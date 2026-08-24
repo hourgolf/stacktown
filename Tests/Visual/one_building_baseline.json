@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "pending_owner_approval",
+  "gate": "Docs/ONE_BUILDING_GATE.md",
+  "target_map": "/Game/Maps/OneBuildingTest",
+  "approved_camera": null,
+  "approved_focal_length_mm": 70,
+  "approved_exposure_ev": null,
+  "baseline_image": null,
+  "comparison_enabled": false,
+  "baseline_mutation_allowed": false,
+  "post_process_required_off": ["depth_of_field", "bloom", "motion_blur"],
+  "pending_decision": "Approve the hero camera transform, its exposure value, and the first baseline capture."
+}

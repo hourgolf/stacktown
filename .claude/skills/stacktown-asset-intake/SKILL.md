@@ -1,0 +1,1 @@
+../../../.codex/skills/stacktown-asset-intake/SKILL.md

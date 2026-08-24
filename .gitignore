@@ -1,0 +1,37 @@
+# ---- licensed third-party content: NEVER commit ----------------------------
+# Assetsville is a paid Fab entitlement (680 MB). Anyone joining adds it to
+# their own project from their own account.
+Content/AssetsvilleTown/
+
+# ---- engine-regenerable -----------------------------------------------------
+DerivedDataCache/
+Intermediate/
+Binaries/
+Build/
+.vs/
+*.pdb
+
+# ---- capture churn ----------------------------------------------------------
+# 2.5 GB of raw 20 MB HighResShot output. Curated evidence lives in Docs/evidence.
+Saved/Screenshots/
+Saved/Autosaves/
+Saved/ShaderDebugInfo/
+Saved/Logs/
+Saved/Crashes/
+Saved/SourceControl/
+
+# ---- full-resolution evidence PNGs ------------------------------------------
+# The records reference these; the downsampled set in Docs/evidence carries the
+# same information at 1/100th the size.
+# recursive - a views/ subfolder slipped past a single-level pattern
+Saved/**/*.png
+Saved/**/*.jpg
+!Docs/evidence/*.jpg
+Saved/Stage1/obj_w/
+Saved/Stage2/data/*.json
+
+# ---- local scratch ----------------------------------------------------------
+*.pyc
+__pycache__/
+.mcp_sid
+_guarded_tmp.py

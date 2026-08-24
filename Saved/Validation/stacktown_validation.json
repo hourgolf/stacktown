@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "failures": [],
+  "warnings": [],
+  "info": [
+    {
+      "code": "METADATA_ADVISORY_ONLY",
+      "detail": "No repository-wide Unreal metadata-tag convention exists yet; provenance remains documented at intake."
+    },
+    {
+      "code": "NO_OWNED_PCG_GRAPHS",
+      "detail": "No PCGGraph assets were found under Stacktown-owned scan roots."
+    }
+  ],
+  "summary": {
+    "assets_scanned": 76,
+    "pcg_graphs": 0,
+    "hard_failures": 0,
+    "warnings": 0
+  }
+}

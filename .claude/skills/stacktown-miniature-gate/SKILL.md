@@ -1,0 +1,1 @@
+../../../.codex/skills/stacktown-miniature-gate/SKILL.md

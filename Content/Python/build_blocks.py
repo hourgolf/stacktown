@@ -60,6 +60,9 @@ ue('wipe_lamps.py', 'clear old lamps')
 import street_lamps
 street_lamps.run()
 ue('lamp_lights.py', 'lamp lights')
+# Second role sweep: lamps are created above, after the first one, so this is
+# what binds them. Idempotent - it re-assigns, it does not accumulate.
+ue('step_roles.py', 'role sweep (late actors)')
 print('=== checks ===')
 ue('check_block.py', 'geometry + party walls')
 ue('gap_check2.py', 'no hollow facades')

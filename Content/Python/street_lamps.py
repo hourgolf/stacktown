@@ -17,6 +17,7 @@ import _path  # noqa: F401
 import ue, json, math, random
 from genbuild import mkactor, box
 from city import STREETS, AVENUES, BOARD_E, BOARD_S
+import citygeom as G
 
 S = 'editor_toolset.toolsets.scene.SceneTools'
 A = 'editor_toolset.toolsets.actor.ActorTools'
@@ -60,6 +61,19 @@ def lamp(label, x, y, reach):
     return 4
 
 
+POLE_HALF = 20.0
+
+
+def clear_of(rects, x, y):
+    """A lamp line runs the full width of the board, so a street's pavement
+    line crosses every avenue and an avenue's crosses every street. Six lamps
+    each way were standing in the middle of a carriageway at a junction -
+    "lightposts in the middle of the roads". Reads the same rectangles that
+    invariant DRESS-03 checks, so the placement and the check cannot drift."""
+    pole = (x - POLE_HALF, y - POLE_HALF, x + POLE_HALF, y + POLE_HALF)
+    return not any(G.intersect(r, pole) for r in rects)
+
+
 def run():
     killed = wipe()
     if killed:
@@ -76,15 +90,19 @@ def run():
         # then has to reach back toward the road, so the sign flips too.
         for side, ly, reach in (('F', k_far - 62.0, +1), ('N', k_near + 62.0, -1)):
             x = X0 + 900.0 + (si % 2)*SPACING*0.5
+            crossing = G.avenue_road_rects()
             while x < X1 - 400.0:
-                n += lamp('LAMP_s%d%s_%d' % (si, side, n), x, ly, reach) and 1
+                if clear_of(crossing, x, ly):
+                    n += lamp('LAMP_s%d%s_%d' % (si, side, n), x, ly, reach) and 1
                 x += SPACING
     for ai, (x_w, x_e, walk) in enumerate(AVENUES, 1):
         k_w, k_e = x_w + walk, x_e - walk
         for side, lx in (('W', k_w - 62.0), ('E', k_e + 62.0)):
             y = BOARD_S + 900.0
+            crossing = G.street_road_rects()
             while y < 700.0:
-                n += lamp('LAMP_a%d%s_%d' % (ai, side, n), lx, y, +1) and 1
+                if clear_of(crossing, lx, y):
+                    n += lamp('LAMP_a%d%s_%d' % (ai, side, n), lx, y, +1) and 1
                 y += SPACING
     print('street lamps: %d' % n)
     return n

@@ -11,6 +11,7 @@ Two rules now:
 """
 import unreal, sys, math, random
 import _path  # repo tool paths; replaces a dead scratchpad path
+import citygeom as G
 from city import BLOCKS, STREETS, AVENUES, BOARD_E
 
 AV = '/Game/AssetsvilleTown/Meshes'
@@ -130,6 +131,59 @@ for blk in BLOCKS:
             'roof_%s' % spec['name'], col)
 
 # --- street furniture and trees, on EVERY street's pavements -----------------
+# --- planting plan: the ground decides the species --------------------------
+# The mix was a hand-weighted bag, and scale then multiplied the crown back up:
+# SM_tree_02 stood in a 1280 uu park lot at a 1613 uu crown, and a dozen street
+# trees reached 500 uu past the kerb into a 1400 uu carriageway. A planting
+# plan works the other way round - measure the ground, then choose what can
+# stand on it.
+#
+# The number that matters is REACH: the yaw-independent radius of the canopy
+# about the actor's PIVOT. Two earlier attempts used the bounds extent as a
+# diameter, wrong twice over. The bounds are not centred on the pivot (a tree
+# pivots at its trunk), and the actor is placed at a random yaw, so what a rule
+# measures is the circumscribed box - up to sqrt(2) larger than the extent.
+# Measured: SM_tree_01's extent says 675 across; its placed crown measured 916.
+# reach_of() returns the corner distance, which bounds every yaw.
+KERB_TOLERANCE  = 200.0   # must match invariants.KERB_TOLERANCE
+BUILDING_MARGIN = 40.0    # keep the trunk off the facade line
+_reach = {}
+
+
+def reach_of(name, folder='Nature'):
+    if name not in _reach:
+        sm = unreal.EditorAssetLibrary.load_asset('%s/%s/%s.%s' % (AV, folder, name, name))
+        if not sm:
+            _reach[name] = 1e9
+        else:
+            b = sm.get_bounds(); o, e = b.origin, b.box_extent
+            _reach[name] = math.hypot(abs(o.x) + e.x, abs(o.y) + e.y)
+    return _reach[name]
+
+
+def fits_footway(name, walk, smax):
+    """A tree may be pushed back as far as the facade line. It is admissible if
+    even there its canopy overhangs the kerb by no more than the tolerance."""
+    return reach_of(name)*smax <= (walk - BUILDING_MARGIN) + KERB_TOLERANCE
+
+
+def fits_lot(name, room, smax):
+    return 2.0*reach_of(name)*smax <= room
+
+
+def admissible(bag, test):
+    fit = [n for n in bag if test(n)]
+    # an empty verge is a worse answer than a small tree
+    return fit or [min(bag, key=reach_of)]
+
+
+def kerb_offset(name, scale, walk):
+    """How far back from the kerb to stand this tree: far enough that its canopy
+    stays within tolerance, never past the facade line."""
+    return min(max(walk*0.45, reach_of(name)*scale - KERB_TOLERANCE),
+               walk - BUILDING_MARGIN)
+
+
 # Street trees. The previous pass alternated two species on a fixed 1120 uu
 # grid down both pavements of all three streets, which closed the canyon views
 # down and read as a hedge rather than a planting.
@@ -147,21 +201,36 @@ KIT = (('SM_Bicycle_01', 'MI_frame_print'), ('SM_barrel_1', 'MI_frame_print'))
 X0, X1 = -300.0, BOARD_E     # the board grew east for the avenue
 STEP = 1900.0
 ti = ki = 0
+AVENUE_ROADS = G.avenue_road_rects()
+BOARD = G.board_rect()
 for si, (y_far, y_near, walk) in enumerate(STREETS, 1):
     # street 3 is a service road at the back - it gets a thinner planting
     density = 0.55 if si == len(STREETS) else 1.0
-    for half, (side, ybase) in enumerate(
-            (('F', y_far + walk*0.55), ('N', y_near - walk*0.55))):
+    smax = 1.15
+    bag = admissible(_BAG, lambda n: fits_footway(n, walk, smax))
+    k_far, k_near = y_far + walk, y_near - walk
+    for half, (side, kerb, inward) in enumerate(
+            (('F', k_far, -1.0), ('N', k_near, +1.0))):
         x = X0 + 600.0 + half*STEP*0.5
-        while x < X1 - 300.0:
+        while x < X1 - 400.0:
             if rnd.random() <= density:
-                nm = _BAG[rnd.randrange(len(_BAG))]; ti += 1
-                put('Nature', nm, x + rnd.uniform(-90, 90), ybase + rnd.uniform(-40, 40),
-                    0.0, rnd.uniform(0, 360), 'tree_s%d%s_%d' % (si, side, ti), '',
-                    native=True, radius=45.0, scale=rnd.uniform(0.85, 1.15))
+                nm = bag[rnd.randrange(len(bag))]; ti += 1
+                sc = rnd.uniform(0.85, smax)
+                reach = reach_of(nm)*sc
+                wx = x + rnd.uniform(-90, 90)
+                wy = kerb + inward*kerb_offset(nm, sc, walk)
+                crown = (wx - reach, wy - reach, wx + reach, wy + reach)
+                # A pavement line runs the full width of the board, so it
+                # crosses every avenue. Same junction skip the lamps and the
+                # parked cars needed, reading the same rectangles they read.
+                if (G.contains(BOARD, crown)
+                        and not any(G.intersect(r, crown) for r in AVENUE_ROADS)):
+                    put('Nature', nm, wx, wy, 0.0, rnd.uniform(0, 360),
+                        'tree_s%d%s_%d' % (si, side, ti), '',
+                        native=True, radius=45.0, scale=sc)
             x += STEP + rnd.uniform(-420, 420)
         nm, col = KIT[ki % len(KIT)]; ki += 1
-        put('StreetProps', nm, X0 + 1400.0 + si*900.0, ybase, 0.0,
+        put('StreetProps', nm, X0 + 1400.0 + si*900.0, kerb + inward*walk*0.5, 0.0,
             rnd.uniform(0, 90), 'kit_s%d%s' % (si, side), col)
 # --- planting and seating inside open zones ---------------------------------
 # A plaza is a place props go, not a thing that carries its own: the footprint
@@ -195,6 +264,10 @@ for blk in BLOCKS:
             nseat = max(4, int(area / 340000.0))
             bag = _BAG
             tscale = (0.8, 1.1)
+        # Whatever the kind chose, the LOT gets the last word: nothing may be
+        # wider than the narrow dimension of the ground it stands on. This is
+        # what keeps SM_tree_02 in the park and out of a 610 uu plaza.
+        bag = admissible(bag, lambda n: fits_lot(n, min(W, D - 62.0), tscale[1]))
         for i in range(ntree):
             lx = spec['x0'] + W*(0.14 + 0.72*rnd.random())
             ly = 62.0 + (D - 62.0)*(0.28 + 0.62*rnd.random())

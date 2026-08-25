@@ -222,7 +222,6 @@ def _t_dress_04():
 # =========================== SCALE ========================================
 @rule('SCALE-01', 'a street tree overhangs the kerb by no more than %.0f uu' % KERB_TOLERANCE)
 def scale_01(snap):
-    roads = G.road_rects()
     out = []
     for a, c in snapshot.mesh_actors(snap, labels.is_planting):
         if not a['label'].startswith('SUR_tree_'):
@@ -230,11 +229,20 @@ def scale_01(snap):
         r = snapshot.rect_of(c)
         if not r:
             continue
+        # Measure penetration PERPENDICULAR to the road's own axis. The first
+        # version took min(width, height) of the overlap, which reports the
+        # whole crown for a tree standing inside the avenue - the avenue rect
+        # spans the full board depth, so the overlap is the tree itself. That
+        # read 523 uu of "kerb overhang" for a tree whose canopy is 237 uu.
         worst = 0.0
-        for rd in roads:
+        for rd in G.street_road_rects():          # streets run in X: kerbs are Y
             i = G.intersect(rd, r)
             if i:
-                worst = max(worst, min(i[2]-i[0], i[3]-i[1]))
+                worst = max(worst, i[3] - i[1])
+        for rd in G.avenue_road_rects():          # avenues run in Y: kerbs are X
+            i = G.intersect(rd, r)
+            if i:
+                worst = max(worst, i[2] - i[0])
         if worst > KERB_TOLERANCE:
             out.append((a['label'], '%s overhangs carriageway %.0f uu' % (c['mesh'], worst)))
     return out

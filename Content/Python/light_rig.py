@@ -191,10 +191,16 @@ if MODE == 'day':
     #     sky  8 -> 189 / 116  (0.62)   plaza still murky
     #     sky 14 -> 193 / 138  (0.71)   colour and cast shadow both hold
     #     sky 22 -> 204 / 167  (0.82)   plaza lit, but the board washes out
-    # 14 is the knee. Nothing blown at any of them.
+    # 14 was the knee FOR THAT SCENE. Then the planting plan landed and the
+    # scene itself changed: oversized pale canopies shrank and 216 lamp
+    # components went from the bright WorldGridMaterial checker to dark metal,
+    # which took the board from 193 to 158 at an untouched rig. Re-measured:
+    #     sky 14 -> 158 /  88     sky 22 -> 175 / 110     sky 38 -> 194 / 115
+    # 22 now sits where 14 did. The lesson is the reusable part: a light rig is
+    # tuned against a SCENE, so changing what is in the scene invalidates it.
     SUN_I = _A.get('sun', 430.0)
     SUN_PITCH = _A.get('elev', 52.0)
-    SKY_I = _A.get('sky', 14.0)
+    SKY_I = _A.get('sky', 22.0)
     ISO = _A.get('iso', 800)
     FSTOP = _A.get('fstop', 4.0)
     SHUTTER = _A.get('shutter', 60)

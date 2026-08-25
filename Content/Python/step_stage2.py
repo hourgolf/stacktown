@@ -5,7 +5,7 @@ between them and each side needs its own pavement.
 """
 import unreal, sys, math
 import _path  # repo tool paths; replaces a dead scratchpad path
-from city import BLOCKS, STREETS, AVENUES, BOARD_S, BOARD_E
+from city import BLOCKS, STREETS, AVENUES, BOARD_S, BOARD_E, BOARD_N
 eas=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 les=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 F='/Game/Stacktown/Materials'
@@ -13,7 +13,7 @@ cube=unreal.EditorAssetLibrary.load_asset('/Engine/BasicShapes/Cube.Cube')
 def M(n): return unreal.EditorAssetLibrary.load_asset('%s/%s.%s'%(F,n,n))
 
 X0, X1 = -300.0, BOARD_E
-YB, YT = BOARD_S, 900.0
+YB, YT = BOARD_S, BOARD_N
 acts = {a.get_actor_label(): a for a in eas.get_all_level_actors()}
 
 # board

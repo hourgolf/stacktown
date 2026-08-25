@@ -44,12 +44,22 @@ BLOCK_F_REAR  = STREET3_FAR - BLOCK_F_DEPTH
 BOARD_S       = BLOCK_F_REAR - 300.0
 STREET_FACE_E = STREET_FACE_B                          # block D fronts street 1 too
 
+# The board grows NORTH for the industrial district, as it grew east for the
+# avenue and south for the houses. Block A's deepest lot is 800, so its rear is
+# the line street 0 measures from.
+BLOCK_A_REAR   = 800.0
+STREET_FACE_N  = BLOCK_A_REAR + CORRIDOR
+BLOCK_H_DEPTH  = 1150.0
+BLOCK_H_REAR   = STREET_FACE_N + BLOCK_H_DEPTH
+BOARD_N        = BLOCK_H_REAR + 300.0
+
 AVENUE_W = 4400.0
 AVENUE_E = AVENUE_W + CORRIDOR
 BLOCK_D_X = AVENUE_E + 4100.0                          # block D's far end
 BOARD_E   = BLOCK_D_X + 300.0
 
 STREETS = [
+    (BLOCK_A_REAR, STREET_FACE_N, WALK_W),    # 0: behind A, in front of the works
     (STREET_FACE_B, STREET_FACE_A, WALK_W),   # 1: between A and B
     (STREET_FACE_C, BLOCK_B_REAR,  WALK_W),   # 2: behind B, in front of C
     (STREET3_FAR,   STREET_FACE_D, SERV_WALK),# 3: the service street
@@ -221,5 +231,27 @@ BLOCKS = [
      dict(kind='gen', style='walkup', name='Hazel',  x0=2750.0, width=1350.0,
           depth=BLOCK_F_DEPTH, floors=2, gf_h=246.0, fl_h=228.0, parapet=46.0,
           bays=4, wall='MI_precast_grey', seed=167),
+  ]),
+
+  # --- Block H: the works ----------------------------------------------------
+  # A city has an edge where things are made, and nothing on this board had
+  # that texture: no long low sheds, no sawtooth roofs, no yard. It also gives
+  # the Deko containers and chain-link somewhere they belong rather than being
+  # dressing sprinkled on a street.
+  #
+  # Block H faces SOUTH onto street 0, so yaw 0: local +y runs north into the
+  # block, away from the city.
+  dict(name='H', origin=(1200.0, STREET_FACE_N, 0.0), yaw=0.0,
+       abuts_low=False, abuts_high=False, lots=[
+     dict(kind='gen', style='works', name='Foundry', x0=0.0, width=1900.0,
+          depth=BLOCK_H_DEPTH, floors=1, gf_h=560.0, fl_h=300.0, parapet=60.0,
+          bays=6, wall='MI_precast_grey', roofmat='MI_shingle_grey',
+          chimney=True, seed=211),
+     dict(kind='gen', style='works', name='Depot', x0=1900.0, width=1600.0,
+          depth=BLOCK_H_DEPTH, floors=0, gf_h=520.0, fl_h=300.0, parapet=54.0,
+          bays=5, wall='MI_precast_buff', roofmat='MI_shingle_grey',
+          chimney=False, seed=223),
+     dict(kind='vacant', name='Yard', x0=3500.0, width=1500.0,
+          depth=BLOCK_H_DEPTH, wall=None, seed=227),
   ]),
 ]

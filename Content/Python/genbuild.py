@@ -109,6 +109,8 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         return build_house(spec, origin, yaw)
     if st == 'walkup':
         return build_walkup(spec, origin, yaw)
+    if st == 'works':
+        return build_works(spec, origin, yaw)
     return build_vernacular(spec, origin, yaw)
 
 
@@ -1053,4 +1055,125 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         top + PAR, top + PAR + 120); made += 1
 
     print('%s [walkup %dst]: %d boxes' % (n, F + 1, made))
+    return made
+
+
+def build_works(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """A works: long, low, and lit from the roof rather than the wall.
+
+    Nothing on this board had this texture. A city has an edge where things are
+    made, and it does not look like a smaller office block - it looks like a
+    SHED. What says shed is the sawtooth: a run of asymmetric roof bays, each
+    with a steep glazed face turned away from the sun so the light inside never
+    moves. That is why a factory roof looks the way it does, and it is only
+    possible here because add_cube honours a rotation.
+
+    Ground floor is doors, not windows: roller shutters and a dock, because
+    what a works does at street level is take things in and send them out.
+    """
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    GF, PAR = spec['gf_h'], spec['parapet']
+    F = spec['floors']
+    BAYS = spec['bays']
+    rnd = random.Random(spec.get('seed', 0))
+    SIDE, FRONT = 40.0, 90.0
+    hx0, hx1 = x0 + SIDE, x0 + W - SIDE
+    hy0, hy1 = FRONT, D - 60.0
+    HW, HD = hx1 - hx0, hy1 - hy0
+    eaves = GF + F*spec['fl_h']
+    made = 0
+
+    a = mkactor('BLD2_%s_W' % n, origin, (0.0, yaw, 0.0))
+    pl = mkactor('PLOT_%s' % n, origin, (0.0, yaw, 0.0))
+
+    # ---- the yard in front: hard standing, a kerb and a gate ---------------
+    box(pl, 'Ground_Apron', x0 + 10, x0 + W - 10, 10, hy0 - 6, 0, 12); made += 1
+    box(pl, 'Kerbing_Kerb', x0 + 6, x0 + W - 6, 0, 14, 12, 30); made += 1
+    for k in range(5):
+        px = x0 + 60.0 + (W - 120.0)*k/4.0
+        box(pl, 'Frame_Bollard%d' % k, px - 12, px + 12, 40, 64, 12, 96); made += 1
+
+    # ---- body ---------------------------------------------------------------
+    box(a, 'Wall_Plinth', hx0 - 12, hx1 + 12, hy0 - 12, hy1 + 12, 0, 34); made += 1
+    box(a, 'Wall_Body', hx0, hx1, hy0, hy1, 34, eaves); made += 1
+    box(a, 'Band_Eaves', hx0 - 14, hx1 + 14, hy0 - 14, hy1 + 14,
+        eaves - 22, eaves + PAR*0.4); made += 1
+
+    # ---- ground floor: shutters and a dock, not shopfronts ------------------
+    bw = HW/float(BAYS)
+    for b in range(BAYS):
+        bx0 = hx0 + b*bw + 26
+        bx1 = hx0 + (b + 1)*bw - 26
+        if b % 3 == 1:                       # a loading dock
+            box(a, 'Frame_Dock%d' % b, bx0, bx1, hy0 - 8, hy0 + 4, 34, 34 + 300)
+            box(a, 'Interior_Dock%d' % b, bx0 + 12, bx1 - 12, hy0 + 4, hy0 + 16,
+                46, 34 + 286)
+            box(pl, 'Ground_Ramp%d' % b, bx0 - 10, bx1 + 10, hy0 - 130, hy0,
+                0, 32)
+            box(a, 'Roof_DockHood%d' % b, bx0 - 22, bx1 + 22, hy0 - 120, hy0 + 6,
+                34 + 306, 34 + 330)
+            made += 4
+        else:                                # a roller shutter
+            box(a, 'Frame_Shutter%d' % b, bx0, bx1, hy0 - 6, hy0 + 4, 34, 34 + 250)
+            for r in range(6):
+                rz = 34 + 26 + r*36.0
+                box(a, 'Mullion_Slat%d_%d' % (b, r), bx0 + 8, bx1 - 8,
+                    hy0 - 9, hy0 - 3, rz, rz + 22)
+            made += 7
+        # a clerestory over every bay - the high strip windows a shed has
+        made += window(a, 'Cl%d' % b, 'y', hy0, -1.0, bx0 + 10, bx1 - 10,
+                       eaves - 150, eaves - 46, bars=(2, 0))
+
+    # ---- flanks and rear ----------------------------------------------------
+    for sgn, side in ((-1.0, hx0), (1.0, hx1)):
+        for k in range(3):
+            wy = hy0 + HD*(0.22 + 0.28*k)
+            made += window(a, 'S%d_%d' % (int(sgn) + 1, k), 'x', side, sgn,
+                           wy - 70, wy + 70, eaves - 190, eaves - 60, bars=(1, 0))
+    for k in range(3):
+        rx = hx0 + HW*(0.2 + 0.3*k)
+        made += window(a, 'R%d' % k, 'y', hy1, 1.0, rx - 80, rx + 80,
+                       eaves - 190, eaves - 60, bars=(2, 0))
+
+    # ---- SAWTOOTH ROOF ------------------------------------------------------
+    # Each tooth: a shallow slope facing the street and a steep glazed face
+    # turned away from the sun, so the light inside never moves.
+    teeth = max(3, int(round(HD/300.0)))
+    td = HD/float(teeth)
+    rise = 190.0
+    ang = math.degrees(math.atan2(rise, td*0.78))
+    slope_len = math.hypot(td*0.78, rise)
+    for t in range(teeth):
+        ty = hy0 + td*(t + 0.5)
+        slab(a, 'Tile_Tooth%d' % t, (hx0 + hx1)/2.0, ty - td*0.11,
+             eaves + rise/2.0, HW + 24.0, slope_len, 16.0, roll=-ang)
+        made += 1
+        gz = eaves + rise
+        gy = ty + td*0.39
+        box(a, 'Frame_ToothF%d' % t, hx0 - 10, hx1 + 10, gy - 9, gy + 9,
+            eaves, gz); made += 1
+        box(a, 'Glass_Tooth%d' % t, hx0 + 16, hx1 - 16, gy - 4, gy + 3,
+            eaves + 16, gz - 14); made += 1
+        for k in range(1, 6):
+            mx = hx0 + (hx1 - hx0)*k/6.0
+            box(a, 'Mullion_Tooth%d_%d' % (t, k), mx - 5, mx + 5,
+                gy - 7, gy + 2, eaves + 16, gz - 14); made += 1
+    box(a, 'Wall_ParapetF', hx0 - 6, hx1 + 6, hy0 - 6, hy0 + 14,
+        eaves, eaves + PAR); made += 1
+    box(a, 'Band_Coping', hx0 - 14, hx1 + 14, hy0 - 14, hy0 + 18,
+        eaves + PAR, eaves + PAR + 12); made += 1
+
+    if spec.get('chimney'):
+        cx_ = hx1 - 220.0
+        cy_ = hy1 - 200.0
+        for k in range(4):
+            w2 = 92.0 - k*12.0
+            box(a, 'Wall_Stack%d' % k, cx_ - w2, cx_ + w2, cy_ - w2, cy_ + w2,
+                eaves + k*260.0, eaves + (k + 1)*260.0); made += 1
+        box(a, 'Frame_StackCap', cx_ - 96, cx_ + 96, cy_ - 96, cy_ + 96,
+            eaves + 1040, eaves + 1076); made += 1
+
+    print('%s [works %d teeth%s]: %d boxes'
+          % (n, teeth, ' + stack' if spec.get('chimney') else '', made))
     return made

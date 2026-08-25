@@ -7,7 +7,7 @@ there is one transform rather than one per script that disagrees at the edges.
 """
 import math
 import _path
-from city import BLOCKS, STREETS, AVENUES, BOARD_S, BOARD_E
+from city import BLOCKS, STREETS, AVENUES, BOARD_S, BOARD_E, BOARD_N
 
 CAR_HALF = 270.0          # half a car length; the junction keep-clear margin
 
@@ -19,7 +19,7 @@ def norm(x0, y0, x1, y1):
 
 
 def board_rect():
-    return norm(-300.0, BOARD_S, BOARD_E, 900.0)
+    return norm(-300.0, BOARD_S, BOARD_E, BOARD_N)
 
 
 def street_road_rects():

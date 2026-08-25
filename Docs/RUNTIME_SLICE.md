@@ -126,66 +126,114 @@ the budget on a realistic tick, THAT is the measurement that justifies C++.
 
 ## Step by step
 
-**1. Open it.** Content Browser → `Content/Stacktown/Runtime` → double-click
-`BP_Parcel`. Left panel is Components (you will see **Building**), the middle is
-the Event Graph, and **My Blueprint** on the left lists the six variables.
+Everything below is in `Content/Stacktown/Runtime`. The catalogue now carries a
+**MeshByKey** map — key `recipe_tier` (`cottage_0`, `walkup_2`) to the baked
+mesh — so `ResolveMesh` is five nodes instead of a twelve-node loop. Six entries
+are already filled in.
 
-**2. Make the function.** In My Blueprint, hover **Functions** → **+**. Name it
-`ResolveMesh`. It opens its own graph tab with a single entry node.
+### The panels, once
 
-**3. Wire `ResolveMesh`.** Drag from the entry node's white execution pin and
-build this chain:
+Double-click **BP_Parcel**. Four areas matter:
 
-- Drag **Catalogue** from My Blueprint into the graph → choose *Get*.
-- Drag off it → **Cast to BP_BuildingCatalogue**. (The variable is typed as the
-  generic `PrimaryDataAsset`, so it needs the cast to reach the arrays.)
-- From the cast's blue output → **Get Recipe Ids**.
-- Drag off that array pin → **For Each Loop with Break**.
-- Connect the entry node's exec to the cast, and the cast's exec to the loop.
+- **Components**, top left. You will see `DefaultSceneRoot` and **Building**.
+- **My Blueprint**, bottom left. Variables: RecipeId, Tier, Level, WidthUU,
+  DepthUU, Catalogue.
+- The **graph**, middle — the big grid.
+- **Details**, right — shows whatever is selected.
 
-Inside the loop body:
+Two things to know. **White pins are execution** (the order things happen);
+**coloured pins are data**. And "drag off a pin" means click the little circle,
+drag into empty space, let go — a search box appears, and it only offers nodes
+that fit that pin.
 
-- **Array Element** (a Name) → **Equal (Name)** ← drag in **RecipeId** (*Get*).
-- From the cast → **Get Tiers** → **Get (a copy)** with **Array Index** from the
-  loop → **Equal (integer)** ← drag in **Tier** (*Get*).
-- Both Equal outputs → an **AND** node → into a **Branch** condition.
-- Loop Body exec → Branch.
-- Branch **True** → **Set Static Mesh**: drag **Building** from Components into
-  the graph, drag off it, choose *Set Static Mesh*. Its **New Mesh** pin comes
-  from the cast → **Get Meshes** → **Get (a copy)** with the same **Array
-  Index**.
-- After Set Static Mesh, run the exec into the loop's **Break** pin so it stops
-  at the first match.
+### 1. Make the function
 
-Compile. That one function is the whole of *place* and the whole of *upgrade*.
+In **My Blueprint**, hover the **Functions** row, click the **+**. Name it
+`ResolveMesh`. A new tab opens with one node: `ResolveMesh` with a white output
+pin. That white pin is where the chain starts.
 
-**4. Wire the tick.** Back in the Event Graph, right-click → **Add Custom
-Event**, name it `CityTick`.
+### 2. Get the catalogue and cast it
 
-- **Level** → **+ (float)** with 0.1 → **Clamp (float)** 0 to 1 → **Set Level**.
-- **Level** → **× (float)** by 2 (that is tier count minus one) →
-  **Round** → a local variable or straight into **Set Tier**.
-- Before setting, a **Branch**: **Not Equal (integer)** comparing that rounded
-  value against **Tier**. True → **Set Tier** → call **ResolveMesh**.
+- Drag **Catalogue** from My Blueprint into the graph. A menu offers Get/Set —
+  choose **Get Catalogue**.
+- Drag off the blue pin on its right, let go, type `Cast to BP_BuildingCatalogue`,
+  pick it.
+- Connect the entry node's **white** pin to the cast's **white** input.
 
-The branch is the point: `ResolveMesh` only runs when the tier actually changed,
-so a tick that does nothing costs nothing.
+The variable is typed as the generic `PrimaryDataAsset`, which is why it needs
+the cast to reach the arrays.
 
-**5. Try it.** Drag `BP_Parcel` into the level. In its Details panel set
-**Catalogue** to `DA_Catalogue`, **RecipeId** to `cottage`, **Tier** to `0`,
-**WidthUU** to `820`. Right-click the `ResolveMesh` node → *Call Function* — or
-just press Play and fire `CityTick` from a key binding — and it should take the
-cabin mesh. Set Tier to 2 and call it again: the extended house, same identity,
-one pointer swap.
+### 3. Build the key
 
-**If Cast to BP_BuildingCatalogue does not appear** in the node menu, the
-Blueprint has not been compiled since the class was made — hit **Compile** on
-`BP_BuildingCatalogue` first.
+- Right-click empty graph space, type `Append`, choose **Append** (under String).
+- Drag **RecipeId** in as a *Get*, connect it to the Append's **A**. It converts
+  Name to String automatically — a small dot appears on the wire, which is
+  correct.
+- Click **B** and type `_` (one underscore).
+- On the Append node click **Add pin**. Drag **Tier** in as a *Get* and connect
+  it to the new pin. Int converts to String the same way.
 
-## What this slice does not prove
+Append now produces `cottage_0`.
 
-Everything above happens in the editor. A packaged build has no Python, so the
-simulation itself will eventually need to live in Blueprint or C++. The slice
-proves the **data and asset pipeline** end to end; it does not prove the
-simulation loop under load. That measurement comes when there is a loop to
-measure, and it is the measurement that would justify C++.
+### 4. Look the mesh up
+
+- From the **cast node's** blue output ("As BP Building Catalogue"), drag off
+  and type `MeshByKey` → **Get MeshByKey**.
+- Drag off MeshByKey's pin, type `Find`, choose **Find** (the Map one).
+- Connect **Append's** output to Find's **Key**.
+
+Find gives you **Value** (the mesh) and a boolean.
+
+### 5. Set the mesh
+
+- Drag **Building** from **Components** into the graph.
+- Drag off it, type `Set Static Mesh`, choose it.
+- Connect **Find's Value** to **New Mesh**.
+- Connect the **cast's** white output to **Set Static Mesh's** white input.
+
+Press **Compile** (top left). Green tick means done.
+
+### 6. The tick
+
+Go to the **EventGraph** tab. Right-click empty space → `Add Custom Event`, name
+it `CityTick`.
+
+- Drag **Level** in as *Get* → drag off it → `+` → choose **float + float**. Set
+  the second box to `0.1`.
+- Drag off the result → `Clamp (float)`. Min 0, Max 1.
+- Drag **Level** in as a **Set** and feed the clamped value in. Connect
+  `CityTick`'s white pin to it.
+- Drag off the clamped value again → `*` → **float * float**, second box `2`.
+- Drag off that → `Round`.
+- Drag off Round → `!=` → **Not Equal (integer)**; drag **Tier** in as *Get* for
+  the other side.
+- Drag off that boolean → **Branch**. Connect Set Level's white pin to Branch.
+- Branch **True** → drag **Tier** in as a **Set**, feed it the Round result.
+- From Set Tier's white pin → drag off → type `ResolveMesh` → call it.
+
+Compile. **The Branch is the whole point**: `ResolveMesh` only runs when the
+tier actually changed. Measured, that is the difference between 295 ms and
+1.1 ms across 500 parcels.
+
+### 7. Try it
+
+Drag **BP_Parcel** from the Content Browser into the level. In **Details** set:
+
+    Catalogue   DA_Catalogue
+    RecipeId    cottage
+    Tier        0
+    WidthUU     820
+
+Nothing appears yet — `ResolveMesh` has not run. Press **Play**, then stop.
+Or set **Tier** to 2 and press Play again: the extended house rather than the
+cabin. Same house, grown, one pointer swap.
+
+### If something does not match
+
+- **No `Cast to BP_BuildingCatalogue` in the menu** — compile
+  `BP_BuildingCatalogue` first.
+- **A pin will not connect** — the types differ. Unreal usually inserts a
+  converter automatically; if it refuses, the wrong node was picked.
+- **`Find` offers several versions** — you want the one whose target is a Map.
+- Tell me what the screen actually says. These node names come from the API;
+  the menu wording in 5.8 I have not seen.

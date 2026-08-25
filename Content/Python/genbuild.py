@@ -500,7 +500,12 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # ---- gardens, fences, front walk, drive ---------------------------------
     # which side the drive takes is decided first, because the shed goes in the
     # back corner the drive does not use
-    dside = 1 if rnd.random() < 0.5 else -1
+    # The PLOT has its own random stream. Drawing it from the building's
+    # stream meant a tier change shifted every later draw, so upgrading a house
+    # moved its drive and swapped its swing set for a putting green - the
+    # opposite of the identity the recipe tiers exist to preserve.
+    grnd = random.Random(spec.get('seed', 0)*7 + 13)
+    dside = 1 if grnd.random() < 0.5 else -1
     dx = x0 + (W - 150.0) if dside > 0 else x0 + 26.0
     box(pl, 'Grass_Yard', x0 + 12, x0 + W - 12, 8, GARDEN - 4, 0, 10); made += 1
     # THE BACK GARDEN. A house with nothing behind it is a facade with a roof;
@@ -519,7 +524,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # reads as a site, not a home. None of this is large; all of it is what
         # the eye uses to tell one back garden from the next.
         gcx = (x0 + W)/2.0
-        if rnd.random() < 0.62:                       # a swing set
+        if grnd.random() < 0.62:                       # a swing set
             sw = x0 + 120.0 if dside > 0 else x0 + W - 320.0
             for k in (0, 1):
                 for sgn2 in (-1, 1):
@@ -531,7 +536,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 box(pl, 'Frame_SwingSeat%d' % k, sw + 40 + k*90, sw + 96 + k*90,
                     by0 + 140, by0 + 160, 52, 60)
             made += 7
-        elif rnd.random() < 0.5:                      # a putting green
+        elif grnd.random() < 0.5:                      # a putting green
             box(pl, 'Grass_Putt', gcx - 170, gcx + 170, by0 + 120, by0 + 380, 10, 16)
             box(pl, 'Frame_PuttFlag', gcx + 96, gcx + 104, by0 + 244, by0 + 252, 16, 120)
             box(pl, 'Accent_PuttFlag', gcx + 104, gcx + 160, by0 + 246, by0 + 250, 96, 120)

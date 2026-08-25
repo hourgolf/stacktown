@@ -14,6 +14,16 @@ WALL={l['name']: l['wall'] for b in BLOCKS for l in b['lots'] if l.get('wall')}
 # read as five white wedges. Per lot, like the wall colour.
 ROOF={l['name']: l.get('roofmat', 'MI_shingle_grey')
       for b in BLOCKS for l in b['lots'] if l.get('style') in ('house', 'walkup')}
+# Staging lots baked for the catalogue are not in the city table, so their
+# colours arrive in a temp file. ONE role mapping, extended - not a second copy
+# of it living in the bake script, which is how the two would drift.
+import os, json, tempfile
+_ov = os.path.join(tempfile.gettempdir(), 'stacktown_role_overrides.json')
+if os.path.exists(_ov):
+    for _n, _d in json.load(open(_ov)).items():
+        if _d.get('wall'):    WALL[_n] = _d['wall']
+        if _d.get('roofmat'): ROOF[_n] = _d['roofmat']
+    print('role overrides for %s' % ', '.join(sorted(json.load(open(_ov)))))
 SHARED={'Glass_':'MI_glass_b','Interior_':'MI_interior','Frame_':'MI_frame_print',
         'Mullion_':'MI_frame_print','Accent_':'MI_canopy_accent','Roof_':'MI_concrete',
         # ground roles, for zones that are not buildings

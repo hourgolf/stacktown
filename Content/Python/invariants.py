@@ -417,6 +417,35 @@ def _t_cam_01():
     return _one(cam_01(_snap(bad, ok)), 'CAM_Bad')
 
 
+@rule('BAKE-01', 'every placed catalogue building is one mesh with its roles intact')
+def bake_01(snap):
+    """The whole point of the bake is that a 200-box recipe becomes ONE mesh
+    that still carries a slot per role. A merge that compacts the materials
+    gives one slot and silently loses the role system - which is exactly what
+    the first bake did."""
+    out = []
+    for a in snap['actors']:
+        if labels.family(a['label']) != 'CAT' or a['label'] == 'CAT_Pad':
+            continue
+        if len(a['comps']) != 1:
+            out.append((a['label'], '%d components, expected 1' % len(a['comps'])))
+            continue
+        mats = a['comps'][0]['mats']
+        if len(mats) < 2:
+            out.append((a['label'], 'only %d material slot(s) - roles were '
+                                    'compacted away' % len(mats)))
+        elif any(m is None or m in snapshot.DEFAULT_MATS for m in mats):
+            out.append((a['label'], 'a slot is unassigned or default'))
+    return out
+
+
+@selftest('BAKE-01')
+def _t_bake_01():
+    ok = _a('CAT_cottage_t0', comps=[_c('m', 'SM_Bld', mats=['MI_a', 'MI_b'])])
+    flat = _a('CAT_cottage_t9', comps=[_c('m', 'SM_Bld', mats=['MI_a'])])
+    return _one(bake_01(_snap(ok, flat)), 't9')
+
+
 # =========================== ZONE =========================================
 BENCH_LOOK = 260.0        # how far ahead of a bench must be open ground
 

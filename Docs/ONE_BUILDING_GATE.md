@@ -169,6 +169,16 @@ red on this rule on purpose.** Tuning the threshold down to green would be the
 exact failure this document opens by naming: criteria bending to fit what got
 built. Those four are the punch list. See `Docs/INVARIANTS.md`.
 
+**Punch list cleared, 25 Aug 2026.** Modern went 0.76 -> **0.95** parts/m2 and
+vernacular 1.15 -> 1.24; all four are over the line and the rule is green
+without the threshold moving. What was added is detail that belonged there:
+opening lights on the ribbon (a sealed ribbon is a curtain wall; a 60s office
+block has top-hung vents), spandrel PANELS between the joints, mullion heads
+and cills, and on vernacular corbels under every cill and quoins at the
+corners. The quoins then ran 38 uu proud of the lot edge and put Narrow 68 uu
+inside the Stage 1 building - `check_block` caught it, not a capture. A quoin
+projects from the wall, not past the party line.
+
 ### Finishing-effects carve-out
 
 *Added 2026-08-25 by owner decision. This is an amendment by the owner, not a downward

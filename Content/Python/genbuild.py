@@ -156,6 +156,20 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             box(a, 'Wall_Pier%d' % b, px, px + pier_w, fy, fy + 60, z0, z1 - 34); made += 1
         # band course - primary depth carrier at range, 60 uu proud
         box(a, 'Band_Course', x0 - 8, x0 + W + 8, fy - 8, fy + 58, z1 - 34, z1); made += 1
+        # QUOINS: alternating blocks at each corner, which is how a masonry
+        # front turns a corner and what a narrow elevation has instead of bays.
+        # INSIDE the lot. The first version ran the quoin 38 uu proud of the
+        # lot edge, which put Narrow's left corner 68 uu into the Stage 1
+        # building next door - check_block caught it. A quoin projects from the
+        # WALL, not past the party line; it steps in Y, not in X.
+        for qs, qx in (('L', x0), ('R', x0 + W)):
+            for q in range(4):
+                qw = 34.0 if q % 2 else 22.0
+                qz = z0 + (z1 - z0)*q/4.0
+                box(a, 'Wall_Quoin%s%d' % (qs, q),
+                    qx if qs == 'L' else qx - qw,
+                    qx + qw if qs == 'L' else qx,
+                    fy - 14, fy + 26, qz + 4, qz + (z1 - z0)/4.0 - 4); made += 1
         for b in range(BAYS):
             wx0 = x0 + b * bw + pier_w
             wx1 = x0 + (b + 1) * bw
@@ -172,6 +186,12 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             box(a, 'Mullion_B%dV' % b, mx - 3, mx + 3, gy - 6, gy + 1, wz0, wz1); made += 1
             mz = wz0 + (wz1 - wz0) * 0.62
             box(a, 'Mullion_B%dH' % b, wx0, wx1, gy - 6, gy + 1, mz - 3, mz + 3); made += 1
+            # CORBELS under the cill. A cill sits on something; DETAIL-01 found
+            # Narrow at 0.65 parts per m2 and this is the detail a narrow
+            # vernacular front is actually missing, not more mullions.
+            for cb, cx_ in (('L', wx0 + 16), ('R', wx1 - 16)):
+                box(a, 'Frame_B%dCorbel%s' % (b, cb), cx_ - 11, cx_ + 11,
+                    gy - 12, gy + 2, wz0 - 20, wz0 - 6); made += 1
         # hand-made tolerance: model tolerances, 1-2% of width, not 0.15%
         ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
             'instance': a, 'values': json.dumps({
@@ -348,6 +368,31 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 fy - FIN_PROUD, fy + GLAZE_Y + 2, gz0, gz1); made += 1
         mz = gz0 + (gz1 - gz0) * 0.58
         box(a, 'Mullion_RibbonH', gx0, gx1, fy + GLAZE_Y - 5, fy + GLAZE_Y + 1, mz - 3, mz + 3); made += 1
+        # OPENING LIGHTS. A sealed ribbon is a curtain wall; a 60s office block
+        # has top-hung vents, and every third light being proud of the plane is
+        # what stops a run of glass reading as one sheet.
+        for k in range(1, nmul, 3):
+            ax0 = gx0 + (gx1 - gx0)*k/float(nmul)
+            ax1 = gx0 + (gx1 - gx0)*(k + 1)/float(nmul)
+            box(a, 'Frame_Vent%d_%d' % (f, k), ax0 + 5, ax1 - 5,
+                fy + GLAZE_Y - 12, fy + GLAZE_Y - 2, mz + 8, gz1 - 10)
+            box(a, 'Glass_Vent%d_%d' % (f, k), ax0 + 9, ax1 - 9,
+                fy + GLAZE_Y - 10, fy + GLAZE_Y - 8, mz + 12, gz1 - 14)
+            made += 2
+        # SPANDREL PANELS. The band is panels bolted to a frame, not a casting:
+        # each bay gets a face standing slightly proud between the joints.
+        for b in range(BAYS):
+            px0 = x0 + W*b/float(BAYS) + 10
+            px1 = x0 + W*(b + 1)/float(BAYS) - 10
+            box(a, 'Band_Panel%d_%d' % (f, b), px0, px1,
+                fy - BAND_PROUD - 6, fy - BAND_PROUD + 10, z0 + 12, z0 + sp - 12)
+            made += 1
+        # heads and cills to the mullion run
+        box(a, 'Frame_MullHead%d' % f, gx0 - 6, gx1 + 6, fy + GLAZE_Y - 9,
+            fy + GLAZE_Y + 2, gz1 - 12, gz1 - 4)
+        box(a, 'Frame_MullCill%d' % f, gx0 - 8, gx1 + 8, fy + GLAZE_Y - 13,
+            fy + GLAZE_Y + 2, gz0 + 2, gz0 + 12)
+        made += 2
         # hand tolerance: MODEL tolerances, 1-2%, not building tolerances
         ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
             'instance': a, 'values': json.dumps({

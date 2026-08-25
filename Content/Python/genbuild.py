@@ -52,6 +52,8 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         return build_deco(spec, origin, yaw)
     if st == 'house':
         return build_house(spec, origin, yaw)
+    if st == 'walkup':
+        return build_walkup(spec, origin, yaw)
     return build_vernacular(spec, origin, yaw)
 
 
@@ -412,6 +414,17 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     BAYS = spec['bays']
     rnd = random.Random(spec.get('seed', 0))
 
+    # VARIANTS. Five houses from one generator were five colours of the same
+    # house, which is the thing "buildings are parameter sets" is supposed to
+    # avoid. These are the differences that actually read from the street: what
+    # the roof does at the top, what the front door does at the bottom, and
+    # whether the elevation is flat or broken.
+    roof_kind = spec.get('roof', rnd.choice(('gable', 'hip', 'gable')))
+    entry = spec.get('entry', rnd.choice(('porch', 'stoop')))
+    dormers = spec.get('dormers', rnd.choice((0, 0, 2)))
+    bay = spec.get('bay', rnd.random() < 0.45)
+    garage = spec.get('garage', rnd.random() < 0.4)
+
     GARDEN = 250.0 + rnd.uniform(-20, 20)  # street line to the front wall
     SIDE = 100.0                           # gap to the lot edge, each side
     hx0, hx1 = x0 + SIDE, x0 + W - SIDE
@@ -445,14 +458,24 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     box(a, 'Wall_Plinth', hx0 - 10, hx1 + 10, hy0 - 10, hy1 + 10, 0, 26); made += 1
     box(a, 'Wall_Body', hx0, hx1, hy0, hy1, 26, eaves); made += 1
 
-    # ---- porch --------------------------------------------------------------
-    pw = 210.0
-    box(a, 'Roof_Porch', cx - pw/2 - 20, cx + pw/2 + 20, hy0 - 96, hy0 + 6,
-        GF - 34, GF - 16); made += 1
-    for sgn in (-1, 1):
-        px = cx + sgn*(pw/2 - 8)
-        box(a, 'Frame_PorchPost%d' % (sgn + 1), px - 9, px + 9,
-            hy0 - 88, hy0 - 70, 26, GF - 34); made += 1
+    # ---- the way the front door meets the ground ----------------------------
+    if entry == 'porch':
+        pw = 210.0
+        box(a, 'Roof_Porch', cx - pw/2 - 20, cx + pw/2 + 20, hy0 - 96, hy0 + 6,
+            GF - 34, GF - 16); made += 1
+        for sgn in (-1, 1):
+            px = cx + sgn*(pw/2 - 8)
+            box(a, 'Frame_PorchPost%d' % (sgn + 1), px - 9, px + 9,
+                hy0 - 88, hy0 - 70, 26, GF - 34); made += 1
+        box(a, 'Ground_PorchDeck', cx - pw/2 - 14, cx + pw/2 + 14,
+            hy0 - 92, hy0, 14, 26); made += 1
+    else:
+        # a stoop: three steps up to the door and a small hood over it
+        for i in range(3):
+            box(a, 'Ground_Stoop%d' % i, cx - 78 + i*6, cx + 78 - i*6,
+                hy0 - 72 + i*22, hy0, 0, 10 + i*8); made += 1
+        box(a, 'Roof_Hood', cx - 76, cx + 76, hy0 - 54, hy0 + 4,
+            26 + 158, 26 + 178); made += 1
     box(a, 'Frame_Door', cx - 44, cx + 44, hy0 - 4, hy0 + 5, 26, 26 + 150); made += 1
     box(a, 'Interior_Hall', cx - 38, cx + 38, hy0 + 5, hy0 + 12, 30, 26 + 140); made += 1
 
@@ -487,7 +510,30 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             made += win('S%d_%d' % (sgn + 1, k), side - 4, side + 4,
                         wy - 58, wy + 58, GF + 44, GF + FH - 52, 'x')
 
-    # ---- pitched roof, stepped; the ridge runs along X so the gables show ----
+    # ---- a bay window, which is what breaks a flat cottage elevation --------
+    if bay:
+        bside = -1 if entry == 'porch' else 1
+        bx = cx + bside*(HW*0.28)
+        box(a, 'Wall_Bay', bx - 96, bx + 96, hy0 - 86, hy0 + 6, 20, GF - 30); made += 1
+        box(a, 'Glass_Bay', bx - 82, bx + 82, hy0 - 90, hy0 - 84, 26 + 60, GF - 52); made += 1
+        for sgn in (-1, 1):
+            box(a, 'Glass_BayS%d' % (sgn + 1), bx + sgn*90, bx + sgn*96,
+                hy0 - 80, hy0 - 10, 26 + 60, GF - 52); made += 1
+        box(a, 'Roof_Bay', bx - 104, bx + 104, hy0 - 94, hy0 + 6,
+            GF - 30, GF - 14); made += 1
+        made += 4
+
+    # ---- a garage, set back from the house front so it does not lead --------
+    if garage:
+        gw = 190.0
+        gx = dx + 62.0 - gw/2.0
+        box(a, 'Wall_Garage', gx, gx + gw, hy0 + 40, hy0 + 230, 0, 190); made += 1
+        box(a, 'Frame_GarageDoor', gx + 14, gx + gw - 14, hy0 + 34, hy0 + 42,
+            8, 168); made += 1
+        box(a, 'Roof_Garage', gx - 16, gx + gw + 16, hy0 + 26, hy0 + 240,
+            190, 210); made += 1
+
+    # ---- pitched roof, stepped; a gable shows its ends, a hip closes them ---
     # 6 steps over a 150 uu rise read as a ziggurat from above rather than as
     # a pitch. 11 steps put each riser under 15 uu, which is below the 0.4%
     # bar at the board camera and reads as a slope.
@@ -496,11 +542,123 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     for i in range(steps):
         t0, t1 = i/float(steps), (i + 1)/float(steps)
         ins = (HD/2.0 - 24.0)*t0
-        box(a, 'Roof_Slope%d' % i, hx0 - 34, hx1 + 34,
+        xins = (HW/2.0 - 24.0)*t0 if roof_kind == 'hip' else 0.0
+        box(a, 'Roof_Slope%d' % i, hx0 + xins - 34, hx1 - xins + 34,
             hy0 + ins - 34, hy1 - ins + 34,
             eaves + rise*t0, eaves + rise*t1 + 2); made += 1
+    # dormers, on the street slope only
+    for d in range(dormers):
+        dxc = hx0 + HW*(0.3 + 0.4*d)
+        box(a, 'Wall_Dormer%d' % d, dxc - 66, dxc + 66, hy0 - 20, hy0 + 96,
+            eaves + 8, eaves + rise*0.72); made += 1
+        box(a, 'Glass_Dormer%d' % d, dxc - 48, dxc + 48, hy0 - 24, hy0 - 18,
+            eaves + 30, eaves + rise*0.62); made += 1
+        box(a, 'Roof_Dormer%d' % d, dxc - 78, dxc + 78, hy0 - 32, hy0 + 100,
+            eaves + rise*0.72, eaves + rise*0.72 + 16); made += 1
+        made += 3
     box(a, 'Wall_Chimney', hx1 - 120, hx1 - 62, hy0 + HD*0.62, hy0 + HD*0.62 + 58,
         eaves, eaves + rise + 86); made += 1
 
-    print('%s [house]: %d boxes' % (n, made))
+    print('%s [house %s/%s%s%s%s]: %d boxes'
+          % (n, roof_kind, entry, ' bay' if bay else '',
+             ' %ddormer' % dormers if dormers else '',
+             ' garage' if garage else '', made))
+    return made
+
+
+def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """A small walk-up apartment block: the step between a house and a block.
+
+    It is not a short office block and it is not a wide house. What makes it
+    read as apartments is REPETITION with a single front door - the same window
+    and the same balcony stacked three high, one stoop on the street, and a
+    forecourt too small to be a garden. Setback is shallower than a house's,
+    because a walk-up sits closer to the pavement than a cottage does.
+
+    Detached like the houses, so it builds all four of its own walls.
+    """
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    GF, FH, PAR = spec['gf_h'], spec['fl_h'], spec['parapet']
+    F = spec['floors']
+    BAYS = spec['bays']
+    rnd = random.Random(spec.get('seed', 0))
+
+    FORE = 130.0 + rnd.uniform(-14, 14)
+    SIDE = 70.0
+    hx0, hx1 = x0 + SIDE, x0 + W - SIDE
+    hy0 = FORE
+    hy1 = min(D - 60.0, FORE + 520.0)
+    HW = hx1 - hx0
+    top = GF + F*FH
+    made = 0
+
+    a = mkactor('BLD2_%s_A' % n, origin, (0.0, yaw, 0.0))
+    cx = (hx0 + hx1)/2.0
+
+    # ---- forecourt: a low wall and a path, not a garden ---------------------
+    box(a, 'Ground_Fore', x0 + 10, x0 + W - 10, 8, FORE - 4, 0, 12); made += 1
+    box(a, 'Kerbing_Wall', x0 + 8, x0 + W - 8, 0, 16, 12, 62); made += 1
+    walk = paths.Path((cx, 0.0), (cx, FORE + 6.0), 130.0, 'walk')
+    wr = walk.rect()
+    box(a, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 14); made += 1
+
+    # ---- body ---------------------------------------------------------------
+    box(a, 'Wall_Plinth', hx0 - 12, hx1 + 12, hy0 - 12, hy1 + 12, 0, 34); made += 1
+    box(a, 'Wall_Body', hx0, hx1, hy0, hy1, 34, top); made += 1
+    box(a, 'Wall_Parapet', hx0 - 10, hx1 + 10, hy0 - 10, hy1 + 10,
+        top, top + PAR); made += 1
+    box(a, 'Roof_Cap', hx0 - 14, hx1 + 14, hy0 - 14, hy1 + 14,
+        top + PAR, top + PAR + 10); made += 1
+
+    # ---- one front door, on a stoop -----------------------------------------
+    for i in range(3):
+        box(a, 'Ground_Stoop%d' % i, cx - 96 + i*8, cx + 96 - i*8,
+            hy0 - 78 + i*24, hy0, 0, 12 + i*8); made += 1
+    box(a, 'Frame_Door', cx - 62, cx + 62, hy0 - 6, hy0 + 6, 34, 34 + 170); made += 1
+    box(a, 'Interior_Lobby', cx - 54, cx + 54, hy0 + 6, hy0 + 14, 40, 34 + 158); made += 1
+    box(a, 'Roof_Canopy', cx - 108, cx + 108, hy0 - 84, hy0 + 6,
+        34 + 178, 34 + 200); made += 1
+
+    # ---- the stack: same window, same balcony, three high -------------------
+    for f in range(F + 1):
+        z0 = 34 + (GF - 34 if f else 0) + max(0, f - 1)*FH
+        z0 = GF + (f - 1)*FH if f else 34
+        h = (GF - 34) if f == 0 else FH
+        for b in range(BAYS):
+            bx = hx0 + 44 + (HW - 88)*(b + 0.5)/BAYS
+            if f == 0 and abs(bx - cx) < 96:
+                continue                       # the door takes the middle bay
+            wz0 = z0 + (54 if f else 62)
+            wz1 = z0 + h - (46 if f else 40)
+            box(a, 'Glass_W%d_%d' % (f, b), bx - 62, bx + 62,
+                hy0 - 6, hy0 + 2, wz0, wz1); made += 1
+            box(a, 'Frame_W%d_%dSill' % (f, b), bx - 72, bx + 72,
+                hy0 - 12, hy0 + 6, wz0 - 12, wz0); made += 1
+            box(a, 'Interior_W%d_%d' % (f, b), bx - 56, bx + 56,
+                hy0 + 4, hy0 + 12, wz0 + 6, wz1 - 6); made += 1
+            made += 2
+            if f > 0 and b % 2 == 0:
+                box(a, 'Ground_Balc%d_%d' % (f, b), bx - 92, bx + 92,
+                    hy0 - 96, hy0 + 2, wz0 - 22, wz0 - 10); made += 1
+                box(a, 'Frame_Balust%d_%d' % (f, b), bx - 92, bx + 92,
+                    hy0 - 100, hy0 - 90, wz0 - 10, wz0 + 78); made += 1
+                made += 1
+    # flank windows, because a detached block is seen from three sides
+    for sgn, side in ((-1, hx0), (1, hx1)):
+        for f in range(F + 1):
+            z0 = GF + (f - 1)*FH if f else 34
+            h = (GF - 34) if f == 0 else FH
+            for k in range(2):
+                wy = hy0 + (hy1 - hy0)*(0.32 + 0.36*k)
+                box(a, 'Glass_S%d_%d_%d' % (sgn + 1, f, k), side - 5, side + 5,
+                    wy - 54, wy + 54, z0 + 58, z0 + h - 46); made += 1
+                box(a, 'Frame_S%d_%d_%dSill' % (sgn + 1, f, k), side - 8, side + 8,
+                    wy - 64, wy + 64, z0 + 46, z0 + 58); made += 1
+                made += 1
+
+    box(a, 'Roof_Stair', cx - 110, cx + 110, hy1 - 210, hy1 - 40,
+        top + PAR, top + PAR + 120); made += 1
+
+    print('%s [walkup %dst]: %d boxes' % (n, F + 1, made))
     return made

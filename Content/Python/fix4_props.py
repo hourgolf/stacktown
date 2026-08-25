@@ -123,6 +123,12 @@ for blk in BLOCKS:
         # it (step_roles was the first). Guard on kind, not on presence.
         if spec['kind'] not in ('gen', 'av'):
             continue
+        # Water tanks, plant and a comms mast belong on a commercial roof. A
+        # house had a radio tower on it and a walk-up had a water tank, which
+        # is the roof kit following 'kind' when it should follow STYLE - the
+        # thing that decides what a building IS.
+        if spec.get('style') in ('house', 'walkup'):
+            continue
         if rnd.random() > 0.55:            # not every roof, or it reads as a rule
             continue
         nm, col = ROOF[ri % len(ROOF)]; ri += 1
@@ -264,6 +270,10 @@ for blk in BLOCKS:
             stands in a lawn panel, a shrub in a bed, a bench on paving."""
             global n_zone
             made = 0
+            # put()'s footprint test only runs at z == 0, and zone planting
+            # stands at 62, so nothing was stopping two trees landing on the
+            # same spot - DRESS-06 found exactly that in the park.
+            used = []
             for i in range(count):
                 rect = rects[i % len(rects)]
                 room = min(rect[2] - rect[0], rect[3] - rect[1])
@@ -283,6 +293,10 @@ for blk in BLOCKS:
                 crown = (lx - reach, ly - reach, lx + reach, ly + reach)
                 if avoid and any(G.intersect(av, crown) for av in LO['avoid']):
                     continue
+                if any((lx - ux)**2 + (ly - uy)**2 < ((reach + ur)*0.78)**2
+                       for ux, uy, ur in used):
+                    continue
+                used.append((lx, ly, reach))
                 wx, wy = _zone_world(blk, lx, ly)
                 if put('Nature', nm, wx, wy, zoff, rnd.uniform(0, 360),
                        'zone_%s_%s%d' % (spec['name'], tag, i), '',

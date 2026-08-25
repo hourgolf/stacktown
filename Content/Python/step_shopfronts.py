@@ -54,7 +54,7 @@ def world(blk, lx, ly):
             oy + lx*math.sin(y) + ly*math.cos(y))
 
 
-def put(mesh, wx, wy, wz, yaw, label, colour):
+def put(mesh, wx, wy, wz, yaw, label, colour, sx=1.0):
     sm = unreal.load_asset('%s/%s.%s' % (D, mesh, mesh))
     if not sm:
         print('  missing', mesh); return 0
@@ -62,6 +62,8 @@ def put(mesh, wx, wy, wz, yaw, label, colour):
                                    unreal.Vector(wx, wy, wz),
                                    unreal.Rotator(0, 0, yaw))
     a.set_actor_label('SHOP_' + label)
+    if sx != 1.0:
+        a.set_actor_scale3d(unreal.Vector(sx, 1.0, 1.0))
     c = a.static_mesh_component
     c.set_editor_property('static_mesh', sm)
     for i in range(len(sm.get_editor_property('static_materials'))):
@@ -70,35 +72,68 @@ def put(mesh, wx, wy, wz, yaw, label, colour):
 
 
 PIER = 52.0
+# A modern lot's shopfront sits behind a 78 uu arcade, so dressing hung on the
+# facade line floats in front of nothing. Push it back to the glass.
+ARCADE = {'modern': 78.0, 'deco': 34.0}
+BANNERS = ('SM_BLDG_Prop_BA_Banner_A01_N1', 'SM_BLDG_Prop_BB_Banner_B01_N1',
+           'SM_BLDG_Prop_CA_Banner_C01_N1')
+LAMPS = ('SM_BLDG_Prop_Lamp_Wall_A01_N1', 'SM_BLDG_Prop_Lamp_Wall_B01_N1')
+
 n = 0
 for blk in BLOCKS:
     for spec in blk['lots']:
-        if spec.get('kind') != 'gen' or spec.get('style') == 'house':
+        if spec.get('kind') != 'gen' or spec.get('style') in ('house', 'walkup'):
             continue
         rnd = random.Random(spec.get('seed', 0) + 7717)
-        x0, W = spec['x0'], spec['width']
-        GF = spec['gf_h']
+        x0, W, GF = spec['x0'], spec['width'], spec['gf_h']
+        back = ARCADE.get(spec.get('style'), 0.0)
         sx0, sx1 = x0 + PIER, x0 + W - PIER
         span = sx1 - sx0
-        # one awning per ~3 m of shopfront, which is how they actually come
-        count = max(1, int(span / 300.0))
-        for k in range(count):
-            lx = sx0 + span*(k + 0.5)/count
-            wx, wy = world(blk, lx, 0.0)
-            # MEASURED: the shop glass runs z 40..GF-48 and the bulkhead
-            # GF-40..GF, while the awning mesh spans pivot-17 to pivot+82. At
-            # GF-52 the awning straddled the glass HEAD and rose above the
-            # bulkhead - it hung over nothing. GF-130 puts its top at the glass
-            # head, which is where an awning is fixed.
-            n += put(rnd.choice(AWNINGS), wx, wy, GF - 130.0,
-                     blk['yaw'] + 180.0, '%s_awn%d' % (spec['name'], k),
-                     rnd.choice(CLOTH))
-        # a fascia board over the bulkhead, and one hanging sign at the end
-        wx, wy = world(blk, (sx0 + sx1)/2.0, 0.0)
-        n += put(rnd.choice(BOARDS), wx, wy, GF - 18.0,
-                 blk['yaw'] + 180.0, '%s_board' % spec['name'], 'MI_frame_print')
-        wx, wy = world(blk, sx1 - 40.0, 0.0)
-        n += put(rnd.choice(SIGNS), wx, wy, GF + 30.0,
-                 blk['yaw'] + 180.0, '%s_sign' % spec['name'], 'MI_dark_metal')
+        yawf = blk['yaw'] + 180.0          # facing out over the street
+
+        def place(mesh, lx, ly, lz, yaw, tag, colour, sx=1.0):
+            wx, wy = world(blk, lx, ly)
+            return put(mesh, wx, wy, lz, yaw, '%s_%s' % (spec['name'], tag),
+                       colour, sx)
+
+        # WHAT A SHOP HANGS ON ITS FRONT is not one recipe. A row where every
+        # unit has the same awning reads as a texture, not as a street.
+        # Every commercial unit gets an awning - it is the piece that actually
+        # reads at street level, and a 287 uu awning on a 900 uu shopfront read
+        # as a stamp rather than as a shop. It is SCALED to fill its slot.
+        # Banners and blades are additions on top, not alternatives.
+        extra = rnd.choice(('none', 'banner', 'blade', 'blade'))
+
+        if True:
+            count = max(1, int(round(span / 340.0)))
+            slot = span/count
+            cloth = rnd.choice(CLOTH)       # one shop, one colour
+            for k in range(count):
+                lx = sx0 + span*(k + 0.5)/count
+                # MEASURED: glass runs z 40..GF-48, bulkhead GF-40..GF, and the
+                # awning mesh spans pivot-17..pivot+82. GF-130 puts its top at
+                # the glass head, which is where an awning is fixed.
+                n += place(rnd.choice(AWNINGS), lx, back, GF - 130.0, yawf,
+                           'awn%d' % k, cloth, sx=(slot - 16.0)/287.0)
+        if extra == 'banner':
+            for k in range(3):
+                lx = sx0 + span*(k + 0.5)/3.0
+                n += place(rnd.choice(BANNERS), lx, back, GF + 40.0, yawf,
+                           'ban%d' % k, rnd.choice(CLOTH))
+        elif extra == 'blade':
+            # a BLADE sign projects square to the wall, so it reads from down
+            # the street rather than only from straight ahead
+            side = rnd.choice((-1.0, 1.0))
+            lx = sx0 + 60.0 if side < 0 else sx1 - 60.0
+            n += place(rnd.choice(SIGNS), lx, back, GF + 6.0,
+                       yawf + 90.0*side, 'blade', 'MI_dark_metal')
+
+        # every unit gets a fascia over the bulkhead and a pair of wall lamps
+        n += place(rnd.choice(BOARDS), (sx0 + sx1)/2.0, back, GF - 18.0, yawf,
+                   'board', 'MI_frame_print')
+        for k, lx in enumerate((sx0 + 30.0, sx1 - 30.0)):
+            n += place(rnd.choice(LAMPS), lx, back, GF - 96.0, yawf,
+                       'lamp%d' % k, 'MI_dark_metal')
+
 print('shopfront dressing: %d pieces' % n)
 les.save_current_level()

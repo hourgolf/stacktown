@@ -340,6 +340,41 @@ def _t_dress_06():
     return _one(dress_06(s), 'LAMP_s1F_9')
 
 
+@rule('DRESS-07', 'commercial roof kit does not stand on a home')
+def dress_07(snap):
+    """A water tank on a cottage and a comms mast on a walk-up. The roof kit
+    was gated on kind, which says whether a lot is built on; style says what
+    was built."""
+    homes = []
+    for _n, sp, r in G.lots(('gen',)):
+        if sp.get('style') in ('house', 'walkup'):
+            homes.append((sp['name'], r))
+    out = []
+    for a in snap['actors']:
+        if not a['label'].startswith('SUR_roof_'):
+            continue
+        x, y, _z = a['loc']
+        for nm, r in homes:
+            if r[0] <= x <= r[2] and r[1] <= y <= r[3]:
+                out.append((a['label'], 'on %s, which is a %s'
+                            % (nm, 'home')))
+    return out
+
+
+@selftest('DRESS-07')
+def _t_dress_07():
+    homes = [(sp['name'], r) for _n, sp, r in G.lots(('gen',))
+             if sp.get('style') in ('house', 'walkup')]
+    assert homes, 'no residential lots in the table - the rule cannot be tested'
+    nm, r = homes[0]
+    cx, cy = (r[0] + r[2])/2.0, (r[1] + r[3])/2.0
+    bad = _a('SUR_roof_%s' % nm, loc=(cx, cy, 400.0))
+    # clear of EVERY home, not merely of this one: the first version offset in
+    # X by 6000 and landed on a different house down the same lane
+    ok = _a('SUR_roof_Narrow', loc=(cx, r[1] - 3000.0, 400.0))
+    return _one(dress_07(_snap(bad, ok)), nm)
+
+
 # =========================== ZONE =========================================
 BENCH_LOOK = 260.0        # how far ahead of a bench must be open ground
 

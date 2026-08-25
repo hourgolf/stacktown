@@ -200,4 +200,22 @@ BLOCKS = [
           depth=BLOCK_F_DEPTH, floors=1, gf_h=200.0, fl_h=192.0, parapet=0.0,
           bays=3, wall='MI_paint_cream', seed=97),
   ]),
+
+  # --- Block G: walk-up apartments, the same lane, west of the avenue --------
+  # Block F runs to the avenue's east kerb and had no room left, so "adjacent"
+  # is the next block along the same street rather than the next lot. Which is
+  # also how a real neighbourhood grades: houses at one end, walk-ups where the
+  # lane meets the through road.
+  dict(name='G', origin=(AVENUE_W, STREET3_FAR, 0.0), yaw=180.0,
+       abuts_low=False, abuts_high=False, lots=[
+     dict(kind='gen', style='walkup', name='Alder',  x0=0.0,    width=1330.0,
+          depth=BLOCK_F_DEPTH, floors=2, gf_h=250.0, fl_h=225.0, parapet=44.0,
+          bays=4, wall='MI_precast_buff', seed=131),
+     dict(kind='gen', style='walkup', name='Rowan',  x0=1330.0, width=1420.0,
+          depth=BLOCK_F_DEPTH, floors=2, gf_h=258.0, fl_h=232.0, parapet=40.0,
+          bays=4, wall='MI_card_ochre', seed=149),
+     dict(kind='gen', style='walkup', name='Hazel',  x0=2750.0, width=1350.0,
+          depth=BLOCK_F_DEPTH, floors=2, gf_h=246.0, fl_h=228.0, parapet=46.0,
+          bays=4, wall='MI_precast_grey', seed=167),
+  ]),
 ]

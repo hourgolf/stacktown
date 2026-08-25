@@ -218,6 +218,26 @@ def park_layout(spec):
                 avoid=[walk])
 
 
+# --- the house plan, shared -------------------------------------------------
+# build_house draws the house and fix4_props plants the garden, and they need
+# the same rectangles or the planting lands in the patio. Same reason the zone
+# layout lives here.
+HOUSE_GARDEN = 250.0
+HOUSE_SIDE = 100.0
+HOUSE_DEPTH = 430.0
+
+
+def house_plan(spec):
+    """Block-local rectangles for one house lot."""
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    hx0, hx1 = x0 + HOUSE_SIDE, x0 + W - HOUSE_SIDE
+    hy0 = HOUSE_GARDEN
+    hy1 = min(D - 60.0, hy0 + HOUSE_DEPTH)
+    return dict(house=(hx0, hy0, hx1, hy1),
+                front=(x0 + 12.0, 8.0, x0 + W - 12.0, hy0 - 4.0),
+                back=(x0 + 12.0, hy1 + 10.0, x0 + W - 12.0, D - 12.0))
+
+
 def layout(spec):
     k = spec.get('kind')
     if k == 'green':

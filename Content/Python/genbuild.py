@@ -509,6 +509,39 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 GARDEN - 20, by1, 8, 78); made += 1
         box(a, 'Kerbing_BackFence', x0 + 8, x0 + W - 8, by1 - 10, by1, 8, 84)
         made += 2
+        # THINGS PEOPLE PUT IN A GARDEN. An empty fenced rectangle of grass
+        # reads as a site, not a home. None of this is large; all of it is what
+        # the eye uses to tell one back garden from the next.
+        gcx = (x0 + W)/2.0
+        if rnd.random() < 0.62:                       # a swing set
+            sw = x0 + 120.0 if dside > 0 else x0 + W - 320.0
+            for k in (0, 1):
+                for sgn2 in (-1, 1):
+                    box(a, 'Frame_SwingLeg%d%d' % (k, sgn2 + 1),
+                        sw + k*190 - 8, sw + k*190 + 8,
+                        by0 + 150 + sgn2*54, by0 + 150 + sgn2*54 + 12, 0, 150)
+            box(a, 'Frame_SwingBar', sw - 14, sw + 204, by0 + 144, by0 + 156, 142, 154)
+            for k in (0, 1):
+                box(a, 'Frame_SwingSeat%d' % k, sw + 40 + k*90, sw + 96 + k*90,
+                    by0 + 140, by0 + 160, 52, 60)
+            made += 7
+        elif rnd.random() < 0.5:                      # a putting green
+            box(a, 'Grass_Putt', gcx - 170, gcx + 170, by0 + 120, by0 + 380, 10, 16)
+            box(a, 'Frame_PuttFlag', gcx + 96, gcx + 104, by0 + 244, by0 + 252, 16, 120)
+            box(a, 'Accent_PuttFlag', gcx + 104, gcx + 160, by0 + 246, by0 + 250, 96, 120)
+            made += 3
+        # a raised bed along one fence, always
+        bs = x0 + 30.0 if dside > 0 else x0 + W - 250.0
+        box(a, 'Kerbing_Bed', bs, bs + 220, by0 + 60, by1 - 240, 10, 46)
+        box(a, 'Grass_Bed', bs + 14, bs + 206, by0 + 74, by1 - 254, 10, 54)
+        # a washing line
+        for sgn2 in (-1, 1):
+            px2 = gcx + sgn2*200.0
+            box(a, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
+                by1 - 300, by1 - 286, 10, 170)
+        box(a, 'Frame_Line', gcx - 200, gcx + 200, by1 - 295, by1 - 291, 160, 164)
+        made += 5
+
         # a shed in the corner the drive does not use
         sx_ = x0 + W - 250.0 if dside < 0 else x0 + 60.0
         box(a, 'Wall_Shed', sx_, sx_ + 190, by1 - 190, by1 - 24, 0, 150); made += 1
@@ -681,7 +714,10 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         for sgn, tag in ((-1.0, 'F'), (1.0, 'B')):
             slab(a, 'Tile_Slope%s' % tag, (hx0 + hx1)/2.0, ridge + sgn*run/2.0,
                  eaves + rise/2.0, (hx1 - hx0) + 2*OV,
-                 math.hypot(run, rise), 18.0, roll=-sgn*ang)
+                 # MEASURED, not reasoned: a positive roll takes +Y DOWN, so
+                 # the slope whose +Y end is the ridge needs a NEGATIVE roll.
+                 # This was -sgn*ang and every side-gabled roof was a valley.
+                 math.hypot(run, rise), 18.0, roll=sgn*ang)
             made += 1
         for sgn, hx_ in ((-1.0, hx0), (1.0, hx1)):
             for i in range(7):
@@ -796,11 +832,24 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             made += window(a, 'W%d_%d' % (f, b), 'y', hy0, -1.0,
                            bx - 62, bx + 62, wz0, wz1, bars=(1, 1))
             if f > 0 and b % 2 == 0:
-                box(a, 'Ground_Balc%d_%d' % (f, b), bx - 92, bx + 92,
-                    hy0 - 96, hy0 + 2, wz0 - 22, wz0 - 10); made += 1
-                box(a, 'Frame_Balust%d_%d' % (f, b), bx - 92, bx + 92,
-                    hy0 - 100, hy0 - 90, wz0 - 10, wz0 + 78); made += 1
-                made += 1
+                # A BALCONY, not a shelf. The old one was a slab with a solid
+                # panel in front of it, which from any distance reads as a
+                # canopy. What says balcony is the RAILING: a top rail with
+                # light showing between uprights, and a door behind it.
+                bw2, bp = 96.0, 104.0
+                box(a, 'Ground_Balc%d_%d' % (f, b), bx - bw2, bx + bw2,
+                    hy0 - bp, hy0 + 2, wz0 - 26, wz0 - 12); made += 1
+                for e2, ex2 in (('L', bx - bw2), ('R', bx + bw2)):
+                    box(a, 'Frame_BalcEnd%d_%d%s' % (f, b, e2), ex2 - 7, ex2 + 7,
+                        hy0 - bp, hy0 + 2, wz0 - 12, wz0 + 84); made += 1
+                box(a, 'Frame_BalcRail%d_%d' % (f, b), bx - bw2 - 4, bx + bw2 + 4,
+                    hy0 - bp - 4, hy0 - bp + 8, wz0 + 72, wz0 + 84); made += 1
+                for u in range(5):
+                    ux = bx - bw2 + 2*bw2*(u + 0.5)/5.0
+                    box(a, 'Mullion_Balust%d_%d_%d' % (f, b, u), ux - 4, ux + 4,
+                        hy0 - bp - 1, hy0 - bp + 6, wz0 - 12, wz0 + 74); made += 1
+                box(a, 'Frame_BalcDoor%d_%d' % (f, b), bx - 40, bx + 40,
+                    hy0 - 6, hy0 + 3, wz0 - 12, wz0 + 118); made += 1
     # flank windows, because a detached block is seen from three sides
     for sgn, side in ((-1, hx0), (1, hx1)):
         for f in range(F + 1):
@@ -839,7 +888,21 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         box(a, 'Wall_BinStore', x0 + 70, x0 + 350, by1 - 200, by1 - 30, 0, 130)
         box(a, 'Roof_BinStore', x0 + 58, x0 + 362, by1 - 212, by1 - 18, 130, 144)
         box(a, 'Ground_Bins', x0 + 400, x0 + 640, by1 - 150, by1 - 40, 0, 96)
-        made += 4
+        # a yard people use: a drying area, a bench, a strip of planting and a
+        # couple of parking bays off the back lane
+        for sgn2 in (-1, 1):
+            px2 = (x0 + W)/2.0 + sgn2*220.0
+            box(a, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
+                by0 + 150, by0 + 164, 12, 180); made += 1
+        box(a, 'Frame_Line', (x0 + W)/2.0 - 220, (x0 + W)/2.0 + 220,
+            by0 + 155, by0 + 159, 170, 174)
+        box(a, 'Kerbing_YardBed', x0 + W - 330, x0 + W - 40, by0 + 40, by1 - 260, 12, 48)
+        box(a, 'Grass_YardBed', x0 + W - 316, x0 + W - 54, by0 + 54, by1 - 274, 12, 56)
+        for k in range(2):
+            bxp = x0 + 700.0 + k*260.0
+            box(a, 'Ground_Bay%d' % k, bxp, bxp + 230, by1 - 300, by1 - 40, 12, 15)
+            made += 1
+        made += 7
     for f in range(F + 1):
         z0 = GF + (f - 1)*FH if f else 34
         h = (GF - 34) if f == 0 else FH

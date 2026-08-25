@@ -32,7 +32,10 @@ import snapshot
 POLE_HALF      = 20.0     # a lamp column footprint; its arm reaches over the road
 KERB_TOLERANCE = 200.0    # a street tree may overhang the kerb this far
 PRACTICAL_MAX_PITCH = 60.0
-AUTO_NAME = re.compile(r'^StaticMesh\d+$')
+# UE names an unnamed component 'StaticMeshComponent_0' as well as
+# 'StaticMesh12'; the first pattern only caught the second, and a stray
+# probe actor slipped past it and was found by MAT-01 instead.
+AUTO_NAME = re.compile(r'^StaticMesh(Component)?_?\d+$')
 
 RULES = []
 
@@ -94,14 +97,20 @@ def _t_name_01():
 
 @rule('NAME-02', 'no component was auto-renamed to StaticMesh<N> by a name collision')
 def name_02(snap):
-    return [(a['label'], c['name']) for a in snap['actors'] for c in a['comps']
-            if AUTO_NAME.match(c['name'] or '')]
+    # Only on MULTI-PART actors. A StaticMeshActor's single mesh component is
+    # called StaticMeshComponent0 by the engine and always has been - that is a
+    # default name, not a collision. Widening the pattern without this caught
+    # every AV_ tile in the level.
+    return [(a['label'], c['name']) for a in snap['actors'] if len(a['comps']) > 1
+            for c in a['comps'] if AUTO_NAME.match(c['name'] or '')]
 
 
 @selftest('NAME-02')
 def _t_name_02():
-    s = _snap(_a('ELEV_Mid_E', comps=[_c('Wall_Pier0'), _c('StaticMesh12')]))
-    return len(name_02(s)) == 1 and name_02(s)[0][1] == 'StaticMesh12'
+    multi = _a('ELEV_Mid_E', comps=[_c('Wall_Pier0'), _c('StaticMesh12')])
+    single = _a('AV_shop0', comps=[_c('StaticMeshComponent0')])
+    got = name_02(_snap(multi, single))
+    return len(got) == 1 and got[0][1] == 'StaticMesh12'
 
 
 # =========================== MAT ==========================================

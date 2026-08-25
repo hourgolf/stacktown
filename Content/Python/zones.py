@@ -21,8 +21,10 @@ exactly as genbuild does it.
 import _path  # noqa: F401
 import ue, json, math, random
 from genbuild import mkactor, box
+from zonelayout import plaza_layout, park_layout, layout  # noqa: F401
 
 FRONT = 62.0          # the line a building's facade would have stood on
+
 
 
 def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
@@ -68,40 +70,35 @@ def plaza(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     x0, W, D = spec['x0'], spec['width'], spec['depth']
     a = mkactor('ZONE_%s' % n, origin, (0.0, yaw, 0.0))
     made = 0
-    Y0, Y1 = FRONT, D
+    LO = plaza_layout(spec)
     KERB, LAWN = 16.0, 12.0
+    deck = KERB + LAWN
 
-    # kerbing all round, so the square meets the street the way a block does
-    box(a, 'Kerbing_Edge', x0, x0 + W, Y0, Y1, 0, KERB); made += 1
+    def slab(name, r, z0, z1):
+        box(a, name, r[0], r[2], r[1], r[3], z0, z1)
 
-    # forecourt: paved apron along the street frontage
-    box(a, 'Ground_Forecourt', x0 + 8, x0 + W - 8, Y0 + 8, Y0 + 170, 0, KERB + 2); made += 1
+    slab('Kerbing_Edge', LO['bounds'], 0, KERB); made += 1
+    slab('Ground_Forecourt', LO['forecourt'], 0, KERB + 2); made += 1
+    slab('Grass_Lawn', LO['lawn'], 0, deck); made += 1
+    slab('Ground_PathNS', LO['spine'], 0, deck + 2); made += 1
+    if LO['walk']:
+        slab('Ground_PathEW', LO['walk'], 0, deck + 2); made += 1
 
-    # lawn: the dominant surface
-    box(a, 'Grass_Lawn', x0 + 8, x0 + W - 8, Y0 + 170, Y1 - 8, 0, KERB + LAWN); made += 1
+    for i, bed in enumerate(LO['beds']):
+        slab('Kerbing_Bed%d' % i, bed, deck, deck + 34); made += 1
+        slab('Grass_Bed%d' % i, (bed[0] + 16, bed[1] + 16, bed[2] - 16, bed[3] - 16),
+             deck, deck + 40); made += 1
 
-    # a cross of paths over the lawn
-    cx, cy = x0 + W*0.5, Y0 + (Y1 - Y0)*0.58
-    box(a, 'Ground_PathNS', cx - 90, cx + 90, Y0 + 150, Y1 - 8, 0, KERB + LAWN + 2); made += 1
-    box(a, 'Ground_PathEW', x0 + 8, x0 + W - 8, cy - 90, cy + 90, 0, KERB + LAWN + 2); made += 1
-
-    # planted beds in two quadrants, kerbed and raised
-    for tag, bx, by in (('A', x0 + 90, Y0 + 250), ('B', x0 + W - 430, cy + 150)):
-        box(a, 'Kerbing_Bed%s' % tag, bx, bx + 340, by, by + 220,
-            KERB + LAWN, KERB + LAWN + 34); made += 1
-        box(a, 'Grass_Bed%s' % tag, bx + 16, bx + 324, by + 16, by + 204,
-            KERB + LAWN, KERB + LAWN + 40); made += 1
-
-    # basin on the crossing - the one vertical incident
-    r = min(W, Y1 - Y0) * 0.13
+    bs = LO['basin']
+    bcx, bcy = (bs[0] + bs[2])/2.0, (bs[1] + bs[3])/2.0
+    r = (bs[2] - bs[0])/2.0 - 26.0
     for i in range(4):
         ang = math.pi*i/4.0
-        hw, hh = r*math.cos(ang), r*math.sin(ang)
-        box(a, 'Ground_Basin%d' % i, cx - abs(hw) - 26, cx + abs(hw) + 26,
-            cy - abs(hh) - 26, cy + abs(hh) + 26,
-            KERB + LAWN, KERB + LAWN + 46); made += 1
-    box(a, 'Glass_Water', cx - r*0.9, cx + r*0.9, cy - r*0.9, cy + r*0.9,
-        KERB + LAWN + 30, KERB + LAWN + 38); made += 1
+        hw, hh = abs(r*math.cos(ang)), abs(r*math.sin(ang))
+        box(a, 'Ground_Basin%d' % i, bcx - hw - 26, bcx + hw + 26,
+            bcy - hh - 26, bcy + hh + 26, deck, deck + 46); made += 1
+    box(a, 'Glass_Water', bcx - r*0.9, bcx + r*0.9, bcy - r*0.9, bcy + r*0.9,
+        deck + 30, deck + 38); made += 1
 
     print('%s [plaza]: %d boxes' % (n, made))
     return made

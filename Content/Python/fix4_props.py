@@ -12,6 +12,7 @@ Two rules now:
 import unreal, sys, math, random
 import _path  # repo tool paths; replaces a dead scratchpad path
 import citygeom as G
+import zonelayout
 from city import BLOCKS, STREETS, AVENUES, BOARD_E
 
 AV = '/Game/AssetsvilleTown/Meshes'
@@ -241,50 +242,75 @@ def _zone_world(blk, lx, ly):
             oy + lx*math.sin(yaw) + ly*math.cos(yaw))
 
 n_zone = 0
+
+
+def _fits_in(rect, reach):
+    """Can a canopy of this reach stand anywhere inside this rectangle?"""
+    return (rect[2] - rect[0]) > 2*reach and (rect[3] - rect[1]) > 2*reach
+
+
 for blk in BLOCKS:
     for spec in blk['lots']:
         if spec['kind'] not in ('plaza', 'park'):
             continue
-        W, D = spec['width'], spec['depth']
-        # scale planting with AREA. Six trees is right for a 1500 x 600 square
-        # and nothing at all for a 4100 x 1280 park.
-        area = W * (D - 62.0)
-        if spec['kind'] == 'plaza':
-            # A SQUARE IS NOT A WOOD. Six trees at 0.8-1.1 scale, with canopies
-            # 656 to 1223 uu across, completely roofed a 1500 x 548 plaza: the
-            # plan view showed foliage and nothing else - no lawn, no paths, no
-            # beds, no basin. The ground IS the subject in a paved square, so
-            # the planting has to leave it visible.
-            ntree = max(2, int(area / 300000.0))
-            nseat = max(3, int(area / 260000.0))
-            bag = ['SM_bush_01', 'SM_tree_03', 'SM_tree_04', 'SM_bush_01']
-            tscale = (0.55, 0.8)
-        else:
-            ntree = max(6, int(area / 95000.0))
-            nseat = max(4, int(area / 340000.0))
-            bag = _BAG
-            tscale = (0.8, 1.1)
-        # Whatever the kind chose, the LOT gets the last word: nothing may be
-        # wider than the narrow dimension of the ground it stands on. This is
-        # what keeps SM_tree_02 in the park and out of a 610 uu plaza.
-        bag = admissible(bag, lambda n: fits_lot(n, min(W, D - 62.0), tscale[1]))
-        for i in range(ntree):
-            lx = spec['x0'] + W*(0.14 + 0.72*rnd.random())
-            ly = 62.0 + (D - 62.0)*(0.28 + 0.62*rnd.random())
-            wx, wy = _zone_world(blk, lx, ly)
-            nm = bag[rnd.randrange(len(bag))]
-            if put('Nature', nm, wx, wy, 62.0, rnd.uniform(0, 360),
-                   'zone_%s_t%d' % (spec['name'], i), '', native=True,
-                   radius=45.0, scale=rnd.uniform(*tscale)):
-                n_zone += 1
-        for i in range(nseat):
-            lx = spec['x0'] + W*(0.2 + 0.6*rnd.random())
-            ly = 62.0 + (D - 62.0)*(0.3 + 0.5*rnd.random())
-            wx, wy = _zone_world(blk, lx, ly)
-            if put('StreetProps', 'SM_bench', wx, wy, 62.0,
-                   rnd.uniform(0, 360), 'zone_%s_b%d' % (spec['name'], i),
-                   'MI_wood', radius=90.0):
-                n_zone += 1
+        LO = zonelayout.layout(spec)
+        smax = 0.8 if spec['kind'] == 'plaza' else 1.1
+        smin = 0.55 if spec['kind'] == 'plaza' else 0.8
+        SHRUBS = ['SM_bush_01']
+        TREES = [n for n, _w in TREE_MIX if n not in SHRUBS]
+
+        def place(rects, bag, tag, count, zoff=62.0, avoid=True):
+            """Into the authored rectangle, not across the whole lot. A tree
+            stands in a lawn panel, a shrub in a bed, a bench on paving."""
+            global n_zone
+            made = 0
+            for i in range(count):
+                rect = rects[i % len(rects)]
+                room = min(rect[2] - rect[0], rect[3] - rect[1])
+                fit = [n for n in bag if 2.0*reach_of(n)*smax <= room]
+                if not fit:
+                    fit = [min(bag, key=reach_of)]
+                nm = fit[rnd.randrange(len(fit))]
+                sc = rnd.uniform(smin, smax)
+                reach = reach_of(nm)*sc
+                if not _fits_in(rect, reach):
+                    sc = smin
+                    reach = reach_of(nm)*sc
+                    if not _fits_in(rect, reach):
+                        continue
+                lx = rnd.uniform(rect[0] + reach, rect[2] - reach)
+                ly = rnd.uniform(rect[1] + reach, rect[3] - reach)
+                crown = (lx - reach, ly - reach, lx + reach, ly + reach)
+                if avoid and any(G.intersect(av, crown) for av in LO['avoid']):
+                    continue
+                wx, wy = _zone_world(blk, lx, ly)
+                if put('Nature', nm, wx, wy, zoff, rnd.uniform(0, 360),
+                       'zone_%s_%s%d' % (spec['name'], tag, i), '',
+                       native=True, radius=45.0, scale=sc):
+                    n_zone += 1
+                    made += 1
+            return made
+
+        # Counts still scale with AREA, but with the PLANTABLE area now - a
+        # square is not a wood, and six trees at full scale once roofed the
+        # whole plaza so the plan view showed foliage and nothing else.
+        tree_area = sum((r[2]-r[0])*(r[3]-r[1]) for r in LO['tree'])
+        place(LO['tree'], TREES, 't',
+              max(2, int(tree_area / (300000.0 if spec['kind'] == 'plaza' else 95000.0))))
+        if LO['shrub']:
+            place(LO['shrub'], SHRUBS, 's', 2*len(LO['shrub']),
+                  zoff=62.0 + 28.0, avoid=False)
+        # Benches sit ON the paving, facing the lawn - not scattered over grass.
+        for i, sr in enumerate(LO['seat']):
+            for j in range(2):
+                lx = sr[0] + (sr[2] - sr[0])*(0.28 + 0.44*j)
+                ly = (sr[1] + sr[3])/2.0
+                wx, wy = _zone_world(blk, lx, ly)
+                if put('StreetProps', 'SM_bench', wx, wy, 62.0,
+                       blk['yaw'] + (0.0 if j % 2 else 180.0),
+                       'zone_%s_b%d_%d' % (spec['name'], i, j), 'MI_wood',
+                       radius=90.0):
+                    n_zone += 1
 print('zone planting and seating: %d' % n_zone)
 
 # --- traffic signals, one per intersection corner ---------------------------

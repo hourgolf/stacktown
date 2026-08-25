@@ -292,6 +292,47 @@ def _t_scale_02():
     return _one(scale_02(_snap(big, ok)), 't90')
 
 
+# =========================== ZONE =========================================
+@rule('ZONE-01', 'zone planting and seating stand in their authored layout')
+def zone_01(snap):
+    zl = {n: w for n, _b, w in G.zone_layouts()}
+    out = []
+    for a in snap['actors']:
+        parts = a['label'].split('_')
+        if len(parts) < 3 or parts[0] != 'SUR' or parts[1] != 'zone':
+            continue
+        w = zl.get(parts[2])
+        if not w:
+            continue
+        bench = parts[3].startswith('b') if len(parts) > 3 else False
+        for c in a['comps']:
+            r = snapshot.rect_of(c)
+            if not r:
+                continue
+            if bench:
+                cx, cy = (r[0]+r[2])/2.0, (r[1]+r[3])/2.0
+                ok = any(s[0] <= cx <= s[2] and s[1] <= cy <= s[3] for s in w['seat'])
+                if not ok:
+                    out.append((a['label'], 'bench is not on paving'))
+            else:
+                ok = any(G.contains(pr, r) for pr in w['tree'] + w['shrub'])
+                if not ok:
+                    out.append((a['label'], '%s is not in a lawn panel or bed' % c['mesh']))
+    return out
+
+
+@selftest('ZONE-01')
+def _t_zone_01():
+    name, _blk, w = G.zone_layouts()[0]
+    panel = w['tree'][0]
+    px, py = (panel[0]+panel[2])/2.0, (panel[1]+panel[3])/2.0
+    inside  = _a('SUR_zone_%s_t0' % name,
+                 comps=[_c('m', 'SM_tree_04', (px-40, py-40, px+40, py+40))])
+    outside = _a('SUR_zone_%s_t1' % name,
+                 comps=[_c('m', 'SM_tree_04', (px-40, panel[1]-900, px+40, panel[1]-820))])
+    return _one(zone_01(_snap(inside, outside)), 't1')
+
+
 # =========================== LIGHT ========================================
 @rule('LIGHT-01', 'no practical is aimed within %.0f degrees of vertical'
                   % (90.0 - PRACTICAL_MAX_PITCH))

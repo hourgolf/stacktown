@@ -75,8 +75,12 @@ into a procedural manual.
   level contains a family the registry does not list. The eight prefixes this line used to
   name were written when the project was one building; there are fifteen families now.
   Python files and functions use snake_case. Asset names stay PascalCase.
-- `/Game/Maps/OneBuildingTest` is the single authored map and is **protected**. Duplicate into
-  a clearly named sandbox before experimenting.
+- The authored maps are `/Game/Maps/BayRecessTest` (Stage 0), `/Game/Maps/Stage1_Building`
+  (Stage 1, the gate scene) and `/Game/Maps/Stage2_Block` (the city). All three are
+  **protected**; duplicate into a clearly named sandbox before experimenting.
+  `Content/Python/_guard.py` refuses to run against anything but the last two.
+  This line named `/Game/Maps/OneBuildingTest` until 2026-08-24. No such map has ever
+  existed in this repository, so the rule protected nothing.
 - Every user-authored map and asset is protected unless an explicitly named duplicate has been
   designated disposable.
 

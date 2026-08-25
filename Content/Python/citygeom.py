@@ -65,6 +65,35 @@ def lot_rect(blk, spec):
     return norm(min(xs), min(ys), max(xs), max(ys))
 
 
+def to_world(blk, rect):
+    """A block-local rectangle through its block's origin and yaw."""
+    ox, oy, _ = blk['origin']
+    yaw = math.radians(blk['yaw'])
+    c, s = math.cos(yaw), math.sin(yaw)
+    xs, ys = [], []
+    for lx in (rect[0], rect[2]):
+        for ly in (rect[1], rect[3]):
+            xs.append(ox + lx*c - ly*s)
+            ys.append(oy + lx*s + ly*c)
+    return norm(min(xs), min(ys), max(xs), max(ys))
+
+
+def zone_layouts():
+    """[(lot name, block, layout in WORLD rectangles)] for every open lot."""
+    import zonelayout
+    out = []
+    for blk in BLOCKS:
+        for spec in blk['lots']:
+            lo = zonelayout.layout(spec)
+            if not lo:
+                continue
+            w = {k: ([to_world(blk, r) for r in v] if isinstance(v, list)
+                     else to_world(blk, v) if isinstance(v, tuple) else v)
+                 for k, v in lo.items()}
+            out.append((spec['name'], blk, w))
+    return out
+
+
 def lots(kinds=None):
     """[(block name, lot spec, world rect)] over the whole table."""
     out = []

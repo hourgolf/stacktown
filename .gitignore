@@ -47,3 +47,10 @@ Saved/Lane4/*.jpg
 Saved/Lane4/*.png
 Saved/Lane4/*.html
 Saved/Lane4/backup/
+
+# Mega Street Props is a donor pack, same class as Assetsville and Deko:
+# source material, not authored result. It was swept into a commit by a
+# `git add -A` that I ran without checking what was untracked first - 2.7 GB of
+# LFS objects. The rule that should have caught it is the one already written
+# above: donor packs are never committed.
+Content/Mega_Street_Props_Pack/

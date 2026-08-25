@@ -29,7 +29,7 @@ FRONT = 62.0          # the line a building's facade would have stood on
 
 def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     k = spec.get('kind')
-    if k == 'plaza':
+    if k in ('plaza', 'green'):
         return plaza(spec, origin, yaw)
     if k == 'park':
         return park(spec, origin, yaw)

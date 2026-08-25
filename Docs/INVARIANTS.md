@@ -76,7 +76,8 @@ Re-derive the registry from the level with `census.py`.
 | `DRESS-04` | every dressing actor stands on the board | zero tolerance | dressing placed from street tables that run past the board edge |
 | `SCALE-01` | a street tree overhangs the kerb by ≤ 200 uu | measured: 31 of 73 trees overhang, worst 618 uu into a 1400 uu road | owner: trees oversized; a 618 uu overhang eats 44% of the carriageway |
 | `SCALE-02` | zone planting is smaller than the narrow dimension of its lot | measured crowns: `SM_tree_02` 1131–1613 uu, `SM_tree_03/04` 374–715 uu | owner: "the trees in the plaza are badly oversized" — a 1613 uu crown cannot stand in a 610 uu plaza |
-| `ZONE-01` | zone planting and seating stand in their authored layout | — | owner: "benches strewn about and trees planted in sidewalks rather than the authored planting beds" — `zones.py` drew the beds, `fix4_props.py` planted at uniform random across the whole lot |
+| `ZONE-01` | planting sits in a lawn panel or bed; seating sits on ground it can | — | owner: "benches strewn about and trees planted in sidewalks rather than the authored planting beds" — `zones.py` drew the beds, `fix4_props.py` planted at uniform random across the whole lot |
+| `ZONE-02` | a bench faces open ground, not a wall | bench forward measured from vertices: `SM_bench` backrest at mean X −30.6, seat at +0.8 over 306 verts, so it faces +X at yaw 0 | owner: "the benches seem to be rotated illogically" — they were placed at block yaw ± 180, which has nothing to do with what they look at |
 | `LIGHT-01` | no practical aimed within 30° of vertical | measured: all 304 practicals sit at pitch −12.5..0; the defect was pitch 90 | 43 practicals had `Rotator(0,90,0)` read as yaw when it is pitch — "a horizontal bar of light casting upwards" |
 
 ## Not yet folded in
@@ -110,14 +111,14 @@ spine instead.
 First run over the two-block city, 1015 actors / 6944 visible components:
 
 ```
-self-tests: 11/11 rules proved they can see their own defect
+self-tests: 12/12 rules proved they can see their own defect
 NAME-01   ok     NAME-02   ok     DRESS-01  ok     DRESS-02  ok     LIGHT-01  ok
 MAT-01    FAIL   216 components on WorldGridMaterial - all 54 lamps, 4 parts each
 DRESS-03  FAIL   12 lamp columns standing in a carriageway
 DRESS-04  FAIL   1 street tree 67 uu off the board
 SCALE-01  FAIL   12 street trees overhang the kerb, worst 523 uu
 SCALE-02  FAIL   1 park tree, 1613 uu crown in a 1280 uu lot
-invariants: 11 rules, 0 violated
+invariants: 12 rules, 0 violated
 ```
 
 All eleven are green. The five that were red on the first run are recorded

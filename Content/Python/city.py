@@ -91,7 +91,14 @@ BLOCKS = [
      # 1500 x 610 was a light well, not a square: 15 x 6 m between a 34 m tower
      # and a 25 m block, in permanent shadow at the sun's 52 degree elevation.
      # Widened to 2150 by taking frontage from both neighbours.
-     dict(kind='plaza', name='Forecourt', x0=1000.0, width=2150.0, depth=610.0,
+     # RENAMED 2026-08-24. This was 'Forecourt', kind='plaza'. It is 2150 x 610
+     # - and 62 of that depth is the front offset and 162 the paved apron, so
+     # the lawn is 370 uu, 3.7 m. That is a GREEN: a planted strip off the
+     # pavement with a path through it. Calling it a plaza did not make it one,
+     # and widening it earlier made it longer rather than deeper. A real plaza
+     # is paving-dominant with a focus, and needs depth this block does not
+     # have; it belongs on a block that does.
+     dict(kind='green', name='Green', x0=1000.0, width=2150.0, depth=610.0,
           seed=137),
      dict(kind='gen', name='Terrace', x0=3150.0, width=1000.0, depth=630.0,
           floors=5, gf_h=540.0, fl_h=380.0, parapet=100.0, bays=3,

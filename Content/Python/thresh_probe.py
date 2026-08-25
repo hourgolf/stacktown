@@ -31,7 +31,7 @@ print('  trees %d   overhanging road %d' % (len(snapshot.mesh_actors(s, labels.i
 for w, l in ov[:6]: print('    %7.1f uu  %s' % (w, l))
 
 print('--- zone planting vs its own zone lot ---')
-zl = {n + '/' + sp['name']: r for n, sp, r in G.lots(('plaza', 'park', 'vacant'))}
+zl = {n + '/' + sp['name']: r for n, sp, r in G.lots(('plaza', 'green', 'park', 'vacant'))}
 out = []
 for a, c in snapshot.mesh_actors(s, labels.is_planting):
     if not a['label'].startswith('SUR_zone_'): continue

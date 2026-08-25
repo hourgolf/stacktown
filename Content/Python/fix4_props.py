@@ -251,11 +251,11 @@ def _fits_in(rect, reach):
 
 for blk in BLOCKS:
     for spec in blk['lots']:
-        if spec['kind'] not in ('plaza', 'park'):
+        if spec['kind'] not in ('plaza', 'green', 'park'):
             continue
         LO = zonelayout.layout(spec)
-        smax = 0.8 if spec['kind'] == 'plaza' else 1.1
-        smin = 0.55 if spec['kind'] == 'plaza' else 0.8
+        smax = 0.8 if spec['kind'] in ('plaza', 'green') else 1.1
+        smin = 0.55 if spec['kind'] in ('plaza', 'green') else 0.8
         SHRUBS = ['SM_bush_01']
         TREES = [n for n, _w in TREE_MIX if n not in SHRUBS]
 
@@ -296,21 +296,17 @@ for blk in BLOCKS:
         # whole plaza so the plan view showed foliage and nothing else.
         tree_area = sum((r[2]-r[0])*(r[3]-r[1]) for r in LO['tree'])
         place(LO['tree'], TREES, 't',
-              max(2, int(tree_area / (300000.0 if spec['kind'] == 'plaza' else 95000.0))))
+              max(2, int(tree_area / (300000.0 if spec['kind'] in ('plaza', 'green') else 95000.0))))
         if LO['shrub']:
             place(LO['shrub'], SHRUBS, 's', 2*len(LO['shrub']),
                   zoff=62.0 + 28.0, avoid=False)
-        # Benches sit ON the paving, facing the lawn - not scattered over grass.
-        for i, sr in enumerate(LO['seat']):
-            for j in range(2):
-                lx = sr[0] + (sr[2] - sr[0])*(0.28 + 0.44*j)
-                ly = (sr[1] + sr[3])/2.0
-                wx, wy = _zone_world(blk, lx, ly)
-                if put('StreetProps', 'SM_bench', wx, wy, 62.0,
-                       blk['yaw'] + (0.0 if j % 2 else 180.0),
-                       'zone_%s_b%d_%d' % (spec['name'], i, j), 'MI_wood',
-                       radius=90.0):
-                    n_zone += 1
+        # Seating comes from the layout, which knows what each bench looks at.
+        for i, (lx, ly, lyaw) in enumerate(zonelayout.seat_plan(LO)):
+            wx, wy = _zone_world(blk, lx, ly)
+            if put('StreetProps', 'SM_bench', wx, wy, 62.0,
+                   blk['yaw'] + lyaw, 'zone_%s_b%d' % (spec['name'], i),
+                   'MI_wood', radius=90.0):
+                n_zone += 1
 print('zone planting and seating: %d' % n_zone)
 
 # --- traffic signals, one per intersection corner ---------------------------

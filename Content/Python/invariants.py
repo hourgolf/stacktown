@@ -261,7 +261,7 @@ def _t_scale_01():
 
 @rule('SCALE-02', 'zone planting is smaller than the narrow dimension of its own lot')
 def scale_02(snap):
-    zones = {sp['name']: r for _n, sp, r in G.lots(('plaza', 'park', 'vacant'))}
+    zones = {sp['name']: r for _n, sp, r in G.lots(('plaza', 'green', 'park', 'vacant'))}
     out = []
     for a, c in snapshot.mesh_actors(snap, labels.is_planting):
         parts = a['label'].split('_')
@@ -281,7 +281,7 @@ def scale_02(snap):
 
 @selftest('SCALE-02')
 def _t_scale_02():
-    z = {sp['name']: r for _n, sp, r in G.lots(('plaza',))}
+    z = {sp['name']: r for _n, sp, r in G.lots(('plaza', 'green'))}
     r = list(z.values())[0]
     cx, cy = (r[0]+r[2])/2.0, (r[1]+r[3])/2.0
     name = list(z.keys())[0]
@@ -293,31 +293,39 @@ def _t_scale_02():
 
 
 # =========================== ZONE =========================================
-@rule('ZONE-01', 'zone planting and seating stand in their authored layout')
-def zone_01(snap):
+BENCH_LOOK = 260.0        # how far ahead of a bench must be open ground
+
+
+def _zone_actors(snap):
     zl = {n: w for n, _b, w in G.zone_layouts()}
-    out = []
     for a in snap['actors']:
-        parts = a['label'].split('_')
-        if len(parts) < 3 or parts[0] != 'SUR' or parts[1] != 'zone':
+        p = a['label'].split('_')
+        if len(p) < 4 or p[0] != 'SUR' or p[1] != 'zone':
             continue
-        w = zl.get(parts[2])
-        if not w:
-            continue
-        bench = parts[3].startswith('b') if len(parts) > 3 else False
+        w = zl.get(p[2])
+        if w:
+            yield a, w, p[3].startswith('b')
+
+
+@rule('ZONE-01', 'zone planting sits in a lawn panel or bed; seating sits on ground it can')
+def zone_01(snap):
+    out = []
+    for a, w, is_bench in _zone_actors(snap):
         for c in a['comps']:
             r = snapshot.rect_of(c)
             if not r:
                 continue
-            if bench:
+            if is_bench:
                 cx, cy = (r[0]+r[2])/2.0, (r[1]+r[3])/2.0
-                ok = any(s[0] <= cx <= s[2] and s[1] <= cy <= s[3] for s in w['seat'])
-                if not ok:
-                    out.append((a['label'], 'bench is not on paving'))
-            else:
-                ok = any(G.contains(pr, r) for pr in w['tree'] + w['shrub'])
-                if not ok:
-                    out.append((a['label'], '%s is not in a lawn panel or bed' % c['mesh']))
+                pt = (cx - 1, cy - 1, cx + 1, cy + 1)
+                if not G.contains(w['bounds'], pt):
+                    out.append((a['label'], 'bench is off the lot'))
+                elif G.intersect(w['basin'], pt) if w.get('basin') else False:
+                    out.append((a['label'], 'bench is standing in the basin'))
+                elif any(G.intersect(b, pt) for b in w.get('shrub', [])):
+                    out.append((a['label'], 'bench is standing in a planting bed'))
+            elif not any(G.contains(pr, r) for pr in w['tree'] + w['shrub']):
+                out.append((a['label'], '%s is not in a lawn panel or bed' % c['mesh']))
     return out
 
 
@@ -331,6 +339,39 @@ def _t_zone_01():
     outside = _a('SUR_zone_%s_t1' % name,
                  comps=[_c('m', 'SM_tree_04', (px-40, panel[1]-900, px+40, panel[1]-820))])
     return _one(zone_01(_snap(inside, outside)), 't1')
+
+
+@rule('ZONE-02', 'a bench faces open ground, not a wall')
+def zone_02(snap):
+    import math as _m
+    out = []
+    for a, w, is_bench in _zone_actors(snap):
+        if not is_bench:
+            continue
+        # MEASURED: SM_bench faces +X at yaw 0 (backrest at mean X -30.6, seat
+        # at +0.8 over 306 vertices). So forward is the yaw bearing.
+        yaw = _m.radians(a['rot'][1])
+        x, y, _z = a['loc']
+        fx, fy = x + BENCH_LOOK*_m.cos(yaw), y + BENCH_LOOK*_m.sin(yaw)
+        pt = (fx - 1, fy - 1, fx + 1, fy + 1)
+        if not G.contains(w['bounds'], pt):
+            out.append((a['label'], 'looks off the lot at yaw %.0f' % a['rot'][1]))
+    return out
+
+
+@selftest('ZONE-02')
+def _t_zone_02():
+    name, blk, w = G.zone_layouts()[0]
+    b = w['bounds']
+    cx, cy = (b[0]+b[2])/2.0, (b[1]+b[3])/2.0
+    good = _a('SUR_zone_%s_b0' % name, cls='StaticMeshActor',
+              loc=(cx, cy, 0.0), rot=(0.0, 90.0, 0.0),
+              comps=[_c('m', 'SM_bench', (cx-30, cy-115, cx+30, cy+115))])
+    # aimed straight out of the short side of the lot
+    edge = _a('SUR_zone_%s_b1' % name, cls='StaticMeshActor',
+              loc=(cx, b[1] + 20.0, 0.0), rot=(0.0, -90.0, 0.0),
+              comps=[_c('m', 'SM_bench', (cx-30, b[1], cx+30, b[1]+40))])
+    return _one(zone_02(_snap(good, edge)), 'b1')
 
 
 # =========================== LIGHT ========================================

@@ -32,6 +32,6 @@ print(line[0] if line else 'wipe reported nothing')
 made = 0
 for blk in BLOCKS:
     for spec in blk['lots']:
-        if spec.get('kind') in ('plaza', 'park', 'vacant'):
+        if spec.get('kind') in ('plaza', 'green', 'park', 'vacant'):
             made += zones.build(spec, origin=blk['origin'], yaw=blk['yaw'])
 print('rebuilt %d zone boxes' % made)

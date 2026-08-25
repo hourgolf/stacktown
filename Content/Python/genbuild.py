@@ -512,7 +512,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # a shed in the corner the drive does not use
         sx_ = x0 + W - 250.0 if dside < 0 else x0 + 60.0
         box(a, 'Wall_Shed', sx_, sx_ + 190, by1 - 190, by1 - 24, 0, 150); made += 1
-        box(a, 'Roof_Shed', sx_ - 12, sx_ + 202, by1 - 202, by1 - 12, 150, 166)
+        box(a, 'Tile_Shed', sx_ - 12, sx_ + 202, by1 - 202, by1 - 12, 150, 166)
         box(a, 'Frame_ShedDoor', sx_ + 40, sx_ + 150, by1 - 196, by1 - 188, 8, 128)
         made += 2
         for k in range(3):
@@ -593,8 +593,17 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     made += 2
 
     # ---- trim: the small parts that separate a model from a massing study ---
-    box(a, 'Frame_Fascia', hx0 - 30, hx1 + 30, hy0 - 30, hy1 + 30,
-        eaves - 16, eaves + 4); made += 1
+    # A fascia is a BAND round the eaves. This was a solid box spanning the
+    # whole plan at eaves height - a flat slab under the pitched roof, which is
+    # what made the roofs read as inverted and as "a flat roof laid on top of a
+    # pitched one". Four thin bands, not a lid.
+    for tag, fx0, fy0, fx1, fy1 in (
+            ('F', hx0 - 30, hy0 - 30, hx1 + 30, hy0 - 12),
+            ('B', hx0 - 30, hy1 + 12, hx1 + 30, hy1 + 30),
+            ('L', hx0 - 30, hy0 - 30, hx0 - 12, hy1 + 30),
+            ('R', hx1 + 12, hy0 - 30, hx1 + 30, hy1 + 30)):
+        box(a, 'Frame_Fascia%s' % tag, fx0, fx1, fy0, fy1,
+            eaves - 16, eaves + 4); made += 1
     box(a, 'Frame_Gutter', hx0 - 34, hx1 + 34, hy0 - 34, hy0 - 22,
         eaves - 14, eaves - 2); made += 1
     box(a, 'Frame_Downpipe', hx1 - 22, hx1 - 8, hy0 - 20, hy0 - 6,
@@ -651,7 +660,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         run = ridge - ex0
         ang = math.degrees(math.atan2(rise, run))
         for sgn in (-1.0, 1.0):
-            slab(a, 'Roof_Slope%d' % (int(sgn) + 1), ridge + sgn*run/2.0,
+            slab(a, 'Tile_Slope%d' % (int(sgn) + 1), ridge + sgn*run/2.0,
                  (ey0 + ey1)/2.0, eaves + rise/2.0,
                  # sign mirrors the roll used for a ridge along X; the first
                  # version had it the other way and the roof came out as a
@@ -662,24 +671,27 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             for i in range(7):
                 t0, t1 = i/7.0, (i + 1)/7.0
                 box(a, 'Wall_Gable%d_%d' % (int(sgn) + 1, i),
-                    ex0 + run*t0, ex1 - run*t0, ey_ - 10, ey_ + 10,
-                    eaves + rise*t0, eaves + rise*t1 + 2)
+                    ex0 + run*t1, ex1 - run*t1, ey_ - 10, ey_ + 10,
+                    eaves + rise*t0, eaves + rise*t1)
                 made += 1
     else:
         ridge = (ey0 + ey1)/2.0
         run = ridge - ey0
         ang = math.degrees(math.atan2(rise, run))
         for sgn, tag in ((-1.0, 'F'), (1.0, 'B')):
-            slab(a, 'Roof_Slope%s' % tag, (hx0 + hx1)/2.0, ridge + sgn*run/2.0,
+            slab(a, 'Tile_Slope%s' % tag, (hx0 + hx1)/2.0, ridge + sgn*run/2.0,
                  eaves + rise/2.0, (hx1 - hx0) + 2*OV,
                  math.hypot(run, rise), 18.0, roll=-sgn*ang)
             made += 1
         for sgn, hx_ in ((-1.0, hx0), (1.0, hx1)):
             for i in range(7):
                 t0, t1 = i/7.0, (i + 1)/7.0
+                # the step's top must land ON the slope, not above it: take
+                # the NEXT station's footprint, or each corner pokes through
+                # and the ridge shows as a dashed line
                 box(a, 'Wall_Gable%d_%d' % (int(sgn) + 1, i),
-                    hx_ - 10, hx_ + 10, ey0 + run*t0, ey1 - run*t0,
-                    eaves + rise*t0, eaves + rise*t1 + 2)
+                    hx_ - 10, hx_ + 10, ey0 + run*t1, ey1 - run*t1,
+                    eaves + rise*t0, eaves + rise*t1)
                 made += 1
 
     # Dormers: SHED dormers, with their own sloped cap. The old ones were a
@@ -701,7 +713,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 hy0 - 12, hy0 - 4, dz, dz + dh); made += 1
             made += window(a, 'Dm%d' % d, 'y', hy0 - 8, -1.0,
                            dxc - 48, dxc + 48, dz + 26, dz + dh - 22, bars=(1, 0))
-            slab(a, 'Roof_Dormer%d' % d, dxc, hy0 - 14 + dd/2.0,
+            slab(a, 'Tile_Dormer%d' % d, dxc, hy0 - 14 + dd/2.0,
                  dz + dh + dh*0.17, 148.0, math.hypot(dd, dh*0.34), 12.0,
                  roll=-dang)
             made += 1

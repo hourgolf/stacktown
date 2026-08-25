@@ -196,11 +196,20 @@ if MODE == 'day':
     # components went from the bright WorldGridMaterial checker to dark metal,
     # which took the board from 193 to 158 at an untouched rig. Re-measured:
     #     sky 14 -> 158 /  88     sky 22 -> 175 / 110     sky 38 -> 194 / 115
-    # 22 now sits where 14 did. The lesson is the reusable part: a light rig is
-    # tuned against a SCENE, so changing what is in the scene invalidates it.
+    # 22 sat where 14 did. Then the scene changed AGAIN - shingle roofs instead
+    # of white ones, backs of houses, gardens, twice the component count - and
+    # 22 read as washed out. Re-measured on the board:
+    #     sky 10 -> 149 / sd 43.1     sky 14 -> 160 / 42.0     sky 22 -> 178 / 40.9
+    # 10 it is. THE TRADE IS REAL and worth stating: sky is the lever that
+    # lifts shadow, so the shadowed north-facing elevations and the Green go
+    # back to being the darkest things on the board. Washed out was the
+    # complaint; if the shadows now read as too dark, this is the number to
+    # move and the plaza geometry is the other half of the answer.
+    # The lesson is the reusable part: a light rig is tuned against a SCENE, so
+    # changing what is in the scene invalidates it. This is the third time.
     SUN_I = _A.get('sun', 430.0)
     SUN_PITCH = _A.get('elev', 52.0)
-    SKY_I = _A.get('sky', 22.0)
+    SKY_I = _A.get('sky', 10.0)
     ISO = _A.get('iso', 800)
     FSTOP = _A.get('fstop', 4.0)
     SHUTTER = _A.get('shutter', 60)

@@ -9,6 +9,11 @@ F='/Game/Stacktown/Materials'
 # KeyError, which took the whole role sweep down and left 7000 components
 # unassigned while every other step reported ok.
 WALL={l['name']: l['wall'] for b in BLOCKS for l in b['lots'] if l.get('wall')}
+# A pitched roof is the largest surface on a house and it was rendering on
+# MI_concrete - the same pale grey as a flat commercial deck - so five houses
+# read as five white wedges. Per lot, like the wall colour.
+ROOF={l['name']: l.get('roofmat', 'MI_shingle_grey')
+      for b in BLOCKS for l in b['lots'] if l.get('style') in ('house', 'walkup')}
 SHARED={'Glass_':'MI_glass_b','Interior_':'MI_interior','Frame_':'MI_frame_print',
         'Mullion_':'MI_frame_print','Accent_':'MI_canopy_accent','Roof_':'MI_concrete',
         # ground roles, for zones that are not buildings
@@ -42,6 +47,8 @@ for a in eas.get_all_level_actors():
         role=next((r for r in SHARED if nm.startswith(r)),None)
         if fam_role: c.set_material(0,M(fam[fam_role]))
         elif role: c.set_material(0,M(SHARED[role]))
+        elif nm.startswith('Tile_'):
+            c.set_material(0, M(ROOF.get(who, 'MI_shingle_grey')))
         elif nm.startswith('Wall_') or nm.startswith('Band_'):
             c.set_material(0,M(WALL.get(who,'MI_paint_cream')))
         else: unresolved.append(nm); continue

@@ -31,12 +31,16 @@ moves to meet it, never the other way round.
 """
 import unreal, math
 import _path
+from city import BOARD_N
 from city import BOARD_S, BOARD_E
 
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
 X0, X1 = -300.0, BOARD_E
-Y0, Y1 = BOARD_S, 900.0
+# the board grew north for the works; a rig sized to the old edge lights an
+# island and leaves the rest in a void, which is what the first works
+# capture showed at mean 60
+Y0, Y1 = BOARD_S, BOARD_N
 CX, CY = (X0 + X1)/2.0, (Y0 + Y1)/2.0
 DIAG = math.hypot(X1 - X0, Y1 - Y0)
 

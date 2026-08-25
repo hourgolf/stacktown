@@ -27,7 +27,9 @@ if os.path.exists(_ov):
 SHARED={'Glass_':'MI_glass_b','Interior_':'MI_interior','Frame_':'MI_frame_print',
         'Mullion_':'MI_frame_print','Accent_':'MI_canopy_accent','Roof_':'MI_concrete',
         # ground roles, for zones that are not buildings
-        'Ground_':'MI_concrete','Grass_':'MI_grass','Kerbing_':'MI_paint_cream'}
+        'Ground_':'MI_concrete','Grass_':'MI_grass','Kerbing_':'MI_paint_cream',
+        # a raised bed is PLANTING; on MI_grass it is a raised bed of grass
+        'Bloom_':'MI_bloom_warm'}
 # Some families want a different material for the SAME role. A lamp column is
 # dark painted metal, not the window-frame print - both are 'Frame_' because
 # both are a frame, and role-in-the-name is about what a part IS, not what it

@@ -19,6 +19,8 @@ n = 0
 for a in list(alls):
     l = a.get_actor_label()
     parts = l.split('_')
+    if parts[0] == 'ZONE' and len(parts) > 1 and parts[1] in want:
+        eas.destroy_actor(a); n += 1; continue
     if len(parts) > 1 and parts[0] in ('BLD2', 'ELEV', 'CORE', 'PLOT') and parts[1] in want:
         eas.destroy_actor(a); n += 1
 print('removed %d actors for lots %s (of %d in level)'

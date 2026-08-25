@@ -119,6 +119,56 @@ Every line is pass/fail. There is no partial credit and there is no "close enoug
 Evaluate at the approved camera, at fixed exposure, **with depth of field, bloom, and motion
 blur disabled**. Finishing effects are judged only after the gate passes without them.
 
+### F1 result — 25 August 2026
+
+**Tested as written**: a person who had not seen the project was shown a capture
+with no explanation. Recorded here because "done" is not a result and the gate
+distinguishes hard between the two outcomes.
+
+**Verdict: PASS, with a finding.** The reader judged that the main city pulls
+off the miniature look convincingly. They also observed, unprompted, that as
+blocks were built out into the sandbox the work appeared to lose architectural
+detail, architectural logic and material richness. The owner agrees with that
+observation.
+
+**A pass with a finding is not a clean pass, and the finding is the useful
+half.** It was measured rather than argued about (`Content/Python/richness.py`).
+
+The first measurement was **wrong and is corrected here.** It counted a level
+that contained 151 duplicate actors - `step_elevations` wiped over MCP, the call
+that silently returns nothing, so a standalone re-run stacked a second set of
+elevations and in places a third. That inflated deco to 905 parts and
+vernacular to 383. `NAME-03` now fails the build on any duplicated label, and
+the level shrank from 6.29 MB to 5.22 MB when they were removed.
+
+The denominator was wrong too. Parts per metre of frontage is unfair to a low
+building: a two-storey block over 13 m has half the elevation of a four-storey
+one and cannot carry the same count. **Parts per square metre of street
+elevation** is the honest measure.
+
+Deduped, area-normalised, and after the modern ribbon and arcade were
+articulated:
+
+    style        parts/m2 range      mean
+    house        4.26 - 4.91         4.43
+    walkup       2.66 - 4.08         3.58
+    deco         1.06 - 1.41         1.29
+    vernacular   0.65 - 1.71         1.15
+    modern       0.52 - 1.04         0.76
+
+**The reader was right and the direction survived the correction**: modern is
+the thinnest style on the board, and its worst - Court at 0.52 - sits beside a
+Marquee at 1.41. Block C was called "more rough draft than our first street"
+when it was built and was never brought up to standard.
+
+**Consequence.** Detail density becomes a measured invariant rather than a
+habit, so a style cannot ship under-built again. `DETAIL-01` is set at **0.70
+parts per m2**, which is ABOVE four buildings that are genuinely thin - Court
+0.52, Civic 0.57, Annex 0.65, Narrow 0.65 - and not below them. **The suite is
+red on this rule on purpose.** Tuning the threshold down to green would be the
+exact failure this document opens by naming: criteria bending to fit what got
+built. Those four are the punch list. See `Docs/INVARIANTS.md`.
+
 ### Finishing-effects carve-out
 
 *Added 2026-08-25 by owner decision. This is an amendment by the owner, not a downward

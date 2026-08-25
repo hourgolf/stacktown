@@ -79,6 +79,8 @@ Re-derive the registry from the level with `census.py`.
 | `DRESS-07` | commercial roof kit does not stand on a home | — | a house wore a radio mast and a walk-up a water tank: the roof kit was gated on `kind`, which says whether a lot is built on, when it needed `style`, which says what was built |
 | `CAM-01` | no saved camera stands inside a building | — | eight blocks were built after most cameras were placed; `CAM_View_Approach` ended up inside block B's Hall |
 | `BAKE-01` | every placed catalogue building is one mesh with its roles intact | ≥2 material slots | the first bake merged with the roles unbound, so every component was on the same default material and the merge compacted seven slots into one — silently losing the role system the whole material design rests on |
+| `NAME-03` | no two actors share a label | — | four sweeps have silently doubled their own output — lamps twice, zones once, elevations and practicals once — and the level looks unchanged because the copies sit exactly on top of each other. 151 duplicates found the day this rule was written |
+| `DETAIL-01` | a building carries ≥0.70 parts per m² of street elevation | measured, deduped, area-normalised: house 4.4, walkup 3.6, deco 1.3, vernacular 1.2, modern 0.8 | the F1 reader passed the city but said later blocks were losing architectural detail — modern's upper floor was a ribbon of ~10 parts against vernacular's per-bay 24+ |
 | `SCALE-01` | a street tree overhangs the kerb by ≤ 200 uu | measured: 31 of 73 trees overhang, worst 618 uu into a 1400 uu road | owner: trees oversized; a 618 uu overhang eats 44% of the carriageway |
 | `SCALE-02` | zone planting is smaller than the narrow dimension of its lot | measured crowns: `SM_tree_02` 1131–1613 uu, `SM_tree_03/04` 374–715 uu | owner: "the trees in the plaza are badly oversized" — a 1613 uu crown cannot stand in a 610 uu plaza |
 | `ZONE-01` | planting sits in a lawn panel or bed; seating sits on ground it can | — | owner: "benches strewn about and trees planted in sidewalks rather than the authored planting beds" — `zones.py` drew the beds, `fix4_props.py` planted at uniform random across the whole lot |
@@ -171,14 +173,14 @@ spine instead.
 First run over the two-block city, 1015 actors / 6944 visible components:
 
 ```
-self-tests: 17/17 rules proved they can see their own defect
+self-tests: 19/19 rules proved they can see their own defect
 NAME-01   ok     NAME-02   ok     DRESS-01  ok     DRESS-02  ok     LIGHT-01  ok
 MAT-01    FAIL   216 components on WorldGridMaterial - all 54 lamps, 4 parts each
 DRESS-03  FAIL   12 lamp columns standing in a carriageway
 DRESS-04  FAIL   1 street tree 67 uu off the board
 SCALE-01  FAIL   12 street trees overhang the kerb, worst 523 uu
 SCALE-02  FAIL   1 park tree, 1613 uu crown in a 1280 uu lot
-invariants: 17 rules, 0 violated
+invariants: 19 rules, 1 violated (DETAIL-01, deliberately)
 ```
 
 All eleven are green. The five that were red on the first run are recorded

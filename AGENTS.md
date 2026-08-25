@@ -54,8 +54,17 @@ avoid repeating:
 - **Python** owns narrow, repeatable editor audits and orchestration. Read-only by default.
   It must never silently save a map or asset.
 - **Blueprint** owns designer-facing interaction and small reusable authoring tools.
+  **Approved 2026-08-25 by the owner:** Blueprint authoring for the runtime slice, plus a
+  DataAsset holding the building catalogue. This is a narrow relaxation and it does **not**
+  extend to a C++ module, `AllToolsets`, PCG, or a parallel MCP server, all of which remain
+  approval-gated. C++ comes back for discussion when a MEASURED wall says so - not in
+  anticipation of one.
 - **C++** is for measured gaps that nothing above can safely solve. There is no C++ module in
-  this project and adding one requires approval.
+  this project and adding one still requires approval. A runtime system cannot be checked by
+  the invariant suite the way geometry can, so before one is built the numbers that define
+  "working" are agreed first: tick budget in ms, buildings on the board before frame time
+  moves, and how long an upgrade may take. Judging a runtime by eye is the failure the F1
+  finding just caught in the geometry.
 - **Blender** is an optional normalization station for pivots, UVs, dimensions, collision, and
   mesh repair. It is not where the building gets built.
 - **PCG is deferred.** It is not enabled in the `.uproject`. PCG multiplies approved art; there

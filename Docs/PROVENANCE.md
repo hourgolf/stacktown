@@ -83,3 +83,16 @@ Two properties this exists to protect:
 
 Measured: cottage tiers bake to 131 / 176 / 201 source boxes, 6,288 / 8,448 /
 9,648 triangles, **7 material slots each**, placed as one component.
+
+## Donor assets available (25 Aug 2026)
+
+Vehicles came from a FAB pack and are baked statics bound to our own 2S card
+materials; the Deko shopfront pack supplies awnings, signs, boards and street
+furniture the same way - donor GEOMETRY, our materials, their textures never
+shipped. The owner has more packs in their FAB library that can be pulled in
+the same way when the detailing pass needs them.
+
+The rule that makes this safe is the one already applied twice: take the
+SHAPES, bind by role, never inherit the donor's material tier. Every complete
+donor object tried in this project has had to be fought back to the diorama;
+every donor part used as a part has worked.

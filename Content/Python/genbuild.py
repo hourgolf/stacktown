@@ -262,6 +262,32 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     for k in range(1, BAYS * 2):
         mx = sx0 + (sx1 - sx0) * k / float(BAYS * 2)
         box(g, 'Mullion_Shop%d' % k, mx - 3, mx + 3, ARCADE - 5, ARCADE + 1, 26, GF - 20); made += 1
+    # AN ARCADE IS BUILT, NOT EXTRUDED. Column bases and caps, a coffer in the
+    # soffit over each bay, a fascia at the head and a door in every other bay.
+    # DETAIL-01 caught Annex at 8.2 parts per metre - a two-storey block gets
+    # almost nothing from the upper-floor loop, so its ground floor has to
+    # carry the elevation, and this one was twelve parts wide.
+    for b in range(BAYS + 1):
+        px = min(x0 + b * (W / float(BAYS)), x0 + W - col_w)
+        box(g, 'Wall_ColBase%d' % b, px - 10, px + col_w + 10, -6, 70, 0, 40)
+        box(g, 'Frame_ColCap%d' % b, px - 8, px + col_w + 8, -4, 68, GF - 46, GF - 26)
+        made += 2
+    for b in range(BAYS):
+        bx0 = x0 + b * (W / float(BAYS)) + col_w
+        bx1 = x0 + (b + 1) * (W / float(BAYS))
+        if bx1 - bx0 < 60:
+            continue
+        box(g, 'Roof_Coffer%d' % b, bx0 + 8, bx1 - 8, 14, ARCADE - 14,
+            GF - 30, GF - 14); made += 1
+        box(g, 'Ground_Arcade%d' % b, bx0 - 6, bx1 + 6, 0, ARCADE, 0, 10); made += 1
+        if b % 2 == 0:
+            dcx = (bx0 + bx1)/2.0
+            box(g, 'Frame_Door%d' % b, dcx - 52, dcx + 52, ARCADE - 6, ARCADE + 4,
+                26, 26 + 190); made += 1
+            box(g, 'Interior_Door%d' % b, dcx - 44, dcx + 44, ARCADE + 4,
+                ARCADE + 12, 30, 26 + 178); made += 1
+    box(g, 'Band_ShopFascia', x0 - 8, x0 + W + 8, ARCADE - 12, ARCADE + 8,
+        GF - 20, GF - 4); made += 1
 
     # ---- upper floors: ribbon behind a proud band -------------------------
     for f in range(F):
@@ -286,6 +312,31 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         box(a, 'Interior_Ribbon', gx0, gx1, fy + GLAZE_Y + 8, fy + GLAZE_Y + 14, gz0, gz1); made += 1
         box(a, 'Frame_RibbonS', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz0, gz0 + 6); made += 1
         box(a, 'Frame_RibbonT', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz1 - 6, gz1); made += 1
+        # A RIBBON IS NOT A SHEET OF GLASS. It is a run of lights divided by
+        # mullions every metre or so, with a transom across it - and the
+        # spandrel below is panels with joints between them, not one casting.
+        # Without those the whole upper elevation was ten parts per floor
+        # against the vernacular's twenty-four, which is the detail the F1
+        # reader saw draining out of the later blocks.
+        nmul = max(4, BAYS*3)
+        for k in range(1, nmul):
+            mx = gx0 + (gx1 - gx0)*k/float(nmul)
+            box(a, 'Mullion_R%dV%d' % (f, k), mx - 4, mx + 4,
+                fy + GLAZE_Y - 7, fy + GLAZE_Y + 1, gz0 + 4, gz1 - 4); made += 1
+        tz = gz0 + (gz1 - gz0)*0.62
+        box(a, 'Mullion_R%dT' % f, gx0, gx1, fy + GLAZE_Y - 6, fy + GLAZE_Y + 1,
+            tz - 4, tz + 4); made += 1
+        # spandrel panel joints, one per bay, and a reveal under the band
+        for b in range(1, BAYS):
+            jx = x0 + W*b/float(BAYS)
+            box(a, 'Frame_Sp%dJ%d' % (f, b), jx - 4, jx + 4,
+                fy - BAND_PROUD - 2, fy - BAND_PROUD + 14, z0 + 4, z0 + sp - 4)
+            made += 1
+        box(a, 'Frame_Sp%dReveal' % f, x0 - 6, x0 + W + 6,
+            fy - BAND_PROUD - 3, fy - BAND_PROUD + 9, z0 + sp - 10, z0 + sp)
+        box(a, 'Frame_Sp%dCill' % f, x0 - 12, x0 + W + 12,
+            fy - BAND_PROUD - 9, fy - BAND_PROUD + 6, z0 - 8, z0 + 4)
+        made += 2
         # precast fins: the vertical rhythm, standing off the glass
         # FEWER fins, standing further off. At BAYS*2 they subdivided the
         # ribbon into six panes and read as window mullions - which is the
@@ -520,41 +571,62 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 GARDEN - 20, by1, 8, 78); made += 1
         box(pl, 'Kerbing_BackFence', x0 + 8, x0 + W - 8, by1 - 10, by1, 8, 84)
         made += 2
-        # THINGS PEOPLE PUT IN A GARDEN. An empty fenced rectangle of grass
-        # reads as a site, not a home. None of this is large; all of it is what
-        # the eye uses to tell one back garden from the next.
-        gcx = (x0 + W)/2.0
-        if grnd.random() < 0.62:                       # a swing set
-            sw = x0 + 120.0 if dside > 0 else x0 + W - 320.0
-            for k in (0, 1):
-                for sgn2 in (-1, 1):
-                    box(pl, 'Frame_SwingLeg%d%d' % (k, sgn2 + 1),
-                        sw + k*190 - 8, sw + k*190 + 8,
-                        by0 + 150 + sgn2*54, by0 + 150 + sgn2*54 + 12, 0, 150)
-            box(pl, 'Frame_SwingBar', sw - 14, sw + 204, by0 + 144, by0 + 156, 142, 154)
-            for k in (0, 1):
-                box(pl, 'Frame_SwingSeat%d' % k, sw + 40 + k*90, sw + 96 + k*90,
-                    by0 + 140, by0 + 160, 52, 60)
+        # THINGS PEOPLE PUT IN A GARDEN, laid out so they do not stand in
+        # each other. The first version put the washing line at the garden's
+        # centre and the bed along a fence and let them overlap - the frames
+        # showed a line running into a raised bed - and the bed was on
+        # MI_grass, so it was a raised bed of grass.
+        #
+        # The garden is divided ONCE, into three bands, and each thing gets
+        # one. Bed against the fence the drive does not use, lawn feature in
+        # the middle, drying area at the back.
+        bed_x0 = x0 + 30.0 if dside > 0 else x0 + W - 250.0
+        bed_x1 = bed_x0 + 220.0
+        lawn_x0 = bed_x1 + 60.0 if dside > 0 else x0 + 30.0
+        lawn_x1 = x0 + W - 30.0 if dside > 0 else bed_x0 - 60.0
+        lcx = (lawn_x0 + lawn_x1)/2.0
+
+        box(pl, 'Kerbing_Bed', bed_x0, bed_x1, by0 + 60, by1 - 300, 10, 46)
+        box(pl, 'Bloom_Bed', bed_x0 + 14, bed_x1 - 14, by0 + 74, by1 - 314, 10, 58)
+        made += 2
+
+        if grnd.random() < 0.62:
+            # a swing set: two A-frames and a beam, not a pile of uprights
+            sw = lcx
+            legs = 172.0
+            for sgn2 in (-1.0, 1.0):
+                for lean in (-1.0, 1.0):
+                    slab(pl, 'Frame_SwingLeg%d%d' % (int(sgn2) + 1, int(lean) + 1),
+                         sw + sgn2*95.0, by0 + 190.0 + lean*38.0, legs/2.0,
+                         14.0, 16.0, legs + 26.0, roll=lean*13.0)
+                    made += 1
+            box(pl, 'Frame_SwingBeam', sw - 118, sw + 118,
+                by0 + 182, by0 + 198, legs, legs + 16)
+            for k in (-1, 1):
+                sx2 = sw + k*54.0
+                for cs in (-1, 1):
+                    box(pl, 'Frame_SwingChain%d%d' % (k + 1, cs + 1),
+                        sx2 + cs*22 - 3, sx2 + cs*22 + 3,
+                        by0 + 187, by0 + 193, 62, legs)
+                box(pl, 'Frame_SwingSeat%d' % (k + 1), sx2 - 30, sx2 + 30,
+                    by0 + 180, by0 + 200, 54, 62)
             made += 7
-        elif grnd.random() < 0.5:                      # a putting green
-            box(pl, 'Grass_Putt', gcx - 170, gcx + 170, by0 + 120, by0 + 380, 10, 16)
-            box(pl, 'Frame_PuttFlag', gcx + 96, gcx + 104, by0 + 244, by0 + 252, 16, 120)
-            box(pl, 'Accent_PuttFlag', gcx + 104, gcx + 160, by0 + 246, by0 + 250, 96, 120)
+        else:
+            box(pl, 'Grass_Putt', lcx - 150, lcx + 150, by0 + 120, by0 + 360, 10, 16)
+            box(pl, 'Frame_PuttFlag', lcx + 86, lcx + 94, by0 + 234, by0 + 242, 16, 120)
+            box(pl, 'Accent_PuttFlag', lcx + 94, lcx + 150, by0 + 236, by0 + 240, 96, 120)
             made += 3
-        # a raised bed along one fence, always
-        bs = x0 + 30.0 if dside > 0 else x0 + W - 250.0
-        box(pl, 'Kerbing_Bed', bs, bs + 220, by0 + 60, by1 - 240, 10, 46)
-        box(pl, 'Grass_Bed', bs + 14, bs + 206, by0 + 74, by1 - 254, 10, 54)
-        # a washing line
+
+        # the drying area is at the BACK, clear of both
         for sgn2 in (-1, 1):
-            px2 = gcx + sgn2*200.0
+            px2 = lcx + sgn2*(min(180.0, (lawn_x1 - lawn_x0)/2.0 - 30.0))
             box(pl, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
-                by1 - 300, by1 - 286, 10, 170)
-        box(pl, 'Frame_Line', gcx - 200, gcx + 200, by1 - 295, by1 - 291, 160, 164)
-        made += 5
+                by1 - 200, by1 - 186, 10, 170); made += 1
+        box(pl, 'Frame_Line', lcx - 180, lcx + 180, by1 - 195, by1 - 191, 160, 164)
+        made += 1
 
         # a shed in the corner the drive does not use
-        sx_ = x0 + W - 250.0 if dside < 0 else x0 + 60.0
+        sx_ = lawn_x1 - 200.0 if dside > 0 else lawn_x0 + 10.0
         box(pl, 'Wall_Shed', sx_, sx_ + 190, by1 - 190, by1 - 24, 0, 150); made += 1
         box(pl, 'Tile_Shed', sx_ - 12, sx_ + 202, by1 - 202, by1 - 12, 150, 166)
         box(pl, 'Frame_ShedDoor', sx_ + 40, sx_ + 150, by1 - 196, by1 - 188, 8, 128)
@@ -610,6 +682,12 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         if abs(bx - cx) > 70:
             made += window(a, 'GF%d' % b, 'y', hy0, -1.0, bx - 62, bx + 62,
                            26 + 62, GF - 34, bars=(1, 1))
+        # A SINGLE-STOREY COTTAGE had two street windows and nothing else,
+        # because the upper-floor loop does not run when floors is 0. The gable
+        # above the eaves is elevation too: it takes a window.
+        if F == 0 and abs(bx - cx) <= 70:
+            made += window(a, 'GFd', 'y', hy0, -1.0, bx - 46, bx + 46,
+                           26 + 168, GF - 34, bars=(1, 0))
         for f in range(F):
             z0 = GF + f*FH + 44
             made += window(a, 'U%d_%d' % (f, b), 'y', hy0, -1.0,

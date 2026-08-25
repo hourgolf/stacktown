@@ -220,26 +220,28 @@ def flank_vernacular(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
 
 def run(only=None):
-    # Idempotent: wipe our own actors first. In the full build wipe_owned.py
-    # has already done it (ELEV_ is in its ownership gate), but a standalone
-    # re-run would otherwise stack a second elevation on top of the first.
-    S_ = 'editor_toolset.toolsets.scene.SceneTools'
-    import json as _json
-    try:
-        acts = _json.loads(ue.tool(S_, 'get_all_level_actors', {}))['returnValue']
-    except Exception:
-        acts = []
-    killed = 0
-    for ref in acts:
-        try:
-            lbl = _json.loads(ue.tool('editor_toolset.toolsets.actor.ActorTools',
-                                      'get_label', {'actor': ref}))['returnValue']
-        except Exception:
-            continue
-        if str(lbl).startswith('ELEV_'):
-            ue.tool(S_, 'destroy_actor', {'actor': ref}); killed += 1
-    if killed:
-        print('  removed %d existing ELEV_ actors' % killed)
+    # Idempotent: wipe our own actors first - THROUGH rung.sh, locally.
+    #
+    # This used to wipe over MCP with get_all_level_actors, which is the call
+    # that returns something unparseable and gets swallowed by the except
+    # below. It reported nothing and removed nothing, so a standalone re-run
+    # stacked a second elevation on the first and in one case a third. 95
+    # duplicated labels were found only because NAME-03 was written to look for
+    # them. street_lamps and rebuild_zones were moved off MCP for exactly this;
+    # this was the one left.
+    import os as _os, subprocess as _sub, tempfile as _tf
+    _here = _os.path.dirname(_os.path.abspath(__file__))
+    _rung = _os.path.join(_os.path.dirname(_os.path.dirname(_here)),
+                          'Tools', 'rung.sh')
+    open(_os.path.join(_tf.gettempdir(), 'stacktown_wipe_family.txt'),
+         'w').write('ELEV')
+    _r = _sub.run([_rung, 'wipe_family.py'], capture_output=True, text=True,
+                  cwd=_here)
+    if 'success: True' not in _r.stdout:
+        raise SystemExit('wipe_family.py FAILED - refusing to build on top of '
+                         'the old set\n' + (_r.stdout[-400:] or _r.stderr[-400:]))
+    print('  ' + next((l[7:] for l in _r.stdout.splitlines() if 'removed' in l),
+                      'wipe reported nothing'))
     total = 0
     for blk in BLOCKS:
         for spec, sign in exposed_flanks(blk):

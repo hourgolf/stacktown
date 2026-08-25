@@ -113,6 +113,30 @@ def _t_name_02():
     return len(got) == 1 and got[0][1] == 'StaticMesh12'
 
 
+@rule('NAME-03', 'no two actors share a label')
+def name_03(snap):
+    """A sweep that does not wipe before it builds doubles its own output, and
+    the level looks fine because the copies sit exactly on top of each other.
+    Four times now: lamps twice, zones once, elevations and practicals once.
+    DRESS-06 only watches the dressing families; this watches everything."""
+    seen, out = {}, []
+    for a in snap['actors']:
+        if a['label'] in seen:
+            seen[a['label']] += 1
+        else:
+            seen[a['label']] = 1
+    for lbl, n in sorted(seen.items()):
+        if n > 1:
+            out.append((lbl, '%d actors share this label' % n))
+    return out
+
+
+@selftest('NAME-03')
+def _t_name_03():
+    s = _snap(_a('ELEV_Mid_E'), _a('ELEV_Mid_E'), _a('ELEV_Mid_W'))
+    return _one(name_03(s), 'ELEV_Mid_E')
+
+
 # =========================== MAT ==========================================
 @rule('MAT-01', 'zero unassigned or engine-default material slots  [gate B1]')
 def mat_01(snap):
@@ -444,6 +468,69 @@ def _t_bake_01():
     ok = _a('CAT_cottage_t0', comps=[_c('m', 'SM_Bld', mats=['MI_a', 'MI_b'])])
     flat = _a('CAT_cottage_t9', comps=[_c('m', 'SM_Bld', mats=['MI_a'])])
     return _one(bake_01(_snap(ok, flat)), 't9')
+
+
+# --- detail density ---------------------------------------------------------
+# The F1 reader passed the city on the miniature look and said, unprompted,
+# that later blocks were losing architectural detail and material richness.
+# Measured with richness.py, and the denominator matters: parts per METRE is
+# unfair to a low building, because a two-storey block over 13 m has half the
+# elevation of a four-storey one and cannot carry the same count. Parts per
+# SQUARE METRE of street elevation is the honest measure.
+#
+# Deduped and area-normalised, per m2:
+#     house 4.26-4.91   walkup 2.66-4.08   deco 1.06-1.41
+#     vernacular 0.65-1.71   modern 0.52-1.04
+#
+# 0.70 is set ABOVE four buildings that are genuinely thin, not below them.
+# Tuning it down to green would be the failure the gate warns about in as many
+# words - criteria bending to fit what got built.
+DETAIL_MIN = 0.70        # parts per square metre of street elevation
+MAT_MIN = 4              # distinct material instances on a building
+
+
+@rule('DETAIL-01', 'a building carries at least %.2f parts per m2 of elevation'
+                   % DETAIL_MIN)
+def detail_01(snap):
+    area, parts, mats = {}, {}, {}
+    for _n, sp, _r in G.lots(('gen',)):
+        h = (sp.get('gf_h', 300.0) + sp.get('floors', 4)*sp.get('fl_h', 260.0)
+             + sp.get('parapet', 0.0))
+        area[sp['name']] = (sp['width']/100.0) * (h/100.0)
+    for a in snap['actors']:
+        p = a['label'].split('_')
+        if p[0] not in ('BLD2', 'ELEV') or len(p) < 2 or p[1] not in area:
+            continue
+        parts[p[1]] = parts.get(p[1], 0) + len(a['comps'])
+        for c in a['comps']:
+            for m in c['mats']:
+                if m:
+                    mats.setdefault(p[1], set()).add(m)
+    out = []
+    for nm, ar in sorted(area.items()):
+        got = parts.get(nm, 0)
+        if not got:
+            continue
+        if got/ar < DETAIL_MIN:
+            out.append((nm, '%d parts over %.0f m2 = %.2f/m2, under %.2f'
+                        % (got, ar, got/ar, DETAIL_MIN)))
+        if len(mats.get(nm, ())) < MAT_MIN:
+            out.append((nm, 'only %d distinct materials' % len(mats.get(nm, ()))))
+    return out
+
+
+@selftest('DETAIL-01')
+def _t_detail_01():
+    nm, sp = next((sp['name'], sp) for _n, sp, _r in G.lots(('gen',)))
+    h = sp.get('gf_h', 300.0) + sp.get('floors', 4)*sp.get('fl_h', 260.0)
+    ar = (sp['width']/100.0)*(h/100.0)
+    def bld(k):
+        return _a('BLD2_%s_F0' % nm,
+                  comps=[_c('c%d' % i, 'SM', mats=['MI_a', 'MI_b', 'MI_c', 'MI_d'])
+                         for i in range(k)])
+    if detail_01(_snap(bld(int(ar*DETAIL_MIN) + 30))):
+        return False                       # a dense building must pass
+    return _one(detail_01(_snap(bld(max(4, int(ar*DETAIL_MIN) - 30)))), nm)
 
 
 # =========================== ZONE =========================================

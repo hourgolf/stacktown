@@ -59,7 +59,7 @@ def exposed_flanks(block):
     lots = sorted(block['lots'], key=lambda l: l['x0'])
     out = []
     for i, l in enumerate(lots):
-        if l['kind'] != 'gen':
+        if l['kind'] != 'gen' or l.get('style') == 'house':
             continue
         low_free = (i == 0 and not block.get('abuts_low')) or \
                    (i > 0 and lots[i-1]['kind'] not in ('gen', 'av'))
@@ -79,7 +79,8 @@ def exposed_rears(block):
     """
     if not block.get('rear_street'):
         return []
-    return [l for l in block['lots'] if l['kind'] == 'gen']
+    return [l for l in block['lots']
+            if l['kind'] == 'gen' and l.get('style') != 'house']
 
 
 def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):

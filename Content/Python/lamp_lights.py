@@ -5,19 +5,29 @@ is components placed over MCP. Own prefix so practicals.py - which wipes every
 LIGHT2_ actor it finds - cannot take these with it.
 """
 import unreal, random
+import _path  # noqa: F401
+import labels
 
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+
+# 'LAMPLIGHT_s1F_0'.startswith('LAMP_') is TRUE, so the build loop counted the
+# lights it had just made as lamps and hung a second light on each: 46 lamps
+# produced 88 lights. Collect the lamps BEFORE wiping, and discriminate by
+# FAMILY rather than by prefix string - which is the whole reason labels.py
+# exists.
+LAMPS = [a for a in eas.get_all_level_actors()
+         if labels.family(a.get_actor_label()) == 'LAMP']
 for a in list(eas.get_all_level_actors()):
-    if a.get_actor_label().startswith('LAMPLIGHT_'):
+    if labels.family(a.get_actor_label()) == 'LAMPLIGHT':
         eas.destroy_actor(a)
 
 HEIGHT, ARM = 780.0, 210.0
 rnd = random.Random(90210)
 n = 0
-for a in eas.get_all_level_actors():
+for a in LAMPS:
     lbl = a.get_actor_label()
-    if not lbl.startswith('LAMP_'):
-        continue
+    if True:
+        pass
     loc = a.get_actor_location()
     # the arm leans along Y; the head sits at its far end. Which way is encoded
     # in the label's side letter, the same way the geometry decided it.

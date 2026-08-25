@@ -74,11 +74,24 @@ Re-derive the registry from the level with `census.py`.
 | `DRESS-02` | nothing parked inside a junction keep-clear | carriageway + 270 uu (half a car) | street parking lanes ran the full board width; 10 of 49 cars stood in an intersection |
 | `DRESS-03` | no lamp column inside a carriageway | zero tolerance | owner: "lightposts in the middle of the roads" |
 | `DRESS-04` | every dressing actor stands on the board | zero tolerance | dressing placed from street tables that run past the board edge |
+| `DRESS-05` | every lamp has exactly one light, and every light a lamp | — | `'LAMPLIGHT_s1F_0'.startswith('LAMP_')` is **True**, so the build loop counted the lights it had just made as lamps and hung a second on each: 46 lamps produced 88 lights |
+| `DRESS-06` | no two dressing actors of a family stand in the same spot | 20 uu grid | a wipe that silently did nothing and left the old set under the new one — three times now, lamps twice and zones once, each found by eye or by a count that looked odd |
 | `SCALE-01` | a street tree overhangs the kerb by ≤ 200 uu | measured: 31 of 73 trees overhang, worst 618 uu into a 1400 uu road | owner: trees oversized; a 618 uu overhang eats 44% of the carriageway |
 | `SCALE-02` | zone planting is smaller than the narrow dimension of its lot | measured crowns: `SM_tree_02` 1131–1613 uu, `SM_tree_03/04` 374–715 uu | owner: "the trees in the plaza are badly oversized" — a 1613 uu crown cannot stand in a 610 uu plaza |
 | `ZONE-01` | planting sits in a lawn panel or bed; seating sits on ground it can | — | owner: "benches strewn about and trees planted in sidewalks rather than the authored planting beds" — `zones.py` drew the beds, `fix4_props.py` planted at uniform random across the whole lot |
 | `ZONE-02` | a bench faces open ground, not a wall | bench forward measured from vertices: `SM_bench` backrest at mean X −30.6, seat at +0.8 over 306 verts, so it faces +X at yaw 0 | owner: "the benches seem to be rotated illogically" — they were placed at block yaw ± 180, which has nothing to do with what they look at |
 | `LIGHT-01` | no practical aimed within 30° of vertical | measured: all 304 practicals sit at pitch −12.5..0; the defect was pitch 90 | 43 practicals had `Rotator(0,90,0)` read as yaw when it is pitch — "a horizontal bar of light casting upwards" |
+
+## Paths
+
+`Content/Python/paths.py` is a path as a **centreline plus a width**, not as a
+rectangle. A rectangle cannot answer the three questions everything placed
+outdoors has to ask — where along it am I, which side am I on, which way does
+it run — so seating, lighting and tree pits each grew their own arithmetic and
+the park ended up with a bench dropped on each of seven overlapping boxes. A
+`Path` yields its slab when something needs geometry and yields *points along
+it with a bearing* when something needs placing. Pure, with known-answer
+checks in `__main__`.
 
 ## Not yet folded in
 
@@ -127,14 +140,14 @@ spine instead.
 First run over the two-block city, 1015 actors / 6944 visible components:
 
 ```
-self-tests: 12/12 rules proved they can see their own defect
+self-tests: 14/14 rules proved they can see their own defect
 NAME-01   ok     NAME-02   ok     DRESS-01  ok     DRESS-02  ok     LIGHT-01  ok
 MAT-01    FAIL   216 components on WorldGridMaterial - all 54 lamps, 4 parts each
 DRESS-03  FAIL   12 lamp columns standing in a carriageway
 DRESS-04  FAIL   1 street tree 67 uu off the board
 SCALE-01  FAIL   12 street trees overhang the kerb, worst 523 uu
 SCALE-02  FAIL   1 park tree, 1613 uu crown in a 1280 uu lot
-invariants: 12 rules, 0 violated
+invariants: 14 rules, 0 violated
 ```
 
 All eleven are green. The five that were red on the first run are recorded

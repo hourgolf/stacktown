@@ -46,13 +46,15 @@ REGISTRY = {
     'SUR':       ('surface dressing: planting, furniture, signals, roof kit',
                                               'fix4_props.py, zones.py'),
     'BAKED':     ('baked static vehicles',                     'place_baked.py'),
+    'SHOP':      ('shopfront dressing: awnings, fascia boards, signs',
+                                              'step_shopfronts.py'),
     'PROP':      ('the Stage 1 tree, kept deliberately',       'stage 1'),
 }
 
 # Families wiped and rebuilt on every dressing pass. Anything here must be
 # removable by label alone, or it accumulates - 401 stale props once roofed the
 # plaza because the wipe matched `SUR_prop*` and `SUR_tree*` and nothing else.
-DRESSING = ('SUR', 'BAKED', 'LAMP', 'LAMPLIGHT')
+DRESSING = ('SUR', 'BAKED', 'LAMP', 'LAMPLIGHT', 'SHOP')
 
 # --- mesh-level classification ---------------------------------------------
 def is_vehicle(label, mesh):

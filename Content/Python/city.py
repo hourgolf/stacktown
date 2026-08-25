@@ -33,7 +33,11 @@ STREET_FACE_C = BLOCK_B_REAR - CORRIDOR                # block C north, over str
 BLOCK_C_SEP   = 1280.0                                 # C's two rows, back to back
 STREET_FACE_D = STREET_FACE_C - BLOCK_C_SEP            # block C south
 STREET3_FAR   = STREET_FACE_D - SERV_CORRIDOR
-BOARD_S       = STREET3_FAR - 300.0
+# The board grows south for the houses, exactly as it grew east for the avenue.
+# Block F fronts the service street opposite the park.
+BLOCK_F_DEPTH = 820.0
+BLOCK_F_REAR  = STREET3_FAR - BLOCK_F_DEPTH
+BOARD_S       = BLOCK_F_REAR - 300.0
 STREET_FACE_E = STREET_FACE_B                          # block D fronts street 1 too
 
 AVENUE_W = 4400.0
@@ -170,5 +174,30 @@ BLOCKS = [
      dict(kind='gen', name='Hall',   x0=1860.0, width=1340.0, depth=820.0,
           floors=3, gf_h=520.0, fl_h=420.0, parapet=150.0, bays=4,
           canopy=260.0, setback=None, roof_units=2, seed=97, wall='MI_card_ochre'),
+  ]),
+
+  # --- Block F: houses, across the service street from the park --------------
+  # The first residential lots. A house is not a small office block: two
+  # storeys, a pitched roof, a porch, and - the part that actually reads as
+  # residential - a SETBACK, so the street line is gardens and fences rather
+  # than shopfronts. They are detached, so each lot is wider than its house and
+  # the gap between them is the point.
+  dict(name='F', origin=(BLOCK_D_X, STREET3_FAR, 0.0), yaw=180.0,
+       abuts_low=False, abuts_high=False, lots=[
+     dict(kind='gen', style='house', name='Elm',    x0=0.0,    width=820.0,
+          depth=BLOCK_F_DEPTH, floors=1, gf_h=200.0, fl_h=190.0, parapet=0.0,
+          bays=3, wall='MI_paint_cream', seed=41),
+     dict(kind='gen', style='house', name='Maple',  x0=820.0,  width=820.0,
+          depth=BLOCK_F_DEPTH, floors=1, gf_h=210.0, fl_h=185.0, parapet=0.0,
+          bays=3, wall='MI_card_sage', seed=57),
+     dict(kind='gen', style='house', name='Cedar',  x0=1640.0, width=820.0,
+          depth=BLOCK_F_DEPTH, floors=1, gf_h=195.0, fl_h=195.0, parapet=0.0,
+          bays=3, wall='MI_card_ochre', seed=73),
+     dict(kind='gen', style='house', name='Birch',  x0=2460.0, width=820.0,
+          depth=BLOCK_F_DEPTH, floors=1, gf_h=205.0, fl_h=188.0, parapet=0.0,
+          bays=3, wall='MI_card_rose', seed=89),
+     dict(kind='gen', style='house', name='Willow', x0=3280.0, width=820.0,
+          depth=BLOCK_F_DEPTH, floors=1, gf_h=200.0, fl_h=192.0, parapet=0.0,
+          bays=3, wall='MI_paint_cream', seed=97),
   ]),
 ]

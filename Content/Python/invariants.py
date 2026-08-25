@@ -292,6 +292,54 @@ def _t_scale_02():
     return _one(scale_02(_snap(big, ok)), 't90')
 
 
+@rule('DRESS-05', 'every lamp has exactly one light, and every light a lamp')
+def dress_05(snap):
+    fam = {}
+    for a in snap['actors']:
+        f = labels.family(a['label'])
+        if f in ('LAMP', 'LAMPLIGHT'):
+            fam.setdefault(f, set()).add(a['label'].split('_', 1)[1])
+    lamps = fam.get('LAMP', set())
+    lights = fam.get('LAMPLIGHT', set())
+    out = [(l, 'lamp with no light') for l in sorted(lamps - lights)]
+    out += [(l, 'light with no lamp') for l in sorted(lights - lamps)]
+    return out
+
+
+@selftest('DRESS-05')
+def _t_dress_05():
+    s = _snap(_a('LAMP_s1F_0', cls='Actor'), _a('LAMPLIGHT_s1F_0', cls='RectLight'),
+              _a('LAMP_s1F_1', cls='Actor'))
+    return _one(dress_05(s), 's1F_1')
+
+
+@rule('DRESS-06', 'no two dressing actors of a family stand in the same spot')
+def dress_06(snap):
+    """Catches a wipe that silently did nothing and left the old set under the
+    new one - which has now happened three times, with lamps twice and zones
+    once, each time discovered by eye or by a count that looked odd."""
+    seen, out = {}, []
+    for a in snap['actors']:
+        f = labels.family(a['label'])
+        if f not in labels.DRESSING:
+            continue
+        key = (f, round(a['loc'][0]/20.0), round(a['loc'][1]/20.0),
+               round(a['loc'][2]/20.0))
+        if key in seen:
+            out.append((a['label'], 'same spot as %s' % seen[key]))
+        else:
+            seen[key] = a['label']
+    return out
+
+
+@selftest('DRESS-06')
+def _t_dress_06():
+    s = _snap(_a('LAMP_s1F_0', cls='Actor', loc=(100.0, 200.0, 0.0)),
+              _a('LAMP_s1F_9', cls='Actor', loc=(100.0, 200.0, 0.0)),
+              _a('LAMP_s1F_1', cls='Actor', loc=(900.0, 200.0, 0.0)))
+    return _one(dress_06(s), 'LAMP_s1F_9')
+
+
 # =========================== ZONE =========================================
 BENCH_LOOK = 260.0        # how far ahead of a bench must be open ground
 

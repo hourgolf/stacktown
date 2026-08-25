@@ -13,6 +13,7 @@ hold at the 19 mm player-zoom threshold, not because it reads from 112 m.
 """
 import _path  # noqa: F401 - puts Tools/measure (ue.py) on sys.path
 import ue, json, math, random
+import paths
 
 S = 'editor_toolset.toolsets.scene.SceneTools'
 P = 'editor_toolset.toolsets.primitive.PrimitiveTools'
@@ -49,6 +50,8 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         return build_modern(spec, origin, yaw)
     if st == 'deco':
         return build_deco(spec, origin, yaw)
+    if st == 'house':
+        return build_house(spec, origin, yaw)
     return build_vernacular(spec, origin, yaw)
 
 
@@ -387,3 +390,117 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     print('%s [deco]: %d boxes, height %d uu' % (n, made, ztop + PAR))
     return ztop + PAR
+
+
+def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """A house, which is not a small office block.
+
+    Three things make it read as residential rather than as a shrunk commercial
+    block, and none of them is the massing. A SETBACK, so the street line is
+    garden and fence instead of shopfront. A PITCHED roof, stepped rather than
+    sloped because box() is axis-aligned and a card model folds anyway. And the
+    GAP: these are detached, so the lot is wider than the house and the space
+    between them is the point.
+
+    Detached also means it is self-contained - all four walls are built here, so
+    it needs no core behind it and no flank elevation added later.
+    """
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    GF, FH = spec['gf_h'], spec['fl_h']
+    F = spec['floors']                     # storeys ABOVE the ground floor
+    BAYS = spec['bays']
+    rnd = random.Random(spec.get('seed', 0))
+
+    GARDEN = 250.0 + rnd.uniform(-20, 20)  # street line to the front wall
+    SIDE = 100.0                           # gap to the lot edge, each side
+    hx0, hx1 = x0 + SIDE, x0 + W - SIDE
+    hy0 = GARDEN
+    hy1 = min(D - 60.0, GARDEN + 430.0)
+    HW, HD = hx1 - hx0, hy1 - hy0
+    eaves = GF + F*FH
+    made = 0
+
+    a = mkactor('BLD2_%s_H' % n, origin, (0.0, yaw, 0.0))
+
+    # ---- garden, fence, front walk, drive -----------------------------------
+    box(a, 'Grass_Yard', x0 + 12, x0 + W - 12, 8, GARDEN - 4, 0, 10); made += 1
+    box(a, 'Kerbing_FenceL', x0 + 8, x0 + W*0.34, 0, 10, 10, 76); made += 1
+    box(a, 'Kerbing_FenceR', x0 + W*0.66, x0 + W - 8, 0, 10, 10, 76); made += 1
+    for k in range(4):
+        px = x0 + 26 + (W - 52)*k/3.0
+        box(a, 'Frame_FencePost%d' % k, px - 7, px + 7, -2, 12, 10, 92); made += 1
+
+    # the front walk is a PATH - a centreline and a width - so the porch and the
+    # gate are derived from it rather than from three more hand-typed numbers
+    cx = (hx0 + hx1)/2.0
+    walk = paths.Path((cx, 0.0), (cx, GARDEN + 6.0), 96.0, 'walk')
+    wr = walk.rect()
+    box(a, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 12); made += 1
+    dside = 1 if rnd.random() < 0.5 else -1
+    dx = x0 + (W - 150.0) if dside > 0 else x0 + 26.0
+    box(a, 'Ground_Drive', dx, dx + 124, 0, GARDEN + 40, 0, 11); made += 1
+
+    # ---- body ---------------------------------------------------------------
+    box(a, 'Wall_Plinth', hx0 - 10, hx1 + 10, hy0 - 10, hy1 + 10, 0, 26); made += 1
+    box(a, 'Wall_Body', hx0, hx1, hy0, hy1, 26, eaves); made += 1
+
+    # ---- porch --------------------------------------------------------------
+    pw = 210.0
+    box(a, 'Roof_Porch', cx - pw/2 - 20, cx + pw/2 + 20, hy0 - 96, hy0 + 6,
+        GF - 34, GF - 16); made += 1
+    for sgn in (-1, 1):
+        px = cx + sgn*(pw/2 - 8)
+        box(a, 'Frame_PorchPost%d' % (sgn + 1), px - 9, px + 9,
+            hy0 - 88, hy0 - 70, 26, GF - 34); made += 1
+    box(a, 'Frame_Door', cx - 44, cx + 44, hy0 - 4, hy0 + 5, 26, 26 + 150); made += 1
+    box(a, 'Interior_Hall', cx - 38, cx + 38, hy0 + 5, hy0 + 12, 30, 26 + 140); made += 1
+
+    # ---- windows: front, and both flanks, because a house is seen from three
+    # sides at once and a blank gable is what gave the first block away -------
+    def win(tag, ax0, ax1, ay0, ay1, z0, z1, axis):
+        """axis 'y' = a window in a wall facing +/-Y; 'x' = facing +/-X."""
+        box(a, 'Glass_%s' % tag, ax0, ax1, ay0, ay1, z0, z1)
+        if axis == 'y':
+            box(a, 'Frame_%sSill' % tag, ax0 - 8, ax1 + 8, ay0 - 6, ay1 + 6, z0 - 10, z0)
+            box(a, 'Interior_%s' % tag, ax0 + 4, ax1 - 4,
+                ay0 + (7 if ay0 < (hy0 + hy1)/2 else -7),
+                ay1 + (7 if ay0 < (hy0 + hy1)/2 else -7), z0 + 4, z1 - 4)
+        else:
+            box(a, 'Frame_%sSill' % tag, ax0 - 6, ax1 + 6, ay0 - 8, ay1 + 8, z0 - 10, z0)
+        return 3 if axis == 'y' else 2
+
+    # front elevation: door bay in the middle, windows either side
+    for b in range(BAYS):
+        bx = hx0 + 40 + (HW - 80)*(b + 0.5)/BAYS
+        if abs(bx - cx) > 70:
+            made += win('GF%d' % b, bx - 62, bx + 62, hy0 - 5, hy0 + 3,
+                        26 + 62, GF - 34, 'y')
+        for f in range(F):
+            z0 = GF + f*FH + 44
+            made += win('U%d_%d' % (f, b), bx - 56, bx + 56, hy0 - 5, hy0 + 3,
+                        z0, z0 + FH - 96, 'y')
+    # flanks
+    for sgn, side in ((-1, hx0), (1, hx1)):
+        for k in range(2):
+            wy = hy0 + HD*(0.3 + 0.4*k)
+            made += win('S%d_%d' % (sgn + 1, k), side - 4, side + 4,
+                        wy - 58, wy + 58, GF + 44, GF + FH - 52, 'x')
+
+    # ---- pitched roof, stepped; the ridge runs along X so the gables show ----
+    # 6 steps over a 150 uu rise read as a ziggurat from above rather than as
+    # a pitch. 11 steps put each riser under 15 uu, which is below the 0.4%
+    # bar at the board camera and reads as a slope.
+    steps = 11
+    rise = 168.0 + rnd.uniform(-16, 16)
+    for i in range(steps):
+        t0, t1 = i/float(steps), (i + 1)/float(steps)
+        ins = (HD/2.0 - 24.0)*t0
+        box(a, 'Roof_Slope%d' % i, hx0 - 34, hx1 + 34,
+            hy0 + ins - 34, hy1 - ins + 34,
+            eaves + rise*t0, eaves + rise*t1 + 2); made += 1
+    box(a, 'Wall_Chimney', hx1 - 120, hx1 - 62, hy0 + HD*0.62, hy0 + HD*0.62 + 58,
+        eaves, eaves + rise + 86); made += 1
+
+    print('%s [house]: %d boxes' % (n, made))
+    return made

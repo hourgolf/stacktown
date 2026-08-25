@@ -75,9 +75,19 @@ def clear_of(rects, x, y):
 
 
 def run():
-    killed = wipe()
-    if killed:
-        print('  removed %d existing lamps' % killed)
+    # The MCP wipe above silently no-ops when the enumeration call returns
+    # something unparseable, and the failure is swallowed - it once left 96
+    # lamps where 48 were wanted, and did it again here (42 + 46 = 88). Go
+    # through rung.sh, which runs locally, and refuse to build on failure.
+    import os, subprocess
+    here = os.path.dirname(os.path.abspath(__file__))
+    rung = os.path.join(os.path.dirname(os.path.dirname(here)), 'Tools', 'rung.sh')
+    r = subprocess.run([rung, 'wipe_lamps.py'], capture_output=True, text=True, cwd=here)
+    if 'success: True' not in r.stdout:
+        raise SystemExit('wipe_lamps.py FAILED - refusing to build on top of '
+                         'the old set\n' + (r.stdout[-400:] or r.stderr[-400:]))
+    print('  ' + next((l[7:] for l in r.stdout.splitlines() if 'removed' in l),
+                      'wipe reported nothing'))
     rnd = random.Random(31337)
     X0, X1 = -300.0, BOARD_E
     n = 0

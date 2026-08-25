@@ -29,6 +29,9 @@ for b in BLOCKS:
     c_,s_=math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
     for spec in b['lots']:
         if spec['kind']!='gen': continue
+        # a house is detached and builds all four of its own walls, so it has
+        # no facade standing proud of a core and needs none behind it
+        if spec.get('style')=='house': continue
         GF,FH,FL,PAR=spec['gf_h'],spec['fl_h'],spec['floors'],spec['parapet']
         setback=spec.get('setback') or 0.0
         ztop=GF+FL*FH

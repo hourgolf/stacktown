@@ -38,7 +38,7 @@ for a in eas.get_all_level_actors():
     # nothing ever bound them: all 54 sat on WorldGridMaterial, which is gate
     # line B1, and no check had ever looked. The build now calls this a second
     # time once the lamps exist rather than growing a second binder.
-    if not l.startswith(('BLD2_', 'ELEV_', 'ZONE_', 'LAMP_')): continue
+    if not l.startswith(('BLD2_', 'ELEV_', 'ZONE_', 'LAMP_', 'PLOT_')): continue
     fam=FAMILY.get(labels.family(l), {})
     who=l.split('_')[1]
     for c in a.get_components_by_class(unreal.StaticMeshComponent):

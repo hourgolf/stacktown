@@ -490,24 +490,30 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     made = 0
 
     a = mkactor('BLD2_%s_H' % n, origin, (0.0, yaw, 0.0))
+    # THE PLOT IS NOT THE BUILDING. Gardens, fences, drives and sheds went onto
+    # the building actor, so check_block - which takes a building's extent from
+    # all of its components - measured the fences and reported eight overlaps
+    # between houses that do not touch. Side fences on a shared boundary SHOULD
+    # meet. Separate actor, exactly as an open lot already gets ZONE_.
+    pl = mkactor('PLOT_%s' % n, origin, (0.0, yaw, 0.0))
 
     # ---- gardens, fences, front walk, drive ---------------------------------
     # which side the drive takes is decided first, because the shed goes in the
     # back corner the drive does not use
     dside = 1 if rnd.random() < 0.5 else -1
     dx = x0 + (W - 150.0) if dside > 0 else x0 + 26.0
-    box(a, 'Grass_Yard', x0 + 12, x0 + W - 12, 8, GARDEN - 4, 0, 10); made += 1
+    box(pl, 'Grass_Yard', x0 + 12, x0 + W - 12, 8, GARDEN - 4, 0, 10); made += 1
     # THE BACK GARDEN. A house with nothing behind it is a facade with a roof;
     # from any camera that is not square to the street the rear reads, and
     # these had bare walls and bare ground.
     by0, by1 = hy1 + 10.0, D - 12.0
     if by1 - by0 > 200.0:
-        box(a, 'Grass_Back', x0 + 12, x0 + W - 12, by0, by1, 0, 10); made += 1
-        box(a, 'Ground_Patio', hx0 + 30, hx1 - 30, by0, by0 + 130, 0, 13); made += 1
+        box(pl, 'Grass_Back', x0 + 12, x0 + W - 12, by0, by1, 0, 10); made += 1
+        box(pl, 'Ground_Patio', hx0 + 30, hx1 - 30, by0, by0 + 130, 0, 13); made += 1
         for sgn, fx in ((-1.0, x0 + 8), (1.0, x0 + W - 8)):
-            box(a, 'Kerbing_SideFence%d' % (int(sgn) + 1), fx - 7, fx + 7,
+            box(pl, 'Kerbing_SideFence%d' % (int(sgn) + 1), fx - 7, fx + 7,
                 GARDEN - 20, by1, 8, 78); made += 1
-        box(a, 'Kerbing_BackFence', x0 + 8, x0 + W - 8, by1 - 10, by1, 8, 84)
+        box(pl, 'Kerbing_BackFence', x0 + 8, x0 + W - 8, by1 - 10, by1, 8, 84)
         made += 2
         # THINGS PEOPLE PUT IN A GARDEN. An empty fenced rectangle of grass
         # reads as a site, not a home. None of this is large; all of it is what
@@ -517,54 +523,54 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             sw = x0 + 120.0 if dside > 0 else x0 + W - 320.0
             for k in (0, 1):
                 for sgn2 in (-1, 1):
-                    box(a, 'Frame_SwingLeg%d%d' % (k, sgn2 + 1),
+                    box(pl, 'Frame_SwingLeg%d%d' % (k, sgn2 + 1),
                         sw + k*190 - 8, sw + k*190 + 8,
                         by0 + 150 + sgn2*54, by0 + 150 + sgn2*54 + 12, 0, 150)
-            box(a, 'Frame_SwingBar', sw - 14, sw + 204, by0 + 144, by0 + 156, 142, 154)
+            box(pl, 'Frame_SwingBar', sw - 14, sw + 204, by0 + 144, by0 + 156, 142, 154)
             for k in (0, 1):
-                box(a, 'Frame_SwingSeat%d' % k, sw + 40 + k*90, sw + 96 + k*90,
+                box(pl, 'Frame_SwingSeat%d' % k, sw + 40 + k*90, sw + 96 + k*90,
                     by0 + 140, by0 + 160, 52, 60)
             made += 7
         elif rnd.random() < 0.5:                      # a putting green
-            box(a, 'Grass_Putt', gcx - 170, gcx + 170, by0 + 120, by0 + 380, 10, 16)
-            box(a, 'Frame_PuttFlag', gcx + 96, gcx + 104, by0 + 244, by0 + 252, 16, 120)
-            box(a, 'Accent_PuttFlag', gcx + 104, gcx + 160, by0 + 246, by0 + 250, 96, 120)
+            box(pl, 'Grass_Putt', gcx - 170, gcx + 170, by0 + 120, by0 + 380, 10, 16)
+            box(pl, 'Frame_PuttFlag', gcx + 96, gcx + 104, by0 + 244, by0 + 252, 16, 120)
+            box(pl, 'Accent_PuttFlag', gcx + 104, gcx + 160, by0 + 246, by0 + 250, 96, 120)
             made += 3
         # a raised bed along one fence, always
         bs = x0 + 30.0 if dside > 0 else x0 + W - 250.0
-        box(a, 'Kerbing_Bed', bs, bs + 220, by0 + 60, by1 - 240, 10, 46)
-        box(a, 'Grass_Bed', bs + 14, bs + 206, by0 + 74, by1 - 254, 10, 54)
+        box(pl, 'Kerbing_Bed', bs, bs + 220, by0 + 60, by1 - 240, 10, 46)
+        box(pl, 'Grass_Bed', bs + 14, bs + 206, by0 + 74, by1 - 254, 10, 54)
         # a washing line
         for sgn2 in (-1, 1):
             px2 = gcx + sgn2*200.0
-            box(a, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
+            box(pl, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
                 by1 - 300, by1 - 286, 10, 170)
-        box(a, 'Frame_Line', gcx - 200, gcx + 200, by1 - 295, by1 - 291, 160, 164)
+        box(pl, 'Frame_Line', gcx - 200, gcx + 200, by1 - 295, by1 - 291, 160, 164)
         made += 5
 
         # a shed in the corner the drive does not use
         sx_ = x0 + W - 250.0 if dside < 0 else x0 + 60.0
-        box(a, 'Wall_Shed', sx_, sx_ + 190, by1 - 190, by1 - 24, 0, 150); made += 1
-        box(a, 'Tile_Shed', sx_ - 12, sx_ + 202, by1 - 202, by1 - 12, 150, 166)
-        box(a, 'Frame_ShedDoor', sx_ + 40, sx_ + 150, by1 - 196, by1 - 188, 8, 128)
+        box(pl, 'Wall_Shed', sx_, sx_ + 190, by1 - 190, by1 - 24, 0, 150); made += 1
+        box(pl, 'Tile_Shed', sx_ - 12, sx_ + 202, by1 - 202, by1 - 12, 150, 166)
+        box(pl, 'Frame_ShedDoor', sx_ + 40, sx_ + 150, by1 - 196, by1 - 188, 8, 128)
         made += 2
         for k in range(3):
             px = x0 + 120.0 + (W - 240.0)*k/2.0
-            box(a, 'Frame_BackPost%d' % k, px - 6, px + 6, by1 - 12, by1 + 2,
+            box(pl, 'Frame_BackPost%d' % k, px - 6, px + 6, by1 - 12, by1 + 2,
                 8, 96); made += 1
-    box(a, 'Kerbing_FenceL', x0 + 8, x0 + W*0.34, 0, 10, 10, 76); made += 1
-    box(a, 'Kerbing_FenceR', x0 + W*0.66, x0 + W - 8, 0, 10, 10, 76); made += 1
+    box(pl, 'Kerbing_FenceL', x0 + 8, x0 + W*0.34, 0, 10, 10, 76); made += 1
+    box(pl, 'Kerbing_FenceR', x0 + W*0.66, x0 + W - 8, 0, 10, 10, 76); made += 1
     for k in range(4):
         px = x0 + 26 + (W - 52)*k/3.0
-        box(a, 'Frame_FencePost%d' % k, px - 7, px + 7, -2, 12, 10, 92); made += 1
+        box(pl, 'Frame_FencePost%d' % k, px - 7, px + 7, -2, 12, 10, 92); made += 1
 
     # the front walk is a PATH - a centreline and a width - so the porch and the
     # gate are derived from it rather than from three more hand-typed numbers
     cx = (hx0 + hx1)/2.0
     walk = paths.Path((cx, 0.0), (cx, GARDEN + 6.0), 96.0, 'walk')
     wr = walk.rect()
-    box(a, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 12); made += 1
-    box(a, 'Ground_Drive', dx, dx + 124, 0, GARDEN + 40, 0, 11); made += 1
+    box(pl, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 12); made += 1
+    box(pl, 'Ground_Drive', dx, dx + 124, 0, GARDEN + 40, 0, 11); made += 1
 
     # ---- body ---------------------------------------------------------------
     box(a, 'Wall_Plinth', hx0 - 10, hx1 + 10, hy0 - 10, hy1 + 10, 0, 26); made += 1
@@ -668,10 +674,10 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     if garage:
         gw = 190.0
         gx = dx + 62.0 - gw/2.0
-        box(a, 'Wall_Garage', gx, gx + gw, hy0 + 40, hy0 + 230, 0, 190); made += 1
-        box(a, 'Frame_GarageDoor', gx + 14, gx + gw - 14, hy0 + 34, hy0 + 42,
+        box(pl, 'Wall_Garage', gx, gx + gw, hy0 + 40, hy0 + 230, 0, 190); made += 1
+        box(pl, 'Frame_GarageDoor', gx + 14, gx + gw - 14, hy0 + 34, hy0 + 42,
             8, 168); made += 1
-        box(a, 'Roof_Garage', gx - 16, gx + gw + 16, hy0 + 26, hy0 + 240,
+        box(pl, 'Roof_Garage', gx - 16, gx + gw + 16, hy0 + 26, hy0 + 240,
             190, 210); made += 1
 
     # ---- pitched roof, actually pitched --------------------------------------
@@ -792,14 +798,15 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     made = 0
 
     a = mkactor('BLD2_%s_A' % n, origin, (0.0, yaw, 0.0))
+    pl = mkactor('PLOT_%s' % n, origin, (0.0, yaw, 0.0))
     cx = (hx0 + hx1)/2.0
 
     # ---- forecourt: a low wall and a path, not a garden ---------------------
-    box(a, 'Ground_Fore', x0 + 10, x0 + W - 10, 8, FORE - 4, 0, 12); made += 1
-    box(a, 'Kerbing_Wall', x0 + 8, x0 + W - 8, 0, 16, 12, 62); made += 1
+    box(pl, 'Ground_Fore', x0 + 10, x0 + W - 10, 8, FORE - 4, 0, 12); made += 1
+    box(pl, 'Kerbing_Wall', x0 + 8, x0 + W - 8, 0, 16, 12, 62); made += 1
     walk = paths.Path((cx, 0.0), (cx, FORE + 6.0), 130.0, 'walk')
     wr = walk.rect()
-    box(a, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 14); made += 1
+    box(pl, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 14); made += 1
 
     # ---- body ---------------------------------------------------------------
     box(a, 'Wall_Plinth', hx0 - 12, hx1 + 12, hy0 - 12, hy1 + 12, 0, 34); made += 1
@@ -879,28 +886,28 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # ---- rear yard and rear elevation ---------------------------------------
     by0, by1 = hy1 + 10.0, D - 12.0
     if by1 - by0 > 200.0:
-        box(a, 'Ground_Yard', x0 + 10, x0 + W - 10, by0, by1, 0, 12); made += 1
-        box(a, 'Kerbing_YardWall', x0 + 8, x0 + W - 8, by1 - 12, by1, 12, 96)
+        box(pl, 'Ground_Yard', x0 + 10, x0 + W - 10, by0, by1, 0, 12); made += 1
+        box(pl, 'Kerbing_YardWall', x0 + 8, x0 + W - 8, by1 - 12, by1, 12, 96)
         for sgn, fx in ((-1.0, x0 + 8), (1.0, x0 + W - 8)):
-            box(a, 'Kerbing_YardSide%d' % (int(sgn) + 1), fx - 7, fx + 7,
+            box(pl, 'Kerbing_YardSide%d' % (int(sgn) + 1), fx - 7, fx + 7,
                 by0 - 40, by1, 12, 96); made += 1
         # bin store: every block of flats has one and it is always by the back
-        box(a, 'Wall_BinStore', x0 + 70, x0 + 350, by1 - 200, by1 - 30, 0, 130)
-        box(a, 'Roof_BinStore', x0 + 58, x0 + 362, by1 - 212, by1 - 18, 130, 144)
-        box(a, 'Ground_Bins', x0 + 400, x0 + 640, by1 - 150, by1 - 40, 0, 96)
+        box(pl, 'Wall_BinStore', x0 + 70, x0 + 350, by1 - 200, by1 - 30, 0, 130)
+        box(pl, 'Roof_BinStore', x0 + 58, x0 + 362, by1 - 212, by1 - 18, 130, 144)
+        box(pl, 'Ground_Bins', x0 + 400, x0 + 640, by1 - 150, by1 - 40, 0, 96)
         # a yard people use: a drying area, a bench, a strip of planting and a
         # couple of parking bays off the back lane
         for sgn2 in (-1, 1):
             px2 = (x0 + W)/2.0 + sgn2*220.0
-            box(a, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
+            box(pl, 'Frame_LinePost%d' % (sgn2 + 1), px2 - 7, px2 + 7,
                 by0 + 150, by0 + 164, 12, 180); made += 1
-        box(a, 'Frame_Line', (x0 + W)/2.0 - 220, (x0 + W)/2.0 + 220,
+        box(pl, 'Frame_Line', (x0 + W)/2.0 - 220, (x0 + W)/2.0 + 220,
             by0 + 155, by0 + 159, 170, 174)
-        box(a, 'Kerbing_YardBed', x0 + W - 330, x0 + W - 40, by0 + 40, by1 - 260, 12, 48)
-        box(a, 'Grass_YardBed', x0 + W - 316, x0 + W - 54, by0 + 54, by1 - 274, 12, 56)
+        box(pl, 'Kerbing_YardBed', x0 + W - 330, x0 + W - 40, by0 + 40, by1 - 260, 12, 48)
+        box(pl, 'Grass_YardBed', x0 + W - 316, x0 + W - 54, by0 + 54, by1 - 274, 12, 56)
         for k in range(2):
             bxp = x0 + 700.0 + k*260.0
-            box(a, 'Ground_Bay%d' % k, bxp, bxp + 230, by1 - 300, by1 - 40, 12, 15)
+            box(pl, 'Ground_Bay%d' % k, bxp, bxp + 230, by1 - 300, by1 - 40, 12, 15)
             made += 1
         made += 7
     for f in range(F + 1):

@@ -46,6 +46,8 @@ REGISTRY = {
     'SUR':       ('surface dressing: planting, furniture, signals, roof kit',
                                               'fix4_props.py, zones.py'),
     'BAKED':     ('baked static vehicles',                     'place_baked.py'),
+    'PLOT':      ('a lot around a home: garden, fences, drive, shed',
+                                              'genbuild.build_house / build_walkup'),
     'SHOP':      ('shopfront dressing: awnings, fascia boards, signs',
                                               'step_shopfronts.py'),
     'PROP':      ('the Stage 1 tree, kept deliberately',       'stage 1'),

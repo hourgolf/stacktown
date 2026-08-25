@@ -77,6 +77,7 @@ Re-derive the registry from the level with `census.py`.
 | `DRESS-05` | every lamp has exactly one light, and every light a lamp | — | `'LAMPLIGHT_s1F_0'.startswith('LAMP_')` is **True**, so the build loop counted the lights it had just made as lamps and hung a second on each: 46 lamps produced 88 lights |
 | `DRESS-06` | no two dressing actors of a family stand in the same spot | 20 uu grid | a wipe that silently did nothing and left the old set under the new one — three times now, lamps twice and zones once, each found by eye or by a count that looked odd |
 | `DRESS-07` | commercial roof kit does not stand on a home | — | a house wore a radio mast and a walk-up a water tank: the roof kit was gated on `kind`, which says whether a lot is built on, when it needed `style`, which says what was built |
+| `CAM-01` | no saved camera stands inside a building | — | eight blocks were built after most cameras were placed; `CAM_View_Approach` ended up inside block B's Hall |
 | `SCALE-01` | a street tree overhangs the kerb by ≤ 200 uu | measured: 31 of 73 trees overhang, worst 618 uu into a 1400 uu road | owner: trees oversized; a 618 uu overhang eats 44% of the carriageway |
 | `SCALE-02` | zone planting is smaller than the narrow dimension of its lot | measured crowns: `SM_tree_02` 1131–1613 uu, `SM_tree_03/04` 374–715 uu | owner: "the trees in the plaza are badly oversized" — a 1613 uu crown cannot stand in a 610 uu plaza |
 | `ZONE-01` | planting sits in a lawn panel or bed; seating sits on ground it can | — | owner: "benches strewn about and trees planted in sidewalks rather than the authored planting beds" — `zones.py` drew the beds, `fix4_props.py` planted at uniform random across the whole lot |
@@ -108,6 +109,19 @@ wall.
 Camera placement had been the single largest waste of time in this project —
 inside walls, behind the backdrop, under lamps, in trees, aimed past the board
 edge. All of it was solvable from numbers already known.
+
+## The viewport can be piloting an actor
+
+`cap2.set_fov()` ejects any piloted level actor before every capture, and
+`shot.shoot()` reads the camera transform back and refuses to capture if it
+did not move.
+
+Spawning `CineCameraActor`s left the editor viewport **piloting one of them**.
+After that, every `SetCameraTransform` was silently ignored — `GetCameraTransform`
+returned the actor's transform, not the one just sent — while the captures kept
+returning plausible means. Several images were framed and reasoned about before
+the read-back exposed it. This is the same class as every other trap recorded
+here: a call that appears to succeed and changes nothing.
 
 ## Not yet folded in
 
@@ -156,14 +170,14 @@ spine instead.
 First run over the two-block city, 1015 actors / 6944 visible components:
 
 ```
-self-tests: 15/15 rules proved they can see their own defect
+self-tests: 16/16 rules proved they can see their own defect
 NAME-01   ok     NAME-02   ok     DRESS-01  ok     DRESS-02  ok     LIGHT-01  ok
 MAT-01    FAIL   216 components on WorldGridMaterial - all 54 lamps, 4 parts each
 DRESS-03  FAIL   12 lamp columns standing in a carriageway
 DRESS-04  FAIL   1 street tree 67 uu off the board
 SCALE-01  FAIL   12 street trees overhang the kerb, worst 523 uu
 SCALE-02  FAIL   1 park tree, 1613 uu crown in a 1280 uu lot
-invariants: 15 rules, 0 violated
+invariants: 16 rules, 0 violated
 ```
 
 All eleven are green. The five that were red on the first run are recorded

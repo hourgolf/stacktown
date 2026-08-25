@@ -26,9 +26,20 @@ def set_fov(fov=FOV):
     # evidenced failures inherited from the bakeoff: "the image the engine
     # decision rested on was an uncomposed viewport grab with the editor axis
     # gizmo still visible". It reappeared in this session's board capture.
+    #
+    # AND EJECT THE PILOT. Spawning CineCameraActors left the viewport locked
+    # to one of them, after which SetCameraTransform was silently overridden -
+    # GetCameraTransform read back the actor's transform, not the one just
+    # sent, and every capture came from the wrong camera while reporting a
+    # plausible mean. That is the exact class this project keeps getting
+    # caught by: a call that appears to succeed and changes nothing.
     src = ('import unreal\n'
            'les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)\n'
            'ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)\n'
+           'try:\n'
+           '    les.eject_pilot_level_actor()\n'
+           'except Exception as e:\n'
+           '    print("eject failed:", e)\n'
            'les.editor_set_game_view(True)\n'
            'k = les.get_active_viewport_config_key()\n'
            'les.set_level_viewport_fov(%f, k)\n'

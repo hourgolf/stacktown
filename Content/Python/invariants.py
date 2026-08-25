@@ -375,6 +375,39 @@ def _t_dress_07():
     return _one(dress_07(_snap(bad, ok)), nm)
 
 
+@rule('CAM-01', 'no saved camera stands inside a building')
+def cam_01(snap):
+    """Eight blocks have been built since most of the cameras were placed. One
+    of them ended up inside block B's Hall - a saved view is a remembered
+    number and the city moved underneath it."""
+    lots = []
+    for _n, sp, r in G.lots(('gen', 'av')):
+        h = (sp.get('gf_h', 300.0) + sp.get('floors', 4)*sp.get('fl_h', 260.0)
+             + sp.get('parapet', 0.0))
+        lots.append((sp['name'], r, h))
+    out = []
+    for a in snap['actors']:
+        if labels.family(a['label']) != 'CAM':
+            continue
+        x, y, z = a['loc']
+        for nm, r, h in lots:
+            if r[0] <= x <= r[2] and r[1] <= y <= r[3] and z < h:
+                out.append((a['label'], 'inside %s' % nm))
+                break
+    return out
+
+
+@selftest('CAM-01')
+def _t_cam_01():
+    nm, r, h = next(((sp['name'], rr,
+                      sp.get('gf_h', 300.0) + sp.get('floors', 4)*sp.get('fl_h', 260.0))
+                     for _n, sp, rr in G.lots(('gen',))))
+    cx, cy = (r[0] + r[2])/2.0, (r[1] + r[3])/2.0
+    bad = _a('CAM_Bad', cls='CineCameraActor', loc=(cx, cy, 100.0))
+    ok = _a('CAM_Good', cls='CineCameraActor', loc=(cx, cy, h + 4000.0))
+    return _one(cam_01(_snap(bad, ok)), 'CAM_Bad')
+
+
 # =========================== ZONE =========================================
 BENCH_LOOK = 260.0        # how far ahead of a bench must be open ground
 

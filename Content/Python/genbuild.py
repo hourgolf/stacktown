@@ -40,6 +40,61 @@ def box(actor, name, x0, x1, y0, y1, z0, z1):
                                          'z': (z0 + z1) / 2.0}}})
 
 
+
+def _bx(a, nm, axis, p0, p1, u0, u1, z0, z1):
+    """box() with the wall's plane axis abstracted, so one window routine can
+    serve a front wall and a flank."""
+    if axis == 'y':
+        box(a, nm, u0, u1, min(p0, p1), max(p0, p1), z0, z1)
+    else:
+        box(a, nm, min(p0, p1), max(p0, p1), u0, u1, z0, z1)
+
+
+def window(a, tag, axis, plane, outward, u0, u1, z0, z1, bars=(1, 1)):
+    """A recessed window with a frame, a sill and glazing bars.
+
+    The houses and walk-ups were built with a flat pane sitting ON the wall
+    plane and a sill under it - three parts - while block A gives every opening
+    eight: glass set back 250 mm (the Stage 0 finding), an interior behind it,
+    a frame standing 8 uu proud of the glass on three sides, a sill proud
+    again, and glazing bars. That difference is the whole of "they don't look
+    as finished". Gate A1 wants the recess to read as a shadow line and A2
+    wants the sill to have real thickness; a flat pane has neither.
+
+    `outward` is +1 if the exterior face looks along +axis, -1 if it looks back.
+    """
+    d = -outward                        # into the wall
+    g = plane + d*24.0                  # the glass plane
+    _bx(a, 'Glass_%s' % tag, axis, g, g + d*2, u0 + 6, u1 - 6, z0 + 6, z1 - 6)
+    _bx(a, 'Interior_%s' % tag, axis, g + d*18, g + d*24, u0, u1, z0, z1)
+    _bx(a, 'Frame_%sL' % tag, axis, g - d*8, g + d*2, u0, u0 + 6, z0, z1)
+    _bx(a, 'Frame_%sR' % tag, axis, g - d*8, g + d*2, u1 - 6, u1, z0, z1)
+    _bx(a, 'Frame_%sT' % tag, axis, g - d*8, g + d*2, u0, u1, z1 - 6, z1)
+    _bx(a, 'Frame_%sS' % tag, axis, g - d*16, g + d*2, u0 - 5, u1 + 5, z0 - 9, z0)
+    n = 6
+    for k in range(1, bars[0] + 1):
+        m = u0 + (u1 - u0)*k/(bars[0] + 1.0)
+        _bx(a, 'Mullion_%sV%d' % (tag, k), axis, g - d*6, g + d*1,
+            m - 3, m + 3, z0, z1); n += 1
+    for k in range(1, bars[1] + 1):
+        mz = z0 + (z1 - z0)*k/(bars[1] + 1.0)
+        _bx(a, 'Mullion_%sH%d' % (tag, k), axis, g - d*6, g + d*1,
+            u0, u1, mz - 3, mz + 3); n += 1
+    return n
+
+
+def slab(actor, name, cx, cy, cz, sx, sy, sz, pitch=0.0, roll=0.0, yaw=0.0):
+    """A box with a ROTATION. add_cube honours a rotation in its local
+    transform - measured, the component reads back what it was given - which
+    box() never passed, so every roof in this project was a stack of treads.
+    Eleven risers over a 168 uu rise reads as terracing from the pavement."""
+    ue.tool(P, 'add_cube', {
+        'actor': actor, 'name': name,
+        'dimensions': {'x': sx, 'y': sy, 'z': sz},
+        'local_transform': {'location': {'x': cx, 'y': cy, 'z': cz},
+                            'rotation': {'pitch': pitch, 'yaw': yaw, 'roll': roll}}})
+
+
 def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """Dispatch on style. ONE generator with more parameters, never a second
     generator - "buildings are parameter sets" is the property HANDOFF.md 4.2
@@ -481,34 +536,39 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     # ---- windows: front, and both flanks, because a house is seen from three
     # sides at once and a blank gable is what gave the first block away -------
-    def win(tag, ax0, ax1, ay0, ay1, z0, z1, axis):
-        """axis 'y' = a window in a wall facing +/-Y; 'x' = facing +/-X."""
-        box(a, 'Glass_%s' % tag, ax0, ax1, ay0, ay1, z0, z1)
-        if axis == 'y':
-            box(a, 'Frame_%sSill' % tag, ax0 - 8, ax1 + 8, ay0 - 6, ay1 + 6, z0 - 10, z0)
-            box(a, 'Interior_%s' % tag, ax0 + 4, ax1 - 4,
-                ay0 + (7 if ay0 < (hy0 + hy1)/2 else -7),
-                ay1 + (7 if ay0 < (hy0 + hy1)/2 else -7), z0 + 4, z1 - 4)
-        else:
-            box(a, 'Frame_%sSill' % tag, ax0 - 6, ax1 + 6, ay0 - 8, ay1 + 8, z0 - 10, z0)
-        return 3 if axis == 'y' else 2
-
     # front elevation: door bay in the middle, windows either side
     for b in range(BAYS):
         bx = hx0 + 40 + (HW - 80)*(b + 0.5)/BAYS
         if abs(bx - cx) > 70:
-            made += win('GF%d' % b, bx - 62, bx + 62, hy0 - 5, hy0 + 3,
-                        26 + 62, GF - 34, 'y')
+            made += window(a, 'GF%d' % b, 'y', hy0, -1.0, bx - 62, bx + 62,
+                           26 + 62, GF - 34, bars=(1, 1))
         for f in range(F):
             z0 = GF + f*FH + 44
-            made += win('U%d_%d' % (f, b), bx - 56, bx + 56, hy0 - 5, hy0 + 3,
-                        z0, z0 + FH - 96, 'y')
+            made += window(a, 'U%d_%d' % (f, b), 'y', hy0, -1.0,
+                           bx - 56, bx + 56, z0, z0 + FH - 96, bars=(1, 1))
     # flanks
-    for sgn, side in ((-1, hx0), (1, hx1)):
+    for sgn, side in ((-1.0, hx0), (1.0, hx1)):
         for k in range(2):
             wy = hy0 + HD*(0.3 + 0.4*k)
-            made += win('S%d_%d' % (sgn + 1, k), side - 4, side + 4,
-                        wy - 58, wy + 58, GF + 44, GF + FH - 52, 'x')
+            made += window(a, 'S%d_%d' % (int(sgn) + 1, k), 'x', side, sgn,
+                           wy - 58, wy + 58, GF + 44, GF + FH - 52, bars=(1, 0))
+
+    # ---- trim: the small parts that separate a model from a massing study ---
+    box(a, 'Frame_Fascia', hx0 - 30, hx1 + 30, hy0 - 30, hy1 + 30,
+        eaves - 16, eaves + 4); made += 1
+    box(a, 'Frame_Gutter', hx0 - 34, hx1 + 34, hy0 - 34, hy0 - 22,
+        eaves - 14, eaves - 2); made += 1
+    box(a, 'Frame_Downpipe', hx1 - 22, hx1 - 8, hy0 - 20, hy0 - 6,
+        26, eaves - 12); made += 1
+    for cxn, cx_ in (('L', hx0), ('R', hx1)):
+        box(a, 'Frame_Corner%sF' % cxn, cx_ - 9, cx_ + 9, hy0 - 6, hy0 + 4,
+            26, eaves); made += 1
+        box(a, 'Frame_Corner%sB' % cxn, cx_ - 9, cx_ + 9, hy1 - 4, hy1 + 6,
+            26, eaves); made += 1
+    box(a, 'Frame_Threshold', cx - 52, cx + 52, hy0 - 16, hy0 + 4, 20, 30); made += 1
+    box(a, 'Glass_Fanlight', cx - 36, cx + 36, hy0 + 2, hy0 + 6,
+        26 + 152, 26 + 172); made += 1
+    made += 4
 
     # ---- a bay window, which is what breaks a flat cottage elevation --------
     if bay:
@@ -533,19 +593,42 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         box(a, 'Roof_Garage', gx - 16, gx + gw + 16, hy0 + 26, hy0 + 240,
             190, 210); made += 1
 
-    # ---- pitched roof, stepped; a gable shows its ends, a hip closes them ---
-    # 6 steps over a 150 uu rise read as a ziggurat from above rather than as
-    # a pitch. 11 steps put each riser under 15 uu, which is below the 0.4%
-    # bar at the board camera and reads as a slope.
-    steps = 11
+    # ---- pitched roof, actually pitched --------------------------------------
+    # Two rotated slabs meeting at a ridge, not eleven treads. The ridge runs
+    # along X so the gable ends show; a hip adds two more slabs to close them.
+    OV = 34.0
     rise = 168.0 + rnd.uniform(-16, 16)
-    for i in range(steps):
-        t0, t1 = i/float(steps), (i + 1)/float(steps)
-        ins = (HD/2.0 - 24.0)*t0
-        xins = (HW/2.0 - 24.0)*t0 if roof_kind == 'hip' else 0.0
-        box(a, 'Roof_Slope%d' % i, hx0 + xins - 34, hx1 - xins + 34,
-            hy0 + ins - 34, hy1 - ins + 34,
-            eaves + rise*t0, eaves + rise*t1 + 2); made += 1
+    ey0, ey1 = hy0 - OV, hy1 + OV
+    ridge_y = (ey0 + ey1)/2.0
+    run = ridge_y - ey0
+    ang = math.degrees(math.atan2(rise, run))
+    slope_len = math.hypot(run, rise)
+    for sgn, tag in ((-1.0, 'F'), (1.0, 'B')):
+        cy_ = ridge_y + sgn*run/2.0
+        slab(a, 'Roof_Slope%s' % tag, (hx0 + hx1)/2.0, cy_, eaves + rise/2.0,
+             (hx1 - hx0) + 2*OV, slope_len, 18.0, roll=-sgn*ang)
+        made += 1
+    # gable ends: a stepped triangle, small enough that the steps do not read
+    if roof_kind == 'gable':
+        for sgn, hx_ in ((-1.0, hx0), (1.0, hx1)):
+            for i in range(7):
+                t0, t1 = i/7.0, (i + 1)/7.0
+                box(a, 'Wall_Gable%d_%d' % (int(sgn) + 1, i),
+                    hx_ - 10, hx_ + 10,
+                    ey0 + run*t0, ey1 - run*t0,
+                    eaves + rise*t0, eaves + rise*t1 + 2)
+                made += 1
+    else:
+        # hip: two more slabs closing the ends, pitched about Y
+        hrun = (hx1 - hx0)/2.0 + OV
+        hang = math.degrees(math.atan2(rise, hrun))
+        for sgn, hx_ in ((-1.0, hx0 - OV), (1.0, hx1 + OV)):
+            cx_ = (hx0 + hx1)/2.0 - sgn*hrun/2.0
+            slab(a, 'Roof_Hip%d' % (int(sgn) + 1), cx_, ridge_y,
+                 eaves + rise/2.0, math.hypot(hrun, rise),
+                 (ey1 - ey0) - 2*run*0.0, 18.0, pitch=sgn*hang)
+            made += 1
+
     # dormers, on the street slope only
     for d in range(dormers):
         dxc = hx0 + HW*(0.3 + 0.4*d)
@@ -631,13 +714,8 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 continue                       # the door takes the middle bay
             wz0 = z0 + (54 if f else 62)
             wz1 = z0 + h - (46 if f else 40)
-            box(a, 'Glass_W%d_%d' % (f, b), bx - 62, bx + 62,
-                hy0 - 6, hy0 + 2, wz0, wz1); made += 1
-            box(a, 'Frame_W%d_%dSill' % (f, b), bx - 72, bx + 72,
-                hy0 - 12, hy0 + 6, wz0 - 12, wz0); made += 1
-            box(a, 'Interior_W%d_%d' % (f, b), bx - 56, bx + 56,
-                hy0 + 4, hy0 + 12, wz0 + 6, wz1 - 6); made += 1
-            made += 2
+            made += window(a, 'W%d_%d' % (f, b), 'y', hy0, -1.0,
+                           bx - 62, bx + 62, wz0, wz1, bars=(1, 1))
             if f > 0 and b % 2 == 0:
                 box(a, 'Ground_Balc%d_%d' % (f, b), bx - 92, bx + 92,
                     hy0 - 96, hy0 + 2, wz0 - 22, wz0 - 10); made += 1
@@ -651,11 +729,24 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             h = (GF - 34) if f == 0 else FH
             for k in range(2):
                 wy = hy0 + (hy1 - hy0)*(0.32 + 0.36*k)
-                box(a, 'Glass_S%d_%d_%d' % (sgn + 1, f, k), side - 5, side + 5,
-                    wy - 54, wy + 54, z0 + 58, z0 + h - 46); made += 1
-                box(a, 'Frame_S%d_%d_%dSill' % (sgn + 1, f, k), side - 8, side + 8,
-                    wy - 64, wy + 64, z0 + 46, z0 + 58); made += 1
-                made += 1
+                made += window(a, 'S%d_%d_%d' % (sgn + 1, f, k), 'x', side,
+                               float(sgn), wy - 54, wy + 54,
+                               z0 + 58, z0 + h - 46, bars=(1, 0))
+
+    # ---- trim: a cornice, a string course at each floor, a downpipe ---------
+    box(a, 'Band_Cornice', hx0 - 16, hx1 + 16, hy0 - 16, hy1 + 16,
+        top - 26, top); made += 1
+    for f in range(1, F + 1):
+        zc = GF + (f - 1)*FH
+        box(a, 'Band_String%d' % f, hx0 - 9, hx1 + 9, hy0 - 9, hy0 + 4,
+            zc - 12, zc); made += 1
+    box(a, 'Frame_Downpipe', hx1 - 26, hx1 - 10, hy0 - 22, hy0 - 6,
+        34, top - 20); made += 1
+    for cxn, cx_ in (('L', hx0), ('R', hx1)):
+        box(a, 'Frame_Corner%s' % cxn, cx_ - 10, cx_ + 10, hy0 - 6, hy0 + 4,
+            34, top); made += 1
+    box(a, 'Frame_Threshold', cx - 70, cx + 70, hy0 - 18, hy0 + 4, 26, 38); made += 1
+    made += 3
 
     box(a, 'Roof_Stair', cx - 110, cx + 110, hy1 - 210, hy1 - 40,
         top + PAR, top + PAR + 120); made += 1

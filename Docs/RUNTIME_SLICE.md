@@ -99,6 +99,31 @@ Three functions on `BP_Parcel`, none of them long:
    grows the ones it has. That property is why the seed lives in a recipe's
    base and not in its tiers.
 
+## First measurement, 25 Aug 2026
+
+`sim_tick.py` runs the tick in Python against the REAL assets - it spawns 500
+`BP_Parcel` actors, reads `DA_Catalogue`, and does exactly the lookup
+`ResolveMesh` will do. Python through Unreal's reflection layer is the SLOWEST
+possible implementation of this, which is what makes the numbers useful:
+
+    place 500 parcels                     1240 ms   (2.48 ms each)
+    tick, every parcel upgrades            295 ms   (0.59 ms each)
+    tick, nothing changed                  1.1 ms   (0.002 ms each)
+
+**The budget is not met in the worst case and is met 90x over in the common
+one.** A tick where all 500 buildings upgrade at once is 295 ms against a
+100 ms budget - but that is not a case a city produces; buildings cross tier
+thresholds at different times. A tick where nothing changes is **1.1 ms**, and
+that is the case that runs almost every tick.
+
+The Branch in the tick is what buys that: `ResolveMesh` only runs when the tier
+actually changed. Without it every tick would cost the 295 ms.
+
+**What this says about C++.** Nothing yet, and that is the point of measuring
+before deciding. The slow path is Python reflection writing one property at a
+time; Blueprint does not pay that. If a Blueprint implementation still misses
+the budget on a realistic tick, THAT is the measurement that justifies C++.
+
 ## Step by step
 
 **1. Open it.** Content Browser → `Content/Stacktown/Runtime` → double-click

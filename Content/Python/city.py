@@ -35,7 +35,11 @@ STREET_FACE_D = STREET_FACE_C - BLOCK_C_SEP            # block C south
 STREET3_FAR   = STREET_FACE_D - SERV_CORRIDOR
 # The board grows south for the houses, exactly as it grew east for the avenue.
 # Block F fronts the service street opposite the park.
-BLOCK_F_DEPTH = 820.0
+# 820 left 140 uu behind the house once the front garden and the house itself
+# were taken - a yard you could not stand in. 1500 gives 250 front, 430 house
+# and 820 back, which is a real garden and the reason the rear elevation is
+# worth building at all.
+BLOCK_F_DEPTH = 1500.0
 BLOCK_F_REAR  = STREET3_FAR - BLOCK_F_DEPTH
 BOARD_S       = BLOCK_F_REAR - 300.0
 STREET_FACE_E = STREET_FACE_B                          # block D fronts street 1 too

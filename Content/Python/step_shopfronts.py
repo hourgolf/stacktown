@@ -105,7 +105,11 @@ for blk in BLOCKS:
         extra = rnd.choice(('none', 'banner', 'blade', 'blade'))
 
         if True:
-            count = max(1, int(round(span / 340.0)))
+            # Awnings follow the STRUCTURE. Dividing the span by a fixed 340
+            # put them across the pilasters on the deco block rather than
+            # between them - the lot already knows how many bays it has, so
+            # one awning per bay, inset far enough to clear the pier.
+            count = max(1, int(spec.get('bays', 3)))
             slot = span/count
             cloth = rnd.choice(CLOTH)       # one shop, one colour
             for k in range(count):
@@ -114,7 +118,7 @@ for blk in BLOCKS:
                 # awning mesh spans pivot-17..pivot+82. GF-130 puts its top at
                 # the glass head, which is where an awning is fixed.
                 n += place(rnd.choice(AWNINGS), lx, back, GF - 130.0, yawf,
-                           'awn%d' % k, cloth, sx=(slot - 16.0)/287.0)
+                           'awn%d' % k, cloth, sx=(slot - PIER - 30.0)/287.0)
         if extra == 'banner':
             for k in range(3):
                 lx = sx0 + span*(k + 0.5)/3.0

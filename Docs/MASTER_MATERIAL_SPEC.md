@@ -80,3 +80,15 @@ shader saves it.
 - Per-asset bespoke shaders
 - Using the master to disguise geometry that fails the reveal checks in the gate. The material
   unifies *fabrication*. It cannot manufacture depth, and the last project proved that.
+
+## The hero look (25 Aug 2026)
+
+`Tools/measure/dof.hero(focus)` — **f/2 on a 400 mm back, 8 blades, 1/240**.
+Chosen from the contact sheet of 25 Aug. Aperture alone does nothing at these
+subject distances; the size of the camera back is the knob, because it asks the
+question the art direction is about — how big is the film relative to the thing
+on the table. 36 mm photographs a city; 400 mm photographs a model of one.
+
+**The level's saved state stays DOF-off.** Building and grading need the
+geometry visible, and the gate amendment keeps every A–E line judged with depth
+of field off. `hero()` is turned on for a frame and `reset()` afterwards.

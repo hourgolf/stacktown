@@ -50,6 +50,26 @@ def set_dof(fstop, focus, blades=8, sensor=36.0, shutter=None, iso=None):
     _run(b)
 
 
+# THE HERO LOOK, chosen from the 25 Aug contact sheet. A 400 mm back at f/2 is
+# the knee: the foreground goes soft while the subject plane still carries the
+# awning scallops, the window reveals and the glazing bars. 150 is too polite;
+# 1000 dissolves the model and stops it being a photograph of THIS town.
+#
+# Shutter pays for the aperture so the exposure matches the DOF-off condition -
+# measured at 157.9..158.5 mean across five stops.
+#
+# The LEVEL'S SAVED STATE STAYS DOF-OFF. Building and grading need the geometry
+# visible, and the gate amendment of 25 Aug keeps every A-E line judged with
+# depth of field off. hero() is something you turn on for a frame and reset().
+HERO = dict(fstop=2.0, sensor=400.0, blades=8, shutter=240.0)
+
+
+def hero(focus):
+    """The default hero look, focused at `focus` uu from the camera."""
+    set_dof(HERO['fstop'], focus, blades=HERO['blades'],
+            sensor=HERO['sensor'], shutter=HERO['shutter'])
+
+
 def reset(fstop=4.0, shutter=60.0, iso=800.0):
     """Back to the gate condition: DOF off, base exposure."""
     _run('    st.set_editor_property("override_depth_of_field_focal_distance", False)\n'

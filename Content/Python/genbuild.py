@@ -474,7 +474,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # avoid. These are the differences that actually read from the street: what
     # the roof does at the top, what the front door does at the bottom, and
     # whether the elevation is flat or broken.
-    roof_kind = spec.get('roof', rnd.choice(('gable', 'hip', 'gable')))
+    roof_kind = spec.get('roof', rnd.choice(('gable', 'crossgable', 'gable')))
     entry = spec.get('entry', rnd.choice(('porch', 'stoop')))
     dormers = spec.get('dormers', rnd.choice((0, 0, 2)))
     bay = spec.get('bay', rnd.random() < 0.45)
@@ -491,8 +491,34 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     a = mkactor('BLD2_%s_H' % n, origin, (0.0, yaw, 0.0))
 
-    # ---- garden, fence, front walk, drive -----------------------------------
+    # ---- gardens, fences, front walk, drive ---------------------------------
+    # which side the drive takes is decided first, because the shed goes in the
+    # back corner the drive does not use
+    dside = 1 if rnd.random() < 0.5 else -1
+    dx = x0 + (W - 150.0) if dside > 0 else x0 + 26.0
     box(a, 'Grass_Yard', x0 + 12, x0 + W - 12, 8, GARDEN - 4, 0, 10); made += 1
+    # THE BACK GARDEN. A house with nothing behind it is a facade with a roof;
+    # from any camera that is not square to the street the rear reads, and
+    # these had bare walls and bare ground.
+    by0, by1 = hy1 + 10.0, D - 12.0
+    if by1 - by0 > 200.0:
+        box(a, 'Grass_Back', x0 + 12, x0 + W - 12, by0, by1, 0, 10); made += 1
+        box(a, 'Ground_Patio', hx0 + 30, hx1 - 30, by0, by0 + 130, 0, 13); made += 1
+        for sgn, fx in ((-1.0, x0 + 8), (1.0, x0 + W - 8)):
+            box(a, 'Kerbing_SideFence%d' % (int(sgn) + 1), fx - 7, fx + 7,
+                GARDEN - 20, by1, 8, 78); made += 1
+        box(a, 'Kerbing_BackFence', x0 + 8, x0 + W - 8, by1 - 10, by1, 8, 84)
+        made += 2
+        # a shed in the corner the drive does not use
+        sx_ = x0 + W - 250.0 if dside < 0 else x0 + 60.0
+        box(a, 'Wall_Shed', sx_, sx_ + 190, by1 - 190, by1 - 24, 0, 150); made += 1
+        box(a, 'Roof_Shed', sx_ - 12, sx_ + 202, by1 - 202, by1 - 12, 150, 166)
+        box(a, 'Frame_ShedDoor', sx_ + 40, sx_ + 150, by1 - 196, by1 - 188, 8, 128)
+        made += 2
+        for k in range(3):
+            px = x0 + 120.0 + (W - 240.0)*k/2.0
+            box(a, 'Frame_BackPost%d' % k, px - 6, px + 6, by1 - 12, by1 + 2,
+                8, 96); made += 1
     box(a, 'Kerbing_FenceL', x0 + 8, x0 + W*0.34, 0, 10, 10, 76); made += 1
     box(a, 'Kerbing_FenceR', x0 + W*0.66, x0 + W - 8, 0, 10, 10, 76); made += 1
     for k in range(4):
@@ -505,8 +531,6 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     walk = paths.Path((cx, 0.0), (cx, GARDEN + 6.0), 96.0, 'walk')
     wr = walk.rect()
     box(a, 'Ground_Walk', wr[0], wr[2], wr[1], wr[3], 0, 12); made += 1
-    dside = 1 if rnd.random() < 0.5 else -1
-    dx = x0 + (W - 150.0) if dside > 0 else x0 + 26.0
     box(a, 'Ground_Drive', dx, dx + 124, 0, GARDEN + 40, 0, 11); made += 1
 
     # ---- body ---------------------------------------------------------------
@@ -553,6 +577,21 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             made += window(a, 'S%d_%d' % (int(sgn) + 1, k), 'x', side, sgn,
                            wy - 58, wy + 58, GF + 44, GF + FH - 52, bars=(1, 0))
 
+    # ---- rear elevation ------------------------------------------------------
+    for b in range(2):
+        rx = hx0 + 40 + (HW - 80)*(b + 0.5)/2.0
+        made += window(a, 'R0_%d' % b, 'y', hy1, 1.0, rx - 58, rx + 58,
+                       26 + 66, GF - 40, bars=(1, 1))
+        for f in range(F):
+            z0 = GF + f*FH + 44
+            made += window(a, 'R%d_%d' % (f + 1, b), 'y', hy1, 1.0,
+                           rx - 52, rx + 52, z0, z0 + FH - 96, bars=(1, 1))
+    bd = (hx0 + hx1)/2.0
+    box(a, 'Frame_BackDoor', bd - 40, bd + 40, hy1 - 5, hy1 + 4, 26, 26 + 146)
+    box(a, 'Roof_BackHood', bd - 62, bd + 62, hy1 - 4, hy1 + 54,
+        26 + 150, 26 + 166)
+    made += 2
+
     # ---- trim: the small parts that separate a model from a massing study ---
     box(a, 'Frame_Fascia', hx0 - 30, hx1 + 30, hy0 - 30, hy1 + 30,
         eaves - 16, eaves + 4); made += 1
@@ -594,51 +633,79 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             190, 210); made += 1
 
     # ---- pitched roof, actually pitched --------------------------------------
-    # Two rotated slabs meeting at a ridge, not eleven treads. The ridge runs
-    # along X so the gable ends show; a hip adds two more slabs to close them.
+    # Two rotated slabs meeting at a ridge. The HIP that used to live here was
+    # wrong: a hip's main slopes are trapezoids and its ends are triangles, and
+    # a box is neither, so it came out as four full-size slabs overlapping in
+    # the middle - which is the "flat roof laid on top of a pitched roof" in
+    # the frames. Variety comes from which way the RIDGE runs instead, which is
+    # a real difference a street reads: gable to the side, or gable to the
+    # street.
     OV = 34.0
     rise = 168.0 + rnd.uniform(-16, 16)
     ey0, ey1 = hy0 - OV, hy1 + OV
-    ridge_y = (ey0 + ey1)/2.0
-    run = ridge_y - ey0
-    ang = math.degrees(math.atan2(rise, run))
-    slope_len = math.hypot(run, rise)
-    for sgn, tag in ((-1.0, 'F'), (1.0, 'B')):
-        cy_ = ridge_y + sgn*run/2.0
-        slab(a, 'Roof_Slope%s' % tag, (hx0 + hx1)/2.0, cy_, eaves + rise/2.0,
-             (hx1 - hx0) + 2*OV, slope_len, 18.0, roll=-sgn*ang)
-        made += 1
-    # gable ends: a stepped triangle, small enough that the steps do not read
-    if roof_kind == 'gable':
+    ex0, ex1 = hx0 - OV, hx1 + OV
+    street_gable = (roof_kind == 'crossgable')
+
+    if street_gable:
+        ridge = (ex0 + ex1)/2.0
+        run = ridge - ex0
+        ang = math.degrees(math.atan2(rise, run))
+        for sgn in (-1.0, 1.0):
+            slab(a, 'Roof_Slope%d' % (int(sgn) + 1), ridge + sgn*run/2.0,
+                 (ey0 + ey1)/2.0, eaves + rise/2.0,
+                 # sign mirrors the roll used for a ridge along X; the first
+                 # version had it the other way and the roof came out as a
+                 # valley - two slopes meeting in a V instead of at a ridge
+                 math.hypot(run, rise), ey1 - ey0, 18.0, pitch=-sgn*ang)
+            made += 1
+        for sgn, ey_ in ((-1.0, hy0), (1.0, hy1)):
+            for i in range(7):
+                t0, t1 = i/7.0, (i + 1)/7.0
+                box(a, 'Wall_Gable%d_%d' % (int(sgn) + 1, i),
+                    ex0 + run*t0, ex1 - run*t0, ey_ - 10, ey_ + 10,
+                    eaves + rise*t0, eaves + rise*t1 + 2)
+                made += 1
+    else:
+        ridge = (ey0 + ey1)/2.0
+        run = ridge - ey0
+        ang = math.degrees(math.atan2(rise, run))
+        for sgn, tag in ((-1.0, 'F'), (1.0, 'B')):
+            slab(a, 'Roof_Slope%s' % tag, (hx0 + hx1)/2.0, ridge + sgn*run/2.0,
+                 eaves + rise/2.0, (hx1 - hx0) + 2*OV,
+                 math.hypot(run, rise), 18.0, roll=-sgn*ang)
+            made += 1
         for sgn, hx_ in ((-1.0, hx0), (1.0, hx1)):
             for i in range(7):
                 t0, t1 = i/7.0, (i + 1)/7.0
                 box(a, 'Wall_Gable%d_%d' % (int(sgn) + 1, i),
-                    hx_ - 10, hx_ + 10,
-                    ey0 + run*t0, ey1 - run*t0,
+                    hx_ - 10, hx_ + 10, ey0 + run*t0, ey1 - run*t0,
                     eaves + rise*t0, eaves + rise*t1 + 2)
                 made += 1
-    else:
-        # hip: two more slabs closing the ends, pitched about Y
-        hrun = (hx1 - hx0)/2.0 + OV
-        hang = math.degrees(math.atan2(rise, hrun))
-        for sgn, hx_ in ((-1.0, hx0 - OV), (1.0, hx1 + OV)):
-            cx_ = (hx0 + hx1)/2.0 - sgn*hrun/2.0
-            slab(a, 'Roof_Hip%d' % (int(sgn) + 1), cx_, ridge_y,
-                 eaves + rise/2.0, math.hypot(hrun, rise),
-                 (ey1 - ey0) - 2*run*0.0, 18.0, pitch=sgn*hang)
+
+    # Dormers: SHED dormers, with their own sloped cap. The old ones were a
+    # box with a flat plate on top, sitting on a pitched slope - which is
+    # exactly the "flat roof on a pitched roof" that reads as broken. Only on a
+    # side-gabled roof: a street-facing gable has no front slope to sit in.
+    if dormers and not street_gable:
+        dh = rise*0.52
+        dd = run*0.46
+        dang = math.degrees(math.atan2(dh*0.34, dd))
+        for d in range(dormers):
+            dxc = hx0 + HW*(0.3 + 0.4*d)
+            dz = eaves + rise*0.10
+            box(a, 'Wall_DormerC%dL' % d, dxc - 66, dxc - 52,
+                hy0 - 8, hy0 - 8 + dd, dz, dz + dh); made += 1
+            box(a, 'Wall_DormerC%dR' % d, dxc + 52, dxc + 66,
+                hy0 - 8, hy0 - 8 + dd, dz, dz + dh); made += 1
+            box(a, 'Wall_DormerF%d' % d, dxc - 66, dxc + 66,
+                hy0 - 12, hy0 - 4, dz, dz + dh); made += 1
+            made += window(a, 'Dm%d' % d, 'y', hy0 - 8, -1.0,
+                           dxc - 48, dxc + 48, dz + 26, dz + dh - 22, bars=(1, 0))
+            slab(a, 'Roof_Dormer%d' % d, dxc, hy0 - 14 + dd/2.0,
+                 dz + dh + dh*0.17, 148.0, math.hypot(dd, dh*0.34), 12.0,
+                 roll=-dang)
             made += 1
 
-    # dormers, on the street slope only
-    for d in range(dormers):
-        dxc = hx0 + HW*(0.3 + 0.4*d)
-        box(a, 'Wall_Dormer%d' % d, dxc - 66, dxc + 66, hy0 - 20, hy0 + 96,
-            eaves + 8, eaves + rise*0.72); made += 1
-        box(a, 'Glass_Dormer%d' % d, dxc - 48, dxc + 48, hy0 - 24, hy0 - 18,
-            eaves + 30, eaves + rise*0.62); made += 1
-        box(a, 'Roof_Dormer%d' % d, dxc - 78, dxc + 78, hy0 - 32, hy0 + 100,
-            eaves + rise*0.72, eaves + rise*0.72 + 16); made += 1
-        made += 3
     box(a, 'Wall_Chimney', hx1 - 120, hx1 - 62, hy0 + HD*0.62, hy0 + HD*0.62 + 58,
         eaves, eaves + rise + 86); made += 1
 
@@ -747,6 +814,30 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             34, top); made += 1
     box(a, 'Frame_Threshold', cx - 70, cx + 70, hy0 - 18, hy0 + 4, 26, 38); made += 1
     made += 3
+
+    # ---- rear yard and rear elevation ---------------------------------------
+    by0, by1 = hy1 + 10.0, D - 12.0
+    if by1 - by0 > 200.0:
+        box(a, 'Ground_Yard', x0 + 10, x0 + W - 10, by0, by1, 0, 12); made += 1
+        box(a, 'Kerbing_YardWall', x0 + 8, x0 + W - 8, by1 - 12, by1, 12, 96)
+        for sgn, fx in ((-1.0, x0 + 8), (1.0, x0 + W - 8)):
+            box(a, 'Kerbing_YardSide%d' % (int(sgn) + 1), fx - 7, fx + 7,
+                by0 - 40, by1, 12, 96); made += 1
+        # bin store: every block of flats has one and it is always by the back
+        box(a, 'Wall_BinStore', x0 + 70, x0 + 350, by1 - 200, by1 - 30, 0, 130)
+        box(a, 'Roof_BinStore', x0 + 58, x0 + 362, by1 - 212, by1 - 18, 130, 144)
+        box(a, 'Ground_Bins', x0 + 400, x0 + 640, by1 - 150, by1 - 40, 0, 96)
+        made += 4
+    for f in range(F + 1):
+        z0 = GF + (f - 1)*FH if f else 34
+        h = (GF - 34) if f == 0 else FH
+        for b in range(2):
+            rx = hx0 + 60 + (HW - 120)*(b + 0.5)/2.0
+            made += window(a, 'RR%d_%d' % (f, b), 'y', hy1, 1.0,
+                           rx - 58, rx + 58, z0 + 58, z0 + h - 46, bars=(1, 1))
+    box(a, 'Frame_RearStair', hx1 - 150, hx1 - 30, hy1 - 4, hy1 + 120, 34, top)
+    box(a, 'Frame_BackDoor', cx - 44, cx + 44, hy1 - 5, hy1 + 5, 34, 34 + 160)
+    made += 2
 
     box(a, 'Roof_Stair', cx - 110, cx + 110, hy1 - 210, hy1 - 40,
         top + PAR, top + PAR + 120); made += 1

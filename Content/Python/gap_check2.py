@@ -4,7 +4,7 @@ The previous version kept whichever core actor it found last, so with two
 segments per building it compared every floor against the setback band and
 reported voids that were not there."""
 import unreal, sys
-sys.path.insert(0,'/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad')
+import _path  # repo tool paths; replaces a dead scratchpad path
 from city import BLOCKS
 eas=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 def aabb(c):

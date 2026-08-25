@@ -1,6 +1,6 @@
 """Is PaperTiling connected to anything in the master graph?"""
 import json, sys
-sys.path.insert(0,'/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad')
+import _path  # repo tool paths; replaces a dead scratchpad path
 import ue
 M='editor_toolset.toolsets.material.MaterialTools'
 O='editor_toolset.toolsets.object.ObjectTools'

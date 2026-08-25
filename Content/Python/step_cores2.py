@@ -4,7 +4,7 @@ The previous version measured world extents, which only works for an
 unrotated block. Deriving the core from the lot spec and letting the actor
 carry the block yaw works for any block."""
 import unreal, sys
-sys.path.insert(0,'/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad')
+import _path  # repo tool paths; replaces a dead scratchpad path
 from city import BLOCKS
 eas=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 les=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)

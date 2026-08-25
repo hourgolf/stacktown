@@ -1,4 +1,10 @@
 import unreal, json
+# Data goes to Saved/data, never Content/ - UE's importer picks up a .json
+# there and opens a modal DataTable dialog that blocks the game thread.
+_SAVED = __import__('unreal').Paths.convert_relative_path_to_full(
+    __import__('unreal').Paths.project_saved_dir()) + 'data/'
+__import__('os').makedirs(_SAVED, exist_ok=True)
+
 eas=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 rows=[]
 for a in eas.get_all_level_actors():
@@ -15,5 +21,5 @@ for a in eas.get_all_level_actors():
 uniq=sorted(set(rows))
 work=[d for d in uniq if min(d)>=3.0 and max(d)<=2500.0]
 print('components %d  distinct %d  to chamfer %d'%(len(rows),len(uniq),len(work)))
-open('/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad/stage1_sizes_current.json','w').write(json.dumps({'work':work}))
+open(_SAVED + 'stage1_sizes_current.json','w').write(json.dumps({'work':work}))
 print('wrote sizes')

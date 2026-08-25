@@ -70,7 +70,10 @@ into a procedural manual.
   lives in `Content/Stacktown`.
 - Normalized imports use `Content/Stacktown/Source/<provider>/<asset-id>` when provenance
   applies. Donor packs remain source material, never the authored result.
-- Actor prefixes: `CAM_`, `LIGHT_`, `LOOK_`, `STAGE_`, `ART_`, `PROP_`, `DIO_`, `BLD_`.
+- Actor label families are defined in `Content/Python/labels.py`, which is the single
+  authority; `Docs/INVARIANTS.md` explains why. Rule `NAME-01` fails the build when the
+  level contains a family the registry does not list. The eight prefixes this line used to
+  name were written when the project was one building; there are fifteen families now.
   Python files and functions use snake_case. Asset names stay PascalCase.
 - `/Game/Maps/OneBuildingTest` is the single authored map and is **protected**. Duplicate into
   a clearly named sandbox before experimenting.

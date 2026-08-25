@@ -1,6 +1,5 @@
 # Unreal packages are binary even before Git LFS is available.
-*.uasset -text -diff -merge
-*.umap -text -diff -merge
-
+*.uasset filter=lfs diff=lfs merge=lfs -text
+*.umap filter=lfs diff=lfs merge=lfs -text
 # Run `sh Tools/enable_git_lfs.sh` after Git LFS is installed. It appends the
 # LFS filters for future packages. It does not migrate history.

@@ -1,4 +1,10 @@
 import unreal, json
+# Data goes to Saved/data, never Content/ - UE's importer picks up a .json
+# there and opens a modal DataTable dialog that blocks the game thread.
+_SAVED = __import__('unreal').Paths.convert_relative_path_to_full(
+    __import__('unreal').Paths.project_saved_dir()) + 'data/'
+__import__('os').makedirs(_SAVED, exist_ok=True)
+
 eas=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 sizes={}
 n=0
@@ -13,6 +19,6 @@ for a in eas.get_all_level_actors():
         n+=1
 print('cube components: %d   unique sizes: %d'%(n,len(sizes)))
 print('smallest dim overall: %.1f'%min(min(k) for k in sizes))
-open('/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad/stage2_sizes.json','w').write(
+open(_SAVED + 'stage2_sizes.json','w').write(
     json.dumps({'sizes':[list(k) for k in sizes]}))
 print('written stage2_sizes.json')

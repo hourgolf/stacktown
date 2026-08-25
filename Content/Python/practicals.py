@@ -1,17 +1,28 @@
-"""Practicals for every generated building, placed procedurally.
+"""Practicals for every generated building and every exposed flank.
 
-Intensities are the TUNED values (the old ones clipped on the reveal box behind
-the glass). They are absolute, not a scale factor, so re-running the build does
-not dim the block further each time.
+THE BUG THIS REPLACES. Every practical in the project was spawned with
+`unreal.Rotator(0, 90, 0)`, intended as "yaw 90". Rotator takes
+(roll, PITCH, yaw), so it set pitch instead: measured on the level, all 43
+lights had forward = (0, 0, 1) and were aimed at the ceiling. Seen from the
+street that is a bright horizontal bar with a wash up the underside of the
+window head, which is exactly what it looked like. The trap is written down in
+HANDOFF.md section 5 and the code did it anyway.
 
-The new shopfronts rendered as flat black voids - MASTER_MATERIAL_SPEC's rule
-that emptiness behind glass reads as a hole, not a room. Stage 1 only avoided it
-because its practicals were hand-placed, which is exactly what cannot scale.
+WHAT A LIT WINDOW SHOULD BE. Not a visible lamp. In a card model a lit window is
+a diffusing panel behind the glazing, so the read is an evenly glowing rectangle
+with no source in view. So the practical now sits BETWEEN the glass and the
+interior card, aimed INWARD at the card, with a source sized to the opening.
+The card is what you see; the lamp is edge-on and behind the glass.
 
-So this derives placement from the geometry: find each building's shop glass and
-upper-floor interiors, and light a DELIBERATELY UNEVEN subset. Evenly lit floors
-read as an office block at night; a model reads as occupied when some rooms are
-lit and some are not.
+AIM IS DERIVED, NOT TABULATED. Each interior card is paired with its own glass
+by name suffix - Interior_B0 with Glass_B0, Interior_L2B1 with Glass_L2B1 - and
+the light points along the vector between them. That is why this works
+unchanged on block B, which faces the other way, and on the flank elevations,
+whose windows face +/-X. A table of facing directions would have needed an edit
+for every one of them.
+
+Intensities are absolute, not a scale factor, so re-running does not dim the
+block further each time.
 """
 import unreal, random
 
@@ -22,8 +33,17 @@ for a in list(eas.get_all_level_actors()):
     if a.get_actor_label().startswith('LIGHT2_'):
         eas.destroy_actor(a)
 
-def add_light(name, loc, intensity, temp, w, h, radius):
-    act = eas.spawn_actor_from_class(unreal.RectLight, loc, unreal.Rotator(0, 90, 0))
+
+def world_extent(c):
+    e = c.static_mesh.get_bounds().box_extent
+    s = c.get_world_scale()
+    return unreal.Vector(abs(e.x * s.x), abs(e.y * s.y), abs(e.z * s.z))
+
+
+def add_light(name, loc, aim, intensity, temp, w, h, radius):
+    """aim is the direction the light faces; a RectLight emits along local +X."""
+    rot = unreal.MathLibrary.make_rot_from_x(aim)
+    act = eas.spawn_actor_from_class(unreal.RectLight, loc, rot)
     act.set_actor_label(name)
     c = act.get_components_by_class(unreal.RectLightComponent)[0]
     c.set_editor_property('intensity', intensity)
@@ -35,36 +55,50 @@ def add_light(name, loc, intensity, temp, w, h, radius):
     c.set_editor_property('cast_shadows', False)
     return act
 
+
 rnd = random.Random(918)
-made = 0
+made = skipped = 0
 for a in eas.get_all_level_actors():
     lbl = a.get_actor_label()
-    if not lbl.startswith('BLD2_'):
+    if not lbl.startswith(('BLD2_', 'ELEV_')):
         continue
     who = lbl.split('_')[1]
-    for c in a.get_components_by_class(unreal.StaticMeshComponent):
-        nm = c.get_name()
-        w = c.get_world_location()
-        e = c.static_mesh.get_bounds().box_extent
-        s = c.get_world_scale()
-        if nm == 'Glass_Shop':
-            n = 2 if e.x * s.x < 350 else 3
-            for i in range(n):
-                x = w.x + (i - (n - 1) / 2.0) * (e.x * s.x * 1.3 / max(1, n - 1) if n > 1 else 0)
-                add_light('LIGHT2_%s_Shop%d' % (who, i),
-                          unreal.Vector(x, w.y + 16, w.z),
-                          rnd.uniform(1760, 2530), rnd.uniform(2700, 3000),
-                          260, 180, 420)
-                made += 1
-        elif nm.startswith('Interior_B') and rnd.random() < 0.42:
-            # sit the lamp just in FRONT of the interior box, not inside the
-            # facade slab. At w.y-10 it was embedded in the wall depth and
-            # washed the spandrel with a hard-edged band; the radius was also
-            # 780 for a room 26 uu deep.
-            add_light('LIGHT2_%s_%s' % (who, nm),
-                      unreal.Vector(w.x, w.y - 4, w.z),
+    comps = {c.get_name(): c for c in a.get_components_by_class(unreal.StaticMeshComponent)}
+    for nm, c in comps.items():
+        if not nm.startswith('Interior_'):
+            continue
+        glass = comps.get('Glass_' + nm[len('Interior_'):])
+        if glass is None:
+            skipped += 1
+            continue
+        shop = nm == 'Interior_Shop'
+        if not shop and rnd.random() >= 0.42:
+            continue            # a model reads as occupied when only SOME rooms are lit
+        gi, gl = c.get_world_location(), glass.get_world_location()
+        d = unreal.Vector(gi.x - gl.x, gi.y - gl.y, gi.z - gl.z)
+        gap = d.length()
+        if gap < 1e-3:
+            skipped += 1
+            continue
+        aim = unreal.Vector(d.x / gap, d.y / gap, d.z / gap)     # glass -> card
+        # sit in the void between glazing and card, looking at the card
+        loc = unreal.Vector(gl.x + aim.x * gap * 0.55,
+                            gl.y + aim.y * gap * 0.55,
+                            gl.z + aim.z * gap * 0.55)
+        ge = world_extent(glass)
+        # source sized to the OPENING so the card lights evenly instead of
+        # taking a hot spot. The thin axis of the glass box is its depth.
+        horiz = max(ge.x, ge.y) * 2.0
+        vert = ge.z * 2.0
+        if shop:
+            add_light('LIGHT2_%s_%s' % (who, nm), loc, aim,
+                      rnd.uniform(1760, 2530), rnd.uniform(2700, 3000),
+                      max(120.0, horiz * 0.9), max(90.0, vert * 0.9), 420)
+        else:
+            add_light('LIGHT2_%s_%s' % (who, nm), loc, aim,
                       rnd.uniform(2310, 3960), rnd.uniform(2750, 3050),
-                      150, 120, 300)
-            made += 1
-print('placed %d practicals' % made)
+                      max(80.0, horiz * 0.9), max(60.0, vert * 0.9), 300)
+        made += 1
+
+print('placed %d practicals (%d skipped: no paired glass)' % (made, skipped))
 les.save_current_level()

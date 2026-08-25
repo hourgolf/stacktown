@@ -11,6 +11,7 @@ threshold is 230 mm, so what earns its place here is MASS - height, plane
 breaks, band offsets, canopies. Window furniture is built because it has to
 hold at the 19 mm player-zoom threshold, not because it reads from 112 m.
 """
+import _path  # noqa: F401 - puts Tools/measure (ue.py) on sys.path
 import ue, json, math, random
 
 S = 'editor_toolset.toolsets.scene.SceneTools'
@@ -39,6 +40,19 @@ def box(actor, name, x0, x1, y0, y1, z0, z1):
 
 
 def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """Dispatch on style. ONE generator with more parameters, never a second
+    generator - "buildings are parameter sets" is the property HANDOFF.md 4.2
+    calls the most important scaling behaviour in this codebase, and a
+    genbuild2.py is how you lose it."""
+    st = spec.get('style')
+    if st == 'modern':
+        return build_modern(spec, origin, yaw)
+    if st == 'deco':
+        return build_deco(spec, origin, yaw)
+    return build_vernacular(spec, origin, yaw)
+
+
+def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """spec x0/width are BLOCK-LOCAL. The block's world placement lives on the
     actor transform, so a block can be dropped anywhere and rotated - which is
     what lets a second block face the first across a street without every
@@ -129,3 +143,247 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         made += 1
     print('%s: %d boxes, height %d uu' % (n, made, total))
     return total
+
+
+# ---------------------------------------------------------------------------
+# Late-60s / 70s late-modern.
+#
+# The difference from the vernacular style is RHYTHM AND PROPORTION, not more
+# detail. Card wants flat planes and crisp cut edges, which is why this era is
+# easier to fake convincingly in card than Main Street is: there is no
+# ornament to approximate, only planes to place accurately.
+#
+#   vertical bay rhythm  ->  continuous horizontal ribbon
+#   punched window       ->  glazing set 880 mm behind a proud spandrel band
+#   masonry pier         ->  precast fin
+#   projecting cornice   ->  flat coping over a shadow gap
+#   shopfront in a frame ->  recessed arcade under an overhanging mass
+#
+# Everything still lands in y 0..60 with the core starting at 62, exactly as
+# the vernacular style does, because step_cores3.py depends on that and a
+# facade that drifts off it goes hollow.
+# ---------------------------------------------------------------------------
+ARCADE = 78.0        # ground floor set back under the overhang
+SPAND_F = 0.34       # spandrel band as a fraction of floor height
+BAND_PROUD = 40.0    # how far the spandrel stands off the facade line
+GLAZE_Y = 44.0       # glazing plane: 84 uu / 840 mm of shadow behind the band
+# THE DEPTH BUDGET IS 0..60. The core front is at FACADE_BACK+CLEAR = 62, so
+# anything past it is inside solid mass: invisible if fully behind, z-FIGHTING
+# if it straddles the face. Measured on Tower before this was fixed:
+#   Glass_Shop      Y  78..80   INSIDE CORE      -> storefronts read blank
+#   Interior_Shop   Y  94..100  INSIDE CORE
+#   Interior_Ribbon Y  60..66   STRADDLES FACE   -> windows clipped at range
+# The arcade is the one thing allowed past it, and only because step_cores3.py
+# now steps the ground band back by ARCADE to make the recess real.
+FIN_W = 34.0         # a precast fin, not a mullion: it has to be deep enough
+FIN_PROUD = 46.0     # to cast a real shadow across the glass beside it
+
+
+def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
+    BAYS = spec['bays']
+    rnd = random.Random(spec.get('seed', 0))
+    made = 0
+
+    # ---- ground floor: an arcade, not a shopfront -------------------------
+    g = mkactor('BLD2_%s_GF' % n, origin, (0.0, yaw, 0.0))
+    box(g, 'Wall_Plinth', x0 - 4, x0 + W + 4, ARCADE - 10, D * 0.08, 0, 22); made += 1
+    col_w = 64.0
+    for b in range(BAYS + 1):
+        px = min(x0 + b * (W / float(BAYS)), x0 + W - col_w)
+        box(g, 'Wall_Col%d' % b, px, px + col_w, 0, 62, 0, GF); made += 1
+    # the soffit is the whole point of an arcade - it is what casts the shadow
+    box(g, 'Wall_Soffit', x0 - 4, x0 + W + 4, 0, ARCADE, GF - 14, GF); made += 1
+    sx0, sx1 = x0 + col_w, x0 + W - col_w
+    box(g, 'Glass_Shop', sx0, sx1, ARCADE, ARCADE + 2, 26, GF - 20); made += 1
+    box(g, 'Interior_Shop', sx0 - 6, sx1 + 6, ARCADE + 16, ARCADE + 22, 22, GF - 16); made += 1
+    for k in range(1, BAYS * 2):
+        mx = sx0 + (sx1 - sx0) * k / float(BAYS * 2)
+        box(g, 'Mullion_Shop%d' % k, mx - 3, mx + 3, ARCADE - 5, ARCADE + 1, 26, GF - 20); made += 1
+
+    # ---- upper floors: ribbon behind a proud band -------------------------
+    for f in range(F):
+        z0 = GF + f * FH
+        z1 = z0 + FH
+        sp = FH * SPAND_F
+        # Only the TOP floor sets back, which is the rule step_cores3.py bands
+        # the core on. build_modern ignored `setback` entirely at first, so the
+        # core stepped back 140 uu and the facade did not: gap_check2 measured
+        # a 142 uu void behind Tower F6. The spec said setback; the geometry
+        # has to agree with it.
+        fy = (spec.get('setback') or 0.0) if f == F - 1 else 0.0
+        a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
+        # spandrel: full width, standing proud. The primary horizontal.
+        box(a, 'Band_Spandrel', x0 - 10, x0 + W + 10, fy - BAND_PROUD, fy + 20, z0, z0 + sp); made += 1
+        # returns at each end so the band does not read as a floating slab
+        box(a, 'Wall_EndL', x0 - 10, x0 + 16, fy - BAND_PROUD, fy + 60, z0, z1); made += 1
+        box(a, 'Wall_EndR', x0 + W - 16, x0 + W + 10, fy - BAND_PROUD, fy + 60, z0, z1); made += 1
+        gz0, gz1 = z0 + sp, z1
+        gx0, gx1 = x0 + 16, x0 + W - 16
+        box(a, 'Glass_Ribbon', gx0, gx1, fy + GLAZE_Y, fy + GLAZE_Y + 2, gz0 + 4, gz1 - 4); made += 1
+        box(a, 'Interior_Ribbon', gx0, gx1, fy + GLAZE_Y + 8, fy + GLAZE_Y + 14, gz0, gz1); made += 1
+        box(a, 'Frame_RibbonS', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz0, gz0 + 6); made += 1
+        box(a, 'Frame_RibbonT', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz1 - 6, gz1); made += 1
+        # precast fins: the vertical rhythm, standing off the glass
+        # FEWER fins, standing further off. At BAYS*2 they subdivided the
+        # ribbon into six panes and read as window mullions - which is the
+        # vernacular rhythm, the exact thing this style is not.
+        fins = max(2, BAYS)
+        for k in range(1, fins):
+            fx = gx0 + (gx1 - gx0) * k / float(fins)
+            box(a, 'Wall_Fin%d' % k, fx - FIN_W / 2, fx + FIN_W / 2,
+                fy - FIN_PROUD, fy + GLAZE_Y + 2, gz0, gz1); made += 1
+        mz = gz0 + (gz1 - gz0) * 0.58
+        box(a, 'Mullion_RibbonH', gx0, gx1, fy + GLAZE_Y - 5, fy + GLAZE_Y + 1, mz - 3, mz + 3); made += 1
+        # hand tolerance: MODEL tolerances, 1-2%, not building tolerances
+        ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+            'instance': a, 'values': json.dumps({
+                'RelativeLocation': {'x': rnd.uniform(-2.0, 2.0) * (W / 100.0),
+                                     'y': rnd.uniform(-1.4, 1.4), 'z': 0.0},
+                'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.8, 0.8),
+                                     'roll': rnd.uniform(-0.6, 0.6)}})})
+
+    # ---- roof: flat coping over a shadow gap, no cornice ------------------
+    r = mkactor('BLD2_%s_Roof' % n, origin, (0.0, yaw, 0.0))
+    ztop = GF + F * FH
+    # the gap is recessed BEHIND the facade line, so the coping reads as a
+    # separate cut piece rather than a moulding
+    box(r, 'Wall_ParapetF', x0, x0 + W, 12, 40, ztop, ztop + PAR - 12); made += 1
+    box(r, 'Band_Coping', x0 - 6, x0 + W + 6, -6, 44, ztop + PAR - 12, ztop + PAR); made += 1
+    box(r, 'Wall_ParapetL', x0, x0 + 24, 30, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Roof_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
+    for u in range(spec.get('roof_units', 1)):
+        ux = x0 + W * (0.3 + 0.4 * u)
+        uw = 160 + rnd.random() * 120
+        box(r, 'Roof_Unit%d' % u, ux, ux + uw, 200 + u * 100, 200 + u * 100 + uw * 0.8,
+            ztop, ztop + 55 + rnd.random() * 45); made += 1
+
+    print('%s [modern]: %d boxes, height %d uu' % (n, made, GF + F * FH + PAR))
+    return GF + F * FH + PAR
+
+
+# ---------------------------------------------------------------------------
+# Art Deco / 1930s.
+#
+# Chosen because it is the OPPOSITE of the late-modern block, not a variation
+# on it. Modern is horizontal - ribbon glazing behind a proud spandrel band.
+# Deco is vertical: unbroken pilasters running from the base to the parapet,
+# with the windows recessed into continuous channels between them, so the eye
+# is pulled up rather than along. Set beside the vernacular bay rhythm the
+# three read as three eras.
+#
+# It is also flat. Deco ornament is fluting, setbacks and stepped parapets -
+# geometry, not moulding - which is exactly what cut card can do.
+#
+# Same depth budget as every other style: 0..60, core front at 62.
+# ---------------------------------------------------------------------------
+DECO_PIL_W = 76.0        # pilaster width
+DECO_PROUD = 50.0        # how far it stands off the window plane
+DECO_GLAZE = 40.0
+DECO_FLUTE = 11.0
+
+
+def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
+    BAYS = spec['bays']
+    rnd = random.Random(spec.get('seed', 0))
+    ztop = GF + F * FH
+    bw = W / float(BAYS)
+    made = 0
+    # ONE jitter for the whole building. The other styles jitter each floor
+    # independently, which is fine when every floor is a separate plane - but
+    # a deco pilaster is a single piece running the full height, and floors
+    # sliding under it would tear the shaft apart.
+    jx, jy, jr = (rnd.uniform(-2.0, 2.0) * (W / 100.0),
+                  rnd.uniform(-1.4, 1.4), rnd.uniform(-0.8, 0.8))
+
+    def jitter(act):
+        ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+            'instance': act, 'values': json.dumps({
+                'RelativeLocation': {'x': jx, 'y': jy, 'z': 0.0},
+                'RelativeRotation': {'pitch': 0.0, 'yaw': jr, 'roll': 0.0}})})
+
+    # ---- base: a heavy horizontal storefront the shaft stands on ----------
+    g = mkactor('BLD2_%s_GF' % n, origin, (0.0, yaw, 0.0))
+    box(g, 'Wall_Plinth', x0 - 8, x0 + W + 8, -22, D * 0.08, 0, 46); made += 1
+    for b in range(BAYS + 1):
+        px = min(x0 + b * bw, x0 + W - DECO_PIL_W)
+        box(g, 'Wall_BasePier%d' % b, px - 8, px + DECO_PIL_W + 8,
+            -DECO_PROUD - 8, 62, 46, GF - 46); made += 1
+    box(g, 'Band_BaseCap', x0 - 16, x0 + W + 16, -DECO_PROUD - 16, 62,
+        GF - 46, GF - 12); made += 1
+    for b in range(BAYS):
+        sx0, sx1 = x0 + b * bw + DECO_PIL_W, x0 + (b + 1) * bw
+        if sx1 - sx0 < 80: continue
+        box(g, 'Glass_Shop%d' % b, sx0, sx1, 34, 36, 58, GF - 52); made += 1
+        box(g, 'Interior_Shop%d' % b, sx0 - 6, sx1 + 6, 48, 54, 50, GF - 48); made += 1
+        for k in range(1, 3):
+            mx = sx0 + (sx1 - sx0) * k / 3.0
+            box(g, 'Mullion_Shop%d_%d' % (b, k), mx - 3, mx + 3, 28, 35,
+                58, GF - 52); made += 1
+    jitter(g)
+
+    # ---- shaft: unbroken pilasters, fluted -------------------------------
+    sh = mkactor('BLD2_%s_Shaft' % n, origin, (0.0, yaw, 0.0))
+    for b in range(BAYS + 1):
+        px = min(x0 + b * bw, x0 + W - DECO_PIL_W)
+        box(sh, 'Wall_Pilaster%d' % b, px, px + DECO_PIL_W,
+            -DECO_PROUD, 60, GF - 12, ztop + PAR - 26); made += 1
+        # Fluting reads as CARVED STONE, so it takes the wall colour (Band_)
+        # rather than the saturated Accent_ role. Spandrels take Frame_, the
+        # dark metal, which is what sat between deco windows.
+        for k in (1, 2):
+            fx = px + DECO_PIL_W * k / 3.0
+            box(sh, 'Band_Flute%d_%d' % (b, k), fx - DECO_FLUTE/2, fx + DECO_FLUTE/2,
+                -DECO_PROUD - 9, -DECO_PROUD + 4, GF - 4, ztop + PAR - 40); made += 1
+    jitter(sh)
+
+    # ---- floors: glazing recessed into the channels -----------------------
+    for f in range(F):
+        z0, z1 = GF + f * FH, GF + (f + 1) * FH
+        a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
+        for b in range(BAYS):
+            wx0, wx1 = x0 + b * bw + DECO_PIL_W, x0 + (b + 1) * bw
+            if wx1 - wx0 < 80: continue
+            # spandrel panel between floors, set BACK from the pilaster face
+            box(a, 'Frame_Spandrel%d' % b, wx0, wx1, 18, 30, z0, z0 + FH * 0.24); made += 1
+            wz0, wz1 = z0 + FH * 0.24, z1
+            box(a, 'Glass_B%d' % b, wx0 + 5, wx1 - 5, DECO_GLAZE, DECO_GLAZE + 2,
+                wz0 + 5, wz1 - 5); made += 1
+            box(a, 'Interior_B%d' % b, wx0, wx1, DECO_GLAZE + 10, DECO_GLAZE + 16,
+                wz0, wz1); made += 1
+            box(a, 'Frame_B%dL' % b, wx0, wx0 + 5, DECO_GLAZE - 6, DECO_GLAZE + 2,
+                wz0, wz1); made += 1
+            box(a, 'Frame_B%dR' % b, wx1 - 5, wx1, DECO_GLAZE - 6, DECO_GLAZE + 2,
+                wz0, wz1); made += 1
+            mx = (wx0 + wx1) / 2.0
+            box(a, 'Mullion_B%dV' % b, mx - 3, mx + 3, DECO_GLAZE - 5, DECO_GLAZE + 1,
+                wz0, wz1); made += 1
+        jitter(a)
+
+    # ---- roof: STEPPED parapet, the deco silhouette -----------------------
+    r = mkactor('BLD2_%s_Roof' % n, origin, (0.0, yaw, 0.0))
+    mid = BAYS // 2
+    for b in range(BAYS):
+        px0, px1 = x0 + b * bw, x0 + (b + 1) * bw
+        step = PAR * (1.9 if b == mid else (1.35 if abs(b - mid) == 1 else 1.0))
+        box(r, 'Wall_Parapet%d' % b, px0, px1, -18, 34, ztop, ztop + step); made += 1
+        box(r, 'Band_Cap%d' % b, px0 - 8, px1 + 8, -28, 42,
+            ztop + step, ztop + step + 16); made += 1
+    box(r, 'Wall_ParapetL', x0, x0 + 26, 30, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Roof_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
+    for u in range(spec.get('roof_units', 1)):
+        ux = x0 + W * (0.3 + 0.4 * u)
+        uw = 150 + rnd.random() * 110
+        box(r, 'Roof_Unit%d' % u, ux, ux + uw, 210 + u * 95, 210 + u * 95 + uw * 0.8,
+            ztop, ztop + 55 + rnd.random() * 40); made += 1
+    jitter(r)
+
+    print('%s [deco]: %d boxes, height %d uu' % (n, made, ztop + PAR))
+    return ztop + PAR

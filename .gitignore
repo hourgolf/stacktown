@@ -35,3 +35,15 @@ Saved/Stage2/data/*.json
 __pycache__/
 .mcp_sid
 _guarded_tmp.py
+
+# Deko Matrix City is a 5.7 GB donor pack, same class as Assetsville: source
+# material, not authored result. Anyone joining adds it from their own account.
+Content/Deko_MatrixDemo/
+
+# Lane 4 diagnostics. MATERIAL_RECORD.md is the reasoning and IS committed; the
+# captures beside it are automated A/B diagnostics by its own admission, and
+# curated evidence belongs in Docs/evidence.
+Saved/Lane4/*.jpg
+Saved/Lane4/*.png
+Saved/Lane4/*.html
+Saved/Lane4/backup/

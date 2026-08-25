@@ -1,5 +1,5 @@
 import unreal, math, sys
-sys.path.insert(0,'/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad')
+import _path  # repo tool paths; replaces a dead scratchpad path
 from lots import LOTS
 eas=unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 les=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)

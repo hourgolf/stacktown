@@ -119,6 +119,37 @@ Every line is pass/fail. There is no partial credit and there is no "close enoug
 Evaluate at the approved camera, at fixed exposure, **with depth of field, bloom, and motion
 blur disabled**. Finishing effects are judged only after the gate passes without them.
 
+### Finishing-effects carve-out
+
+*Added 2026-08-25 by owner decision. This is an amendment by the owner, not a downward
+negotiation by an agent — that remains prohibited.*
+
+The rule above stands **for evaluation**: every gate line is still judged on a capture with
+depth of field, bloom and motion blur off, at the approved camera and fixed exposure. What
+changes is that finishing effects may now be **developed and reviewed before the gate is
+passed**, rather than only after.
+
+**Owner's rationale:** the project is eight blocks in and the lens treatment is part of the
+art direction being decided, not a polish pass bolted on at the end. Waiting until F1 passes
+would mean choosing the whole look blind.
+
+**What this does not do.** It does not weaken any gate line, and it does not move F1. In
+particular:
+
+1. **Gate evidence is captured with the effects OFF.** A DOF frame is never gate evidence,
+   for the same reason `AGENTS.md` forbids submitting a `-NullRHI` run: it is not the thing
+   being judged.
+2. **A DOF-off camera is kept alongside every hero camera**, so the geometry stays gradeable
+   at all times.
+3. **F1 is still untested and still gates scope.** This amendment is about effects, not about
+   the cold read.
+
+**Known cost, recorded honestly:** depth of field hides geometry. At f/2 on a board-wide
+shot almost nothing is sharp, which flatters the model and conceals exactly the depth,
+alignment and material faults sections A and B exist to catch. That is why point 1 above is
+not negotiable — the risk of this amendment is that a pretty frame starts standing in for a
+graded one.
+
 ### A. Geometric reveal — the thing that failed last time
 
 - [ ] **A1.** Every window is recessed into the wall plane. The recess depth is visible as a

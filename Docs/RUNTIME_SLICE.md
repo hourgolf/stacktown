@@ -70,6 +70,15 @@ Parallel arrays: row *i* of each is one catalogue entry.
     DepthUU     double
     Catalogue   PrimaryDataAsset
 
+## Already done by `mk_runtime.py` and `fill_runtime.py`
+
+- `BP_BuildingCatalogue` and `BP_Parcel` created, members added, compiled.
+- `BP_Parcel` has a `StaticMeshComponent` named **Building**.
+- `DA_Catalogue` exists and holds **6 rows** — cottage and walkup, three tiers
+  each, each pointing at its baked mesh.
+
+Only the graph is left, and it is three short functions.
+
 ## The graph to wire
 
 Three functions on `BP_Parcel`, none of them long:
@@ -89,6 +98,64 @@ Three functions on `BP_Parcel`, none of them long:
    neighbourhood does not swap its houses for different houses as it grows; it
    grows the ones it has. That property is why the seed lives in a recipe's
    base and not in its tiers.
+
+## Step by step
+
+**1. Open it.** Content Browser → `Content/Stacktown/Runtime` → double-click
+`BP_Parcel`. Left panel is Components (you will see **Building**), the middle is
+the Event Graph, and **My Blueprint** on the left lists the six variables.
+
+**2. Make the function.** In My Blueprint, hover **Functions** → **+**. Name it
+`ResolveMesh`. It opens its own graph tab with a single entry node.
+
+**3. Wire `ResolveMesh`.** Drag from the entry node's white execution pin and
+build this chain:
+
+- Drag **Catalogue** from My Blueprint into the graph → choose *Get*.
+- Drag off it → **Cast to BP_BuildingCatalogue**. (The variable is typed as the
+  generic `PrimaryDataAsset`, so it needs the cast to reach the arrays.)
+- From the cast's blue output → **Get Recipe Ids**.
+- Drag off that array pin → **For Each Loop with Break**.
+- Connect the entry node's exec to the cast, and the cast's exec to the loop.
+
+Inside the loop body:
+
+- **Array Element** (a Name) → **Equal (Name)** ← drag in **RecipeId** (*Get*).
+- From the cast → **Get Tiers** → **Get (a copy)** with **Array Index** from the
+  loop → **Equal (integer)** ← drag in **Tier** (*Get*).
+- Both Equal outputs → an **AND** node → into a **Branch** condition.
+- Loop Body exec → Branch.
+- Branch **True** → **Set Static Mesh**: drag **Building** from Components into
+  the graph, drag off it, choose *Set Static Mesh*. Its **New Mesh** pin comes
+  from the cast → **Get Meshes** → **Get (a copy)** with the same **Array
+  Index**.
+- After Set Static Mesh, run the exec into the loop's **Break** pin so it stops
+  at the first match.
+
+Compile. That one function is the whole of *place* and the whole of *upgrade*.
+
+**4. Wire the tick.** Back in the Event Graph, right-click → **Add Custom
+Event**, name it `CityTick`.
+
+- **Level** → **+ (float)** with 0.1 → **Clamp (float)** 0 to 1 → **Set Level**.
+- **Level** → **× (float)** by 2 (that is tier count minus one) →
+  **Round** → a local variable or straight into **Set Tier**.
+- Before setting, a **Branch**: **Not Equal (integer)** comparing that rounded
+  value against **Tier**. True → **Set Tier** → call **ResolveMesh**.
+
+The branch is the point: `ResolveMesh` only runs when the tier actually changed,
+so a tick that does nothing costs nothing.
+
+**5. Try it.** Drag `BP_Parcel` into the level. In its Details panel set
+**Catalogue** to `DA_Catalogue`, **RecipeId** to `cottage`, **Tier** to `0`,
+**WidthUU** to `820`. Right-click the `ResolveMesh` node → *Call Function* — or
+just press Play and fire `CityTick` from a key binding — and it should take the
+cabin mesh. Set Tier to 2 and call it again: the extended house, same identity,
+one pointer swap.
+
+**If Cast to BP_BuildingCatalogue does not appear** in the node menu, the
+Blueprint has not been compiled since the class was made — hit **Compile** on
+`BP_BuildingCatalogue` first.
 
 ## What this slice does not prove
 

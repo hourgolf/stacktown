@@ -79,17 +79,38 @@ def to_world(blk, rect):
 
 
 def zone_layouts():
-    """[(lot name, block, layout in WORLD rectangles)] for every open lot."""
+    """[(lot name, block, layout in WORLD coordinates)] for every open lot.
+
+    Transforms by KEY, not by guessing from the shape of the value. The first
+    version mapped every tuple through the rect transform, which silently ate
+    the facing off a 5-tuple seat entry and turned the 3-tuple fountain centre
+    into nonsense.
+    """
     import zonelayout
+    RECT = ('bounds', 'paving', 'lawn', 'basin', 'inner', 'forecourt', 'spine', 'walk')
+    RECTS = ('tree', 'shrub', 'avoid', 'beds', 'panels', 'walks', 'outer', 'paths', 'pit')
     out = []
     for blk in BLOCKS:
         for spec in blk['lots']:
             lo = zonelayout.layout(spec)
             if not lo:
                 continue
-            w = {k: ([to_world(blk, r) for r in v] if isinstance(v, list)
-                     else to_world(blk, v) if isinstance(v, tuple) else v)
-                 for k, v in lo.items()}
+            w = {}
+            for k, v in lo.items():
+                if k in RECT and v:
+                    w[k] = to_world(blk, v)
+                elif k in RECTS and v:
+                    w[k] = [to_world(blk, r) for r in v]
+                elif k == 'seat' and v:
+                    w[k] = [tuple(to_world(blk, e[:4])) + (e[4] + blk['yaw'],) for e in v]
+                elif k == 'fountain' and v:
+                    cx, cy, r = v
+                    p = to_world(blk, (cx, cy, cx, cy))
+                    w[k] = (p[0], p[1], r)
+                else:
+                    w[k] = v
+            w.setdefault('shrub', [])
+            w.setdefault('basin', None)
             out.append((spec['name'], blk, w))
     return out
 

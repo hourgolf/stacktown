@@ -294,9 +294,41 @@ for blk in BLOCKS:
         # Counts still scale with AREA, but with the PLANTABLE area now - a
         # square is not a wood, and six trees at full scale once roofed the
         # whole plaza so the plan view showed foliage and nothing else.
-        tree_area = sum((r[2]-r[0])*(r[3]-r[1]) for r in LO['tree'])
-        place(LO['tree'], TREES, 't',
-              max(2, int(tree_area / (300000.0 if spec['kind'] in ('plaza', 'green') else 95000.0))))
+        def place_pits(pits, bag, tag):
+            """A pit holds the TRUNK. The canopy overhangs the paving, which is
+            what a tree pit is for, so the only things it must clear are the
+            fountain and the edge of the lot."""
+            global n_zone
+            keep = [LO['basin']] if LO.get('basin') else []
+            for i, pit in enumerate(pits):
+                nm = min(bag, key=reach_of)
+                sc = rnd.uniform(smin, smax)
+                reach = reach_of(nm)*sc
+                px = (pit[0] + pit[2])/2.0 + rnd.uniform(-20, 20)
+                py = (pit[1] + pit[3])/2.0 + rnd.uniform(-20, 20)
+                crown = (px - reach, py - reach, px + reach, py + reach)
+                # The CROWN must stay over the lot. The TRUNK is what must
+                # clear the fountain - a keep-off exists to stop things
+                # STANDING in the water, and a canopy above it is exactly what
+                # a tree beside a fountain does.
+                if not G.contains(LO['bounds'], crown):
+                    continue
+                trunk = (px - 40, py - 40, px + 40, py + 40)
+                if any(G.intersect(k, trunk) for k in keep):
+                    continue
+                wx, wy = _zone_world(blk, px, py)
+                if put('Nature', nm, wx, wy, 62.0, rnd.uniform(0, 360),
+                       'zone_%s_%s%d' % (spec['name'], tag, i), '',
+                       native=True, radius=45.0, scale=sc):
+                    n_zone += 1
+
+        if spec['kind'] == 'plaza':
+            place_pits(LO['pit'], TREES, 'p')
+        else:
+            tree_area = sum((r[2]-r[0])*(r[3]-r[1]) for r in LO['tree'])
+            place(LO['tree'], TREES, 't',
+                  max(2, int(tree_area / (300000.0 if spec['kind'] == 'green'
+                                          else 95000.0))))
         if LO['shrub']:
             place(LO['shrub'], SHRUBS, 's', 2*len(LO['shrub']),
                   zoff=62.0 + 28.0, avoid=False)

@@ -149,8 +149,12 @@ BLOCKS = [
   # exercises kind='park'.
   dict(name='E', origin=(BLOCK_D_X, STREET_FACE_C, 0.0), yaw=180.0,
        abuts_low=False, abuts_high=False, lots=[
-     dict(kind='park', name='Greens', x0=0.0, width=4100.0, depth=1280.0,
-          seed=307),
+     # Block E is yaw 180, so LOCAL +x runs WEST in world space: local
+     # 2700..4100 is world X 6660..8060, the west end. Plaza west, park east.
+     dict(kind='park',  name='Greens', x0=0.0,    width=2700.0, depth=1280.0,
+          wall=None, seed=307),
+     dict(kind='plaza', name='Square', x0=2700.0, width=1400.0, depth=1280.0,
+          wall=None, seed=911),
   ]),
   # rear_street: block B's back faces street 2, which did not exist when this
   # block was built. A rear that fronts a road is an elevation, not a party

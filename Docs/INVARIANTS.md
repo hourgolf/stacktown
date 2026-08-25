@@ -93,6 +93,22 @@ Both run before `invariants.py` in `build_block.py` and `build_blocks.py`.
 Folding them in would give one runner and one report; until then this file is
 the index and the build runs three.
 
+## Kinds of open lot
+
+`green` — lawn-dominant strip with a path through it. `plaza` — paving-dominant
+civic square with a fountain as its focus, planting in **pits**. `park` — lawn
+either side of a walk. `vacant` — a cleared site.
+
+A **pit** is the distinction that took three attempts to see. A tree in a lawn
+panel must be *contained* by it; a tree in a paved square stands in a pit and
+*overhangs* the paving, which is what a pit is for. Sizing a corner bed to
+contain a canopy kept failing, and the reason was not a number — the smallest
+crown we own is 348 uu across and no corner of a 1400 uu square clears the
+fountain by that much. `ZONE-01` therefore checks a pit tree by its **trunk**
+and a lawn tree by its **crown**. For the same reason the fountain keep-off is
+tested against the trunk: it exists to stop things standing in the water, and a
+canopy above it is exactly what a tree beside a fountain does.
+
 ## The zone layout
 
 `Content/Python/zonelayout.py` is to an open lot what `labels.py` is to actor

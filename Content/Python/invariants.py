@@ -324,6 +324,12 @@ def zone_01(snap):
                     out.append((a['label'], 'bench is standing in the basin'))
                 elif any(G.intersect(b, pt) for b in w.get('shrub', [])):
                     out.append((a['label'], 'bench is standing in a planting bed'))
+            elif a['label'].split('_')[3].startswith('p'):
+                # a pit holds the TRUNK; the canopy is meant to overhang
+                x, y, _z = a['loc']
+                pt = (x - 1, y - 1, x + 1, y + 1)
+                if not any(G.intersect(pit, pt) for pit in w.get('pit', [])):
+                    out.append((a['label'], '%s is not standing in a pit' % c['mesh']))
             elif not any(G.contains(pr, r) for pr in w['tree'] + w['shrub']):
                 out.append((a['label'], '%s is not in a lawn panel or bed' % c['mesh']))
     return out

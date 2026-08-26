@@ -11,6 +11,15 @@ Build/
 .vs/
 *.pdb
 
+# ---- per-machine editor state -----------------------------------------------
+# Console history, crash-reporter sessions, editor prefs, world state. Tracked
+# by accident before Saved/ patterns were tightened; untracked 2026-08-25.
+Saved/Config/
+
+# ---- agent infrastructure ---------------------------------------------------
+# Git worktrees that background agents work in. Never content.
+.claude/worktrees/
+
 # ---- capture churn ----------------------------------------------------------
 # 2.5 GB of raw 20 MB HighResShot output. Curated evidence lives in Docs/evidence.
 Saved/Screenshots/

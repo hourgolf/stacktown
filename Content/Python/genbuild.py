@@ -20,7 +20,47 @@ P = 'editor_toolset.toolsets.primitive.PrimitiveTools'
 A = 'editor_toolset.toolsets.actor.ActorTools'
 
 
+# --- the RECORDING SINK -----------------------------------------------------
+# Every box in this file goes out as one MCP round trip, measured at ~0.2 s.
+# A vernacular t5 with its elevations and core is ~900 boxes, so a single bake
+# is twelve minutes - and an art loop that costs twelve minutes per look is not
+# a loop, it is a batch job.
+#
+# bakegen.py exists for this and takes the other road: a SECOND implementation
+# of the same geometry writing an OBJ. That is the "two scripts with separate
+# ideas about the same ground" failure this codebase keeps finding, and it has
+# already drifted - it knows nothing about cornices, stepped setbacks, roof
+# gardens or penthouses.
+#
+# So: ONE generator, two backends. With the sink armed, mkactor and box and
+# slab record instead of emitting, and the whole building comes back as plain
+# data that fastbake.py turns into a mesh in one pass.
+_SINK = None
+
+
+def record():
+    """Arm the sink. Returns nothing; call drain() for the result."""
+    global _SINK
+    _SINK = []
+
+
+def drain():
+    """Disarm and return what was recorded."""
+    global _SINK
+    out = _SINK if _SINK is not None else []
+    _SINK = None
+    return out
+
+
+def recording():
+    return _SINK is not None
+
+
 def mkactor(name, loc=(0, 0, 0), rot=None):
+    if _SINK is not None:
+        _SINK.append(dict(kind='actor', name=name, loc=list(loc),
+                          rot=list(rot) if rot else [0.0, 0.0, 0.0]))
+        return len(_SINK) - 1          # the ref is the record's index
     x = {'location': {'x': loc[0], 'y': loc[1], 'z': loc[2]}}
     if rot:
         x['rotation'] = {'pitch': rot[0], 'yaw': rot[1], 'roll': rot[2]}
@@ -32,6 +72,12 @@ def mkactor(name, loc=(0, 0, 0), rot=None):
 
 
 def box(actor, name, x0, x1, y0, y1, z0, z1):
+    if _SINK is not None:
+        _SINK.append(dict(kind='box', actor=actor, name=name,
+                          c=[(x0 + x1)/2.0, (y0 + y1)/2.0, (z0 + z1)/2.0],
+                          d=[abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)],
+                          r=[0.0, 0.0, 0.0]))
+        return
     ue.tool(P, 'add_cube', {
         'actor': actor, 'name': name,
         'dimensions': {'x': abs(x1 - x0), 'y': abs(y1 - y0), 'z': abs(z1 - z0)},
@@ -88,11 +134,42 @@ def slab(actor, name, cx, cy, cz, sx, sy, sz, pitch=0.0, roll=0.0, yaw=0.0):
     transform - measured, the component reads back what it was given - which
     box() never passed, so every roof in this project was a stack of treads.
     Eleven risers over a 168 uu rise reads as terracing from the pavement."""
+    if _SINK is not None:
+        _SINK.append(dict(kind='box', actor=actor, name=name,
+                          c=[cx, cy, cz], d=[sx, sy, sz],
+                          r=[pitch, yaw, roll]))
+        return
     ue.tool(P, 'add_cube', {
         'actor': actor, 'name': name,
         'dimensions': {'x': sx, 'y': sy, 'z': sz},
         'local_transform': {'location': {'x': cx, 'y': cy, 'z': cz},
                             'rotation': {'pitch': pitch, 'yaw': yaw, 'roll': roll}}})
+
+
+def roof_plant(actor, x0, W, ztop, n, rnd, ymin=180.0, yspread=90.0):
+    """Rooftop plant, spread ACROSS the building and staying on it.
+
+    Was `ux = x0 + W * (0.28 + 0.42 * u)`, which is fine for one or two units
+    and puts the THIRD at 1.12 x width - off the end of the facade entirely,
+    floating beside the building. Nothing had asked for three units until the
+    tier ladders did. GATE-05 would have caught it at bake time as a model
+    wider than its parcel, which is the gate earning its keep, but the fix
+    belongs here.
+
+    Units are spaced by their INDEX across the usable span, so any count from
+    one upward lands on the roof.
+    """
+    made = 0
+    n = max(0, int(n))
+    for u in range(n):
+        uw = 150.0 + rnd.random() * 130.0
+        t = (u + 0.5) / float(n)
+        ux = x0 + 40.0 + max(0.0, W - 80.0 - uw) * t
+        uy = ymin + (u % 2) * yspread
+        box(actor, 'Roof_Unit%d' % u, ux, ux + uw, uy, uy + uw * 0.8,
+            ztop, ztop + 55.0 + rnd.random() * 50.0)
+        made += 1
+    return made
 
 
 def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
@@ -120,7 +197,9 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     what lets a second block face the first across a street without every
     coordinate being rewritten."""
     """spec keys: name x0 width depth floors gf_h fl_h parapet bays wall
-                  canopy(None|projection) setback(None|uu) roof_units seed"""
+                  canopy(None|projection) setback(None|uu) setback_floors
+                  cornice(None|projection) roof_units glaze('large')
+                  roof_garden(bool) penthouse(dict floors/inset/fl_h) seed"""
     n = spec['name']
     x0, W, D = spec['x0'], spec['width'], spec['depth']
     F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
@@ -148,9 +227,14 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     for f in range(F):
         z0 = GF + f * FH
         z1 = z0 + FH
-        # upper-floor setback: a plane break, 900 mm, well over the 230 mm bar
-        back = spec.get('setback') if (spec.get('setback') and f == F - 1) else 0
-        fy = back
+        # Upper-floor setback: a plane break, 900 mm, well over the 230 mm bar.
+        # setback_floors lets the top N floors each step back a further notch,
+        # so the crown changes as the building climbs instead of three tiers
+        # differing only in how many identical floors are stacked.
+        _sb = spec.get('setback') or 0.0
+        _sbf = max(1, int(spec.get('setback_floors', 1)))
+        _d = F - 1 - f
+        fy = _sb * (_sbf - _d) if (_sb and _d < _sbf) else 0.0
         a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
         bw = (W - pier_w) / float(BAYS)
         for b in range(BAYS + 1):
@@ -172,10 +256,16 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     qx if qs == 'L' else qx - qw,
                     qx + qw if qs == 'L' else qx,
                     fy - 14, fy + 26, qz + 4, qz + (z1 - z0)/4.0 - 4); made += 1
+        # A RECLAIMED building keeps its holes and gets new glass. `glaze`
+        # drops the cill and raises the head so the opening reads bigger in
+        # the same wall, and strips the horizontal bar - which is exactly what
+        # a heritage conversion does and why it reads as retrofit rather than
+        # as a different building.
+        big = spec.get('glaze') == 'large'
         for b in range(BAYS):
             wx0 = x0 + b * bw + pier_w
             wx1 = x0 + (b + 1) * bw
-            wz0, wz1 = z0 + 62, z1 - 66
+            wz0, wz1 = (z0 + 30, z1 - 34) if big else (z0 + 62, z1 - 66)
             gy = fy + 27                      # 250 mm recess (Stage 0 finding)
             box(a, 'Glass_B%d' % b, wx0 + 6, wx1 - 6, gy, gy + 2, wz0 + 6, wz1 - 6); made += 1
             box(a, 'Interior_B%d' % b, wx0, wx1, gy + 20, gy + 26, wz0, wz1); made += 1
@@ -186,8 +276,10 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             made += 0
             mx = (wx0 + wx1) / 2.0
             box(a, 'Mullion_B%dV' % b, mx - 3, mx + 3, gy - 6, gy + 1, wz0, wz1); made += 1
-            mz = wz0 + (wz1 - wz0) * 0.62
-            box(a, 'Mullion_B%dH' % b, wx0, wx1, gy - 6, gy + 1, mz - 3, mz + 3); made += 1
+            if not big:
+                mz = wz0 + (wz1 - wz0) * 0.62
+                box(a, 'Mullion_B%dH' % b, wx0, wx1, gy - 6, gy + 1,
+                    mz - 3, mz + 3); made += 1
             # CORBELS under the cill. A cill sits on something; DETAIL-01 found
             # Narrow at 0.65 parts per m2 and this is the detail a narrow
             # vernacular front is actually missing, not more mullions.
@@ -205,16 +297,163 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # ---- roof ---------------------------------------------------------------
     r = mkactor('BLD2_%s_Roof' % n, origin, (0.0, yaw, 0.0))
     ztop = GF + F * FH
-    box(r, 'Wall_ParapetF', x0, x0 + W, -4, 30, ztop, ztop + PAR); made += 1
-    box(r, 'Band_ParapetCap', x0 - 8, x0 + W + 8, -14, 40, ztop + PAR, ztop + PAR + 14); made += 1
-    box(r, 'Wall_ParapetL', x0, x0 + 26, 30, D, ztop, ztop + PAR - 20); made += 1
-    box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, 30, D, ztop, ztop + PAR - 20); made += 1
-    box(r, 'Roof_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
-    for u in range(spec.get('roof_units', 1)):
-        ux = x0 + W * (0.28 + 0.42 * u)
-        uw = 150 + rnd.random() * 130          # >= 230 mm, reads at block hero
-        box(r, 'Roof_Unit%d' % u, ux, ux + uw, 180 + u * 90, 180 + u * 90 + uw * 0.8,
-            ztop, ztop + 60 + rnd.random() * 50); made += 1
+    # THE PARAPET HAS TO FOLLOW THE SETBACK. It was pinned to the full front
+    # plane while the top floors stepped back, so on a stepped tier it hung
+    # 180 uu out in front of the wall it was supposed to cap - a floating
+    # shelf, clearly visible the first time a stepped crown was rendered.
+    SB = spec.get('setback') or 0.0
+    SBF = max(1, int(spec.get('setback_floors', 1)))
+    ty = SB * SBF if SB else 0.0
+    box(r, 'Wall_ParapetF', x0, x0 + W, ty - 4, ty + 30, ztop, ztop + PAR); made += 1
+    box(r, 'Band_ParapetCap', x0 - 8, x0 + W + 8, ty - 14, ty + 40, ztop + PAR, ztop + PAR + 14); made += 1
+    box(r, 'Wall_ParapetL', x0, x0 + 26, ty + 30, D, ztop, ztop + PAR - 20); made += 1
+    box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, ty + 30, D, ztop, ztop + PAR - 20); made += 1
+    box(r, 'Roof_Deck', x0, x0 + W, ty + 20, D, ztop - 8, ztop); made += 1
+
+    # A CORNICE, for the tiers that have earned one. Three courses - bed mould,
+    # corona, cap - because a cornice that is one projecting slab reads as a
+    # shelf. This is vernacular's grandeur lever: the traditional styles gain
+    # ornament at the top as they grow, where modern gains a stepped crown and
+    # rooftop plant. build_modern deliberately has no cornice and keeps its
+    # flat coping over a shadow gap; that is its identity, not an omission.
+    cp = spec.get('cornice') or 0.0
+    if cp:
+        # A cornice crowns the MAIN mass, with any set-back attic rising
+        # BEHIND it. Placed at ztop it sat above the setbacks instead, which
+        # is a cornice on the wrong building - the attic wore it as a hat.
+        zc = (GF + max(1, F - SBF) * FH) if SB else ztop
+        box(r, 'Band_CorniceBed', x0 - 10, x0 + W + 10, -cp*0.45, 30,
+            zc - 34, zc - 16); made += 1
+        box(r, 'Band_Cornice', x0 - 16, x0 + W + 16, -cp, 32,
+            zc - 16, zc + 8); made += 1
+        box(r, 'Band_CorniceCap', x0 - 12, x0 + W + 12, -cp*0.62, 30,
+            zc + 8, zc + 18); made += 1
+
+    made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd)
+
+    # ---- the retrofit roof ------------------------------------------------
+    # THE ROOF IS ZONED, front to back. The first version laid the garden over
+    # the whole roof and then put the penthouse's own deck slab across it at
+    # +94 - which buried every planter, bloom and bench under a floor. Only the
+    # pergola showed, because it was tall enough to poke out.
+    #
+    # So the garden takes the FRONT of the roof, where it is seen from the
+    # street, and the penthouse sits BEHIND it. Everything stays inside the
+    # parapet line, so the footprint is untouched.
+    rg = spec.get('roof_garden')
+    ph = spec.get('penthouse')
+    if rg or ph:
+        gx0, gx1 = x0 + 46, x0 + W - 46
+        gy0, gy1 = ty + 64, D - 44
+        split = gy0 + (gy1 - gy0) * (0.46 if ph else 1.0)
+
+    if rg:
+        box(r, 'Timber_Deck', gx0, gx1, gy0, split, ztop, ztop + 9); made += 1
+        # planters along the front, against the parapet
+        npl = max(2, int((gx1 - gx0) / 300.0))
+        pw = (gx1 - gx0) / float(npl)
+        for i in range(npl):
+            px = gx0 + i * pw
+            box(r, 'Timber_Planter%d' % i, px + 14, px + pw - 14,
+                gy0 + 4, gy0 + 78, ztop + 9, ztop + 62); made += 1
+            box(r, 'Bloom_Bed%d' % i, px + 24, px + pw - 24,
+                gy0 + 14, gy0 + 68, ztop + 56, ztop + 96); made += 1
+            # a small tree in every other planter, so the roof has HEIGHT
+            if i % 2 == 0:
+                tx = px + pw/2.0
+                box(r, 'Timber_Trunk%d' % i, tx - 7, tx + 7,
+                    gy0 + 36, gy0 + 50, ztop + 62, ztop + 150); made += 1
+                for k, (sw, sz) in enumerate(((54, 150), (72, 186), (46, 224))):
+                    box(r, 'Bloom_Crown%d_%d' % (i, k), tx - sw, tx + sw,
+                        gy0 + 41 - sw*0.5, gy0 + 45 + sw*0.5, ztop + sz,
+                        ztop + sz + 42); made += 1
+        # pergola over the middle of the garden strip
+        ppy0, ppy1 = gy0 + 120, split - 30
+        if ppy1 > ppy0 + 90:
+            for k in range(4):
+                ppx = gx0 + 40 + (gx1 - gx0 - 80) * k / 3.0
+                for py in (ppy0, ppy1):
+                    box(r, 'Timber_Post%d_%d' % (k, int(py)), ppx - 8, ppx + 8,
+                        py - 8, py + 8, ztop + 9, ztop + 214); made += 1
+            for py in (ppy0, ppy1):
+                box(r, 'Timber_Beam%d' % int(py), gx0 + 30, gx1 - 30,
+                    py - 10, py + 10, ztop + 214, ztop + 230); made += 1
+            for k in range(7):
+                sx = gx0 + 40 + (gx1 - gx0 - 80) * k / 6.0
+                box(r, 'Timber_Slat%d' % k, sx - 6, sx + 6, ppy0, ppy1,
+                    ztop + 230, ztop + 240); made += 1
+            # a long table and two benches under it
+            mid = (ppy0 + ppy1) / 2.0
+            box(r, 'Timber_Table', gx0 + 190, gx1 - 190, mid - 34, mid + 34,
+                ztop + 9, ztop + 62); made += 1
+            for off in (-62, 62):
+                box(r, 'Timber_Bench%d' % (off + 100), gx0 + 210, gx1 - 210,
+                    mid + off - 16, mid + off + 16, ztop + 9, ztop + 38)
+                made += 1
+
+    # ---- a two-storey glass penthouse, set back ---------------------------
+    # The shell below is UNCHANGED - that is the whole point of the tier.
+    if ph:
+        pfl = int(ph.get('floors', 2))
+        ins = float(ph.get('inset', 150.0))
+        pfh = float(ph.get('fl_h', 250.0))
+        px0, px1 = x0 + ins, x0 + W - ins
+        py0, py1 = split + 46, gy1 - 10
+        pz0 = ztop + 9
+        # a plinth UNDER THE PENTHOUSE ONLY, not across the whole roof
+        box(r, 'Timber_PentDeck', px0 - 34, px1 + 34, py0 - 40, py1 + 16,
+            ztop, pz0); made += 1
+        for f in range(pfl):
+            z0p = pz0 + f * pfh
+            z1p = z0p + pfh
+            box(r, 'Glass_Pent%dF' % f, px0 + 6, px1 - 6, py0, py0 + 3,
+                z0p + 8, z1p - 12); made += 1
+            box(r, 'Glass_Pent%dB' % f, px0 + 6, px1 - 6, py1 - 3, py1,
+                z0p + 8, z1p - 12); made += 1
+            box(r, 'Glass_Pent%dL' % f, px0, px0 + 3, py0, py1,
+                z0p + 8, z1p - 12); made += 1
+            box(r, 'Glass_Pent%dR' % f, px1 - 3, px1, py0, py1,
+                z0p + 8, z1p - 12); made += 1
+            box(r, 'Interior_Pent%d' % f, px0 + 26, px1 - 26, py0 + 26, py1 - 26,
+                z0p + 8, z1p - 12); made += 1
+            for cx_, cy_ in ((px0, py0), (px1, py1), (px0, py1), (px1, py0)):
+                box(r, 'Rail_PentP%d_%d_%d' % (f, int(cx_), int(cy_)),
+                    cx_ - 7, cx_ + 7, cy_ - 7, cy_ + 7, z0p, z1p); made += 1
+            box(r, 'Rail_PentBand%d' % f, px0 - 5, px1 + 5, py0 - 5, py1 + 5,
+                z1p - 12, z1p); made += 1
+            for k in range(1, 5):
+                mx = px0 + (px1 - px0) * k / 5.0
+                box(r, 'Mullion_PentF%d_%d' % (f, k), mx - 4, mx + 4,
+                    py0 - 2, py0 + 5, z0p + 8, z1p - 12); made += 1
+        # a DOOR onto the terrace, and a step down from it
+        dx = (px0 + px1)/2.0
+        box(r, 'Frame_PentDoorL', dx - 66, dx - 54, py0 - 4, py0 + 6,
+            pz0 + 8, pz0 + 190); made += 1
+        box(r, 'Frame_PentDoorR', dx + 54, dx + 66, py0 - 4, py0 + 6,
+            pz0 + 8, pz0 + 190); made += 1
+        box(r, 'Frame_PentDoorH', dx - 66, dx + 66, py0 - 4, py0 + 6,
+            pz0 + 180, pz0 + 190); made += 1
+        box(r, 'Timber_PentStep', dx - 90, dx + 90, py0 - 44, py0 - 6,
+            ztop + 9, ztop + 22); made += 1
+        # terrace furniture on the plinth in front of the door
+        for k, ox_ in enumerate((-180.0, 180.0)):
+            box(r, 'Timber_Lounger%d' % k, dx + ox_ - 52, dx + ox_ + 52,
+                py0 - 40, py0 - 10, pz0, pz0 + 26); made += 1
+        # planters flanking the terrace so it is not a bare shelf
+        for k, ox_ in enumerate((px0 - 26, px1 - 42)):
+            box(r, 'Timber_TerrPl%d' % k, ox_, ox_ + 68, py0 - 44, py0 - 4,
+                pz0, pz0 + 44); made += 1
+            box(r, 'Bloom_Terr%d' % k, ox_ + 8, ox_ + 60, py0 - 38, py0 - 10,
+                pz0 + 38, pz0 + 74); made += 1
+        # cap: a slim slab with a fascia, not a lid
+        ptz = pz0 + pfl * pfh
+        box(r, 'Roof_PentCap', px0 - 16, px1 + 16, py0 - 16, py1 + 16,
+            ptz - 12, ptz + 4); made += 1
+        box(r, 'Band_PentFascia', px0 - 22, px1 + 22, py0 - 22, py1 + 22,
+            ptz + 4, ptz + 16); made += 1
+        # balustrade around the garden edge of the terrace only
+        box(r, 'Rail_TerrEdge', gx0 + 20, gx1 - 20, split + 6, split + 16,
+            ztop + 9, ztop + 62); made += 1
 
     # ---- canopy -------------------------------------------------------------
     if spec.get('canopy'):
@@ -321,7 +560,10 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # core stepped back 140 uu and the facade did not: gap_check2 measured
         # a 142 uu void behind Tower F6. The spec said setback; the geometry
         # has to agree with it.
-        fy = (spec.get('setback') or 0.0) if f == F - 1 else 0.0
+        _sb = spec.get('setback') or 0.0
+        _sbf = max(1, int(spec.get('setback_floors', 1)))
+        _d = F - 1 - f
+        fy = _sb * (_sbf - _d) if (_sb and _d < _sbf) else 0.0
         a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
         # spandrel: full width, standing proud. The primary horizontal.
         box(a, 'Band_Spandrel', x0 - 10, x0 + W + 10, fy - BAND_PROUD, fy + 20, z0, z0 + sp); made += 1
@@ -413,11 +655,8 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     box(r, 'Wall_ParapetL', x0, x0 + 24, 30, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Roof_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
-    for u in range(spec.get('roof_units', 1)):
-        ux = x0 + W * (0.3 + 0.4 * u)
-        uw = 160 + rnd.random() * 120
-        box(r, 'Roof_Unit%d' % u, ux, ux + uw, 200 + u * 100, 200 + u * 100 + uw * 0.8,
-            ztop, ztop + 55 + rnd.random() * 45); made += 1
+    made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
+                       ymin=200.0, yspread=100.0)
 
     print('%s [modern]: %d boxes, height %d uu' % (n, made, GF + F * FH + PAR))
     return GF + F * FH + PAR
@@ -804,6 +1043,14 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     if garage:
         gw = 190.0
         gx = dx + 62.0 - gw/2.0
+        # CLAMP to the lot. The garage roof oversails 16 uu either side, and
+        # unclamped that put the extended cottage at 842 uu inside an 820 uu
+        # parcel - 22 uu into the neighbour it would be placed beside. In the
+        # city the overhang landed in a garden and nothing complained; baked
+        # into a catalogue mesh it is a parcel that does not fit its own
+        # declared width. GATE-05 caught it on the gate's first working run.
+        OS = 16.0
+        gx = max(x0 + OS, min(gx, x0 + W - gw - OS))
         box(pl, 'Wall_Garage', gx, gx + gw, hy0 + 40, hy0 + 230, 0, 190); made += 1
         box(pl, 'Frame_GarageDoor', gx + 14, gx + gw - 14, hy0 + 34, hy0 + 42,
             8, 168); made += 1

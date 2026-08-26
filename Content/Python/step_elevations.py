@@ -44,6 +44,8 @@ FACADE_T = 60.0    # the elevation is a SLAB standing proud of the core face.
 FRONT = 62.0       # facade back / core front
 PIER_W = 52.0
 BAY_TARGET = 340.0
+BITE = 14.0        # how far a flank's inner face pushes PAST the facade line,
+#                    so the two meet in an overlap rather than a shared plane
 
 
 def exposed_flanks(block):
@@ -160,7 +162,16 @@ def flank_vernacular(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     def xr(d0, d1):
         """x range between two depths measured INTO the wall from the outer
-        face. Negative depth is proud of the face."""
+        face. Negative depth is proud of the face.
+
+        BITE, at the inner end. The flank slab's deepest boxes land at exactly
+        x0 - OVER_X, which is exactly where the front's Band_Course starts -
+        two coincident planes, and coincident planes z-fight. That is the dark
+        vertical streaking down the corner piers: not clipping geometry, two
+        surfaces at the same depth arguing about which is in front.
+        A few uu of overlap makes it a solid union instead of a coin toss.
+        """
+        d1 = d1 + BITE if d1 >= FACADE_T - 1.0 else d1
         p, q = XP - sign * d0, XP - sign * d1
         return (p, q) if p <= q else (q, p)
 
@@ -215,7 +226,94 @@ def flank_vernacular(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     # parapet cap, matching the front's Band_ParapetCap so the corner reads
     b('Band_FlankCap', -10, 60, FRONT - 10, D + 10, ztop + PAR, ztop + PAR + 14)
+
+    # ---- a MURAL, on one flank only ---------------------------------------
+    # A painted image at 1:87 is mud - the whole facade is 14 mm across on the
+    # board. So a mural is built the way you would actually paint one on a
+    # card model: a few big offset blocks of colour, which is also how most
+    # real gable-end murals read from across a street.
+    #
+    # One flank, not both. A mural goes on the wall people can see, and a
+    # building with the same mural on both sides reads as wallpaper.
+    mural = spec.get('mural')
+    if mural and sign > 0:
+        rr = random.Random(spec.get('seed', 0) + 991)
+        my0, my1 = FRONT + 90.0, D - 120.0
+        mz0, mz1 = GF + 40.0, ztop - 60.0
+        if my1 > my0 + 200.0 and mz1 > mz0 + 200.0:
+            # three blocks, each a different card colour, deliberately not
+            # aligned to the window grid - paint does not know about bays
+            cuts = sorted(rr.uniform(0.28, 0.72) for _ in range(2))
+            spans = [(0.0, cuts[0]), (cuts[0], cuts[1]), (cuts[1], 1.0)]
+            for i, (t0, t1) in enumerate(spans):
+                y0 = my0 + (my1 - my0) * t0
+                y1 = my0 + (my1 - my0) * t1
+                # each block takes a different slice of the height
+                h0 = mz0 + (mz1 - mz0) * rr.uniform(0.0, 0.30)
+                h1 = mz1 - (mz1 - mz0) * rr.uniform(0.0, 0.26)
+                if h1 <= h0 + 80.0:
+                    continue
+                b('Mural_%s' % 'ABC'[i], 2, 5, y0 + 8, y1 - 8, h0, h1)
+
     print('  ELEV_%s_%s: %d boxes' % (n, face, made))
+    return made
+
+
+# MEASURED, not derived: a walkup core built at 1420 with both flanks treated
+# spans 1576 - GATE-05 refused all three tiers and reported the number. The
+# flank slab's outer face sits at x0 - OVER_X - FACADE_T and its band courses
+# overhang a little further, so the allowance is 156 in total and does NOT
+# scale with width: every offset is fixed relative to x0 and x0 + W.
+#
+# In a city this proud-standing is right - only END lots get flanks and their
+# outward face looks at a street, so the slab oversails nothing. A catalogue
+# model has no such luxury: the parcel is the entire budget, so the CORE is
+# built narrower and the flanks bring it back out to the parcel line.
+FLANK_W = 156.0
+
+
+def flank_allowance(spec):
+    """How much wider a model gets when both flanks are treated."""
+    return 0.0 if spec.get('style') == 'house' else FLANK_W
+
+
+def rear_allowance(spec):
+    """How much DEEPER a model gets when the rear is treated.
+
+    The same fault as the flanks, at ninety degrees: rear() puts the slab's
+    outer face at D + FACADE_T, so a treated rear pushes 60 uu past the back
+    of the plot and into whatever is behind it. GATE-05 refused four of five
+    vernacular tiers at 888 uu in a 700 uu plot and named the number.
+
+    The front is different and is NOT deducted: a canopy, a cill and a cornice
+    oversail the PAVEMENT, which is what GATE-05's OVERSAIL allowance is for.
+    A rear slab oversails the next owner's land, which nothing allows.
+    """
+    return 0.0 if spec.get('style') == 'house' else FACADE_T
+
+
+def freestanding(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """Treat EVERY face - for a catalogue model, which has no neighbours.
+
+    exposed_flanks and exposed_rears exist because a city is a terrace: a
+    mid-block flank is a party wall buried against the building next door, and
+    punching windows into it would be both wrong and invisible. That reasoning
+    is sound for a FIXED city and does not survive a catalogue.
+
+    A catalogue mesh is placed wherever the grammar or the player puts it. It
+    cannot know whether anything stands beside it, so it has to be correct
+    freestanding - and the cost is asymmetric: a blind wall is a visible bug
+    the moment a model lands on a corner, while a window hidden behind a
+    neighbour costs a few hundred triangles nobody ever sees.
+
+    Skips `house`, which build_house already builds on all four sides - the
+    same exclusion exposed_flanks makes, for the same reason.
+    """
+    if spec.get('style') == 'house':
+        return 0
+    made = flank(spec, -1, origin, yaw)
+    made += flank(spec, +1, origin, yaw)
+    made += rear(spec, origin, yaw)
     return made
 
 

@@ -35,7 +35,7 @@ PRACTICAL_MAX_PITCH = 60.0
 # UE names an unnamed component 'StaticMeshComponent_0' as well as
 # 'StaticMesh12'; the first pattern only caught the second, and a stray
 # probe actor slipped past it and was found by MAT-01 instead.
-AUTO_NAME = re.compile(r'^StaticMesh(Component)?_?\d+$')
+from qc import AUTO_NAME  # noqa: F401  - one definition, in qc.py
 
 RULES = []
 
@@ -485,8 +485,9 @@ def _t_bake_01():
 # 0.70 is set ABOVE four buildings that are genuinely thin, not below them.
 # Tuning it down to green would be the failure the gate warns about in as many
 # words - criteria bending to fit what got built.
-DETAIL_MIN = 0.70        # parts per square metre of street elevation
-MAT_MIN = 4              # distinct material instances on a building
+from qc import DETAIL_MIN, MAT_MIN   # one definition, in qc.py - modelgate
+# reads the same two numbers, and a gate that passed a model the suite would
+# fail is worse than no gate
 
 
 @rule('DETAIL-01', 'a building carries at least %.2f parts per m2 of elevation'
@@ -517,6 +518,62 @@ def detail_01(snap):
         if len(mats.get(nm, ())) < MAT_MIN:
             out.append((nm, 'only %d distinct materials' % len(mats.get(nm, ()))))
     return out
+
+
+# An open lot carries a lot less per square metre than a facade does, because
+# it is ground rather than elevation - so DETAIL-01's threshold is meaningless
+# here and this needs its own. The number is MEASURED from the lots that were
+# built, reviewed and kept, not chosen:
+#
+#     Square (plaza)  0.162 parts/m2      reworked after the "sand pit" note
+#     Yard   (yard)   0.174 parts/m2      dressed 25 Aug
+#     Green  (green)  0.130 parts/m2
+#     Greens (park)   0.046 parts/m2      <- the outlier
+#
+# 0.10 sits below every lot that was accepted and well above the one that was
+# never looked at closely. It is deliberately NOT set under 0.046 to make the
+# suite green: a threshold picked to pass the work is not a threshold.
+from qc import DENSITY_MIN   # one definition, in qc.py
+
+
+@rule('DETAIL-02', 'an open lot carries at least %.2f parts per m2 of ground'
+                   % DENSITY_MIN)
+def detail_02(snap):
+    lots = {sp['name']: (sp, r) for _n, sp, r in
+            G.lots(('plaza', 'green', 'park', 'vacant'))}
+    out = []
+    for nm in sorted(lots):
+        sp, r = lots[nm]
+        area = (sp['width']/100.0) * (sp['depth']/100.0)
+        n = 0
+        for a in snap['actors']:
+            lbl = a['label']
+            if lbl == 'ZONE_%s' % nm:
+                n += len(a['comps'])
+            elif lbl.startswith(('SUR_', 'PROP_', 'BAKED_')) and a['comps']:
+                x, y = a['loc'][0], a['loc'][1]
+                if r[0] <= x <= r[2] and r[1] <= y <= r[3]:
+                    n += len(a['comps'])
+        # zero means not built yet rather than built badly - same call
+        # DETAIL-01 makes, so a lot added to the table does not fail the
+        # suite before anyone has had a chance to build it.
+        if n and n/area < DENSITY_MIN:
+            out.append((nm, '%d parts over %.0f m2 = %.3f/m2, under %.2f'
+                        % (n, area, n/area, DENSITY_MIN)))
+    return out
+
+
+@selftest('DETAIL-02')
+def _t_detail_02():
+    nm, sp = next((sp['name'], sp) for _n, sp, _r in
+                  G.lots(('plaza', 'green', 'park', 'vacant')))
+    area = (sp['width']/100.0) * (sp['depth']/100.0)
+    def zone(k):
+        return _a('ZONE_%s' % nm,
+                  comps=[_c('c%d' % i, 'SM', mats=['MI_a']) for i in range(k)])
+    if detail_02(_snap(zone(int(area*DENSITY_MIN) + 10))):
+        return False                       # a dressed lot must pass
+    return _one(detail_02(_snap(zone(max(1, int(area*DENSITY_MIN) - 5)))), nm)
 
 
 @selftest('DETAIL-01')

@@ -53,6 +53,9 @@ REGISTRY = {
     'SHOP':      ('shopfront dressing: awnings, fascia boards, signs',
                                               'step_shopfronts.py'),
     'PROP':      ('the Stage 1 tree, kept deliberately',       'stage 1'),
+    'BENCH':     ('the benchmark stand cameras: hero, street, roof', 'bench.py'),
+    'STAND':     ('the benchmark model itself, parked off-board',    'bench.py'),
+    'STUDY':     ('the material study wall, one variable per panel', 'study.py'),
 }
 
 # Families wiped and rebuilt on every dressing pass. Anything here must be
@@ -75,3 +78,27 @@ def is_bush(label, mesh):
 
 def is_planting(label, mesh):
     return is_tree(label, mesh) or is_bush(label, mesh)
+
+# --- the role vocabulary ----------------------------------------------------
+# Role-in-the-component-name is how one sweep binds every material in the
+# project, and until now the list of roles lived only inside step_roles.py -
+# which imports `unreal` and therefore cannot be read by anything that has to
+# run without an editor. The per-model gate needs exactly that: to ask "does
+# every component here carry a role I recognise" BEFORE a bake, as a pure
+# function it can self-test.
+#
+# So the vocabulary lives here with the families, for the same reason the
+# families do. step_roles validates its own table against this on import; a
+# role bound there and missing here is a bug in one of the two, and the gate
+# says which.
+ROLES = (
+    'Wall_', 'Band_', 'Glass_', 'Interior_', 'Frame_', 'Mullion_',
+    'Accent_', 'Roof_', 'Tile_', 'Ground_', 'Gravel_', 'Grass_',
+    'Kerbing_', 'Bloom_', 'Rail_', 'Timber_', 'Mural_',
+)
+
+
+def role(name):
+    """The role prefix a component name carries, or None."""
+    return next((r for r in ROLES if (name or '').startswith(r)), None)
+

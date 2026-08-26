@@ -10,7 +10,7 @@ import unreal, time
 import _path
 import labels
 
-DEFAULT_MATS = ('WorldGridMaterial', 'DefaultMaterial', 'DefaultDeferredDecalMaterial')
+from qc import DEFAULT_MATS  # noqa: F401  - one definition, in qc.py
 
 
 def _aabb(c):

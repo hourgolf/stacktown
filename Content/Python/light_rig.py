@@ -215,7 +215,24 @@ if MODE == 'day':
     SUN_PITCH = _A.get('elev', 52.0)
     SKY_I = _A.get('sky', 10.0)
     ISO = _A.get('iso', 800)
-    FSTOP = _A.get('fstop', 4.0)
+    # f/5.6, not f/4, decided 2026-08-25 on measurement. At f/4 the walls sit
+    # at 209 of 255 with 12% headroom, where the tonemap compresses colour and
+    # surface detail together: a 21% albedo drop moved the render 3%. One stop
+    # down roughly doubles what the card can show -
+    #
+    #     panel separation  13.2 -> 20.0     surface grain  +50%
+    #
+    # and it is the LAST stop that stays clean. At f/8 the scene exposure hits
+    # 8.9 against a safe range topping out near 8, and Lumen prints "cached
+    # lighting is going to be clipped" across the render. Setting
+    # r.EyeAdaptation.CachedLightingPreExposure at runtime does NOT clear it -
+    # the warning asks for it in PROJECT config, and a live cvar cannot
+    # re-cache lighting already built at pre-exposure 0. That needs
+    # DefaultEngine.ini and a restart, and is still an owner decision.
+    #
+    # Bounce was tested and ruled out first: a 5x drop in studio albedo moved
+    # the walls 1.5%, so this is exposure, not the room.
+    FSTOP = _A.get('fstop', 5.6)
     SHUTTER = _A.get('shutter', 60)
     PRE_EXP = _A.get('preexp', 0.0)
     _daylight()

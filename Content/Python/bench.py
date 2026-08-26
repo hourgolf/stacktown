@@ -19,9 +19,47 @@ cameras - a camera should not be a remembered number.
 """
 import sys, math
 import unreal
+
+SANDBOX = 'Sandbox_Bench'
+
+
+def _require_sandbox():
+    """Refuse to build workshop furniture in the shipping level.
+
+    This used to spawn into Stage2_Block, which is how the benchmark
+    building ended up standing on the studio floor in a board capture.
+    The project guard allows the sandbox map now; this makes sure the
+    benchmark stand can only ever land there.
+    """
+    lvl = unreal.get_editor_subsystem(
+        unreal.UnrealEditorSubsystem).get_editor_world().get_path_name()
+    if SANDBOX not in lvl:
+        raise SystemExit(
+            'refusing to build the benchmark stand in %s\n'
+            '    Open /Game/Maps/%s and run this again.' % (lvl, SANDBOX))
+
+
+_require_sandbox()
 import _path  # noqa: F401
 
-AT = unreal.Vector(-12000.0, -2640.0, 0.0)
+# DERIVED, not remembered. (-12000, -2640) was a spot on the Stage2 studio
+# floor, and carried into the sandbox it put the model past the west end of
+# the backdrop - on the ground, but outside the room. A benchmark stand
+# belongs in the middle of whatever display board the level actually has.
+def _stand_spot():
+    eas_ = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    best = None
+    for a in eas_.get_all_level_actors():
+        n = a.get_actor_label()
+        if n in ('STAGE_ModelBoard', 'STAGE_Ground') and (best is None or
+                                                          n.endswith('Board')):
+            o, e = a.get_actor_bounds(False)
+            best = (n, unreal.Vector(o.x, o.y, o.z + e.z))
+    if best:
+        print('  standing on %s' % best[0])
+        return best[1]
+    print('  no stage found - standing at the origin')
+    return unreal.Vector(0.0, 0.0, 0.0)
 BAKED = '/Game/Stacktown/Baked'
 DEFAULT = 'SM_Bld_vernacular_t5_w1230'
 FOCAL = 70.0
@@ -39,6 +77,7 @@ sm = unreal.load_asset('%s/%s' % (BAKED, asset))
 if not sm:
     raise SystemExit('bench: no baked mesh named %s' % asset)
 
+AT = _stand_spot()
 stand = eas.spawn_actor_from_class(unreal.StaticMeshActor, AT,
                                    unreal.Rotator(0, 0, 0))
 stand.set_actor_label('STAND_%s' % asset)
@@ -53,9 +92,19 @@ HFOV = 2.0 * math.degrees(math.atan(SENSOR_W / (2.0 * FOCAL)))
 
 
 def look(name, bearing, pitch, aim_z, fit, margin):
-    """Solve a standoff that CONTAINS `fit`, then aim at aim_z. Derived, not
-    remembered - the same discipline cameras.py uses for the block set."""
-    dist = (fit * margin) / math.tan(math.radians(HFOV / 2.0))
+    """Solve a standoff that CONTAINS the model, then aim at aim_z.
+
+    The first version sized the standoff from the FOOTPRINT and ignored
+    height, so a 1976 uu penthouse tier came back cropped: it solved for a
+    615 uu subject and the building is three times that tall. The capture is
+    2802 x 2244, so the vertical field is narrower than the horizontal and
+    height is usually the binding constraint, not width.
+    """
+    vfov = 2.0 * math.degrees(math.atan(
+        math.tan(math.radians(HFOV/2.0)) * (2244.0/2802.0)))
+    d_w = (fit * margin) / math.tan(math.radians(HFOV / 2.0))
+    d_h = (ext.z * margin) / math.tan(math.radians(vfov / 2.0))
+    dist = max(d_w, d_h)
     r = math.radians(bearing)
     lx = cx - dist * math.cos(r)
     ly = cy - dist * math.sin(r)

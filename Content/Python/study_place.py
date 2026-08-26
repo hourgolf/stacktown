@@ -1,6 +1,27 @@
 """Stand the study wall on the studio floor and report its bounds."""
 import json
 import unreal
+
+SANDBOX = 'Sandbox_Bench'
+
+
+def _require_sandbox():
+    """Refuse to build workshop furniture in the shipping level.
+
+    This used to spawn into Stage2_Block, which is how the benchmark
+    building ended up standing on the studio floor in a board capture.
+    The project guard allows the sandbox map now; this makes sure the
+    material study wall can only ever land there.
+    """
+    lvl = unreal.get_editor_subsystem(
+        unreal.UnrealEditorSubsystem).get_editor_world().get_path_name()
+    if SANDBOX not in lvl:
+        raise SystemExit(
+            'refusing to build the material study wall in %s\n'
+            '    Open /Game/Maps/%s and run this again.' % (lvl, SANDBOX))
+
+
+_require_sandbox()
 # WELL clear of the bench stand at (-12000, -2640): at a 5,972 uu standoff the
 # building stood between the camera and panels 4 and 5, so their samples were
 # measuring a dark facade. A study that photographs something else is not a

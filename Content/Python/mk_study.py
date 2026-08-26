@@ -13,13 +13,24 @@ import unreal
 
 SRC = '/Game/Stacktown/Materials/MI_paint_cream'
 BASE = (0.780, 0.748, 0.678)
+# ROUND 2. Round 1 moved one term each and found only ONE that did measurable
+# work at building distance: PaperTiling. Everything else - normal strength,
+# seam darkness, edge wear, base colour - moved the render by less than the
+# noise. So round 2 sweeps the lever that works instead of re-testing the ones
+# that do not.
+#
+# Panels 0-4 are a pure tiling sweep, one variable. Panel 5 is a COMBINATION
+# and is labelled as such: it is a candidate to look at, not a measurement,
+# because three terms move at once and nothing it shows can be attributed.
 VARIANTS = [
-    ('MI_st0_base',   {},                                   BASE),
-    ('MI_st1_darker', {},                                    (0.615, 0.585, 0.520)),
-    ('MI_st2_paper',  {'PaperNormalAmount': 6.0},            BASE),
-    ('MI_st3_coarse', {'PaperTiling': 0.012},                BASE),
-    ('MI_st4_seams',  {'SeamDarken': 0.62, 'SeamSpacing': 190.0}, BASE),
-    ('MI_st5_wear',   {'EdgeWearLift': 2.20, 'EdgeWearWidth': 0.60}, BASE),
+    ('MI_st0_t050', {'PaperTiling': 0.050}, BASE),   # current default
+    ('MI_st1_t025', {'PaperTiling': 0.025}, BASE),
+    ('MI_st2_t012', {'PaperTiling': 0.012}, BASE),   # round 1 winner
+    ('MI_st3_t006', {'PaperTiling': 0.006}, BASE),
+    ('MI_st4_t003', {'PaperTiling': 0.003}, BASE),
+    ('MI_st5_combo', {'PaperTiling': 0.012, 'SeamDarken': 0.62,
+                      'SeamSpacing': 190.0, 'EdgeWearLift': 2.20},
+     (0.700, 0.668, 0.600)),
 ]
 
 mel = unreal.MaterialEditingLibrary

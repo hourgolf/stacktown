@@ -23,8 +23,8 @@ RUNG = os.path.join(ROOT, 'Tools', 'rung.sh')
 TMP = tempfile.gettempdir()
 OUT = '/Game/Stacktown/Baked/SM_MatStudy'
 
-PANELS = ['MI_st0_base', 'MI_st1_darker', 'MI_st2_paper',
-          'MI_st3_coarse', 'MI_st4_seams', 'MI_st5_wear']
+PANELS = ['MI_st0_t050', 'MI_st1_t025', 'MI_st2_t012',
+          'MI_st3_t006', 'MI_st4_t003', 'MI_st5_combo']
 PW, PH, PD, GAP = 430.0, 700.0, 60.0, 40.0
 
 

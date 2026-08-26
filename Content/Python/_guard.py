@@ -8,7 +8,11 @@ _lvl = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_worl
 # named only Stage1_Building, so anything run through the repo's own rung.sh
 # refused to run at all - which is why a scratchpad copy had quietly become the
 # real guard. Keep this list current; it is the whole point of the file.
-_ALLOWED = ('Stage1_Building', 'Stage2_Block')
+# Sandbox_Bench added 2026-08-25: the benchmark model and the material study
+# wall were standing in Stage2_Block and turning up in board captures. They
+# are workshop furniture, not city, so they get their own map. bench.py and
+# study_place.py additionally refuse to run anywhere BUT that map.
+_ALLOWED = ('Stage1_Building', 'Stage2_Block', 'Sandbox_Bench')
 if not any(k in _lvl for k in _ALLOWED):
     raise SystemExit('WRONG LEVEL: %s (allowed: %s)' % (_lvl, ', '.join(_ALLOWED)))
 # Put the repository's own script and tool directories on sys.path. rung.sh

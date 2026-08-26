@@ -324,9 +324,13 @@ def yard_layout(spec):
         ('ladder',   X0 + 250.0, Y0 + 640.0, 0.0, 0.0),
         ('lumber_stack', X1 - 230.0, Y0 + 240.0, 0.0, 0.0),
         ('lumber_pile',  X1 - 230.0, Y0 + 560.0, 0.0, 0.0),
+        # A STACK, and DRESS-06 counts plan position, not height - three
+        # pallets on one spot read to it as three props in the same place.
+        # It is also not how a stack sits: they shuffle. Offsetting fixes the
+        # rule and the look together.
         ('pallet', X1 - 330.0, Y0 + 740.0,  0.0, 0.0),
-        ('pallet', X1 - 330.0, Y0 + 740.0, 12.0, 8.0),
-        ('pallet', X1 - 330.0, Y0 + 740.0, 24.0, -6.0),
+        ('pallet', X1 - 318.0, Y0 + 752.0, 12.0, 8.0),
+        ('pallet', X1 - 342.0, Y0 + 731.0, 24.0, -6.0),
         ('plywood', X1 - 40.0, Y0 + 880.0, 0.0, 90.0),
     ]
     lo = dict(bounds=(x0, FRONT, x0 + W, D), gate=gate, apron=apron,

@@ -21,6 +21,11 @@ me, satisfies it.
 
 ## Lane 1 — Disk audit and repository hygiene
 
+**STATUS: COMPLETE 2026-08-24.** The audit ran and reclaimed **26.76 GiB**;
+the full account, including what still awaits an owner decision, is
+`Docs/DISK_AUDIT_2026-08-24.md`. The scope description below is kept for the
+record.
+
 **Character:** careful, destructive, low-creativity, high-consequence. Wants
 patience and a bias toward asking. Needs filesystem access. Does NOT need visual
 judgement or Unreal knowledge.
@@ -55,8 +60,12 @@ the start. Wants strong systems reasoning and the ability to hold an economy in
 its head. Benefits from writing simulation prototypes in plain Python before
 anything touches the engine.
 
-**Status: nothing exists.** Not a line. This is genuinely greenfield, and it is
-the largest unknown in the project.
+**STATUS: ACTIVE 2026-08-25.** A Claude agent took this lane, working in an
+isolated git worktree. Deliverables in flight: `Docs/ECONOMY_DRAFT.md` (the
+interaction model and the open questions for the owner) and `Tools/econsim/`
+(the headless plain-Python simulation). Nothing exists in-engine, which is
+correct — see the deliverable rule below. Do not start a second Lane 2 thread
+without reading that agent's output first.
 
 **The one hard constraint from the visual side:** the player zooms from a block
 hero (112 m) down to a facade (9 m). Whatever the mechanics are, they must be
@@ -76,12 +85,16 @@ Unreal first.
 tolerance for reading a lot of prior art and respecting invariants. Needs Unreal
 MCP access and the ability to run and read captures.
 
-**Current state:** two blocks, generated, from `city.py`. Measured build rate is
-**0.068 s per box** (426 boxes in 29 s) — the 0.75 s figure in the Stage 2 record
-was taken under machine contention and is wrong.
+**Current state (2026-08-25):** nine blocks, generated, from `city.py`, on a
+board grown north — including block H (the works, sawtooth roofs). Measured
+build rate is **0.068 s per box** (426 boxes in 29 s) — the 0.75 s figure in
+the Stage 2 record was taken under machine contention and is wrong.
 
-**Next:** a city-layout generator above `city.py` — streets, intersections,
-block subdivision — and the question of whether blocks become instanced.
+**Next: FROZEN behind recipe quality.** `Docs/RECIPES_DRAFT.md` (25 Aug)
+stops pipeline and scale work until `vernacular` is brought up to standard
+and judged. The city-layout generator above `city.py` — streets,
+intersections, block subdivision, the instancing question — waits behind
+that gate. Do not start it because this paragraph used to say it was next.
 
 **Invariants that must not be broken:**
 - material role lives in the component name (`HANDOFF.md` §4.2)

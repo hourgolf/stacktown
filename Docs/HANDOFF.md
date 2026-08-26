@@ -27,25 +27,40 @@ say so.
 
 ## 2. Current state
 
-A **two-block street**, built by script, in `/Game/Maps/Stage2_Block`.
+**Updated 2026-08-25.** The authoritative current state is always the newest
+record under `Saved/Stage*/` and `Saved/Lane*/` plus `Docs/RECIPES_DRAFT.md`
+and `Docs/RUNTIME_SLICE.md` — this section is a summary and loses to the
+records wherever they disagree.
 
-- **Block A** — 4 buildings: 2 generated, 1 Assetsville tileset volume, 1 reused Stage 1 building
-- **Block B** — 3 buildings, generated, rotated 180° across the road
-- Street, pavements both sides, trees, parked vehicles, pedestrians, rooftop clutter
-- Practicals behind glazing on both blocks
+**Nine built blocks** on a board grown north, in `/Game/Maps/Stage2_Block`:
+the original facing street (blocks A and B), a civic square with a fountain,
+a park with housing across from it, walk-ups, and block H — the works, with
+sawtooth roofs and a stack. All generated from `city.py`/`genbuild.py`;
+measured build rate **0.068 s per box**.
 
-Verified at the block hero: **blown 0.000%, crushed 0.000%**, geometry check
-passing, no hollow facades.
+**The runtime slice is approved and partly wired** (`Docs/RUNTIME_SLICE.md`):
+a catalogue `PrimaryDataAsset`, `BP_Parcel` with a mesh component, an
+owner-wired `ResolveMesh` and CityTick graph, and a first measured tick
+against real assets. A runtime upgrade is a mesh pointer swap against
+pre-baked tier meshes in `/Game/Stacktown/Baked/`.
 
-### What is NOT done
+**Recipe status** (`Docs/RECIPES_DRAFT.md`): four ladders drafted
+(vernacular, modern, deco, works). Pipeline expansion is deliberately
+stopped; `vernacular` is being brought up to standard first. Cottage and
+walkup are kept as **rough drafts** awaiting the same detailing pass (owner
+decision, 2026-08-25). The per-model gate (`modelgate.py`), stamp
+(`stamp.py`) and `catalogue_audit.py` are in place.
 
-- The far side of the street is underlit. The key/fill rig was derived for a
-  single row facing −Y and has never been re-derived for two facing rows.
-- The backdrop does not cover the view down the street; there is black void past
-  the board edge.
-- Props, trees and vehicles exist only on block A's pavement.
+### Open items
+
+- Street lighting for two facing rows — the rig was derived for a single row
+  (Stage 3 record); the current branch has worked on lighting since, so
+  verify against the newest capture before treating this as open or closed.
+- The backdrop does not cover the view down the street.
 - Edge wear does not work on imported geometry (see §5).
-- There is **no gameplay of any kind**. Not a line. This is a visual proof.
+- The single-mesh bake fidelity gap (§9.1).
+- Gameplay: **nothing in-engine.** A Lane 2 agent started the headless
+  economy sim on 2026-08-25 — see `Docs/WORKSTREAMS.md` Lane 2.
 
 ---
 

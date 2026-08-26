@@ -3,6 +3,20 @@
 Three lanes, three threads. Each is self-contained — paste it as the first
 message. Repo: `https://github.com/hourgolf/stacktown` (private).
 
+## Status, 2026-08-25
+
+- **Prompt B (Lane 2) is superseded.** A Claude agent took the lane on
+  2026-08-25, working in a git worktree from the coordinator session:
+  headless economy sim (`Tools/econsim/`) plus an interaction-model memo
+  (`Docs/ECONOMY_DRAFT.md`). Do not start a second Lane 2 thread without
+  reading its output first.
+- **Prompt C (Lane 1) is done.** The audit ran 2026-08-24 and reclaimed
+  26.76 GiB — `Docs/DISK_AUDIT_2026-08-24.md`.
+- **Prompt A (Lane 4) is still current**, but a joiner should also read
+  `Saved/Stage3/BLOCK2_RECORD.md`, `Saved/Lane4/MATERIAL_RECORD.md`,
+  `Docs/RECIPES_DRAFT.md` and `Docs/RUNTIME_SLICE.md` — the project has
+  moved past Stage 2.
+
 ---
 
 ## A. New Claude thread — Lane 4, material and surface treatment

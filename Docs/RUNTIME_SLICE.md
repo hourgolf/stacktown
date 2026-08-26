@@ -237,3 +237,66 @@ cabin. Same house, grown, one pointer swap.
 - **`Find` offers several versions** — you want the one whose target is a Map.
 - Tell me what the screen actually says. These node names come from the API;
   the menu wording in 5.8 I have not seen.
+
+## The per-model gate and the stamp — 25 Aug 2026
+
+**Baking destroys the thing the invariant suite measures.** Every rule in
+`invariants.py` reads a level snapshot and counts *components*; `DETAIL-01`
+asks whether a building carries 0.70 parts per m² of elevation by counting
+boxes. Merge that building and it becomes **one component** — the rule does
+not fail, it silently stops having an opinion, which is worse. A catalogue of
+baked meshes cannot be checked the way the sandbox city is.
+
+So the check moved to the only moment it can see anything: after the roles are
+bound, before the merge.
+
+    build alone off-board  ->  bind roles  ->  GATE  ->  merge  ->  STAMP
+
+`modelgate.py` holds six rules as pure functions with known-answer self-tests
+that run FIRST, exactly as the suite does. Thresholds come from the new
+`qc.py`, which both it and `invariants.py` import — **a gate that passed a
+model the suite would fail is worse than no gate**, and two copies of `0.70`
+is how that happens.
+
+| rule | asks |
+|---|---|
+| `GATE-01` | every component carries a role from `labels.ROLES` |
+| `GATE-02` | no component sits on a default or missing material |
+| `GATE-03` | ≥0.70 parts per m² of elevation — **building components only** |
+| `GATE-04` | ≥4 distinct materials |
+| `GATE-05` | the model fits the parcel it is baked for |
+| `GATE-06` | no component auto-renamed by a name collision |
+
+`GATE-03` counts `BLD2_`/`ELEV_` and ignores `PLOT_`, because `DETAIL-01`
+draws the line there. Counting garden furniture toward elevation density would
+let a thin building pass the gate and fail the suite the moment it was placed;
+a self-test asserts a thin model stays failed with sixty fence posts added.
+
+**The stamp.** `stamp.py` writes the verdict onto the baked asset as metadata
+(`Stacktown.Gate`, `.Parts`, `.Materials`, `.Density`, `.SpanX/Y`, `.Recipe`,
+`.Tier`, `.Width`, `.Stamped`) and reads it back before reporting success. A
+mesh is then **evidence rather than an assurance**, and `catalogue_audit.py`
+reports an unstamped mesh as UNVERIFIED rather than assuming it is fine.
+
+`bake_catalogue.py` refuses to bake a model that fails the gate. `--force`
+bakes anyway and stamps `Gate=FAIL` rather than lying.
+
+### What it caught on its first working run
+
+`cottage` tier 2 measured **842 uu wide inside an 820 uu parcel** — the garage
+roof oversails 16 uu either side and was never clamped to the lot. In the city
+that overhang lands in a garden and `check_block` passes; baked into a
+catalogue mesh it is a parcel 22 uu into its neighbour. Clamped in
+`build_house`; now 819.
+
+### Catalogue state
+
+    asset                    gate  tier          parts mats  per m2  span x
+    SM_Bld_cottage_t0_w820   PASS  cabin           106    6    6.46     818
+    SM_Bld_cottage_t1_w820   PASS  house           144    6    4.50     818
+    SM_Bld_cottage_t2_w820   PASS  extended        166    6    5.19     819
+    SM_Bld_walkup_t0_w1420   PASS  two-storey      191    5    2.59    1418
+    SM_Bld_walkup_t1_w1420   PASS  three-storey    288    5    2.73    1418
+    SM_Bld_walkup_t2_w1420   PASS  four-storey     385    5    2.80    1418
+
+    6 stamped, 0 unverified, 0 gate-failed, 0 missing

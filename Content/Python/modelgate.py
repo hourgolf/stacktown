@@ -91,8 +91,8 @@ def elevation_m2(spec):
     return (spec['width']/100.0) * (h/100.0)
 
 
-def span(m):
-    """XY extent of the model, from component AABBs. None if unmeasurable."""
+def bounds(m):
+    """XY min/max of the model, from component AABBs. None if unmeasurable."""
     lo = [1e18, 1e18]
     hi = [-1e18, -1e18]
     seen = False
@@ -104,7 +104,13 @@ def span(m):
         for i in (0, 1):
             lo[i] = min(lo[i], b[0][i])
             hi[i] = max(hi[i], b[1][i])
-    return (hi[0]-lo[0], hi[1]-lo[1]) if seen else None
+    return (lo, hi) if seen else None
+
+
+def span(m):
+    """XY extent of the model. None if unmeasurable."""
+    b = bounds(m)
+    return (b[1][0]-b[0][0], b[1][1]-b[0][1]) if b else None
 
 
 # =========================== the rules ======================================
@@ -157,29 +163,46 @@ def gate_04(m):
 # two parcels sit side by side, and 22 uu of garage roof over the boundary is
 # 22 uu inside the house next door. Front oversail hangs over a footway.
 OVERSAIL = 130.0          # 1.3 m of ornament over the pavement
+SIDE_TOL = 8.0            # a plinth's 6 uu passes; a 22 uu garage roof fails
 
 
-@rule('GATE-05', 'the model fits its parcel: width strict, %.0f uu front '
-                 'oversail allowed' % OVERSAIL)
+@rule('GATE-05', 'the model fits its parcel: each SIDE within %.0f uu, %.0f '
+                 'uu front oversail allowed' % (SIDE_TOL, OVERSAIL))
 def gate_05(m):
     sp = m['spec']
-    s = span(m)
-    if not s:
+    b = bounds(m)
+    if not b:
         return [(sp.get('name', '?'), 'no measurable bounds')]
     out = []
     # parcel_width, not width: the CORE is built narrower than its parcel so
     # the flank slabs can stand proud and still land on the parcel line. The
     # gate must judge against the land the model claims, not the core.
+    #
+    # PER SIDE, not by span: the old span*1.02 test allowed a one-sided
+    # overhang the size of the tolerance plus however far the other side was
+    # inset - which is exactly the 22-uu garage-roof case the comment above
+    # cites, and it passed.
     pw = sp.get('parcel_width') or sp.get('width')
-    if pw and s[0] > pw*1.02:
-        out.append((sp.get('name', '?'),
-                    'width %.0f exceeds the %.0f parcel it is baked for'
-                    % (s[0], pw)))
+    # parcel_x0, not x0. In the bake pipeline `x0` is where the CORE starts -
+    # inset by half the flank allowance so the flank slabs land on the parcel
+    # line - and reading it as the parcel's edge shifted the whole test by 78
+    # uu, failing a model that fitted exactly. Same distinction as
+    # parcel_width vs width, and for the same reason.
+    x0 = sp.get('parcel_x0', sp.get('x0', 0.0))
+    if pw:
+        if b[0][0] < x0 - SIDE_TOL:
+            out.append((sp.get('name', '?'),
+                        'low side %.0f uu over the parcel line'
+                        % (x0 - b[0][0])))
+        if b[1][0] > x0 + pw + SIDE_TOL:
+            out.append((sp.get('name', '?'),
+                        'high side %.0f uu over the parcel line'
+                        % (b[1][0] - (x0 + pw))))
     d = sp.get('parcel_depth') or sp.get('depth', 0.0)
-    if d and s[1] > d + OVERSAIL:
+    if d and (b[1][1]-b[0][1]) > d + OVERSAIL:
         out.append((sp.get('name', '?'),
                     'depth %.0f exceeds %.0f + %.0f oversail'
-                    % (s[1], d, OVERSAIL)))
+                    % (b[1][1]-b[0][1], d, OVERSAIL)))
     return out
 
 
@@ -211,13 +234,25 @@ SPEC = dict(name='Probe', style='house', width=820.0, depth=1500.0,
 
 
 def _clean(n=None, aabb=True):
-    """A model that every rule must pass."""
+    """A model that every rule must pass.
+
+    The parts need a REAR contingent: GATE-08 locates a part by its centre,
+    and a part spanning the full depth centres at 50%, so a clean model built
+    only of full-depth boxes read as having a blank back and the __main__
+    footer printed 'clean model passes: False' from the day it was written."""
     area = elevation_m2(SPEC)
     n = n if n is not None else int(area*DETAIL_MIN) + 20
-    box = ([0.0, 0.0, 0.0], [SPEC['width'], SPEC['depth'], 400.0])
-    return model(SPEC, [_a('BLD2_Probe_H',
-                           [_c('Wall_P%d' % i, aabb=box if aabb else None)
-                            for i in range(n)])])
+    D = SPEC['depth']
+    box = ([0.0, 0.0, 0.0], [SPEC['width'], D, 400.0])
+    rear = ([0.0, D*0.9, 0.0], [SPEC['width'], D, 400.0])
+    # the LAST dozen of the SAME n parts sit at the rear, so every count a
+    # self-test does against n still holds
+    k = min(n, REAR_PARTS + 2)
+    comps = [_c('Wall_P%d' % i, aabb=box if aabb else None)
+             for i in range(n - k)]
+    comps += [_c('Wall_R%d' % i, aabb=rear if aabb else None)
+              for i in range(k)]
+    return model(SPEC, [_a('BLD2_Probe_H', comps)])
 
 
 @selftest('GATE-01')
@@ -279,10 +314,33 @@ def _t05():
     m['actors'][0]['comps'].append(_c('Wall_Wide', aabb=wide))
     if len(gate_05(m)) != 1:
         return False
+    # the calibration case the old span test PASSED: one side inset 8, the
+    # other 22 uu over the line - span only W+14, but the neighbour still
+    # has a garage roof in it
+    m = _clean()
+    over = ([8.0, 0.0, 0.0], [SPEC['width'] + 22.0, SPEC['depth'], 400.0])
+    m['actors'][0]['comps'].append(_c('Roof_Garage', aabb=over))
+    if len(gate_05(m)) != 1:
+        return False
+    # a plinth 6 uu proud on both sides is fabrication, not trespass
+    m = _clean()
+    pl = ([-6.0, 0.0, 0.0], [SPEC['width'] + 6.0, SPEC['depth'], 30.0])
+    m['actors'][0]['comps'].append(_c('Wall_Plinth', aabb=pl))
+    if gate_05(m):
+        return False
     # depth: a cornice oversailing the pavement is allowed...
     m = _clean()
     orn = ([0.0, -OVERSAIL + 20.0, 0.0], [SPEC['width'], SPEC['depth'], 400.0])
     m['actors'][0]['comps'].append(_c('Band_Cornice', aabb=orn))
+    if gate_05(m):
+        return False
+    # a core INSET from its parcel, whose flanks then land exactly on the
+    # parcel line, must pass - that is how every catalogue model is built
+    inset = dict(SPEC, x0=78.0, width=SPEC['width'] - 156.0,
+                 parcel_x0=0.0, parcel_width=SPEC['width'])
+    box_ = ([0.0, 0.0, 0.0], [SPEC['width'], SPEC['depth'], 400.0])
+    m = model(inset, [_a('BLD2_Probe_H',
+                         [_c('Wall_P%d' % i, aabb=box_) for i in range(30)])])
     if gate_05(m):
         return False
     # ...but a building that simply runs off the back of its plot is not

@@ -45,6 +45,16 @@ FAMILY = {'LAMP': {'Frame_': 'MI_dark_metal'}}
 # per-channel deltas are 0.020, 0.040 and 0.163 - invisible. See mk_mural.py.
 MURAL = {'A': 'MI_mural_a', 'B': 'MI_mural_b', 'C': 'MI_mural_c'}
 
+# Components whose ROLE is right but whose SUBJECT wants a different material.
+# A penthouse is glazed and has an interior, so Glass_/Interior_ are the
+# correct roles - but a window's glass is a dark opening (lum 0.080) and a
+# glass penthouse is a lit volume. Matched on prefix, checked BEFORE the role
+# table, so nothing else in the project moves.
+SPECIAL = {
+    'Glass_Pent': 'MI_glass_pent',
+    'Interior_Pent': 'MI_interior_lit',
+}
+
 DEFAULT_WALL = 'MI_paint_cream'
 DEFAULT_ROOF = 'MI_shingle_grey'
 
@@ -57,6 +67,9 @@ def material_for(comp, wall=None, roofmat=None, family='BLD2'):
     """The material instance name for one component. None if nothing binds it."""
     if comp.startswith('Mural_'):
         return MURAL.get(comp[-1], SHARED['Mural_'])
+    for pre, mi in SPECIAL.items():
+        if comp.startswith(pre):
+            return mi
     fam = FAMILY.get(family, {})
     for r in fam:
         if comp.startswith(r):
@@ -81,6 +94,11 @@ def _selftest():
     assert material_for('Frame_Post', family='LAMP') == 'MI_dark_metal'
     assert material_for('Frame_Post', family='BLD2') == 'MI_frame_print'
     assert material_for('StaticMeshComponent0') is None
+    # the penthouse takes its own glazing; every other window does not
+    assert material_for('Glass_Pent0F') == 'MI_glass_pent'
+    assert material_for('Interior_Pent1') == 'MI_interior_lit'
+    assert material_for('Glass_B0') == 'MI_glass_b'
+    assert material_for('Interior_Shop') == 'MI_interior'
     # the vocabulary must match labels.ROLES exactly, or the gate cannot see
     # a role that is bound, or a listed role binds to nothing
     assert BOUND == set(labels.ROLES), (sorted(BOUND ^ set(labels.ROLES)),)

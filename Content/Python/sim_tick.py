@@ -10,10 +10,14 @@ a 500-parcel tick under 100 ms.
 """
 import unreal, time
 import _path  # noqa: F401
+from city import BOARD_N
 
 RT = '/Game/Stacktown/Runtime'
-PAD = (6200.0, 1500.0)
+# north of the CURRENT board top - the old literal (6200, 1500) predated the
+# northward growth and sat the grid across street 0
+PAD = (6200.0, BOARD_N + 700.0)
 N = 500
+TIER_MAX = 5                     # vernacular t0..t5
 
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 cat = unreal.load_asset('%s/DA_Catalogue' % RT)
@@ -50,20 +54,31 @@ for a in list(eas.get_all_level_actors()):
 
 t0 = time.time()
 parcels = []
+misses = 0
 for i in range(N):
     x = PAD[0] + (i % 25)*900.0
     y = PAD[1] + (i // 25)*1700.0
     a = eas.spawn_actor_from_class(bp.generated_class(),
                                    unreal.Vector(x, y, 0.0), unreal.Rotator())
     a.set_actor_label('SIM_%03d' % i)
-    a.set_editor_property('RecipeId', unreal.Name('cottage' if i % 2 else 'walkup'))
-    a.set_editor_property('WidthUU', 820.0 if i % 2 else 1420.0)
+    # keyed to what the catalogue actually holds. The first run of this
+    # benchmark was keyed cottage/walkup AFTER those rows were retired: every
+    # resolve() missed, the miss was unchecked, and the recorded "first
+    # number" timed 500 parcels that never received a mesh.
+    a.set_editor_property('RecipeId', unreal.Name('vernacular'))
+    a.set_editor_property('WidthUU', 1230.0)
     a.set_editor_property('Tier', 0)
     a.set_editor_property('Level', 0.0)
-    resolve(a)
+    if not resolve(a):
+        misses += 1
     parcels.append(a)
 spawn_ms = (time.time() - t0)*1000.0
 print('placed %d parcels in %.0f ms  (%.2f ms each)' % (N, spawn_ms, spawn_ms/N))
+if misses:
+    raise SystemExit('%d of %d parcels FAILED to resolve a mesh - the '
+                     'benchmark is meaningless, not slow. Check DA_Catalogue '
+                     'against the parcel keys.' % (misses, N))
+print('all %d parcels resolved a mesh' % N)
 
 # --- the tick: advance Level, derive Tier, resolve ONLY when it changed -----
 for step in range(1, 4):
@@ -72,10 +87,11 @@ for step in range(1, 4):
     for a in parcels:
         lvl = min(1.0, float(a.get_editor_property('Level')) + 0.34)
         a.set_editor_property('Level', lvl)
-        want = int(round(lvl*2.0))
+        want = int(round(lvl*TIER_MAX))
         if want != int(a.get_editor_property('Tier')):
             a.set_editor_property('Tier', want)
-            resolve(a)
+            if not resolve(a):
+                raise SystemExit('tier %d failed to resolve mid-tick' % want)
             changed += 1
     ms = (time.time() - t0)*1000.0
     print('tick %d: %d of %d parcels upgraded, %6.1f ms  (%.3f ms per parcel)'
@@ -85,8 +101,10 @@ t0 = time.time()
 for a in parcels:
     lvl = min(1.0, float(a.get_editor_property('Level')))
     a.set_editor_property('Level', lvl)
-    want = int(round(lvl*2.0))
+    want = int(round(lvl*TIER_MAX))
     if want != int(a.get_editor_property('Tier')):
-        a.set_editor_property('Tier', want); resolve(a)
+        a.set_editor_property('Tier', want)
+        if not resolve(a):
+            raise SystemExit('tier %d failed to resolve' % want)
 print('tick with nothing to do: %.1f ms' % ((time.time() - t0)*1000.0))
 print('SIM_ actors left in the level: %d (run wipe_sim.py to clear)' % len(parcels))

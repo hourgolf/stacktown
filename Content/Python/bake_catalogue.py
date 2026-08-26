@@ -52,6 +52,7 @@ for rid, w in JOBS:
         # pavement, which GATE-05 allows; the rear oversails the next plot,
         # which nothing does.
         spec['parcel_width'] = w
+        spec['parcel_x0'] = 0.0
         spec['parcel_depth'] = spec['depth']
         spec['depth'] = spec['depth'] - step_elevations.rear_allowance(spec)
         genbuild.build(spec, origin=STAGE, yaw=0.0)
@@ -83,10 +84,10 @@ for rid, w in JOBS:
         labels = ([l % tag for l in ('BLD2_%s_H', 'BLD2_%s_A', 'BLD2_%s_GF',
                                      'BLD2_%s_Roof', 'BLD2_%s_Canopy',
                                      'BLD2_%s_Shaft', 'PLOT_%s')]
-                  + ['BLD2_%s_F%d' % (tag, i) for i in range(12)]
+                  + ['BLD2_%s_F%d' % (tag, i) for i in range(40)]
                   + ['ELEV_%s_%s' % (tag, f) for f in ('W', 'E', 'R')]
                   + ['CORE_%s' % tag]
-                  + ['CORE_%s_b%d' % (tag, i) for i in range(4)])
+                  + ['CORE_%s_b%d' % (tag, i) for i in range(12)])
         asset = recipes.asset_name(rid, t, w)
 
         # --- the gate, while the model is still boxes -----------------------

@@ -11,7 +11,12 @@ import recipes
 
 RT = '/Game/Stacktown/Runtime'
 BAKED = '/Game/Stacktown/Baked'
-WID = {'cottage': 820.0, 'walkup': 1420.0}
+# The width each recipe is CURRENTLY baked at (vernacular's M width from
+# PARCELS.md). Derived membership: a recipe in RECIPES with no entry here is
+# REPORTED below rather than raising KeyError - the cottage/walkup retirement
+# left this dict speaking recipes that no longer existed and the blanket
+# except swallowed the KeyError while printing FAILED and exiting 0.
+WID = {'vernacular': 1230.0}
 
 # ---- 1. a StaticMeshComponent on BP_Parcel --------------------------------
 try:
@@ -44,6 +49,9 @@ try:
         'DA_Catalogue', RT, None, f)
     ids, tiers, widths, meshes, names = [], [], [], [], []
     for rid in sorted(recipes.RECIPES):
+        if rid not in WID:
+            print('  no baked width declared for %s - skipped' % rid)
+            continue
         w = WID[rid]
         for t in range(recipes.tier_count(rid)):
             p = '%s/%s' % (BAKED, recipes.asset_name(rid, t, w))

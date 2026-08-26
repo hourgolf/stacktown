@@ -61,7 +61,11 @@ def exposed_flanks(block):
     lots = sorted(block['lots'], key=lambda l: l['x0'])
     out = []
     for i, l in enumerate(lots):
-        if l['kind'] != 'gen' or l.get('style') == 'house':
+        # detached styles (solid Wall_Body, four real walls of their own)
+        # take no commercial elevation slabs - hanging a full-lot-depth pier
+        # grid beside a 520-deep walkup built a free-standing wall in its
+        # garden
+        if l['kind'] != 'gen' or l.get('style') in ('house', 'walkup', 'works'):
             continue
         low_free = (i == 0 and not block.get('abuts_low')) or \
                    (i > 0 and lots[i-1]['kind'] not in ('gen', 'av'))
@@ -82,7 +86,8 @@ def exposed_rears(block):
     if not block.get('rear_street'):
         return []
     return [l for l in block['lots']
-            if l['kind'] == 'gen' and l.get('style') != 'house']
+            if l['kind'] == 'gen'
+            and l.get('style') not in ('house', 'walkup', 'works')]
 
 
 def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):

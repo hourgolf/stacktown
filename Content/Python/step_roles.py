@@ -56,28 +56,27 @@ for a in eas.get_all_level_actors():
     # with a directly-assigned material and became Wall_ boxes like everything
     # else - one sweep, one vocabulary.
     if not l.startswith(('BLD2_', 'ELEV_', 'ZONE_', 'LAMP_', 'PLOT_', 'CORE_')): continue
-    fam=FAMILY.get(labels.family(l), {})
     who=l.split('_')[1]
     for c in a.get_components_by_class(unreal.StaticMeshComponent):
         nm=c.get_name()
-        fam_role=next((r for r in fam if nm.startswith(r)),None)
-        role=next((r for r in SHARED if nm.startswith(r)),None)
-        if nm.startswith('Mural_'):
-            c.set_material(0, M(MURAL.get(nm[-1], 'MI_card_ochre')))
-        elif fam_role: c.set_material(0,M(fam[fam_role]))
-        elif role: c.set_material(0,M(SHARED[role]))
-        elif nm.startswith('Tile_'):
-            c.set_material(0, M(ROOF.get(who, 'MI_shingle_grey')))
-        elif nm.startswith('Wall_') or nm.startswith('Band_'):
-            c.set_material(0,M(WALL.get(who,'MI_paint_cream')))
-        elif l.startswith('CORE_') and not role:
+        # ONE resolver, shared with the fast bake path. This loop used to
+        # carry its own if/elif chain over the same tables, which is two
+        # answers to "what material is a Timber_" waiting to drift - and it
+        # did: rolemap grew SPECIAL (penthouse glazing is not window glazing)
+        # and this sweep could not see it.
+        mname = rolemap.material_for(nm, WALL.get(who), ROOF.get(who),
+                                     labels.family(l))
+        if mname:
+            c.set_material(0, M(mname))
+        elif l.startswith('CORE_'):
             # A CITY core is still a bare StaticMeshActor built by
             # step_cores3, which assigns its material directly - so its one
             # component is StaticMeshComponent0 and has no role to bind. The
             # catalogue's cores are Wall_ boxes and DO bind here. Skip rather
             # than report: it is not unresolved, it was never ours.
             continue
-        else: unresolved.append(nm); continue
+        else:
+            unresolved.append(nm); continue
         done+=1
 print('assigned %d slots; unresolved %s'%(done,sorted(set(unresolved))[:6]))
 les.save_current_level()

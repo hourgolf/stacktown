@@ -97,34 +97,42 @@ def _bx(a, nm, axis, p0, p1, u0, u1, z0, z1):
 
 
 def window(a, tag, axis, plane, outward, u0, u1, z0, z1, bars=(1, 1)):
-    """A recessed window with a frame, a sill and glazing bars.
+    """A window built as an APPLIED unit, proud of the wall face.
 
-    The houses and walk-ups were built with a flat pane sitting ON the wall
-    plane and a sill under it - three parts - while block A gives every opening
-    eight: glass set back 250 mm (the Stage 0 finding), an interior behind it,
-    a frame standing 8 uu proud of the glass on three sides, a sill proud
-    again, and glazing bars. That difference is the whole of "they don't look
-    as finished". Gate A1 wants the recess to read as a shadow line and A2
-    wants the sill to have real thickness; a flat pane has neither.
+    The first version recessed every part INTO the wall (d = -outward,
+    glass 24 uu behind the plane) - correct thinking borrowed from the
+    pier-and-gap facades, where the recess is open air, but every caller of
+    THIS function builds one solid Wall_Body and passes its face: the whole
+    unit was buried in opaque mass and rendered nothing. That is what "blank
+    front and blank dormers after three rounds of detail" was - the detail
+    existed, entombed. Found by the 2026-08-25 review; confirmed by the owner
+    on block F.
+
+    So the unit now mounts ON the face, the way a card modeller glues a
+    glazing pane and frame to a facade: interior card flush (the dark void),
+    glass just proud of it, frame proud of the glass by 6, sill proudest.
+    The reveal hierarchy A1/A2 want is kept, just built outward. A true cut
+    opening with an internal recess is the detailing-pass job for each
+    draft recipe, not a change to make blind here.
 
     `outward` is +1 if the exterior face looks along +axis, -1 if it looks back.
     """
-    d = -outward                        # into the wall
-    g = plane + d*24.0                  # the glass plane
-    _bx(a, 'Glass_%s' % tag, axis, g, g + d*2, u0 + 6, u1 - 6, z0 + 6, z1 - 6)
-    _bx(a, 'Interior_%s' % tag, axis, g + d*18, g + d*24, u0, u1, z0, z1)
-    _bx(a, 'Frame_%sL' % tag, axis, g - d*8, g + d*2, u0, u0 + 6, z0, z1)
-    _bx(a, 'Frame_%sR' % tag, axis, g - d*8, g + d*2, u1 - 6, u1, z0, z1)
-    _bx(a, 'Frame_%sT' % tag, axis, g - d*8, g + d*2, u0, u1, z1 - 6, z1)
-    _bx(a, 'Frame_%sS' % tag, axis, g - d*16, g + d*2, u0 - 5, u1 + 5, z0 - 9, z0)
+    d = outward                         # away from the wall
+    _bx(a, 'Interior_%s' % tag, axis, plane + d*1, plane + d*3, u0, u1, z0, z1)
+    _bx(a, 'Glass_%s' % tag, axis, plane + d*4, plane + d*6,
+        u0 + 6, u1 - 6, z0 + 6, z1 - 6)
+    _bx(a, 'Frame_%sL' % tag, axis, plane, plane + d*12, u0, u0 + 6, z0, z1)
+    _bx(a, 'Frame_%sR' % tag, axis, plane, plane + d*12, u1 - 6, u1, z0, z1)
+    _bx(a, 'Frame_%sT' % tag, axis, plane, plane + d*12, u0, u1, z1 - 6, z1)
+    _bx(a, 'Frame_%sS' % tag, axis, plane, plane + d*16, u0 - 5, u1 + 5, z0 - 9, z0)
     n = 6
     for k in range(1, bars[0] + 1):
         m = u0 + (u1 - u0)*k/(bars[0] + 1.0)
-        _bx(a, 'Mullion_%sV%d' % (tag, k), axis, g - d*6, g + d*1,
+        _bx(a, 'Mullion_%sV%d' % (tag, k), axis, plane + d*5, plane + d*11,
             m - 3, m + 3, z0, z1); n += 1
     for k in range(1, bars[1] + 1):
         mz = z0 + (z1 - z0)*k/(bars[1] + 1.0)
-        _bx(a, 'Mullion_%sH%d' % (tag, k), axis, g - d*6, g + d*1,
+        _bx(a, 'Mullion_%sH%d' % (tag, k), axis, plane + d*5, plane + d*11,
             u0, u1, mz - 3, mz + 3); n += 1
     return n
 
@@ -345,19 +353,29 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     if rg or ph:
         gx0, gx1 = x0 + 46, x0 + W - 46
         gy0, gy1 = ty + 64, D - 44
-        split = gy0 + (gy1 - gy0) * (0.46 if ph else 1.0)
+        # A PENTHOUSE REPLACES THE GARDEN, it does not share the roof with
+        # it. t4's roof IS the garden; t5 is the same building after somebody
+        # bought the air rights, and what goes up there takes the roof. The
+        # first version split them front/back, which read as a shed parked
+        # beside a pergola rather than as an addition to the building.
+        split = gy0 if ph else gy1
 
-    if rg:
+    if rg and not ph:
         box(r, 'Timber_Deck', gx0, gx1, gy0, split, ztop, ztop + 9); made += 1
         # planters along the front, against the parapet
         npl = max(2, int((gx1 - gx0) / 300.0))
         pw = (gx1 - gx0) / float(npl)
         for i in range(npl):
             px = gx0 + i * pw
+            # Planting sits INSIDE the box. The bloom used to run from +56 to
+            # +96 against a planter topping out at +62 - 34 uu of it standing
+            # proud - so it read as a pink cushion on a wooden stool rather
+            # than as anything growing. Soil is contained by the planter it is
+            # in; only a little crowns above the rim.
             box(r, 'Timber_Planter%d' % i, px + 14, px + pw - 14,
                 gy0 + 4, gy0 + 78, ztop + 9, ztop + 62); made += 1
-            box(r, 'Bloom_Bed%d' % i, px + 24, px + pw - 24,
-                gy0 + 14, gy0 + 68, ztop + 56, ztop + 96); made += 1
+            box(r, 'Bloom_Bed%d' % i, px + 20, px + pw - 20,
+                gy0 + 10, gy0 + 72, ztop + 44, ztop + 70); made += 1
             # a small tree in every other planter, so the roof has HEIGHT
             if i % 2 == 0:
                 tx = px + pw/2.0
@@ -397,8 +415,12 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         pfl = int(ph.get('floors', 2))
         ins = float(ph.get('inset', 150.0))
         pfh = float(ph.get('fl_h', 250.0))
+        # MOST OF THE FOOTPRINT. It was inset 170 a side and squeezed into the
+        # back 54% of the roof - about a third of the plan - which is why it
+        # read as a rooftop hut. A penthouse floor is the building's floor,
+        # set back just enough to leave a terrace round it.
         px0, px1 = x0 + ins, x0 + W - ins
-        py0, py1 = split + 46, gy1 - 10
+        py0, py1 = gy0 + ins, gy1 - ins*0.6
         pz0 = ztop + 9
         # a plinth UNDER THE PENTHOUSE ONLY, not across the whole roof
         box(r, 'Timber_PentDeck', px0 - 34, px1 + 34, py0 - 40, py1 + 16,
@@ -445,12 +467,16 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 pz0, pz0 + 44); made += 1
             box(r, 'Bloom_Terr%d' % k, ox_ + 8, ox_ + 60, py0 - 38, py0 - 10,
                 pz0 + 38, pz0 + 74); made += 1
-        # cap: a slim slab with a fascia, not a lid
+        # The cap was a 16-thick slab with a 12-thick 'fascia' stacked ON TOP
+        # of it - 28 uu of solid white reading as a lid dropped on a box. A
+        # fascia is the EDGE, not another layer. Slim roof, thin drip lip
+        # projecting past it, and a shadow gap between the two so the lip
+        # reads as a separate cut piece the way the parapet coping does.
         ptz = pz0 + pfl * pfh
-        box(r, 'Roof_PentCap', px0 - 16, px1 + 16, py0 - 16, py1 + 16,
-            ptz - 12, ptz + 4); made += 1
-        box(r, 'Band_PentFascia', px0 - 22, px1 + 22, py0 - 22, py1 + 22,
-            ptz + 4, ptz + 16); made += 1
+        box(r, 'Roof_PentCap', px0 - 8, px1 + 8, py0 - 8, py1 + 8,
+            ptz - 10, ptz - 2); made += 1
+        box(r, 'Band_PentDrip', px0 - 20, px1 + 20, py0 - 20, py1 + 20,
+            ptz, ptz + 7); made += 1
         # balustrade around the garden edge of the terrace only
         box(r, 'Rail_TerrEdge', gx0 + 20, gx1 - 20, split + 6, split + 16,
             ztop + 9, ztop + 62); made += 1
@@ -971,7 +997,10 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # A SINGLE-STOREY COTTAGE had two street windows and nothing else,
         # because the upper-floor loop does not run when floors is 0. The gable
         # above the eaves is elevation too: it takes a window.
-        if F == 0 and abs(bx - cx) <= 70:
+        if F == 0 and abs(bx - cx) <= 70 and GF - 34 - (26 + 168) >= 44:
+            # only when there is real wall between the door hood and the
+            # eaves - on a low cabin (gf_h ~200) this range is INVERTED and
+            # abs() in box() was emitting a 28 uu sliver over the door
             made += window(a, 'GFd', 'y', hy0, -1.0, bx - 46, bx + 46,
                            26 + 168, GF - 34, bars=(1, 0))
         for f in range(F):
@@ -982,8 +1011,11 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     for sgn, side in ((-1.0, hx0), (1.0, hx1)):
         for k in range(2):
             wy = hy0 + HD*(0.3 + 0.4*k)
+            # F==0: eaves == GF, so the upper-floor range floats above the
+            # roofline - drop the flank windows into the ground floor instead
+            wz = (GF + 44, GF + FH - 52) if F else (26 + 62, GF - 34)
             made += window(a, 'S%d_%d' % (int(sgn) + 1, k), 'x', side, sgn,
-                           wy - 58, wy + 58, GF + 44, GF + FH - 52, bars=(1, 0))
+                           wy - 58, wy + 58, wz[0], wz[1], bars=(1, 0))
 
     # ---- rear elevation ------------------------------------------------------
     for b in range(2):
@@ -1130,7 +1162,9 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 hy0 - 8, hy0 - 8 + dd, dz, dz + dh); made += 1
             box(a, 'Wall_DormerF%d' % d, dxc - 66, dxc + 66,
                 hy0 - 12, hy0 - 4, dz, dz + dh); made += 1
-            made += window(a, 'Dm%d' % d, 'y', hy0 - 8, -1.0,
+            # the dormer's FRONT face is hy0-12 (Wall_DormerF spans -12..-4);
+            # passing its mid-plane put the glass inside the roof
+            made += window(a, 'Dm%d' % d, 'y', hy0 - 12, -1.0,
                            dxc - 48, dxc + 48, dz + 26, dz + dh - 22, bars=(1, 0))
             slab(a, 'Tile_Dormer%d' % d, dxc, hy0 - 14 + dd/2.0,
                  dz + dh + dh*0.17, 148.0, math.hypot(dd, dh*0.34), 12.0,

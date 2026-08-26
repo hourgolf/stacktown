@@ -26,15 +26,18 @@ rnd = random.Random(90210)
 n = 0
 for a in LAMPS:
     lbl = a.get_actor_label()
-    if True:
-        pass
     loc = a.get_actor_location()
-    # the arm leans along Y; the head sits at its far end. Which way is encoded
-    # in the label's side letter, the same way the geometry decided it.
-    reach = -1.0 if ('sF' in lbl or lbl.split('_')[1].endswith('F')) else 1.0
+    # The head sits at the arm's far end; which way is encoded in the label's
+    # side letter, the same way the geometry decided it. street_lamps.py
+    # builds F with reach +1 (over the road at k_far) and N with -1; the old
+    # decode here had BOTH signs inverted, so every light hung 420 uu over
+    # the pavement instead of under its own head. Avenues lean along X.
+    side = lbl.split('_')[1][-1]
+    dx, dy = {'F': (0.0, 1.0), 'N': (0.0, -1.0),
+              'W': (1.0, 0.0), 'E': (-1.0, 0.0)}[side]
     lt = eas.spawn_actor_from_class(
         unreal.RectLight,
-        unreal.Vector(loc.x, loc.y + ARM*reach, HEIGHT - 56.0),
+        unreal.Vector(loc.x + ARM*dx, loc.y + ARM*dy, HEIGHT - 56.0),
         unreal.Rotator(0.0, -90.0, 0.0))          # face straight DOWN
     lt.set_actor_label('LAMPLIGHT_' + lbl[5:])
     c = lt.get_components_by_class(unreal.RectLightComponent)[0]

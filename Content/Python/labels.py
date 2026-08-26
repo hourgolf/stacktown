@@ -52,7 +52,8 @@ REGISTRY = {
                                               'genbuild.build_house / build_walkup'),
     'SHOP':      ('shopfront dressing: awnings, fascia boards, signs',
                                               'step_shopfronts.py'),
-    'PROP':      ('the Stage 1 tree, kept deliberately',       'stage 1'),
+    'PROP':      ('yard props, and the Stage 1 tree kept deliberately',
+                                              'yard_props.py, stage 1'),
     'BENCH':     ('the benchmark stand cameras: hero, street, roof', 'bench.py'),
     'STAND':     ('the benchmark model itself, parked off-board',    'bench.py'),
     'STUDY':     ('the material study wall, one variable per panel', 'study.py'),
@@ -61,7 +62,10 @@ REGISTRY = {
 # Families wiped and rebuilt on every dressing pass. Anything here must be
 # removable by label alone, or it accumulates - 401 stale props once roofed the
 # plaza because the wipe matched `SUR_prop*` and `SUR_tree*` and nothing else.
-DRESSING = ('SUR', 'BAKED', 'LAMP', 'LAMPLIGHT', 'SHOP')
+# PROP joined 2026-08-25: yard_props.py made the family a real dressing pass
+# (wiped and rebuilt by label), and while it was missing here the containers
+# were invisible to DRESS-04 (on board) and DRESS-06 (duplicate wipes).
+DRESSING = ('SUR', 'BAKED', 'LAMP', 'LAMPLIGHT', 'SHOP', 'PROP')
 
 # --- mesh-level classification ---------------------------------------------
 def is_vehicle(label, mesh):

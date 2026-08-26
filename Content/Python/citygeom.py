@@ -87,8 +87,15 @@ def zone_layouts():
     into nonsense.
     """
     import zonelayout
-    RECT = ('bounds', 'paving', 'lawn', 'basin', 'inner', 'forecourt', 'spine', 'walk')
-    RECTS = ('tree', 'shrub', 'avoid', 'beds', 'panels', 'walks', 'outer', 'paths', 'pit')
+    RECT = ('bounds', 'paving', 'lawn', 'basin', 'inner', 'forecourt', 'spine',
+            'walk', 'node', 'stand', 'apron', 'hard', 'house', 'front', 'back')
+    RECTS = ('tree', 'shrub', 'avoid', 'beds', 'panels', 'walks', 'outer',
+             'paths', 'pit', 'ring')
+    SEATS = ('seat', 'south', 'east')      # (x0,y0,x1,y1,facing)
+    POINTS = ('centre', 'post')            # (x, y)
+    # deliberately LOCAL: consumed only by the scripts that author them, in
+    # block space. Listed so the unknown-key check below stays honest.
+    LOCAL = ('gate', 'props')
     out = []
     for blk in BLOCKS:
         for spec in blk['lots']:
@@ -97,19 +104,41 @@ def zone_layouts():
                 continue
             w = {}
             for k, v in lo.items():
-                if k in RECT and v:
-                    w[k] = to_world(blk, v)
-                elif k in RECTS and v:
-                    w[k] = [to_world(blk, r) for r in v]
-                elif k == 'seat' and v:
-                    w[k] = [tuple(to_world(blk, e[:4])) + (e[4] + blk['yaw'],) for e in v]
-                elif k == 'fountain' and v:
-                    cx, cy, r = v
-                    p = to_world(blk, (cx, cy, cx, cy))
-                    w[k] = (p[0], p[1], r)
-                else:
+                # membership FIRST, emptiness second: an empty known key is
+                # data ('no walk on this green'), not an unknown key
+                if k in RECT:
+                    w[k] = to_world(blk, v) if v else v
+                elif k in RECTS:
+                    w[k] = [to_world(blk, r) for r in v] if v else v
+                elif k in SEATS:
+                    w[k] = ([tuple(to_world(blk, e[:4])) + (e[4] + blk['yaw'],)
+                             for e in v] if v else v)
+                elif k in POINTS:
+                    if v:
+                        p = to_world(blk, (v[0], v[1], v[0], v[1]))
+                        w[k] = (p[0], p[1])
+                    else:
+                        w[k] = v
+                elif k == 'fountain':
+                    if v:
+                        cx, cy, r = v
+                        p = to_world(blk, (cx, cy, cx, cy))
+                        w[k] = (p[0], p[1], r)
+                    else:
+                        w[k] = v
+                elif k in LOCAL:
                     w[k] = v
+                else:
+                    # fail CLOSED. The first version passed unknown keys
+                    # through untransformed, so a new layout key on a yaw-180
+                    # block carried block-local coordinates into a world-space
+                    # dict and any rule reading it checked ground ~14,000 uu
+                    # from the truth - the exact bug class the key dispatch
+                    # was written to kill.
+                    raise KeyError('zone_layouts: unhandled layout key %r on '
+                                   '%s - classify it above' % (k, spec['name']))
             w.setdefault('shrub', [])
+            w.setdefault('tree', [])
             w.setdefault('basin', None)
             out.append((spec['name'], blk, w))
     return out

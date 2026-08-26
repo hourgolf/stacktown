@@ -29,9 +29,13 @@ for b in BLOCKS:
     c_,s_=math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
     for spec in b['lots']:
         if spec['kind']!='gen': continue
-        # a house is detached and builds all four of its own walls, so it has
-        # no facade standing proud of a core and needs none behind it
-        if spec.get('style')=='house': continue
+        # house, walkup and works are DETACHED styles that build a solid
+        # Wall_Body with all four of their own walls - no facade stands proud
+        # of a core and none is needed behind it. The old 'house'-only test
+        # gave every walkup and works a full-lot solid core that stood 68 uu
+        # in FRONT of its own front wall and filled the garden to the lot
+        # line - the literal blank rear the contact sheet saw.
+        if spec.get('style') in ('house', 'walkup', 'works'): continue
         GF,FH,FL,PAR=spec['gf_h'],spec['fl_h'],spec['floors'],spec['parapet']
         setback=spec.get('setback') or 0.0
         ztop=GF+FL*FH

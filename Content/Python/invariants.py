@@ -695,6 +695,69 @@ def _t_light_01():
 
 
 # =========================== runner =======================================
+@rule('SNAP-01', 'every material slot in the level was READ by the snapshot')
+def snap_01(snap):
+    # MAT-01, BAKE-01 and the gate's GATE-02 all iterate a component's mats
+    # list; a slot whose read THREW contributes an empty list and passes them
+    # all. unread_material_slots was counted from the first snapshot and
+    # consumed by nobody - the exact "asks the wrong question, answers clean"
+    # failure this file's header warns about.
+    n = snap.get('unread_material_slots', 0)
+    return ([('snapshot', '%d material slots unreadable - every material '
+              'rule in this run is blind to them' % n)] if n else [])
+
+
+@selftest('SNAP-01')
+def _t_snap_01():
+    if snap_01(_snap()):
+        return False
+    bad = _snap()
+    bad['unread_material_slots'] = 3
+    return _one(snap_01(bad), 'snapshot')
+
+
+# Vehicles have DRESS-02, lamp columns DRESS-03 - but nothing related any
+# OTHER footprint to the roads, which is how a works yard sat across the
+# avenue carriageway with every rule reporting ok. This is the footprint
+# category the suite was missing, not a variant of the vehicle rule.
+ROAD_FOOTPRINT = ('BLD', 'CORE', 'ELEV', 'ZONE', 'PLOT', 'PROP', 'SUR', 'SHOP')
+
+
+@rule('ROAD-01', 'no building, zone, plot or prop footprint stands in a '
+                 'carriageway')
+def road_01(snap):
+    roads = G.road_rects()
+    out = []
+    for a in snap['actors']:
+        if a['family'] not in ROAD_FOOTPRINT:
+            continue
+        for c in a['comps']:
+            r = snapshot.rect_of(c)
+            if not r:
+                continue
+            if any(G.intersect(rd, r) for rd in roads):
+                out.append((a['label'], '%s is in a carriageway'
+                            % (c.get('mesh') or c['name'])))
+                break
+    return out
+
+
+@selftest('ROAD-01')
+def _t_road_01():
+    rd = G.road_rects()[0]
+    cx, cy = (rd[0] + rd[2])/2.0, (rd[1] + rd[3])/2.0
+    # same positioning discipline as DRESS-03's self-test: the clean actor
+    # must be clear of EVERY carriageway, so keep it west of the avenue and
+    # south of the street
+    clean_x = (G.board_rect()[0] + G.avenue_road_rects()[0][0]) / 2.0
+    bad = _a('BLD2_Probe_H',
+             comps=[_c('Wall_P', 'SM', (cx - 50, cy - 50, cx + 50, cy + 50))])
+    good = _a('BLD2_Clean_H',
+              comps=[_c('Wall_P', 'SM',
+                        (clean_x - 50, rd[1] - 400, clean_x + 50, rd[1] - 300))])
+    return _one(road_01(_snap(bad, good)), 'Probe')
+
+
 def run(snap=None, verbose=True):
     broken = [r['id'] for r in RULES if r['selftest'] is None or not r['selftest']()]
     if broken:

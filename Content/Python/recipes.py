@@ -57,10 +57,13 @@ RECIPES = {
                  roof_garden=True, roof_units=0),
             # PENTHOUSE. t4 untouched below; two glass storeys added on top,
             # set back behind a terrace.
+            # roof_garden OFF: the penthouse takes the roof. t5 is t4 after
+            # the air rights were sold, not t4 with a hut added beside the
+            # pergola.
             dict(name='penthouse',     fill=1.00, floors=4, parapet=90,
                  canopy=110, cornice=55, glaze='large', mural=True,
-                 roof_garden=True, roof_units=0,
-                 penthouse=dict(floors=2, inset=170.0, fl_h=250.0)),
+                 roof_garden=False, roof_units=0,
+                 penthouse=dict(floors=2, inset=95.0, fl_h=260.0)),
         ],
         fits=lambda w, d: 700.0 <= w <= 1700.0 and d >= 600.0),
 }

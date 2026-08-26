@@ -15,7 +15,12 @@ import recipes
 B = unreal.BlueprintEditorLibrary
 RT = '/Game/Stacktown/Runtime'
 BAKED = '/Game/Stacktown/Baked'
-WID = {'cottage': 820.0, 'walkup': 1420.0}
+# The width each recipe is CURRENTLY baked at (vernacular's M width from
+# PARCELS.md). Derived membership: a recipe in RECIPES with no entry here is
+# REPORTED below rather than raising KeyError - the cottage/walkup retirement
+# left this dict speaking recipes that no longer existed and the blanket
+# except swallowed the KeyError while printing FAILED and exiting 0.
+WID = {'vernacular': 1230.0}
 
 MAP = ('(PinCategory="string",ContainerType=Map,'
        'PinValueType=(TerminalCategory="object",'
@@ -33,6 +38,9 @@ print('MeshByKey map added: %s' % ok)
 da = unreal.load_asset('%s/DA_Catalogue' % RT)
 m = {}
 for rid in sorted(recipes.RECIPES):
+    if rid not in WID:
+        print('no baked width declared for %s - skipped' % rid)
+        continue
     for tier in range(recipes.tier_count(rid)):
         sm = unreal.load_asset('%s/%s' % (BAKED, recipes.asset_name(rid, tier, WID[rid])))
         if sm:

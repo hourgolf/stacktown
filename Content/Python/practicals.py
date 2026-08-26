@@ -62,7 +62,11 @@ for a in eas.get_all_level_actors():
     lbl = a.get_actor_label()
     if not lbl.startswith(('BLD2_', 'ELEV_')):
         continue
-    who = lbl.split('_')[1]
+    # the FULL label after the family, not just the building name: a facade
+    # actor BLD2_Bank_F0 and elevation ELEV_Bank_W both reduced to 'Bank',
+    # so two Interior_B1 components on different actors produced two light
+    # actors sharing one label - NAME-03's standing failure
+    who = lbl.split('_', 1)[1]
     comps = {c.get_name(): c for c in a.get_components_by_class(unreal.StaticMeshComponent)}
     for nm, c in comps.items():
         if not nm.startswith('Interior_'):

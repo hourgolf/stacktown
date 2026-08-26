@@ -16,7 +16,7 @@ an actor and this runs over MCP where the boxes do.
 import _path  # noqa: F401
 import ue, json, math, random
 from genbuild import mkactor, box
-from city import STREETS, AVENUES, BOARD_E, BOARD_S
+from city import STREETS, AVENUES, BOARD_E, BOARD_S, BOARD_N
 import citygeom as G
 
 S = 'editor_toolset.toolsets.scene.SceneTools'
@@ -47,9 +47,14 @@ def wipe():
     return n
 
 
-def lamp(label, x, y, reach):
-    """reach: +1 or -1, which way along Y the arm leans over the road."""
-    a = mkactor(label, (x, y, 0.0), (0.0, 0.0, 0.0))
+def lamp(label, x, y, reach, yaw=0.0):
+    """reach: +1 or -1, which way along LOCAL Y the arm leans over the road.
+
+    yaw turns the whole lamp: streets run along X so their arms lean along
+    world Y with yaw 0; avenues run along Y, so their arms need yaw -90 to
+    lean along world X. Before the yaw existed every avenue arm ran parallel
+    to its own kerb."""
+    a = mkactor(label, (x, y, 0.0), (0.0, yaw, 0.0))
     h = POLE/2.0
     box(a, 'Frame_Base',   -h-8, h+8, -h-8, h+8, 0, 34)
     box(a, 'Frame_Column', -h,   h,   -h,   h,   34, HEIGHT)
@@ -107,12 +112,17 @@ def run():
                 x += SPACING
     for ai, (x_w, x_e, walk) in enumerate(AVENUES, 1):
         k_w, k_e = x_w + walk, x_e - walk
-        for side, lx in (('W', k_w - 62.0), ('E', k_e + 62.0)):
+        # W pole west of the road, arm reaches +X over it; E pole mirrored.
+        # yaw -90 maps the arm's local +Y onto world +X.
+        for side, lx, reach in (('W', k_w - 62.0, +1), ('E', k_e + 62.0, -1)):
             y = BOARD_S + 900.0
             crossing = G.street_road_rects()
-            while y < 700.0:
+            # was `while y < 700.0` - the old board top. The board has grown
+            # north twice since; derive the cap like everything else.
+            while y < BOARD_N - 400.0:
                 if clear_of(crossing, lx, y):
-                    n += lamp('LAMP_a%d%s_%d' % (ai, side, n), lx, y, +1) and 1
+                    n += lamp('LAMP_a%d%s_%d' % (ai, side, n), lx, y, reach,
+                              yaw=-90.0) and 1
                 y += SPACING
     print('street lamps: %d' % n)
     return n

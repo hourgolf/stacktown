@@ -12,6 +12,7 @@ layout comes from zonelayout.yard_layout, so the fence panels land on the
 plinths zones.py built for them and nothing stands on the apron.
 """
 import _path  # noqa: F401
+import math
 import unreal
 from city import BLOCKS
 from zonelayout import yard_layout
@@ -65,16 +66,23 @@ print('removed %d old yard props' % gone)
 
 made, bound, unbound, missing = 0, 0, 0, []
 def put(role, lx, ly, lz, lyaw, tag, alt=False):
-    """Block-local in, world out. Block H is yaw 0 so local + origin is world;
-    the yaw is carried anyway so this survives a block that is rotated."""
+    """Block-local in, world out - through the SAME rotation citygeom uses.
+
+    The first version added origin + local without rotating the offset and
+    claimed the actor rotation made it yaw-safe. It did not: the rotation
+    only turns the mesh, not the translation, so on a yaw-180 block every
+    prop would land mirrored outside its lot. Block H is yaw 0 today, which
+    is the only reason it looked right."""
     global made, bound, unbound
     mesh, mat = ALT[role] if (alt and role in ALT) else ROLE[role]
     sm = SM(mesh)
     if not sm:
         missing.append(mesh); return
+    yr = math.radians(blk['yaw'])
+    c_, s_ = math.cos(yr), math.sin(yr)
     a = eas.spawn_actor_from_class(
         unreal.StaticMeshActor,
-        unreal.Vector(ox + lx, oy + ly, oz + lz),
+        unreal.Vector(ox + lx*c_ - ly*s_, oy + lx*s_ + ly*c_, oz + lz),
         unreal.Rotator(0.0, 0.0, blk['yaw'] + lyaw))   # (roll, pitch, yaw)
     a.set_actor_label('PROP_%s_%s' % (name, tag))
     c = a.static_mesh_component

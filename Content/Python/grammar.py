@@ -42,19 +42,21 @@ def pick(width, depth, district=None, level=0.0, seed=0):
 
 
 if __name__ == '__main__':
-    # KNOWN ANSWERS. A grammar that returns something for everything is not a
-    # grammar, so the negative case matters as much as the positive.
-    assert candidates(820.0, 1500.0, 'residential') == ['cottage'], \
-        candidates(820.0, 1500.0, 'residential')
-    assert candidates(1420.0, 1500.0, 'residential') == ['walkup'], \
-        candidates(1420.0, 1500.0, 'residential')
+    # KNOWN ANSWERS against the CURRENT recipe set. A grammar that returns
+    # something for everything is not a grammar, so the negative case matters
+    # as much as the positive. The previous answers asserted the retired
+    # cottage/walkup rows and threw on every run - a self-check that cannot
+    # pass is a self-check nobody is running.
+    assert candidates(1230.0, 700.0, 'commercial') == ['vernacular'], \
+        candidates(1230.0, 700.0, 'commercial')
+    assert candidates(1230.0, 700.0, 'residential') == [], \
+        'no residential recipe is live; the drafts are parked'
     assert candidates(400.0, 400.0) == [], candidates(400.0, 400.0)
-    assert candidates(820.0, 600.0) == [], 'a shallow parcel fits nothing'
-    # level drives the tier, not the recipe
-    assert pick(820.0, 1500.0, 'residential', level=0.0)[1] == 0
-    assert pick(820.0, 1500.0, 'residential', level=1.0)[1] == 2
-    assert pick(820.0, 1500.0, 'residential', level=0.5)[1] == 1
-    rid_lo = pick(820.0, 1500.0, 'residential', level=0.0, seed=7)[0]
-    rid_hi = pick(820.0, 1500.0, 'residential', level=1.0, seed=7)[0]
+    assert candidates(1230.0, 500.0) == [], 'a shallow parcel fits nothing'
+    # level drives the tier, not the recipe (vernacular has 6 tiers, t0..t5)
+    assert pick(1230.0, 700.0, 'commercial', level=0.0)[1] == 0
+    assert pick(1230.0, 700.0, 'commercial', level=1.0)[1] == 5
+    rid_lo = pick(1230.0, 700.0, 'commercial', level=0.0, seed=7)[0]
+    rid_hi = pick(1230.0, 700.0, 'commercial', level=1.0, seed=7)[0]
     assert rid_lo == rid_hi, 'growing a parcel must not change what stands on it'
     print('grammar.py self-check: pass')

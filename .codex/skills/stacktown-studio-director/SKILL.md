@@ -9,6 +9,12 @@ Three other skills defer to this one for art direction. In the legacy repository
 referenced but never written, which is a large part of why the visual target was never reached:
 every skill pointed at an authority that did not exist.
 
+**The visual reference canon is `Docs/CANON.md`** — a closed, owner-governed board of at most
+eight images, each blessed for named qualities. It is the ONLY image set to compare work
+against; a look decision should cite a slot and its blessed quality, or be flagged to the owner
+as uncovered. Do not bring outside references into a session without the owner adding them to
+the board first.
+
 ## The target, stated once
 
 A dense, modern, Portland-inspired building photographed as a **handmade architectural model**.
@@ -68,7 +74,11 @@ When adding a colour, the question is what it replaces, not what it adds.
 - Portland is a *character* reference — contemporary mixed-use, timber and glass and brick,
   transit, greenery. Not a geographic one. Literal GIS reconstruction is explicitly retired.
 - Aspirational games may be studied lawfully for camera behaviour, pacing, and interaction only.
-  Never extract their assets or code.
+  Never extract their assets or code. *(Owner amendment 2026-08-26: a game render on the
+  `Docs/CANON.md` board may additionally be blessed as a RENDERING GOAL — what fabricated
+  materials and staging should read as in a render: flock, formed-model trees, lamp pools,
+  ambient. Lighting and environmental intent only; never surface fabrication reference, never
+  proof a look is reachable in our engine.)*
 - Generated concept renderings are mood, never specification. The single most consequential
   mistake in this project's history was treating a persuasive render as proof that the same
   result was reachable in-engine with the assets on hand.

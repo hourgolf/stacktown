@@ -63,3 +63,6 @@ Saved/Lane4/backup/
 # LFS objects. The rule that should have caught it is the one already written
 # above: donor packs are never committed.
 Content/Mega_Street_Props_Pack/
+
+# OS metadata
+.DS_Store

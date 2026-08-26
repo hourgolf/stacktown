@@ -3,3 +3,7 @@
 *.umap filter=lfs diff=lfs merge=lfs -text
 # Run `sh Tools/enable_git_lfs.sh` after Git LFS is installed. It appends the
 # LFS filters for future packages. It does not migrate history.
+# Canon reference images - binary, versioned via LFS like the packages.
+Docs/canon/*.jpg filter=lfs diff=lfs merge=lfs -text
+Docs/canon/*.png filter=lfs diff=lfs merge=lfs -text
+Docs/canon/*.webp filter=lfs diff=lfs merge=lfs -text

@@ -1,5 +1,10 @@
 # Recipe ladders
 
+**Owner signal, 26 Aug 2026** (from canon intake, `Docs/CANON.md` pending 5):
+ladders must eventually grow past t5 — some buildings need more than five
+tiers, and the city needs true highrise towers. Not a change to the current
+vernacular-first plan; a direction the ladder design must not preclude.
+
 ## Status, 25 Aug 2026
 
 **Cottage and walkup are set aside as rough drafts — preserved, not retired

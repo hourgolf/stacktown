@@ -170,7 +170,10 @@ BLOCKS = [
      # Block E is yaw 180, so LOCAL +x runs WEST in world space: local
      # 2700..4100 is world X 6660..8060, the west end. Plaza west, park east.
      dict(kind='park',  name='Greens', x0=0.0,    width=2700.0, depth=1280.0,
-          wall=None, seed=307),
+          # the bandstand has a roof, and a roof on MI_concrete is the same
+          # pale grey as a commercial deck - which is what made it read as a
+          # white block rather than a building
+          wall=None, roofmat='MI_shingle_brown', seed=307),
      dict(kind='plaza', name='Square', x0=2700.0, width=1400.0, depth=1280.0,
           wall=None, seed=911),
   ]),

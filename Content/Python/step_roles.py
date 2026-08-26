@@ -13,7 +13,8 @@ WALL={l['name']: l['wall'] for b in BLOCKS for l in b['lots'] if l.get('wall')}
 # MI_concrete - the same pale grey as a flat commercial deck - so five houses
 # read as five white wedges. Per lot, like the wall colour.
 ROOF={l['name']: l.get('roofmat', 'MI_shingle_grey')
-      for b in BLOCKS for l in b['lots'] if l.get('style') in ('house', 'walkup')}
+      for b in BLOCKS for l in b['lots']
+      if l.get('style') in ('house', 'walkup') or l.get('roofmat')}
 # Staging lots baked for the catalogue are not in the city table, so their
 # colours arrive in a temp file. ONE role mapping, extended - not a second copy
 # of it living in the bake script, which is how the two would drift.
@@ -24,17 +25,18 @@ if os.path.exists(_ov):
         if _d.get('wall'):    WALL[_n] = _d['wall']
         if _d.get('roofmat'): ROOF[_n] = _d['roofmat']
     print('role overrides for %s' % ', '.join(sorted(json.load(open(_ov)))))
-SHARED={'Glass_':'MI_glass_b','Interior_':'MI_interior','Frame_':'MI_frame_print',
-        'Mullion_':'MI_frame_print','Accent_':'MI_canopy_accent','Roof_':'MI_concrete',
-        # ground roles, for zones that are not buildings
-        'Ground_':'MI_concrete','Grass_':'MI_grass','Kerbing_':'MI_paint_cream',
-        # a raised bed is PLANTING; on MI_grass it is a raised bed of grass
-        'Bloom_':'MI_bloom_warm'}
-# Some families want a different material for the SAME role. A lamp column is
-# dark painted metal, not the window-frame print - both are 'Frame_' because
-# both are a frame, and role-in-the-name is about what a part IS, not what it
-# is painted. Family wins over SHARED where it has an opinion.
-FAMILY={'LAMP': {'Frame_':'MI_dark_metal'}}
+# The table moved to rolemap.py so the FAST bake path can read it too - it
+# runs without an editor and step_roles imports `unreal`. One table, two
+# backends; a second copy is how a Timber_ ends up two different colours.
+from rolemap import SHARED, FAMILY, MURAL  # noqa: E402
+import rolemap
+_bound = rolemap.BOUND
+if _bound != set(labels.ROLES):
+    raise SystemExit('role vocabulary disagrees with labels.ROLES\n'
+                     '  bound here, not listed: %s\n'
+                     '  listed, not bound here: %s'
+                     % (sorted(_bound - set(labels.ROLES)),
+                        sorted(set(labels.ROLES) - _bound)))
 _m={}
 def M(n):
     if n not in _m: _m[n]=unreal.EditorAssetLibrary.load_asset('%s/%s.%s'%(F,n,n))
@@ -50,19 +52,31 @@ for a in eas.get_all_level_actors():
     # nothing ever bound them: all 54 sat on WorldGridMaterial, which is gate
     # line B1, and no check had ever looked. The build now calls this a second
     # time once the lamps exist rather than growing a second binder.
-    if not l.startswith(('BLD2_', 'ELEV_', 'ZONE_', 'LAMP_', 'PLOT_')): continue
+    # CORE_ joined this list when cores stopped being bare StaticMeshActors
+    # with a directly-assigned material and became Wall_ boxes like everything
+    # else - one sweep, one vocabulary.
+    if not l.startswith(('BLD2_', 'ELEV_', 'ZONE_', 'LAMP_', 'PLOT_', 'CORE_')): continue
     fam=FAMILY.get(labels.family(l), {})
     who=l.split('_')[1]
     for c in a.get_components_by_class(unreal.StaticMeshComponent):
         nm=c.get_name()
         fam_role=next((r for r in fam if nm.startswith(r)),None)
         role=next((r for r in SHARED if nm.startswith(r)),None)
-        if fam_role: c.set_material(0,M(fam[fam_role]))
+        if nm.startswith('Mural_'):
+            c.set_material(0, M(MURAL.get(nm[-1], 'MI_card_ochre')))
+        elif fam_role: c.set_material(0,M(fam[fam_role]))
         elif role: c.set_material(0,M(SHARED[role]))
         elif nm.startswith('Tile_'):
             c.set_material(0, M(ROOF.get(who, 'MI_shingle_grey')))
         elif nm.startswith('Wall_') or nm.startswith('Band_'):
             c.set_material(0,M(WALL.get(who,'MI_paint_cream')))
+        elif l.startswith('CORE_') and not role:
+            # A CITY core is still a bare StaticMeshActor built by
+            # step_cores3, which assigns its material directly - so its one
+            # component is StaticMeshComponent0 and has no role to bind. The
+            # catalogue's cores are Wall_ boxes and DO bind here. Skip rather
+            # than report: it is not unresolved, it was never ours.
+            continue
         else: unresolved.append(nm); continue
         done+=1
 print('assigned %d slots; unresolved %s'%(done,sorted(set(unresolved))[:6]))

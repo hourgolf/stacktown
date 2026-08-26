@@ -22,7 +22,7 @@ import _path  # noqa: F401
 import ue, json, math, random
 from genbuild import mkactor, box
 from zonelayout import (green_layout, plaza_layout, park_layout,  # noqa: F401
-                        layout, seat_plan)
+                        yard_layout, layout, seat_plan)
 
 FRONT = 62.0          # the line a building's facade would have stood on
 
@@ -168,8 +168,12 @@ def plaza(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
 def park(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """Lawn with a perimeter walk - people circuit the edge and cut the middle.
-    The old layout was seven overlapping boxes smeared diagonally across the lot
-    with a bench dropped on each one."""
+
+    The prose above was already here while the layout built a single spine and
+    no ring, and the park came out with five boxes over 346 m2. It now builds
+    what it says: a ring, a cross, four quadrants, four beds, and a bandstand
+    on the node where the cross meets. DETAIL-02 is the rule that caught it.
+    """
     n = spec['name']
     a = mkactor('ZONE_%s' % n, origin, (0.0, yaw, 0.0))
     LO = park_layout(spec)
@@ -180,22 +184,157 @@ def park(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     slab('Kerbing_Edge', LO['bounds'], 0, 18); made += 1
     slab('Grass_Lawn', LO['lawn'], 0, 22); made += 1
+    for i, r in enumerate(LO['ring']):
+        slab('Ground_Ring%d' % i, r, 0, 26); made += 1
     for i, w in enumerate(LO['walks']):
         slab('Ground_Walk%d' % i, w, 0, 24); made += 1
-    # kerbed edging where the lawn meets the walk, so it reads as built
+    slab('Ground_Node', LO['node'], 0, 28); made += 1
+    # kerbed edging where each quadrant meets its walk, so it reads as built
     for i, pn in enumerate(LO['panels']):
         slab('Kerbing_Panel%d' % i, pn, 0, 20); made += 1
+    # planting beds, kerb first so the soil sits inside a built edge
+    for i, b in enumerate(LO['beds']):
+        slab('Kerbing_Bed%d' % i, b, 22, 46); made += 1
+        slab('Bloom_Bed%d' % i, (b[0]+14, b[1]+14, b[2]-14, b[3]-14), 40, 62)
+        made += 1
+
+    # the bandstand: plinth, ring of posts, roof, finial. A park this size
+    # wants one thing to look at from the ring walk, and it is the only piece
+    # of built structure in the lot.
+    cx, cy = LO['centre']
+    st = LO['stand']
+    r = (st[2] - st[0])/2.0
+    slab('Ground_Plinth', (st[0], st[1], st[2], st[3]), 28, 76); made += 1
+    slab('Frame_Deck', (st[0]+22, st[1]+22, st[2]-22, st[3]-22), 76, 88)
+    made += 1
+    posts = 8
+    for i in range(posts):
+        th = 2.0*math.pi*i/posts
+        px, py = cx + (r-46)*math.cos(th), cy + (r-46)*math.sin(th)
+        box(a, 'Frame_Post%d' % i, px-13, px+13, py-13, py+13, 88, 300)
+        made += 1
+    # The roof was two stacked boxes named Roof_, and Roof_ maps to MI_concrete
+    # - the same pale grey as a commercial deck - so a bandstand read as a
+    # white block. Tile_ is the role that already means "pitched roof, take the
+    # lot's shingle", which is what this always was. A box builder cannot make
+    # a cone, so it is a taper: at 1:87 a seven-step taper in shingle reads as
+    # a conical roof, which two boxes never could.
+    slab('Tile_Eaves', (st[0]-30, st[1]-30, st[2]+30, st[3]+30), 300, 316)
+    made += 1
+    STEPS, APEX = 7, 436.0
+    for i in range(STEPS):
+        t0, t1 = i/float(STEPS), (i+1)/float(STEPS)
+        h0 = (r + 30.0)*(1.0 - t0) + 20.0*t0
+        z0 = 316.0 + (APEX - 316.0)*t0
+        z1 = 316.0 + (APEX - 316.0)*t1 + 3.0      # overlap, or the steps gap
+        box(a, 'Tile_Step%d' % i, cx-h0, cx+h0, cy-h0, cy+h0, z0, z1)
+        made += 1
+    box(a, 'Frame_Finial', cx-11, cx+11, cy-11, cy+11, APEX, APEX + 56.0)
+    made += 1
     print('%s [park]: %d boxes' % (n, made))
     return made
 
 
+def _fence(a, tag, r, made):
+    """Post-and-rail fence, ours, from a layout run.
+
+    The donor chain-link panels are gone. Their mask texture
+    (T_Fence_ChainLink_A01_M) carries GRAFFITI TAGS as well as wire, so using
+    its alpha as an opacity cut printed someone else's tags across the yard -
+    their texture shipping in all but name, which is the one thing the donor
+    rule forbids. Two panels also rendered inconsistently because the wire and
+    the frame are separate material slots and only one of them was masked.
+
+    At 1:87 the wire is not the readable part of a fence anyway. Posts and
+    rails are, and authored from the SAME layout run the plinth was built
+    from, they cannot drift out of alignment with it.
+    """
+    x0, y0, x1, y1 = r[0], r[1], r[2], r[3]
+    horiz = abs(x1 - x0) >= abs(y1 - y0)
+    L = abs(x1 - x0) if horiz else abs(y1 - y0)
+    H, T = 150.0, 6.0
+    n = max(2, int(round(L/340.0)) + 1)
+    for i in range(n):
+        t = i/float(n - 1)
+        px, py = x0 + (x1 - x0)*t, y0 + (y1 - y0)*t
+        box(a, '%s_P%d' % (tag, i), px - 9, px + 9, py - 9, py + 9, 12, H)
+        made += 1
+    for j, (z0, z1) in enumerate(((H - 15, H - 3), (H*0.54, H*0.54 + 9),
+                                  (30.0, 39.0))):
+        if horiz:
+            box(a, '%s_R%d' % (tag, j), min(x0, x1), max(x0, x1),
+                y0 - T, y0 + T, z0, z1)
+        else:
+            box(a, '%s_R%d' % (tag, j), x0 - T, x0 + T,
+                min(y0, y1), max(y0, y1), z0, z1)
+        made += 1
+    return made
+
+
 def vacant(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
-    """A cleared site: hoarding to the street, rough ground behind."""
+    """A WORKS YARD: hardstanding, a gated frontage, and a kept-clear apron.
+
+    Was two boxes - a slab and a hoarding - and nothing in the invariant suite
+    covered it, because DETAIL-01 only looks at kind='gen'. So the one lot no
+    rule watched is the one that stayed bare. DETAIL-02 now covers open lots.
+
+    The apron is the idea: a lorry comes in at the gate, turns, and backs onto
+    the stores. Nothing is built or stacked on it, which is what makes the
+    props read as worked rather than sprinkled. yard_props.py places the donor
+    meshes into the SAME layout, so the two cannot disagree.
+    """
     n = spec['name']
     x0, W, D = spec['x0'], spec['width'], spec['depth']
+    LO = yard_layout(spec)
     a = mkactor('ZONE_%s' % n, origin, (0.0, yaw, 0.0))
     made = 0
+
+    def slab(name, r, z0, z1):
+        box(a, name, r[0], r[2], r[1], r[3], z0, z1)
+
+    # THREE surfaces, because every box here was Ground_ and Ground_ is one
+    # material - so a yard that had a concrete apron, compacted ground and a
+    # spoil heap in the data rendered as one flat pale tone. The apron and the
+    # container pad are laid concrete; everything else is compacted ground.
     box(a, 'Ground_Slab', x0, x0 + W, FRONT, D, 0, 12); made += 1
-    box(a, 'Frame_Hoarding', x0 - 4, x0 + W + 4, FRONT - 8, FRONT + 10, 0, 210); made += 1
-    print('%s [vacant]: %d boxes' % (n, made))
+    slab('Gravel_Hard', LO['hard'], 12, 20); made += 1
+    slab('Ground_Apron', LO['apron'], 20, 26); made += 1
+    # a container stands on a pad, not on dirt - and the pad is what tells you
+    # the stores were placed rather than dropped
+    hx0, hy0, hx1, hy1 = LO['hard']
+    box(a, 'Ground_Pad', hx0 + 20, hx0 + 1310, hy1 - 300, hy1, 20, 27); made += 1
+
+    # kerb along the frontage, DROPPED across the gate - a crossover is how a
+    # yard entrance actually reads, and it is the only thing that says which
+    # gap in the fence is the gate.
+    gx0, gx1 = LO['gate']
+    box(a, 'Kerbing_West', x0, gx0, FRONT - 8, FRONT + 8, 0, 26); made += 1
+    box(a, 'Kerbing_Cross', gx0, gx1, FRONT - 8, FRONT + 8, 0, 10); made += 1
+    box(a, 'Kerbing_East', gx1, x0 + W, FRONT - 8, FRONT + 8, 0, 26); made += 1
+
+    # gate piers, one either side of the opening
+    for i, gx in enumerate((gx0, gx1)):
+        box(a, 'Frame_Pier%d' % i, gx - 14, gx + 14, FRONT + 2, FRONT + 30,
+            0, 190); made += 1
+
+    # the fence itself, plus a low plinth for it to stand on
+    for i, (fx0, fy0, fx1, fy1, _fy) in enumerate(LO['south'] + LO['east']):
+        box(a, 'Kerbing_Fence%d' % i, min(fx0, fx1) - 8, max(fx0, fx1) + 8,
+            min(fy0, fy1) - 8, max(fy0, fy1) + 8, 12, 30); made += 1
+        made = _fence(a, 'Rail_F%d' % i, (fx0, fy0, fx1, fy1), made)
+
+    # A notice board on the gate pier. The donor parking sign stood free in the
+    # middle of the yard as a grey slab - it is a STREET asset, and a yard gate
+    # wants a nameplate on the pier, not a car park sign on the ground.
+    box(a, 'Accent_Notice', gx0 - 17, gx0 + 17, FRONT - 3, FRONT + 3, 104, 168)
+    made += 1
+    box(a, 'Rail_NoticeBack', gx0 - 4, gx0 + 4, FRONT + 3, FRONT + 8, 120, 152)
+    made += 1
+
+    # spoil, in the corner the apron does not reach
+    box(a, 'Gravel_Spoil', hx0 + 40, hx0 + 250, hy0 + 690, hy0 + 900, 20, 52)
+    made += 1
+    box(a, 'Gravel_Spoil2', hx0 + 250, hx0 + 400, hy0 + 730, hy0 + 880, 20, 38)
+    made += 1
+    print('%s [yard]: %d boxes' % (n, made))
     return made

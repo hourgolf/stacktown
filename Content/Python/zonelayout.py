@@ -190,32 +190,70 @@ def green_layout(spec):
                 avoid=[spine, basin] + beds + ([walk] if walk else []))
 
 
-def park_layout(spec):
-    """Lawn either side of a walk along the long axis.
+RING_W = 130.0        # perimeter walk
+SPINE_W = 150.0       # the cross
+NODE_R = 270.0        # paved node where the cross meets
+STAND_R = 190.0       # the bandstand standing on it
 
-    The first version was a perimeter ring, which is how a big park works and
-    not how a small one does: at 1280 uu deep the ring plus its two belts ate
-    880 of it and left a 318 uu strip in the middle - too narrow for any crown
-    we own, so the park came out with nothing planted in it at all. A single
-    spine leaves two panels of about 500, which holds trees.
+
+def park_layout(spec):
+    """A perimeter walk, a cross, four lawn quadrants and a bandstand.
+
+    The docstring on zones.park has said "a perimeter walk - people circuit
+    the edge and cut the middle" since it was written, and the layout built a
+    single spine and no ring. The prose was right and the code was not, which
+    is why a 346 m2 park came out of the build with five boxes in it and
+    scored 0.046 parts/m2 against every other open lot's 0.13-0.17.
+
+    The first version of THIS function was a ring, and it was abandoned
+    because at 1280 deep the ring plus two belts left a 318 uu strip too
+    narrow to plant. That reasoning was sound for a ring PLUS belts; a ring
+    plus a cross leaves four quadrants of about 1135 x 394, which holds the
+    348 uu crown measured in SCALE-01 with room to spare.
     """
     x0, W, D = spec['x0'], spec['width'], spec['depth']
     Y0, Y1 = FRONT, D
-    lawn = (x0 + 10.0, Y0 + 10.0, x0 + W - 10.0, Y1 - 10.0)
-    cy = (lawn[1] + lawn[3])/2.0
-    path = 150.0
-    walk = (lawn[0], cy - path/2.0, lawn[2], cy + path/2.0)
-    south = (lawn[0], lawn[1], lawn[2], walk[1])
-    north = (lawn[0], walk[3], lawn[2], lawn[3])
+    outer = (x0 + 10.0, Y0 + 10.0, x0 + W - 10.0, Y1 - 10.0)
+    inner = (outer[0] + RING_W, outer[1] + RING_W,
+             outer[2] - RING_W, outer[3] - RING_W)
+    cx = (inner[0] + inner[2])/2.0
+    cy = (inner[1] + inner[3])/2.0
+    h = SPINE_W/2.0
 
-    # benches on the walk, backs to each other, each looking across its own lawn
-    seat = [(walk[0] + 340.0, walk[1], walk[2] - 340.0, cy, -90.0),
-            (walk[0] + 340.0, cy, walk[2] - 340.0, walk[3],  90.0)]
+    ring = [(outer[0], outer[1], outer[2], inner[1]),      # south
+            (outer[0], inner[3], outer[2], outer[3]),      # north
+            (outer[0], inner[1], inner[0], inner[3]),      # west
+            (inner[2], inner[1], outer[2], inner[3])]      # east
+    ns = (cx - h, inner[1], cx + h, inner[3])
+    ew = (inner[0], cy - h, inner[2], cy + h)
+    node = (cx - NODE_R, cy - NODE_R, cx + NODE_R, cy + NODE_R)
+    stand = (cx - STAND_R, cy - STAND_R, cx + STAND_R, cy + STAND_R)
 
-    return dict(bounds=(x0, Y0, x0 + W, Y1), lawn=lawn, walks=[walk],
-                panels=[south, north],
-                tree=[south, north], shrub=[south, north], seat=seat,
-                avoid=[walk])
+    quads = [(inner[0], inner[1], cx - h, cy - h),
+             (cx + h, inner[1], inner[2], cy - h),
+             (inner[0], cy + h, cx - h, inner[3]),
+             (cx + h, cy + h, inner[2], inner[3])]
+
+    # a bed in each quadrant, pushed to the corner against the ring so the
+    # middle of the panel stays open for a tree
+    beds = []
+    for i, q in enumerate(quads):
+        bx = q[0] + BED_INSET if i in (0, 2) else q[2] - BED_INSET - BED_W
+        by = q[1] + BED_INSET if i in (0, 1) else q[3] - BED_INSET - BED_D
+        beds.append((bx, by, bx + BED_W, by + BED_D))
+
+    # Seating: two on the cross facing across it, two on the ring facing in.
+    # Every one looks at lawn, which is what ZONE-02 checks.
+    seat = [(ew[0] + 360.0, ew[1], cx - NODE_R - 40.0, cy, -90.0),
+            (cx + NODE_R + 40.0, cy, ew[2] - 360.0, ew[3], 90.0),
+            (outer[0] + 420.0, outer[1], outer[2] - 420.0, inner[1], 90.0),
+            (outer[0] + 420.0, inner[3], outer[2] - 420.0, outer[3], -90.0)]
+
+    return dict(bounds=(x0, Y0, x0 + W, Y1), lawn=outer,
+                walks=[ns, ew], ring=ring, node=node, stand=stand,
+                centre=(cx, cy), panels=quads, beds=beds,
+                tree=quads, shrub=quads, seat=seat,
+                avoid=[ns, ew, node] + ring + beds)
 
 
 # --- the house plan, shared -------------------------------------------------
@@ -238,6 +276,85 @@ def house_plan(spec):
                 back=(x0 + 12.0, hy1 + 10.0, x0 + W - 12.0, D - 12.0))
 
 
+
+# --- the works yard ---------------------------------------------------------
+# A yard is not a box with props sprinkled in it. It is a ROUTE with things
+# stacked either side of it: a gate, an apron a lorry can turn on, and stores
+# pushed back against the boundary. So the apron is authored FIRST and is
+# kept clear, and every prop slot below is checked against it by _yard_check.
+#
+# Panel lengths are measured, not chosen: the chain-link panels are 412 uu and
+# cannot be cut, so the gate is what is LEFT OVER after whole panels, rather
+# than a width picked first and the fence made to fit it.
+FENCE_PANEL = 412.0       # measured: SM_Fence_ChainLink_A01 is 412 x 12 x 144
+YARD_INSET = 20.0
+
+
+def yard_layout(spec):
+    """Block-local layout of a works yard.
+
+    Fenced to the street and to the block end; open to its own buildings,
+    because a yard does not fence itself off from the shed it serves.
+    """
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    i = YARD_INSET
+    X0, X1 = x0 + i, x0 + W - i
+    Y0, Y1 = FRONT + 10.0, D - i
+
+    # Frontage: whole panels at each end, the gate is the remainder.
+    gate = (X0 + FENCE_PANEL, X1 - FENCE_PANEL)
+    south = [(X0, Y0, X0 + FENCE_PANEL, Y0, 0.0),
+             (X1 - FENCE_PANEL, Y0, X1, Y0, 0.0)]
+    # Block end: whole panels from the front, stopping short of the stores.
+    n_east = int((Y1 - Y0 - 200.0) // FENCE_PANEL)
+    east = [(X1, Y0 + k*FENCE_PANEL, X1, Y0 + (k+1)*FENCE_PANEL, 90.0)
+            for k in range(max(1, n_east))]
+    post = (X1, Y0 + max(1, n_east)*FENCE_PANEL)
+
+    # The apron: from the gate, north, wide enough to turn on. Kept clear.
+    apron = (gate[0] + 18.0, FRONT, gate[1] - 18.0, Y0 + 690.0)
+
+    # Stores along the back, clear of the apron's reach.
+    store_y = Y1 - 122.0
+    props = [
+        ('container_long', X0 + 330.0, store_y,   0.0, 90.0),
+        ('container_long', X0 + 950.0, store_y,   0.0, 90.0),
+        ('container_short', X0 + 250.0, store_y, 290.0, 90.0),
+        ('scaffold', X0 + 130.0, Y0 + 640.0, 0.0, 0.0),
+        ('ladder',   X0 + 250.0, Y0 + 640.0, 0.0, 0.0),
+        ('lumber_stack', X1 - 230.0, Y0 + 240.0, 0.0, 0.0),
+        ('lumber_pile',  X1 - 230.0, Y0 + 560.0, 0.0, 0.0),
+        ('pallet', X1 - 330.0, Y0 + 740.0,  0.0, 0.0),
+        ('pallet', X1 - 330.0, Y0 + 740.0, 12.0, 8.0),
+        ('pallet', X1 - 330.0, Y0 + 740.0, 24.0, -6.0),
+        ('plywood', X1 - 40.0, Y0 + 880.0, 0.0, 90.0),
+    ]
+    lo = dict(bounds=(x0, FRONT, x0 + W, D), gate=gate, apron=apron,
+              south=south, east=east, post=post, props=props,
+              hard=(X0, Y0 - 8.0, X1, Y1), avoid=[apron])
+    _yard_check(lo)
+    return lo
+
+
+def _yard_check(lo):
+    """Known-answer check: the apron is the whole idea, so prove it is clear.
+
+    Run at layout time, not at review time. A prop standing on the route is the
+    single defect that makes a yard read as sprinkled rather than worked, and
+    it is invisible from any angle where the yard looks busy.
+    """
+    ax0, ay0, ax1, ay1 = lo['apron']
+    for role, x, y, _z, _yaw in lo['props']:
+        if ax0 < x < ax1 and ay0 < y < ay1:
+            raise AssertionError(
+                'yard_layout: %s at (%.0f, %.0f) stands on the apron %s'
+                % (role, x, y, tuple(round(v) for v in lo['apron'])))
+    gx0, gx1 = lo['gate']
+    if gx1 - gx0 < 400.0:
+        raise AssertionError('yard_layout: gate %.0f uu is too narrow to drive'
+                             % (gx1 - gx0))
+
+
 def layout(spec):
     k = spec.get('kind')
     if k == 'green':
@@ -246,6 +363,8 @@ def layout(spec):
         return plaza_layout(spec)
     if k == 'park':
         return park_layout(spec)
+    if k == 'vacant':
+        return yard_layout(spec)
     return None
 
 

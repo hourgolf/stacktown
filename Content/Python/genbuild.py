@@ -154,7 +154,70 @@ def slab(actor, name, cx, cy, cz, sx, sy, sz, pitch=0.0, roll=0.0, yaw=0.0):
                             'rotation': {'pitch': pitch, 'yaw': yaw, 'roll': roll}}})
 
 
-def roof_plant(actor, x0, W, ztop, n, rnd, ymin=180.0, yspread=90.0):
+def piece(actor, name, asset, loc, rot=(0.0, 0.0, 0.0), scale=1.0, mat=None):
+    """Place a DONOR MESH the way box() places a box.
+
+    Boxes are all this generator could emit, which is why a planter was a pink
+    cube: some things cannot be cut from card and a modelmaker does not try.
+    A kit piece goes through the same sink, so the fast path carries it into a
+    baked model exactly like a box.
+
+    `mat` overrides the role lookup for pieces whose name carries no role -
+    donor meshes are named by their maker, not by ours.
+
+    `scale` is a float or an (x, y, z) triple. Non-uniform matters: a donor
+    awning is 1402 uu long and a shop bay is 281, so fitting one to the other
+    uniformly would also make it a fifth as deep and a fifth as tall. A
+    modelmaker trims a length of stock to the opening; they do not shrink the
+    whole part. Without this every donor had to already be our dimensions,
+    which is most of why so few of them were usable.
+    """
+    sc = ([float(scale)] * 3 if isinstance(scale, (int, float))
+          else [float(v) for v in scale])
+    if _SINK is not None:
+        _SINK.append(dict(kind='mesh', actor=actor, name=name, asset=asset,
+                          c=list(loc), r=list(rot), s=sc, mat=mat))
+        return
+    ue.tool(S, 'add_static_mesh', {
+        'actor': actor, 'name': name, 'mesh': {'refPath': asset},
+        'local_transform': {'location': {'x': loc[0], 'y': loc[1], 'z': loc[2]},
+                            'rotation': {'pitch': rot[0], 'yaw': rot[1],
+                                         'roll': rot[2]},
+                            'scale': {'x': sc[0], 'y': sc[1], 'z': sc[2]}}})
+
+
+def stair_head(actor, x0, W, D, ztop, rnd, back=True):
+    """The bulkhead over the stair, on the back of the roof. Returns boxes made.
+
+    Every building anyone can walk to the top of has one, and until now none of
+    ours did: tiers 0-3 came out of the bake as bare slabs. From above - which
+    is how a diorama is actually looked at - that reads as unfinished, and a
+    roof is the one elevation a model shows the viewer for free.
+
+    Placed at the BACK so it never competes with the cornice on the street
+    front, and sized from the building rather than fixed, so a lock-up gets a
+    hatch and a five-storey gets a proper stair house.
+    """
+    made = 0
+    w = max(120.0, min(240.0, W * 0.18))
+    d = max(110.0, min(200.0, D * 0.26))
+    h = max(90.0, min(210.0, 60.0 + W * 0.10))
+    hx = x0 + W * (0.60 if rnd.random() < 0.5 else 0.28) - w / 2.0
+    hy = (D - d - 40.0) if back else 60.0
+    box(actor, 'Wall_StairHead', hx, hx + w, hy, hy + d, ztop, ztop + h)
+    made += 1
+    box(actor, 'Band_StairCap', hx - 9, hx + w + 9, hy - 9, hy + d + 9,
+        ztop + h, ztop + h + 11)
+    made += 1
+    # the door faces INTO the roof, not out over the street
+    box(actor, 'Frame_StairDoor', hx + w * 0.26, hx + w * 0.74,
+        hy - 4, hy + 2, ztop + 8, ztop + h * 0.78)
+    made += 1
+    return made
+
+
+def roof_plant(actor, x0, W, ztop, n, rnd, ymin=180.0, yspread=90.0,
+               D=None):
     """Rooftop plant, spread ACROSS the building and staying on it.
 
     Was `ux = x0 + W * (0.28 + 0.42 * u)`, which is fine for one or two units
@@ -167,15 +230,46 @@ def roof_plant(actor, x0, W, ztop, n, rnd, ymin=180.0, yspread=90.0):
     Units are spaced by their INDEX across the usable span, so any count from
     one upward lands on the roof.
     """
+    import avkit
     made = 0
     n = max(0, int(n))
+    # REAL PLANT. These were random boxes standing in for the huts, ducts and
+    # aerials that CANON slot 5 shows on the top of every tower. Assetsville
+    # has the actual objects at 112-960 triangles, which is our tier.
+    # 'roof_stand' was here and it is a GIANT DONUT ADVERT on a stand - it
+    # shipped on the crown of all three towers, where it read as a car tyre.
+    # See avkit.REJECTED. Picked by name, never rendered, exactly the mistake
+    # that put a concrete material on gravel earlier in this project.
+    #
+    # SIZED TO THE ROOF, and scattered rather than lined up. The kit was
+    # cycled in a fixed order at a fixed y, so every building in a row wore
+    # the same objects in the same place - and `vent_tank` is 512 uu long,
+    # which is 40% of a 1230 roof. It read as one big dark pill repeated
+    # down the street. Each unit is now scaled to a share of the roof and
+    # placed on a jittered grid over the whole deck.
+    KIT = ['ac_small', 'ac_large', 'antenna', 'vent_tank', 'water_tank',
+           'chimney']
+    # the biggest a single unit may be, as a fraction of the roof's short side
+    CAP_F = 0.30
+    span_y = max(200.0, (D if D else 700.0) - ymin - 60.0)
+    order = list(KIT)
+    rnd.shuffle(order)
+    cols = max(1, int(math.ceil(math.sqrt(max(1, n) * max(0.4, W / max(1.0, span_y))))))
+    rows = int(math.ceil(n / float(cols)))
     for u in range(n):
-        uw = 150.0 + rnd.random() * 130.0
-        t = (u + 0.5) / float(n)
-        ux = x0 + 40.0 + max(0.0, W - 80.0 - uw) * t
-        uy = ymin + (u % 2) * yspread
-        box(actor, 'Roof_Unit%d' % u, ux, ux + uw, uy, uy + uw * 0.8,
-            ztop, ztop + 55.0 + rnd.random() * 50.0)
+        key = order[u % len(order)]
+        sx, sy, sz = avkit.size(key)
+        cap = CAP_F * min(W, span_y)
+        sc = min(1.0, cap / float(max(sx, sy)))
+        cx_ = u % cols
+        cy_ = u // cols
+        ux = x0 + 70.0 + (max(0.0, W - 140.0) * (cx_ + 0.5) / cols) \
+            + rnd.uniform(-40.0, 40.0)
+        uy = ymin + (span_y * (cy_ + 0.5) / max(1, rows)) \
+            + rnd.uniform(-30.0, 30.0)
+        piece(actor, 'RoofPlant%d' % u, avkit.path(key), (ux, uy, ztop),
+              (0.0, rnd.choice((0.0, 90.0, 180.0, 270.0)), 0.0),
+              scale=sc, mat=avkit.mat(key))
         made += 1
     return made
 
@@ -190,6 +284,8 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         return build_modern(spec, origin, yaw)
     if st == 'deco':
         return build_deco(spec, origin, yaw)
+    if st == 'contemporary':
+        return build_contemporary(spec, origin, yaw)
     if st == 'house':
         return build_house(spec, origin, yaw)
     if st == 'walkup':
@@ -224,12 +320,225 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     box(g, 'Wall_PierR', x0 + W - pier_w, x0 + W, 0, 60, 30, GF - 40); made += 1
     box(g, 'Wall_Bulkhead', x0 - 4, x0 + W + 4, -8, 60, GF - 40, GF); made += 1
     sx0, sx1 = x0 + pier_w, x0 + W - pier_w
-    box(g, 'Glass_Shop', sx0, sx1, 40, 43, 40, GF - 48); made += 1
-    box(g, 'Interior_Shop', sx0 - 6, sx1 + 6, 52, 58, 30, GF - 44); made += 1
-    for k in range(1, 4):
-        mx = sx0 + (sx1 - sx0) * k / 4.0
-        box(g, 'Mullion_Shop%d' % k, mx - 3, mx + 3, 34, 41, 40, GF - 48); made += 1
-    box(g, 'Frame_ShopSill', sx0, sx1, 34, 44, 30, 40); made += 1
+    if spec.get('market'):
+        # A MARKET HALL is one big room behind one big wall. The ground floor
+        # is a run of tall ARCHED openings with almost no wall between them,
+        # and there is a clerestory over: the building is a shed with a
+        # dignified face, which is exactly what a market is.
+        na = max(3, BAYS)
+        for k in range(na):
+            ax0 = sx0 + (sx1 - sx0) * k / float(na) + 16
+            ax1 = sx0 + (sx1 - sx0) * (k + 1) / float(na) - 16
+            if ax1 - ax0 < 60:
+                continue
+            ah = min(GF * 0.34, (ax1 - ax0) * 0.5)
+            for j in range(5):
+                t = (j + 1) / 5.0
+                ins = (ax1 - ax0) * 0.5 * (1.0 - (1.0 - t * t) ** 0.5)
+                box(g, 'Wall_MktArch%d_%d' % (k, j), ax0 + ins, ax1 - ins,
+                    -10, 56, GF - 40 - ah + ah * t * 0.98,
+                    GF - 40 - ah + ah * (t + 0.24)); made += 1
+            box(g, 'Glass_Mkt%d' % k, ax0 + 8, ax1 - 8, 40, 43,
+                34, GF - 40 - ah * 0.12); made += 1
+            box(g, 'Interior_Mkt%d' % k, ax0 + 2, ax1 - 2, 52, 58,
+                34, GF - 40 - ah * 0.12); made += 1
+            for m in range(1, 3):
+                mx = ax0 + (ax1 - ax0) * m / 3.0
+                box(g, 'Mullion_Mkt%d_%d' % (k, m), mx - 4, mx + 4, 36, 42,
+                    34, GF - 40 - ah * 0.12); made += 1
+    elif spec.get('chamfer'):
+        # the corner cut away and the entrance put in it, at an angle to both
+        # streets - four stepped returns standing in for a 45 degree face
+        cl = spec.get('corner_side', 'left') == 'left'
+        cd = float(spec['chamfer'])
+        for k in range(4):
+            t0, t1 = cd * k / 4.0, cd * (k + 1) / 4.0
+            cx_0 = (x0 - 4 + t0) if cl else (x0 + W + 4 - t1)
+            cx_1 = (x0 - 4 + t1) if cl else (x0 + W + 4 - t0)
+            box(g, 'Wall_Chamf%d' % k, cx_0, cx_1, -14 + t1 * 0.9, 62,
+                0, GF); made += 1
+        ex = (x0 + cd * 0.42) if cl else (x0 + W - cd * 0.42)
+        box(g, 'Timber_CornerDoor', ex - 52, ex + 52, cd * 0.30,
+            cd * 0.30 + 9, 34, GF - 104); made += 1
+        box(g, 'Frame_CornerCase', ex - 66, ex + 66, cd * 0.30 - 9,
+            cd * 0.30 + 4, 30, GF - 88); made += 1
+    if spec.get('civic'):
+        # A CIVIC BUILDING - bank, library, institute. It does not sell
+        # anything to the street, so it has no shopfront: it has a RUSTICATED
+        # base of deep horizontal courses, a flight of steps to a central
+        # doorway, and engaged columns above. The period's public face.
+        nc = 5
+        for k in range(nc):
+            ch = (GF - 40.0) / nc
+            o = 9.0 if k % 2 == 0 else 3.0
+            box(g, 'Wall_Rustic%d' % k, x0 - o, x0 + W + o, -o, 60,
+                30 + k * ch, 30 + (k + 1) * ch - 5); made += 1
+        dm = x0 + W * 0.5
+        dw = min(150.0, W * 0.16)
+        for k in range(4):
+            box(g, 'Kerbing_CivicStep%d' % k, dm - dw - 60 + k * 13,
+                dm + dw + 60 - k * 13, -56 + k * 13, 8, 0, 14 + k * 12)
+            made += 1
+        box(g, 'Timber_CivicDoor', dm - dw, dm + dw, 26, 34, 62, GF - 96)
+        made += 1
+        box(g, 'Frame_CivicCase', dm - dw - 20, dm + dw + 20, 18, 30,
+            62, GF - 76); made += 1
+        # flanking windows, tall and narrow
+        for side in (-1, 1):
+            wx = dm + side * (dw + 90.0)
+            if not (x0 + 60 < wx < x0 + W - 60):
+                continue
+            box(g, 'Glass_CivicW%d' % side, wx - 46, wx + 46, 38, 41,
+                96, GF - 100); made += 1
+            box(g, 'Frame_CivicW%d' % side, wx - 58, wx + 58, 28, 38,
+                84, GF - 86); made += 1
+    elif spec.get('terrace'):
+        # A TERRACE MEETS THE STREET WITH FRONT DOORS, one per house, each up
+        # its own flight of steps behind railings. No shopfront, no loading
+        # bay: this is the residential building of the same era, and the
+        # repeated stoop is the whole rhythm of it.
+        nh = max(2, BAYS)
+        for h in range(nh):
+            hx0 = sx0 + (sx1 - sx0) * h / float(nh)
+            hx1 = sx0 + (sx1 - sx0) * (h + 1) / float(nh)
+            dw = min(96.0, (hx1 - hx0) * 0.36)
+            dx = hx0 + (hx1 - hx0) * 0.18
+            # steps down to the pavement
+            for k in range(3):
+                box(g, 'Kerbing_Step%d_%d' % (h, k), dx - 14, dx + dw + 14,
+                    -34 + k * 11, 6, 0, 12 + k * 11); made += 1
+            box(g, 'Timber_Door%d' % h, dx, dx + dw, 30, 38, 44, GF - 96)
+            made += 1
+            box(g, 'Frame_DoorCase%d' % h, dx - 13, dx + dw + 13, 24, 34,
+                44, GF - 82); made += 1
+            box(g, 'Glass_Fanlight%d' % h, dx + 6, dx + dw - 6, 32, 35,
+                GF - 94, GF - 84); made += 1
+            # area railings between the stoops
+            for rk in range(4):
+                rx = hx0 + (hx1 - hx0) * (0.56 + 0.11 * rk)
+                box(g, 'Rail_Area%d_%d' % (h, rk), rx - 4, rx + 4, -26, -18,
+                    12, 78); made += 1
+            box(g, 'Rail_AreaTop%d' % h, hx0 + (hx1 - hx0) * 0.52,
+                hx1 - 6, -28, -16, 78, 88); made += 1
+            # the parlour window beside the door
+            wx0 = hx0 + (hx1 - hx0) * 0.52
+            if hx1 - 10 - wx0 > 50:
+                box(g, 'Glass_Parlour%d' % h, wx0, hx1 - 10, 40, 43,
+                    72, GF - 74); made += 1
+                box(g, 'Interior_Parlour%d' % h, wx0 - 5, hx1 - 5, 52, 58,
+                    66, GF - 70); made += 1
+                box(g, 'Frame_ParlourCill%d' % h, wx0 - 8, hx1 - 2, 34, 46,
+                    60, 74); made += 1
+    elif spec.get('loft'):
+        # A LOFT MEETS THE STREET WITH A LOADING BAY, not a shopfront. Cast
+        # iron columns carrying the floor above, a raised loading platform,
+        # and a pair of tall timber doors in the middle bay - the same era as
+        # the shop & flat, a completely different building.
+        nb = max(2, BAYS)
+        box(g, 'Kerbing_LoadDock', x0 + 20, x0 + W - 20, -46, 10, 0, 34)
+        made += 1
+        for k in range(nb + 1):
+            cx = sx0 + (sx1 - sx0) * k / float(nb)
+            cx = min(max(cx, sx0), sx1)
+            box(g, 'Frame_IronCol%d' % k, cx - 16, cx + 16, 6, 44, 34, GF - 44)
+            made += 1
+        dm = (sx0 + sx1) / 2.0
+        dw = (sx1 - sx0) / float(nb) * 0.86
+        box(g, 'Timber_LoadDoorL', dm - dw, dm - 4, 26, 34, 34, GF - 70)
+        box(g, 'Timber_LoadDoorR', dm + 4, dm + dw, 26, 34, 34, GF - 70)
+        made += 2
+        for side in (-1, 1):
+            box(g, 'Frame_DoorRail%d' % side, dm + side * 4 - 3,
+                dm + side * dw, 22, 28, GF - 74, GF - 62); made += 1
+        # the remaining bays are glazed in small panes behind the columns
+        for k in range(nb):
+            gx_0 = sx0 + (sx1 - sx0) * k / float(nb) + 18
+            gx_1 = sx0 + (sx1 - sx0) * (k + 1) / float(nb) - 18
+            if gx_1 - gx_0 < 40 or (gx_0 < dm < gx_1):
+                continue
+            box(g, 'Glass_Bay%d' % k, gx_0, gx_1, 30, 33, 46, GF - 56)
+            box(g, 'Interior_Bay%d' % k, gx_0 - 4, gx_1 + 4, 44, 50, 40, GF - 52)
+            made += 2
+            for m in range(1, 3):
+                mx = gx_0 + (gx_1 - gx_0) * m / 3.0
+                box(g, 'Mullion_Bay%d_%d' % (k, m), mx - 3, mx + 3, 26, 32,
+                    46, GF - 56); made += 1
+    else:
+        box(g, 'Glass_Shop', sx0, sx1, 40, 43, 40, GF - 48); made += 1
+        box(g, 'Interior_Shop', sx0 - 6, sx1 + 6, 52, 58, 30, GF - 44); made += 1
+        for k in range(1, 4):
+            mx = sx0 + (sx1 - sx0) * k / 4.0
+            box(g, 'Mullion_Shop%d' % k, mx - 3, mx + 3, 34, 41, 40, GF - 48); made += 1
+        box(g, 'Frame_ShopSill', sx0, sx1, 34, 44, 30, 40); made += 1
+
+    # ---- buttresses ----------------------------------------------------------
+    if spec.get('buttress') and F >= 1:
+        bt = mkactor('BLD2_%s_Butt' % n, origin, (0.0, yaw, 0.0))
+        nbt = max(3, BAYS + 1)
+        for k in range(nbt):
+            bx = x0 + 30 + (W - 60) * k / float(nbt - 1)
+            for st in range(3):
+                bd = 62.0 - st * 18.0
+                z_0 = GF + (GF + F * FH - GF) * st / 3.0
+                z_1 = GF + (GF + F * FH - GF) * (st + 1) / 3.0
+                box(bt, 'Wall_Butt%d_%d' % (k, st), bx - 27, bx + 27,
+                    -bd, 10, z_0 - (14 if st else 0), z_1); made += 1
+                box(bt, 'Band_ButtSet%d_%d' % (k, st), bx - 33, bx + 33,
+                    -bd - 8, 12, z_1 - 16, z_1); made += 1
+
+    # ---- engaged columns (civic) --------------------------------------------
+    # A giant order standing on the rusticated base and carrying the cornice:
+    # the one move that separates a public building from a commercial one of
+    # the same date, and it costs three boxes a column.
+    if spec.get('civic') and F >= 1:
+        nc2 = max(3, BAYS + 1)
+        col = mkactor('BLD2_%s_Order' % n, origin, (0.0, yaw, 0.0))
+        czt = GF + max(1, F) * FH
+        for k in range(nc2):
+            cx = x0 + 40 + (W - 80) * k / float(nc2 - 1)
+            cw2 = min(58.0, (W - 80) / float(nc2) * 0.52)
+            box(col, 'Wall_Column%d' % k, cx - cw2 / 2, cx + cw2 / 2,
+                -46, 8, GF, czt - 46); made += 1
+            box(col, 'Band_Capital%d' % k, cx - cw2 / 2 - 11,
+                cx + cw2 / 2 + 11, -58, 10, czt - 46, czt - 20); made += 1
+            box(col, 'Band_Base%d' % k, cx - cw2 / 2 - 9, cx + cw2 / 2 + 9,
+                -55, 10, GF, GF + 22); made += 1
+
+    # ---- projecting bay windows ---------------------------------------------
+    # A terrace's other signature, and the one that makes a whole row read as
+    # houses rather than as flats: a canted bay standing proud of the wall on
+    # the lower floors, one per house, stopping short of the top storey the
+    # way a real terrace does.
+    if spec.get('terrace') and F >= 1:
+        nh = max(2, BAYS)
+        nbf = min(F, int(spec.get('bay_floors', 1)))
+        bpr = float(spec.get('bay_proud', 78.0))
+        bw_ = mkactor('BLD2_%s_Bays' % n, origin, (0.0, yaw, 0.0))
+        for h in range(nh):
+            hx0 = (x0 + pier_w) + ((x0 + W - pier_w) - (x0 + pier_w)) * h / float(nh)
+            hx1 = (x0 + pier_w) + ((x0 + W - pier_w) - (x0 + pier_w)) * (h + 1) / float(nh)
+            bx0 = hx0 + (hx1 - hx0) * 0.10
+            bx1 = hx0 + (hx1 - hx0) * 0.66
+            if bx1 - bx0 < 70:
+                continue
+            for f in range(nbf):
+                z0b, z1b = GF + f * FH, GF + (f + 1) * FH
+                # the canted cheeks: two short returns instead of a curve
+                box(bw_, 'Wall_BayL%d_%d' % (h, f), bx0, bx0 + 22,
+                    -bpr * 0.62, 8, z0b + 8, z1b - 30); made += 1
+                box(bw_, 'Wall_BayR%d_%d' % (h, f), bx1 - 22, bx1,
+                    -bpr * 0.62, 8, z0b + 8, z1b - 30); made += 1
+                box(bw_, 'Glass_BayFace%d_%d' % (h, f), bx0 + 22, bx1 - 22,
+                    -bpr, -bpr + 3, z0b + 18, z1b - 40); made += 1
+                box(bw_, 'Interior_BayFace%d_%d' % (h, f), bx0 + 18, bx1 - 18,
+                    -bpr + 9, -bpr + 15, z0b + 18, z1b - 40); made += 1
+                box(bw_, 'Frame_BayCill%d_%d' % (h, f), bx0 - 8, bx1 + 8,
+                    -bpr - 9, 10, z0b + 4, z0b + 18); made += 1
+                box(bw_, 'Band_BayCap%d_%d' % (h, f), bx0 - 10, bx1 + 10,
+                    -bpr - 11, 10, z1b - 40, z1b - 26); made += 1
+                mxb = (bx0 + bx1) / 2.0
+                box(bw_, 'Mullion_Bay%d_%d' % (h, f), mxb - 4, mxb + 4,
+                    -bpr - 4, -bpr + 1, z0b + 18, z1b - 40); made += 1
 
     # ---- upper floors -------------------------------------------------------
     for f in range(F):
@@ -240,10 +549,161 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # so the crown changes as the building climbs instead of three tiers
         # differing only in how many identical floors are stacked.
         _sb = spec.get('setback') or 0.0
-        _sbf = max(1, int(spec.get('setback_floors', 1)))
-        _d = F - 1 - f
-        fy = _sb * (_sbf - _d) if (_sb and _d < _sbf) else 0.0
+        # cores.setback_at is THE resolver - the same one the core bands on.
+        # This formula used to be written out here, again lower down, again in
+        # build_contemporary and again in cores; four copies of one rule is
+        # how a floor steps back and its core does not (P12).
+        import cores as _co
+        fy = _co.setback_at(spec, f, F)
         a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
+        if spec.get('coffer'):
+            # A COFFERED GRID. The window is not a hole in a wall, it is the
+            # bottom of a deep square box - so every opening carries a full
+            # frame of shadow on all four sides and the facade reads as a
+            # chequerboard from across the board. It is the most three-
+            # dimensional facade in the catalogue and the most repetitive,
+            # which is exactly the trade the era made.
+            CF = 62.0
+            for b in range(BAYS):
+                px0 = x0 + W * b / float(BAYS)
+                px1 = x0 + W * (b + 1) / float(BAYS)
+                box(a, 'Wall_CofL%d_%d' % (f, b), px0, px0 + 26, fy - CF,
+                    fy + 58, z0, z1); made += 1
+                box(a, 'Wall_CofT%d_%d' % (f, b), px0, px1, fy - CF, fy + 58,
+                    z1 - 26, z1); made += 1
+                box(a, 'Wall_CofB%d_%d' % (f, b), px0, px1, fy - CF, fy + 58,
+                    z0, z0 + 26); made += 1
+                ox0, ox1 = px0 + 26, px1 - 26
+                if ox1 - ox0 < 44:
+                    continue
+                box(a, 'Glass_Cof%d_%d' % (f, b), ox0, ox1, fy + 34,
+                    fy + 37, z0 + 26, z1 - 26); made += 1
+                box(a, 'Interior_Cof%d_%d' % (f, b), ox0, ox1, fy + 44,
+                    fy + 50, z0 + 26, z1 - 26); made += 1
+                mxc = (ox0 + ox1) / 2.0
+                box(a, 'Mullion_Cof%d_%d' % (f, b), mxc - 4, mxc + 4,
+                    fy + 30, fy + 35, z0 + 26, z1 - 26); made += 1
+            box(a, 'Wall_CofR%d' % f, x0 + W - 26, x0 + W, fy - CF, fy + 58,
+                z0, z1); made += 1
+            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+                'instance': a, 'values': json.dumps({
+                    'RelativeLocation': {'x': rnd.uniform(-1.4, 1.4) * (W / 100.0),
+                                         'y': rnd.uniform(-1.0, 1.0), 'z': 0.0},
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.5, 0.5),
+                                         'roll': rnd.uniform(-0.4, 0.4)}})})
+            continue
+        if spec.get('deck_access'):
+            # THE SLAB. Postwar housing: a continuous ACCESS DECK running the
+            # full length of the building at every floor, with a solid
+            # balustrade in front of it and the front doors and small windows
+            # in shadow behind. The horizontal repeat is relentless on
+            # purpose - that is what the building is.
+            DK = 118.0
+            box(a, 'Band_DeckSlab%d' % f, x0 - 8, x0 + W + 8, fy - DK,
+                fy + 30, z0, z0 + 22); made += 1
+            box(a, 'Wall_Balust%d' % f, x0 - 8, x0 + W + 8, fy - DK - 12,
+                fy - DK + 6, z0 + 22, z0 + 92); made += 1
+            box(a, 'Band_BalustCap%d' % f, x0 - 12, x0 + W + 12,
+                fy - DK - 18, fy - DK + 12, z0 + 92, z0 + 106); made += 1
+            # the wall behind the deck, with doors and small windows
+            box(a, 'Wall_DeckWall%d' % f, x0, x0 + W, fy + 4, fy + 58,
+                z0 + 22, z1); made += 1
+            nu = max(3, int(round(W / 300.0)))
+            for u in range(nu):
+                ux0 = x0 + W * u / float(nu)
+                ux1 = x0 + W * (u + 1) / float(nu)
+                dx = ux0 + (ux1 - ux0) * 0.13
+                dw = min(74.0, (ux1 - ux0) * 0.26)
+                box(a, 'Timber_FlatDoor%d_%d' % (f, u), dx, dx + dw,
+                    fy - 2, fy + 6, z0 + 26, z0 + 26 + FH * 0.62); made += 1
+                wx0 = ux0 + (ux1 - ux0) * 0.48
+                wx1 = ux1 - (ux1 - ux0) * 0.10
+                if wx1 - wx0 > 46:
+                    box(a, 'Glass_Flat%d_%d' % (f, u), wx0, wx1, fy + 2,
+                        fy + 5, z0 + 44, z1 - 34); made += 1
+                    box(a, 'Interior_Flat%d_%d' % (f, u), wx0, wx1, fy + 12,
+                        fy + 18, z0 + 44, z1 - 34); made += 1
+                    box(a, 'Frame_FlatCill%d_%d' % (f, u), wx0 - 6, wx1 + 6,
+                        fy - 4, fy + 8, z0 + 36, z0 + 46); made += 1
+            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+                'instance': a, 'values': json.dumps({
+                    'RelativeLocation': {'x': rnd.uniform(-1.4, 1.4) * (W / 100.0),
+                                         'y': rnd.uniform(-1.0, 1.0), 'z': 0.0},
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.5, 0.5),
+                                         'roll': rnd.uniform(-0.4, 0.4)}})})
+            continue
+        if spec.get('steel_frame'):
+            # THE MIESIAN BOX. The third modern building: not ribbon glazing
+            # behind a band (v1), not a precast frame with sunk windows (v2),
+            # but floor-to-ceiling glass with the STEEL SHOWN - I-section
+            # mullions standing proud of the glass the whole height of the
+            # storey, and only a hairline slab edge between floors.
+            #
+            # It is the most restrained facade in the catalogue and the
+            # hardest to get right: with nothing else on it, the mullion
+            # rhythm and the slab edge ARE the building.
+            box(a, 'Frame_SlabEdge%d' % f, x0 - 6, x0 + W + 6, fy - 20,
+                fy + 62, z0, z0 + 26); made += 1
+            box(a, 'Glass_Full%d' % f, x0 + 14, x0 + W - 14, fy + GLAZE_Y,
+                fy + GLAZE_Y + 3, z0 + 26, z1); made += 1
+            box(a, 'Interior_Full%d' % f, x0 + 14, x0 + W - 14,
+                fy + GLAZE_Y + 9, fy + GLAZE_Y + 15, z0 + 26, z1); made += 1
+            nmu = max(3, int(round(W / float(spec.get('mull_step', 118.0)))))
+            for k in range(nmu + 1):
+                mx = x0 + W * k / float(nmu)
+                mx = min(max(mx, x0), x0 + W)
+                # an I-section read as three boxes: web plus two flanges
+                box(a, 'Frame_IbeamWeb%d_%d' % (f, k), mx - 4, mx + 4,
+                    fy - 26, fy + GLAZE_Y + 2, z0 + 26, z1); made += 1
+                for fl, dy in (('O', -26.0), ('I', GLAZE_Y - 4.0)):
+                    box(a, 'Frame_IbeamFl%s%d_%d' % (fl, f, k),
+                        mx - 14, mx + 14, fy + dy, fy + dy + 7,
+                        z0 + 26, z1); made += 1
+            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+                'instance': a, 'values': json.dumps({
+                    'RelativeLocation': {'x': rnd.uniform(-1.2, 1.2) * (W / 100.0),
+                                         'y': rnd.uniform(-0.9, 0.9), 'z': 0.0},
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.4, 0.4),
+                                         'roll': rnd.uniform(-0.3, 0.3)}})})
+            continue
+        if spec.get('precast'):
+            # BRUTALIST PRECAST. The same decade as the ribbon block and its
+            # opposite: instead of glass hung behind a proud band, a heavy
+            # frame of precast units with the windows sunk deep inside it.
+            # The shadow does all the work, which is why this reads at city
+            # range where a curtain wall needs its mullions.
+            REV = 46.0                      # how deep the window sits
+            box(a, 'Wall_SlabBand%d' % f, x0 - 8, x0 + W + 8, fy - 18, fy + 62,
+                z0, z0 + sp); made += 1
+            for b in range(BAYS):
+                px0 = x0 + W * b / float(BAYS)
+                px1 = x0 + W * (b + 1) / float(BAYS)
+                box(a, 'Wall_Mullion%d_%d' % (f, b), px0 - 15, px0 + 15,
+                    fy - 18, fy + 62, z0 + sp, z1); made += 1
+                ox0, ox1 = px0 + 15, px1 - 15
+                if ox1 - ox0 < 50:
+                    continue
+                # the reveal: cheeks, head and cill cut back into the frame
+                box(a, 'Wall_RevHead%d_%d' % (f, b), ox0, ox1,
+                    fy - 18, fy + REV, z1 - 22, z1); made += 1
+                box(a, 'Wall_RevCill%d_%d' % (f, b), ox0 - 6, ox1 + 6,
+                    fy - 26, fy + REV, z0 + sp, z0 + sp + 20); made += 1
+                box(a, 'Glass_Deep%d_%d' % (f, b), ox0 + 4, ox1 - 4,
+                    fy + REV, fy + REV + 3, z0 + sp + 20, z1 - 22); made += 1
+                box(a, 'Interior_Deep%d_%d' % (f, b), ox0, ox1,
+                    fy + REV + 9, fy + REV + 15, z0 + sp + 20, z1 - 22); made += 1
+                mx = (ox0 + ox1) / 2.0
+                box(a, 'Mullion_Deep%d_%d' % (f, b), mx - 4, mx + 4,
+                    fy + REV - 4, fy + REV + 1, z0 + sp + 20, z1 - 22); made += 1
+            box(a, 'Wall_Mullion%d_end' % f, x0 + W - 15, x0 + W + 15,
+                fy - 18, fy + 62, z0 + sp, z1); made += 1
+            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+                'instance': a, 'values': json.dumps({
+                    'RelativeLocation': {'x': rnd.uniform(-1.6, 1.6) * (W / 100.0),
+                                         'y': rnd.uniform(-1.1, 1.1), 'z': 0.0},
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.6, 0.6),
+                                         'roll': rnd.uniform(-0.5, 0.5)}})})
+            continue
         bw = (W - pier_w) / float(BAYS)
         for b in range(BAYS + 1):
             px = x0 + b * bw
@@ -311,12 +771,23 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # shelf, clearly visible the first time a stepped crown was rendered.
     SB = spec.get('setback') or 0.0
     SBF = max(1, int(spec.get('setback_floors', 1)))
-    ty = SB * SBF if SB else 0.0
+    import cores as _co
+    ty = _co.setback_top(spec, F)
     box(r, 'Wall_ParapetF', x0, x0 + W, ty - 4, ty + 30, ztop, ztop + PAR); made += 1
     box(r, 'Band_ParapetCap', x0 - 8, x0 + W + 8, ty - 14, ty + 40, ztop + PAR, ztop + PAR + 14); made += 1
     box(r, 'Wall_ParapetL', x0, x0 + 26, ty + 30, D, ztop, ztop + PAR - 20); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, ty + 30, D, ztop, ztop + PAR - 20); made += 1
-    box(r, 'Roof_Deck', x0, x0 + W, ty + 20, D, ztop - 8, ztop); made += 1
+    # A REAR PARAPET. There never was one: the core filled the roof void to
+    # above the parapet, so the missing back wall could not be seen. With
+    # `open_roof` the core stops at the roof line and the void is real, so the
+    # roof has to be closed on all four sides like an actual parapet.
+    box(r, 'Wall_ParapetB', x0, x0 + W, D - 26, D, ztop, ztop + PAR - 20); made += 1
+    # Tile_, not Roof_. `Roof_` is structure and binds to concrete; `Tile_` is
+    # the roof SURFACE and binds to the recipe's `roofmat`, which vernacular
+    # has declared as MI_shingle_grey since it was written and never once
+    # shown - the core was covering this slab. A flat roof is felt or asphalt,
+    # not fair-faced concrete.
+    box(r, 'Tile_Deck', x0, x0 + W, ty + 20, D, ztop - 8, ztop); made += 1
 
     # A CORNICE, for the tiers that have earned one. Three courses - bed mould,
     # corona, cap - because a cornice that is one projecting slab reads as a
@@ -325,7 +796,18 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # rooftop plant. build_modern deliberately has no cornice and keeps its
     # flat coping over a shadow gap; that is its identity, not an omission.
     cp = spec.get('cornice') or 0.0
-    if cp:
+    if cp and spec.get('corbel'):
+        # CORBELLED BRICK, not a moulded cornice. A warehouse crowns itself by
+        # stepping courses out one at a time - the same material all the way
+        # up, which is what a builder does when there is no budget for stone.
+        zc = (GF + max(1, F - SBF) * FH) if SB else ztop
+        for k in range(4):
+            o = cp * (0.30 + 0.22 * k)
+            box(r, 'Wall_Corbel%d' % k, x0 - o * 0.34, x0 + W + o * 0.34,
+                -o, 30, zc - 44 + k * 13, zc - 44 + (k + 1) * 13); made += 1
+        box(r, 'Band_CorbelCap', x0 - cp * 0.42, x0 + W + cp * 0.42,
+            -cp * 1.02, 32, zc + 8, zc + 20); made += 1
+    elif cp:
         # A cornice crowns the MAIN mass, with any set-back attic rising
         # BEHIND it. Placed at ztop it sat above the setbacks instead, which
         # is a cornice on the wrong building - the attic wore it as a hat.
@@ -337,7 +819,96 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         box(r, 'Band_CorniceCap', x0 - 12, x0 + W + 12, -cp*0.62, 30,
             zc + 8, zc + 18); made += 1
 
-    made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd)
+    made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
+                       D=D)
+    if spec.get('gable'):
+        # A GABLE FRONT. A chapel or an institute: the roof turned end-on to
+        # the street so the building shows its section. Stepped in five
+        # courses like every other rake in this catalogue, because that is
+        # what cut card does.
+        gh = float(spec['gable'])
+        gm = x0 + W * 0.5
+        for k in range(6):
+            t = k / 6.0
+            hw = (W * 0.5 + 10) * (1.0 - t)
+            box(r, 'Wall_Gable%d' % k, gm - hw, gm + hw, -18, 30,
+                ztop + PAR + gh * t, ztop + PAR + gh * (t + 0.18)); made += 1
+        # a rose window in the gable
+        box(r, 'Glass_Rose', gm - 44, gm + 44, -22, -18,
+            ztop + PAR + gh * 0.16, ztop + PAR + gh * 0.52); made += 1
+        box(r, 'Frame_RoseSurround', gm - 56, gm + 56, -26, -18,
+            ztop + PAR + gh * 0.10, ztop + PAR + gh * 0.58); made += 1
+    if spec.get('cupola'):
+        # A CORNER BUILDING ANNOUNCES ITSELF AT THE CORNER. The chamfer runs
+        # the full height and the cupola sits on top of it - a pub or a
+        # commercial hotel on a street corner, and the one vernacular that
+        # is designed to be seen from two directions at once.
+        ch = float(spec['cupola'])
+        cxp = x0 + (28.0 if spec.get('corner_side', 'left') == 'left'
+                    else W - 28.0)
+        for k in range(3):
+            o = 74.0 - k * 20.0
+            box(r, 'Wall_Cupola%d' % k, cxp - o, cxp + o, 30 - o, 30 + o,
+                ztop + PAR + k * ch * 0.30,
+                ztop + PAR + (k + 1) * ch * 0.30); made += 1
+            box(r, 'Band_CupolaCap%d' % k, cxp - o - 8, cxp + o + 8,
+                22 - o, 38 + o, ztop + PAR + (k + 1) * ch * 0.30,
+                ztop + PAR + (k + 1) * ch * 0.30 + 12); made += 1
+        box(r, 'Frame_Finial', cxp - 7, cxp + 7, 23, 37,
+            ztop + PAR + ch * 0.90 + 12, ztop + PAR + ch * 1.24); made += 1
+    if spec.get('pediment'):
+        # THE PEDIMENT, stepped rather than triangular - a card model cuts
+        # steps, and at 1:87 a five-step rake reads as a pitch.
+        pw = W * float(spec.get('pediment_w', 0.46))
+        pm = x0 + W * 0.5
+        ph = float(spec.get('pediment', 120.0))
+        for k in range(5):
+            t = k / 5.0
+            hw = pw * 0.5 * (1.0 - t)
+            box(r, 'Wall_Ped%d' % k, pm - hw, pm + hw, -30, 24,
+                ztop + PAR + ph * t, ztop + PAR + ph * (t + 0.21)); made += 1
+        box(r, 'Band_PedBase', pm - pw * 0.5 - 14, pm + pw * 0.5 + 14,
+            -38, 28, ztop + PAR - 14, ztop + PAR + 8); made += 1
+    if spec.get('stacks'):
+        # CHIMNEY STACKS, one on each party wall. A terrace is a row of
+        # houses and the stacks are where you can count them from the roof -
+        # the only place the repetition is visible from above.
+        ns = max(2, int(spec['stacks']))
+        for k in range(ns):
+            sx = x0 + W * (k + 0.5) / float(ns)
+            sw = min(84.0, W / float(ns) * 0.34)
+            box(r, 'Wall_Stack%d' % k, sx - sw / 2, sx + sw / 2, 140, 250,
+                ztop, ztop + PAR + 108); made += 1
+            box(r, 'Band_StackCap%d' % k, sx - sw / 2 - 9, sx + sw / 2 + 9,
+                131, 259, ztop + PAR + 108, ztop + PAR + 122); made += 1
+            for pk in range(2):
+                px = sx - sw * 0.22 + sw * 0.44 * pk
+                box(r, 'Frame_Pot%d_%d' % (k, pk), px - 11, px + 11,
+                    176, 214, ztop + PAR + 122, ztop + PAR + 168); made += 1
+    if spec.get('hoist'):
+        # THE HOIST BEAM. A loading bay needs a way to get goods to the top
+        # floor, and the gantry projecting over the street is the single
+        # detail that says "warehouse" from across a block.
+        hx = x0 + W * 0.5
+        box(r, 'Timber_HoistPost', hx - 15, hx + 15, 10, 40,
+            ztop, ztop + PAR + 92); made += 1
+        # 118, not 140: GATE-05 allows 130 uu of ornament over the pavement
+        # and the beam was the deepest thing on the building. A gantry that
+        # oversails further than the rule is a gantry that hits the model's
+        # neighbour on a real street.
+        box(r, 'Timber_HoistBeam', hx - 13, hx + 13, -118, 34,
+            ztop + PAR + 62, ztop + PAR + 92); made += 1
+        box(r, 'Frame_HoistBrace', hx - 9, hx + 9, -88, 22,
+            ztop + PAR + 18, ztop + PAR + 66); made += 1
+        box(r, 'Frame_HoistBlock', hx - 11, hx + 11, -112, -90,
+            ztop + PAR + 30, ztop + PAR + 62); made += 1
+    # ROOF ACCESS. Skipped when a roof garden is built, because that lays its
+    # own shed; skipped on a single-storey lock-up, which gets a hatch through
+    # roof_plant instead of a stair house. Also skipped under a penthouse,
+    # whose own core carries the stair.
+    if (F >= 1 and not spec.get('roof_garden')
+            and not spec.get('penthouse') and spec.get('stair_head', True)):
+        made += stair_head(r, x0, W, D, ztop, rnd)
 
     # ---- the retrofit roof ------------------------------------------------
     # THE ROOF IS ZONED, front to back. The first version laid the garden over
@@ -363,51 +934,202 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     if rg and not ph:
         box(r, 'Timber_Deck', gx0, gx1, gy0, split, ztop, ztop + 9); made += 1
         # planters along the front, against the parapet
-        npl = max(2, int((gx1 - gx0) / 300.0))
-        pw = (gx1 - gx0) / float(npl)
-        for i in range(npl):
-            px = gx0 + i * pw
-            # Planting sits INSIDE the box. The bloom used to run from +56 to
-            # +96 against a planter topping out at +62 - 34 uu of it standing
-            # proud - so it read as a pink cushion on a wooden stool rather
-            # than as anything growing. Soil is contained by the planter it is
-            # in; only a little crowns above the rim.
-            box(r, 'Timber_Planter%d' % i, px + 14, px + pw - 14,
-                gy0 + 4, gy0 + 78, ztop + 9, ztop + 62); made += 1
-            box(r, 'Bloom_Bed%d' % i, px + 20, px + pw - 20,
-                gy0 + 10, gy0 + 72, ztop + 44, ztop + 70); made += 1
-            # a small tree in every other planter, so the roof has HEIGHT
-            if i % 2 == 0:
-                tx = px + pw/2.0
-                box(r, 'Timber_Trunk%d' % i, tx - 7, tx + 7,
-                    gy0 + 36, gy0 + 50, ztop + 62, ztop + 150); made += 1
-                for k, (sw, sz) in enumerate(((54, 150), (72, 186), (46, 224))):
-                    box(r, 'Bloom_Crown%d_%d' % (i, k), tx - sw, tx + sw,
-                        gy0 + 41 - sw*0.5, gy0 + 45 + sw*0.5, ztop + sz,
-                        ztop + sz + 42); made += 1
-        # pergola over the middle of the garden strip
-        ppy0, ppy1 = gy0 + 120, split - 30
-        if ppy1 > ppy0 + 90:
-            for k in range(4):
-                ppx = gx0 + 40 + (gx1 - gx0 - 80) * k / 3.0
-                for py in (ppy0, ppy1):
-                    box(r, 'Timber_Post%d_%d' % (k, int(py)), ppx - 8, ppx + 8,
-                        py - 8, py + 8, ztop + 9, ztop + 214); made += 1
-            for py in (ppy0, ppy1):
-                box(r, 'Timber_Beam%d' % int(py), gx0 + 30, gx1 - 30,
-                    py - 10, py + 10, ztop + 214, ztop + 230); made += 1
-            for k in range(7):
-                sx = gx0 + 40 + (gx1 - gx0 - 80) * k / 6.0
-                box(r, 'Timber_Slat%d' % k, sx - 6, sx + 6, ppy0, ppy1,
-                    ztop + 230, ztop + 240); made += 1
-            # a long table and two benches under it
-            mid = (ppy0 + ppy1) / 2.0
-            box(r, 'Timber_Table', gx0 + 190, gx1 - 190, mid - 34, mid + 34,
-                ztop + 9, ztop + 62); made += 1
-            for off in (-62, 62):
-                box(r, 'Timber_Bench%d' % (off + 100), gx0 + 210, gx1 - 210,
-                    mid + off - 16, mid + off + 16, ztop + 9, ztop + 38)
+        # REAL BEDS, from the Uniblocks garden kit. These were boxes: a
+        # timber cube with a bloom cube sitting in it, which read as a pink
+        # cushion on a stool however the numbers were tuned. Some things
+        # cannot be cut from card and a modelmaker does not try - they buy a
+        # moulded planter. ubkit lays the pieces out from their MEASURED
+        # bounds; genbuild.piece carries them through the same sink as a box,
+        # so the fast path bakes them into the model.
+        import ubkit
+        seg = max(1, int((gx1 - gx0 - 2*ubkit.CAP) / ubkit.SEG / 3.0))
+        blen = ubkit.bed_length(seg)
+        # MORE BEDS, AND A SECOND RANK. The garden was two troughs holding
+        # fourteen plants between them on a roof with 42 bed parts on it -
+        # the beds read, the planting did not. The Uniblocks bed is 50 uu
+        # deep and that is what its parts are, so density comes from more
+        # beds rather than from crowding these ones.
+        npl = max(2, int((gx1 - gx0) / (blen + 30.0)))
+        gap = ((gx1 - gx0) - npl * blen) / float(npl + 1)
+        pys = [gy0 + ubkit.DEPTH + 18.0]
+        back = split - ubkit.DEPTH - 40.0
+        if back - pys[0] > ubkit.DEPTH * 2 + 150.0:
+            pys.append(back)
+        for i in range(npl * len(pys)):
+            px = gx0 + gap + (i % npl) * (blen + gap)
+            py = pys[i // npl]
+            for mesh, (mx, my, mz), yaw in ubkit.bed(seg, x=px, y=py,
+                                                     z=ztop + 9):
+                piece(r, 'Bed%d_%s' % (i, ubkit.short(mesh)),
+                      mesh, (mx, my, mz), (0.0, yaw, 0.0),
+                      mat='MI_planter')
                 made += 1
+            # REAL PLANTING, not a green box. A bed holds something growing;
+            # an extruded cube never reads as that however it is coloured.
+            # avkit sizes come from measurement so nothing pushes through a
+            # wall, and the soil box stays underneath as the thing they sit in.
+            import avkit
+            x0b, y0b, x1b, y1b = ubkit.bed_extent(seg, px, py)
+            box(r, 'Gravel_Soil%d' % i, x0b + 14, x1b - 14, y0b + 14, y1b - 14,
+                ztop + 9 + 40, ztop + 9 + 62); made += 1
+            for k, (key, (plx, ply, plz), pyaw) in enumerate(
+                    avkit.bed_planting(x0b + 22, y0b + 18, x1b - 22, y1b - 18,
+                                       ztop + 9 + 58, rnd)):
+                piece(r, 'Plant%d_%d' % (i, k), avkit.path(key),
+                      (plx, ply, plz), (0.0, pyaw, 0.0), mat=avkit.mat(key))
+                made += 1
+            # A SHRUB in every other bed, so the roof has height. This was a
+            # trunk box under three stacked crown boxes - the last cube left
+            # in the garden. avkit's bush is 614 uu across, so it is scaled to
+            # the bed it stands in rather than dropped in at author size:
+            # overhanging the rim a little is what a planted shrub does,
+            # swallowing the bed is not.
+            if i % 2 == 0:
+                tx = (x0b + x1b) / 2.0
+                ty = (y0b + y1b) / 2.0
+                bw = avkit.size('bush')[0]
+                sc = min(0.30, (y1b - y0b) * 2.6 / bw)
+                piece(r, 'Shrub%d' % i, avkit.path('bush'),
+                      (tx, ty, ztop + 9 + 58), (0.0, rnd.uniform(0, 360), 0.0),
+                      scale=sc, mat=avkit.mat('bush'))
+                made += 1
+        # ---- the roof PARK ------------------------------------------------
+        # The pergola went. It was four posts, two beams, seven slats, a table
+        # and two benches - eighteen boxes of timber over a strip of bare
+        # deck, and it read as the frame of something rather than as a place.
+        # A small rooftop park is the same footprint doing more: a flock lawn,
+        # a gravel path across it, trees and shrubs, a bench, and a shed for
+        # the stair that has to come up here anyway.
+        pky0, pky1 = gy0 + 108, split - 26
+        if pky1 > pky0 + 90:
+            deck = ztop + 9
+            # LAWN. Flock over card - 5 uu proud of the deck so its edge
+            # catches light, which is the whole reason a model reads as made.
+            # THICK, not a film. A 5 uu slab rendered as warm paper whatever
+            # BaseColour said: the master's EdgeWearLift (1.42) brightens
+            # toward the edge and on a slab that thin the edge is the whole
+            # face. Measured RGB(142,124,100) on a material that is
+            # (0.29,0.40,0.155) green. A roof lawn sits in a real build-up
+            # anyway, so 30 uu is both the fix and the truer object.
+            LAWN_T = 90.0
+            box(r, 'Grass_Lawn', gx0 + 26, gx1 - 26, pky0, pky1,
+                deck, deck + LAWN_T); made += 1
+
+            # GRAVEL PATH, crossing the lawn from the shed to the parapet.
+            # Laid as two runs meeting at a corner rather than one straight
+            # strip: a path that goes somewhere reads as a park, a strip down
+            # the middle reads as a divider.
+            pmid = (pky0 + pky1) / 2.0
+            pxj = gx0 + (gx1 - gx0) * 0.34
+            box(r, 'Gravel_PathA', gx0 + 26, pxj + 34, pmid - 34, pmid + 34,
+                deck, deck + LAWN_T + 2); made += 1
+            box(r, 'Gravel_PathB', pxj - 34, pxj + 34, pky0, pmid + 34,
+                deck, deck + LAWN_T + 2); made += 1
+
+            # ROOF ACCESS SHED. Every roof anybody stands on has one, and it
+            # is the piece that makes the rest read as reachable. Card box,
+            # capped band, printed door - our own geometry, because this is
+            # exactly what a modelmaker cuts.
+            shw, shd, shh = 210.0, 168.0, 196.0
+            shx = gx1 - 26 - shw - 40
+            shy = pky1 - shd - 14
+            box(r, 'Wall_Shed', shx, shx + shw, shy, shy + shd,
+                deck, deck + shh); made += 1
+            box(r, 'Gravel_ShedApron', shx - 30, shx + shw + 30, shy - 34,
+                shy + shd + 12, deck, deck + LAWN_T + 1); made += 1
+            box(r, 'Band_ShedCap', shx - 10, shx + shw + 10, shy - 10,
+                shy + shd + 10, deck + shh, deck + shh + 13); made += 1
+            box(r, 'Frame_ShedDoor', shx + shw * 0.28, shx + shw * 0.72,
+                shy - 4, shy + 2, deck + 6, deck + shh * 0.76); made += 1
+            box(r, 'Timber_ShedStep', shx + shw * 0.22, shx + shw * 0.78,
+                shy - 26, shy - 2, deck, deck + 7); made += 1
+
+            # REAL TREES. The earlier armature-and-flock trees were built
+            # because donor foliage came through the merge as dark quads -
+            # but that was fastbake binding ONE material across a mesh whose
+            # leaf slots need the masked leaf materials. rolemap.SLOT fixes
+            # it at the source, so the pack's own trees work here now, and
+            # tuft clusters were never a good substitute for a tree.
+            #
+            # Two species at three sizes: a roof park is planted at once, so
+            # the variation is in what was planted, not in age.
+            TREES = (('tree_s', 0.22, 0.30, 430.0),
+                     ('tree_t', 0.55, 0.68, 355.0),
+                     ('tree_s', 0.80, 0.26, 300.0))
+            for ti, (key, tx_f, ty_f, want_h) in enumerate(TREES):
+                th = avkit.size(key)[2]
+                tsc = want_h / th
+                tw = avkit.size(key)[0] * tsc
+                tx = gx0 + 50 + (gx1 - gx0 - 100) * tx_f
+                ty = pky0 + (pky1 - pky0) * ty_f
+                piece(r, 'Tree%d' % ti, avkit.path(key),
+                      (tx, ty, deck + LAWN_T),
+                      (0.0, rnd.uniform(0, 360), 0.0), scale=tsc,
+                      mat=avkit.mat(key))
+                made += 1
+                box(r, 'Gravel_TreePit%d' % ti, tx - tw * 0.26, tx + tw * 0.26,
+                    ty - tw * 0.26, ty + tw * 0.26,
+                    deck + LAWN_T - 16, deck + LAWN_T + 3); made += 1
+
+            # SHRUBS along the back, and grass tufts breaking the lawn edge -
+            # a lawn with a hard cut all the way round reads as a mat.
+            # REAL SHRUBS, more of them. SM_bush_01 was failing for the same
+            # reason the trees were - one material across every slot - so it
+            # was kept small enough to hide the damage. It renders properly
+            # now, so it can do the job the grass tufts were standing in for.
+            SHRUBS = ((0.10, 0.82, 112.0), (0.26, 0.16, 92.0),
+                      (0.42, 0.86, 128.0), (0.58, 0.22, 100.0),
+                      (0.71, 0.80, 118.0), (0.88, 0.34, 96.0),
+                      (0.95, 0.72, 108.0))
+            for si, (sf_x, sf_y, sh) in enumerate(SHRUBS):
+                sxp = gx0 + 70 + (gx1 - gx0 - 140) * sf_x
+                syp = pky0 + (pky1 - pky0) * sf_y
+                bsc = sh / avkit.size('bush')[2]
+                piece(r, 'ShrubP%d' % si, avkit.path('bush'),
+                      (sxp, syp, deck + LAWN_T),
+                      (0.0, rnd.uniform(0, 360), 0.0), scale=bsc,
+                      mat=avkit.mat('bush'))
+                made += 1
+            # FLOCK IS SCATTERED FIBRE, not painted card. That is what a
+            # modelmaker actually does - sifts flock over glue - and here it
+            # is also the thing that WORKS: the lawn slab renders as warm
+            # paper whatever material it carries (see the note below), while
+            # these tufts carry MI_grass and come out green in the same
+            # frame. So the green on this roof is the flock, and the slab
+            # underneath is the glue bed it sits on.
+            gsc = 52.0 / avkit.size('grass_tuft')[2]
+            gstep = 118.0
+            gnx = max(2, int((gx1 - gx0 - 120) // gstep))
+            gny = max(2, int((pky1 - pky0 - 40) // gstep))
+            gi = 0
+            for gyi in range(gny):
+                for gxi in range(gnx):
+                    gxp = gx0 + 60 + gxi * gstep + rnd.uniform(-16, 16) \
+                        + (gstep * 0.5 if gyi % 2 else 0.0)
+                    gyp = pky0 + 20 + gyi * gstep + rnd.uniform(-14, 14)
+                    if gxp > gx1 - 60 or gyp > pky1 - 14:
+                        continue
+                    # keep the gravel path and the shed apron clear
+                    if abs(gyp - pmid) < 44 and gxp < pxj + 44:
+                        continue
+                    if abs(gxp - pxj) < 44 and gyp < pmid + 44:
+                        continue
+                    if gxp > shx - 40 and gyp > shy - 44:
+                        continue
+                    piece(r, 'Tuft%d' % gi, avkit.path('grass_tuft'),
+                          (gxp, gyp, deck + LAWN_T),
+                          (0.0, rnd.uniform(0, 360), 0.0), scale=gsc,
+                          mat=avkit.mat('grass_tuft'))
+                    made += 1
+                    gi += 1
+
+            # A BENCH, facing the parapet and the street beyond it. Placed off
+            # the path so it reads as somewhere to sit rather than an obstacle.
+            bnl = avkit.size('bench')[1]
+            piece(r, 'Bench0', avkit.path('bench'),
+                  (gx0 + (gx1 - gx0) * 0.66, pky0 + 40, deck + LAWN_T),
+                  (0.0, 90.0, 0.0), scale=1.0, mat=avkit.mat('bench'))
+            made += 1
 
     # ---- a two-storey glass penthouse, set back ---------------------------
     # The shell below is UNCHANGED - that is the whole point of the tier.
@@ -481,10 +1203,37 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         box(r, 'Rail_TerrEdge', gx0 + 20, gx1 - 20, split + 6, split + 16,
             ztop + 9, ztop + 62); made += 1
 
+    # ---- downpipes, from the facade kit -----------------------------------
+    # A rainwater pipe at each end of the frontage. This is the sort of part a
+    # card builder cannot cut and a modelmaker buys as a length of rod, and it
+    # is most of what makes an elevation look serviced rather than drawn.
+    if spec.get('downpipes', True) and F >= 1:
+        import avkit as _av
+        for _sx in (x0 + 14.0, x0 + W - 14.0):
+            for key, (dx, dy, dz), _dyaw in _av.downpipe(
+                    36.0, ztop - 20.0, _sx, -18.0, rnd):
+                piece(r, 'Pipe%d_%d' % (int(_sx), int(dz)), _av.path(key),
+                      (dx, dy, dz), (0.0, 0.0, 0.0), mat=_av.mat(key))
+                made += 1
+
     # ---- canopy -------------------------------------------------------------
     if spec.get('canopy'):
         proj = spec['canopy']
         c = mkactor('BLD2_%s_Canopy' % n, origin, (0.0, yaw, 0.0))
+        # The head stays a box - it is structure, and a box is what a card
+        # builder cuts for it. What was wrong was the AWNING being a box too:
+        # one flat slab the full width of the shopfront, which is the one
+        # thing a fabric awning is not.
+        box(c, 'Wall_CanopySlab', x0 - 10, x0 + W + 10, -14, 8, GF - 26, GF - 10); made += 1
+        # A CANOPY IS A BOX, and this is the right answer rather than a
+        # concession. Two donor "awnings" were tried and both were rendered
+        # before judging: SM_shopAwing_01 is a market STALL canopy on four
+        # legs that reach the ground, and SM_shopCanopy_01 is a slatted
+        # LOUVRE - at the size a shopfront wants it is a knife edge that
+        # disappears, and blown up 3x it reads as dark blades throwing
+        # striped shadows. Neither is fabric. A modelmaker cuts a canopy from
+        # card and paints the fascia, which is exactly these two boxes, and
+        # the fascia is where this building's accent colour lives.
         box(c, 'Wall_CanopySlab', x0 - 10, x0 + W + 10, -proj, 8, GF - 26, GF - 10); made += 1
         box(c, 'Accent_CanopyFascia', x0 - 10, x0 + W + 10, -proj - 8, -proj, GF - 40, GF - 4); made += 1
         made += 1
@@ -587,9 +1336,12 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # a 142 uu void behind Tower F6. The spec said setback; the geometry
         # has to agree with it.
         _sb = spec.get('setback') or 0.0
-        _sbf = max(1, int(spec.get('setback_floors', 1)))
-        _d = F - 1 - f
-        fy = _sb * (_sbf - _d) if (_sb and _d < _sbf) else 0.0
+        # cores.setback_at is THE resolver - the same one the core bands on.
+        # This formula used to be written out here, again lower down, again in
+        # build_contemporary and again in cores; four copies of one rule is
+        # how a floor steps back and its core does not (P12).
+        import cores as _co
+        fy = _co.setback_at(spec, f, F)
         a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
         # spandrel: full width, standing proud. The primary horizontal.
         box(a, 'Band_Spandrel', x0 - 10, x0 + W + 10, fy - BAND_PROUD, fy + 20, z0, z0 + sp); made += 1
@@ -654,7 +1406,13 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         for b in range(BAYS):
             px0 = x0 + W*b/float(BAYS) + 10
             px1 = x0 + W*(b + 1)/float(BAYS) - 10
-            box(a, 'Band_Panel%d_%d' % (f, b), px0, px1,
+            # COLOURED SPANDREL. The 1960s curtain wall whose panels are a
+            # colour, not a grey - the era's other facade, and a one-word
+            # change here because the role vocabulary already carries an
+            # accent. It is the cheapest distinct building in the catalogue.
+            _pn = ('Accent_Panel%d_%d' if spec.get('spandrel_colour')
+                   else 'Band_Panel%d_%d') % (f, b)
+            box(a, _pn, px0, px1,
                 fy - BAND_PROUD - 6, fy - BAND_PROUD + 10, z0 + 12, z0 + sp - 12)
             made += 1
         # heads and cills to the mullion run
@@ -671,6 +1429,29 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.8, 0.8),
                                      'roll': rnd.uniform(-0.6, 0.6)}})})
 
+    # ---- canted supports ------------------------------------------------
+    # GOOGIE. The roadside commercial building of the same fifteen years:
+    # the mass lifted on splayed legs with a glazed void beneath, and the
+    # slab cantilevering past them. Not one vertical on it, which is the
+    # opposite of every other modern in the catalogue.
+    if spec.get('canted'):
+        cn = mkactor('BLD2_%s_Legs' % n, origin, (0.0, yaw, 0.0))
+        nl = max(3, BAYS)
+        for k in range(nl + 1):
+            lx = x0 + W * k / float(nl)
+            lx = min(max(lx, x0 + 8), x0 + W - 8)
+            # splay: three stacked boxes walking outward as they go down
+            for st in range(4):
+                t = st / 4.0
+                dx = 46.0 * t
+                box(cn, 'Frame_Leg%d_%d' % (k, st), lx - 14 - dx, lx + 14 + dx,
+                    -18 - 22 * t, 40, GF * (1.0 - (st + 1) / 4.0),
+                    GF * (1.0 - t)); made += 1
+        box(cn, 'Band_LiftSlab', x0 - 22, x0 + W + 22, -54, 66,
+            GF - 34, GF + 6); made += 1
+        box(cn, 'Accent_LiftFascia', x0 - 26, x0 + W + 26, -62, -50,
+            GF - 40, GF + 10); made += 1
+
     # ---- roof: flat coping over a shadow gap, no cornice ------------------
     r = mkactor('BLD2_%s_Roof' % n, origin, (0.0, yaw, 0.0))
     ztop = GF + F * FH
@@ -680,9 +1461,34 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     box(r, 'Band_Coping', x0 - 6, x0 + W + 6, -6, 44, ztop + PAR - 12, ztop + PAR); made += 1
     box(r, 'Wall_ParapetL', x0, x0 + 24, 30, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
-    box(r, 'Roof_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
+    # REAR PARAPET, and the deck as a SURFACE. Both exist because the core no
+    # longer fills the roof void: with `open_roof` it stops at the roof line,
+    # so the back of the roof is a real hole and the deck is a real surface
+    # instead of something buried inside the core. See cores.bands_for.
+    box(r, 'Wall_ParapetB', x0, x0 + W, D - 24, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Tile_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
     made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
-                       ymin=200.0, yspread=100.0)
+                       ymin=200.0, yspread=100.0, D=D)
+    if F >= 1 and spec.get('stair_head', True):
+        made += stair_head(r, x0, W, D, ztop, rnd)
+    # THE EXPRESSED SERVICE TOWER - a blind precast shaft running the full
+    # height and standing proud of the mass, carrying the stair and the lift
+    # past the parapet. It is the one thing that stops a brutalist block
+    # reading as a box, and it belongs to the era as much as the reveals do.
+    if spec.get('service_tower'):
+        stw = W * 0.19
+        stx = x0 + W * (0.08 if rnd.random() < 0.5 else 0.73)
+        stx = max(x0 + 10, min(stx, x0 + W - stw - 10))
+        box(r, 'Wall_ServiceShaft', stx, stx + stw, -34, 74,
+            0.0, ztop + PAR + 120.0); made += 1
+        box(r, 'Band_ServiceCap', stx - 11, stx + stw + 11, -45, 85,
+            ztop + PAR + 120.0, ztop + PAR + 138.0); made += 1
+        for k in range(3):
+            sy = -30 + 22 * k
+            box(r, 'Frame_ServiceSlot%d' % k, stx + stw * 0.34,
+                stx + stw * 0.66, -38, -30,
+                ztop * (0.25 + 0.22 * k), ztop * (0.25 + 0.22 * k) + 60)
+            made += 1
 
     print('%s [modern]: %d boxes, height %d uu' % (n, made, GF + F * FH + PAR))
     return GF + F * FH + PAR
@@ -740,6 +1546,22 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             -DECO_PROUD - 8, 62, 46, GF - 46); made += 1
     box(g, 'Band_BaseCap', x0 - 16, x0 + W + 16, -DECO_PROUD - 16, 62,
         GF - 46, GF - 12); made += 1
+    if spec.get('marquee'):
+        # THE MARQUEE - a flat cantilevered canopy over the whole entrance
+        # front, with a lit soffit and a banded fascia. Deco's one horizontal
+        # gesture on a building that is otherwise all verticals, and the
+        # thing that turns a frontage into a cinema.
+        mq = float(spec['marquee'])
+        box(g, 'Wall_Marquee', x0 - 14, x0 + W + 14, -mq, 10,
+            GF - 122, GF - 78); made += 1
+        box(g, 'Accent_MarqueeFascia', x0 - 18, x0 + W + 18, -mq - 12, -mq + 2,
+            GF - 130, GF - 74); made += 1
+        box(g, 'Interior_MarqueeSoffit', x0 - 8, x0 + W + 8, -mq + 8, 4,
+            GF - 128, GF - 122); made += 1
+        for k in range(6):
+            hx = x0 + W * (k + 0.5) / 6.0
+            box(g, 'Frame_MarqueeHang%d' % k, hx - 5, hx + 5, -mq * 0.5,
+                -mq * 0.5 + 8, GF - 78, GF - 40); made += 1
     for b in range(BAYS):
         sx0, sx1 = x0 + b * bw + DECO_PIL_W, x0 + (b + 1) * bw
         if sx1 - sx0 < 80: continue
@@ -751,12 +1573,110 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 58, GF - 52); made += 1
     jitter(g)
 
-    # ---- shaft: unbroken pilasters, fluted -------------------------------
+    # ---- shaft ------------------------------------------------------------
+    # STREAMLINE MODERNE is the same decade turned on its side. Deco proper
+    # pulls the eye UP with unbroken pilasters; streamline drives it ALONG
+    # with speed stripes, ribbon glazing and a rounded corner. Both are 1930s
+    # and they look nothing like each other, which is the point of a v2.
+    SL = bool(spec.get('streamline'))
+    GO = bool(spec.get('giant_order'))
+    BD = bool(spec.get('banded'))
+    FLT = bool(spec.get('flats'))
     sh = mkactor('BLD2_%s_Shaft' % n, origin, (0.0, yaw, 0.0))
-    for b in range(BAYS + 1):
-        px = min(x0 + b * bw, x0 + W - DECO_PIL_W)
-        box(sh, 'Wall_Pilaster%d' % b, px, px + DECO_PIL_W,
-            -DECO_PROUD, 60, GF - 12, ztop + PAR - 26); made += 1
+    if BD:
+        # DECO VIII - BANDED. No pilasters at all. Three deco recipes were
+        # reading as one building because all three were a row of fluted
+        # verticals and only the crown differed; ornament level is not a
+        # difference you can see from across a board. So this one drops the
+        # vertical order entirely and becomes HORIZONTAL: a continuous cill
+        # band and head band at every floor with punched openings between.
+        # Same era, opposite axis, unmistakable at any distance.
+        for f in range(max(1, F)):
+            zb = GF + f * FH
+            box(sh, 'Band_Course%d' % f, x0 - 12, x0 + W + 12, -26, 40,
+                zb - 14, zb + 24); made += 1
+        box(sh, 'Wall_EndL', x0, x0 + 34, -20, 58, GF - 12,
+            ztop + PAR - 24); made += 1
+        box(sh, 'Wall_EndR', x0 + W - 34, x0 + W, -20, 58, GF - 12,
+            ztop + PAR - 24); made += 1
+    elif GO:
+        # DECO INDUSTRIAL - the giant order. A power station or pumping works
+        # of the same decade: brick piers running the FULL height with one
+        # enormous recessed bay between each pair, arched at the head. No
+        # storeys expressed at all, which is what makes it read as industry
+        # rather than as offices, and it is the cheapest facade in the
+        # catalogue - a handful of very large boxes.
+        pw = DECO_PIL_W * 1.35
+        for b in range(BAYS + 1):
+            px = min(x0 + b * bw, x0 + W - pw)
+            box(sh, 'Wall_GiantPier%d' % b, px, px + pw, -DECO_PROUD * 0.55,
+                60, 0.0, ztop + PAR - 20); made += 1
+        for b in range(BAYS):
+            rx0 = x0 + b * bw + pw
+            rx1 = x0 + (b + 1) * bw
+            if rx1 - rx0 < 70:
+                continue
+            # the ARCH, stepped: five courses narrowing to the crown, which is
+            # how a card model makes a semicircle and how a bricklayer makes
+            # a relieving arch anyway
+            ah = min(FH * 0.9, (rx1 - rx0) * 0.5)
+            for k in range(5):
+                t = (k + 1) / 5.0
+                ins = (rx1 - rx0) * 0.5 * (1.0 - (1.0 - t * t) ** 0.5)
+                box(sh, 'Wall_Arch%d_%d' % (b, k), rx0 + ins, rx1 - ins,
+                    -6, 54, ztop - 40 - ah + ah * t * 0.98,
+                    ztop - 40 - ah + ah * (t + 0.22)); made += 1
+            box(sh, 'Glass_Giant%d' % b, rx0 + 14, rx1 - 14, 36, 39,
+                GF * 0.55, ztop - 40 - ah * 0.10); made += 1
+            box(sh, 'Interior_Giant%d' % b, rx0 + 8, rx1 - 8, 48, 54,
+                GF * 0.55, ztop - 40 - ah * 0.10); made += 1
+            nmb = max(2, int((rx1 - rx0) / 120.0))
+            for k in range(1, nmb):
+                mx = rx0 + (rx1 - rx0) * k / float(nmb)
+                box(sh, 'Mullion_Giant%d_%d' % (b, k), mx - 5, mx + 5, 32, 38,
+                    GF * 0.55, ztop - 40 - ah * 0.10); made += 1
+            for k in range(1, 5):
+                tz = GF * 0.55 + (ztop - 40 - ah * 0.10 - GF * 0.55) * k / 5.0
+                box(sh, 'Frame_GiantTrans%d_%d' % (b, k), rx0 + 14, rx1 - 14,
+                    30, 40, tz - 5, tz + 5); made += 1
+    elif SL:
+        # the ROUNDED END, stepped in plan. A card model cannot bend, so the
+        # curve is four returns of decreasing width - which is exactly how a
+        # modelmaker fakes a radius, and it reads as one at this scale.
+        rad = float(spec.get('corner_radius', 150.0))
+        rl = spec.get('corner_side', 'left') == 'left'
+        for k in range(4):
+            t0 = rad * (k / 4.0)
+            t1 = rad * ((k + 1) / 4.0)
+            inset = rad - (rad * rad - (rad - t1) * (rad - t1)) ** 0.5
+            cx_0 = (x0 - 6 + t0) if rl else (x0 + W + 6 - t1)
+            cx_1 = (x0 - 6 + t1) if rl else (x0 + W + 6 - t0)
+            box(sh, 'Wall_Round%d' % k, cx_0, cx_1,
+                -DECO_PROUD + inset, 60, GF - 12, ztop + PAR - 26); made += 1
+        # SPEED STRIPES: three continuous bands wrapping the whole frontage,
+        # the accent one in the middle. Nothing interrupts them - an
+        # interrupted stripe is a moulding, a continuous one is speed.
+        for f in range(max(1, F)):
+            zb = GF + f * FH
+            for si, (dz, th, role) in enumerate(
+                    ((0.30, 13.0, 'Band_'), (0.44, 9.0, 'Accent_'),
+                     (0.58, 13.0, 'Band_'))):
+                box(sh, '%sStripe%d_%d' % (role, f, si),
+                    x0 - 10, x0 + W + 10, -DECO_PROUD - 10, 30,
+                    zb + FH * dz, zb + FH * dz + th); made += 1
+        made += 0
+    else:
+      for b in range(BAYS + 1):
+        # DECO VI - FLATS uses SHALLOW piers and no fluting. A block of flats
+        # of this date is not a commercial palace: the piers are a structural
+        # rhythm, not an order, and the balcony is what you are meant to see.
+        pilw = DECO_PIL_W * (0.55 if FLT else 1.0)
+        prd = DECO_PROUD * (0.34 if FLT else 1.0)
+        px = min(x0 + b * bw, x0 + W - pilw)
+        box(sh, 'Wall_Pilaster%d' % b, px, px + pilw,
+            -prd, 60, GF - 12, ztop + PAR - 26); made += 1
+        if FLT:
+            continue
         # Fluting reads as CARVED STONE, so it takes the wall colour (Band_)
         # rather than the saturated Accent_ role. Spandrels take Frame_, the
         # dark metal, which is what sat between deco windows.
@@ -764,12 +1684,93 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             fx = px + DECO_PIL_W * k / 3.0
             box(sh, 'Band_Flute%d_%d' % (b, k), fx - DECO_FLUTE/2, fx + DECO_FLUTE/2,
                 -DECO_PROUD - 9, -DECO_PROUD + 4, GF - 4, ztop + PAR - 40); made += 1
+      if spec.get('chevron'):
+        # ZIGZAG DECO. A chevron band across each spandrel, built as a stepped
+        # V from short boxes - the ornament that gives the style its other
+        # name, and the only figurative thing in the whole catalogue. Cut
+        # card does this beautifully and does curves badly, which is why deco
+        # ornament suits this project so well.
+        for f in range(max(1, F)):
+            zb = GF + f * FH + FH * 0.06
+            for b in range(BAYS):
+                wx0 = x0 + b * bw + DECO_PIL_W
+                wx1 = x0 + (b + 1) * bw
+                if wx1 - wx0 < 90:
+                    continue
+                nz = 3
+                seg = (wx1 - wx0) / float(nz * 2)
+                for zi in range(nz * 2):
+                    up = (zi % 2 == 0)
+                    sx_ = wx0 + zi * seg
+                    for st in range(3):
+                        t = st / 3.0
+                        zz = zb + (t if up else (1.0 - t)) * 26.0
+                        box(sh, 'Accent_Chev%d_%d_%d_%d' % (f, b, zi, st),
+                            sx_ + seg * t, sx_ + seg * (t + 0.40),
+                            -DECO_PROUD - 6, -DECO_PROUD + 6,
+                            zz, zz + 11); made += 1
     jitter(sh)
 
-    # ---- floors: glazing recessed into the channels -----------------------
-    for f in range(F):
+    # ---- floors -----------------------------------------------------------
+    # `0 if GO else F` - the giant order draws its own full-height glazing in
+    # the shaft and must NOT also get per-floor windows. This read
+    # `0 if not GO else F` from the day the giant order was added, i.e. it
+    # was inverted: every deco recipe EXCEPT the works ran zero floors and
+    # therefore had no glazing whatsoever. The pale stripes between the
+    # pilasters were the CORE showing through the gap where the windows
+    # should have been. It is why deco bound only six materials, why the
+    # ladders looked plain, and why three deco variants read as one building.
+    for f in range(0 if GO else F):
         z0, z1 = GF + f * FH, GF + (f + 1) * FH
         a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
+        if BD:
+            # punched openings between the courses - squarer and further
+            # apart than a deco channel, which is what an ordinary building
+            # of the period actually had
+            nw = max(2, int(round(W / 330.0)))
+            for k in range(nw):
+                wx0 = x0 + 48 + (W - 96) * k / float(nw)
+                wx1 = x0 + 48 + (W - 96) * (k + 0.62) / float(nw)
+                if wx1 - wx0 < 50:
+                    continue
+                wz0, wz1 = z0 + FH * 0.30, z1 - FH * 0.16
+                box(a, 'Wall_Reveal%d_%d' % (f, k), wx0 - 12, wx1 + 12,
+                    -8, 46, wz0 - 12, wz1 + 12); made += 1
+                box(a, 'Glass_Punch%d_%d' % (f, k), wx0, wx1, 34, 37,
+                    wz0, wz1); made += 1
+                box(a, 'Interior_Punch%d_%d' % (f, k), wx0 - 4, wx1 + 4,
+                    46, 52, wz0, wz1); made += 1
+                mxb = (wx0 + wx1) / 2.0
+                box(a, 'Mullion_Punch%d_%d' % (f, k), mxb - 4, mxb + 4,
+                    30, 35, wz0, wz1); made += 1
+                box(a, 'Frame_PunchCill%d_%d' % (f, k), wx0 - 16, wx1 + 16,
+                    -14, 40, wz0 - 16, wz0 - 4); made += 1
+            jitter(a)
+            continue
+        if SL:
+            # RIBBON GLAZING, one run per floor, unbroken from end to end and
+            # turning the rounded corner. The horizontal is the whole idea, so
+            # nothing vertical is allowed to cut it except thin glazing bars.
+            rad = float(spec.get('corner_radius', 150.0))
+            rl = spec.get('corner_side', 'left') == 'left'
+            rx0 = (x0 + rad * 0.55) if rl else (x0 + 26)
+            rx1 = (x0 + W - 26) if rl else (x0 + W - rad * 0.55)
+            gz0, gz1 = z0 + FH * 0.30, z0 + FH * 0.74
+            box(a, 'Glass_Ribbon%d' % f, rx0, rx1, DECO_GLAZE,
+                DECO_GLAZE + 3, gz0, gz1); made += 1
+            box(a, 'Interior_Ribbon%d' % f, rx0, rx1, DECO_GLAZE + 10,
+                DECO_GLAZE + 16, gz0, gz1); made += 1
+            box(a, 'Frame_RibbonHead%d' % f, rx0 - 8, rx1 + 8,
+                DECO_GLAZE - 8, DECO_GLAZE + 2, gz1 - 7, gz1 + 5); made += 1
+            box(a, 'Frame_RibbonCill%d' % f, rx0 - 10, rx1 + 10,
+                DECO_GLAZE - 12, DECO_GLAZE + 2, gz0 - 6, gz0 + 6); made += 1
+            nb = max(3, int((rx1 - rx0) / 150.0))
+            for k in range(1, nb):
+                mx = rx0 + (rx1 - rx0) * k / float(nb)
+                box(a, 'Mullion_Rib%d_%d' % (f, k), mx - 3, mx + 3,
+                    DECO_GLAZE - 4, DECO_GLAZE + 1, gz0, gz1); made += 1
+            jitter(a)
+            continue
         for b in range(BAYS):
             wx0, wx1 = x0 + b * bw + DECO_PIL_W, x0 + (b + 1) * bw
             if wx1 - wx0 < 80: continue
@@ -787,28 +1788,588 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             mx = (wx0 + wx1) / 2.0
             box(a, 'Mullion_B%dV' % b, mx - 3, mx + 3, DECO_GLAZE - 5, DECO_GLAZE + 1,
                 wz0, wz1); made += 1
+            if spec.get('deco_balcony') and f >= 1:
+                # DECO APARTMENTS. The balcony IS the building - it was 66 uu
+                # deep on every other bay and simply did not register next to
+                # a 50 uu pilaster. Now it is 118 deep, runs the FULL bay, and
+                # appears on every floor above the first: a continuous
+                # sunbalcony, which is what the period actually built and
+                # what makes this read as flats rather than as offices.
+                bd_ = 100.0
+                box(a, 'Band_DBalc%d_%d' % (f, b), wx0 - 10, wx1 + 10,
+                    -bd_, 16, wz0 - 20, wz0 + 4); made += 1
+                box(a, 'Wall_DBalcFront%d_%d' % (f, b), wx0 - 10, wx1 + 10,
+                    -bd_ - 10, -bd_ + 8, wz0 + 4, wz0 + 74); made += 1
+                box(a, 'Accent_DBalcRail%d_%d' % (f, b), wx0 - 15, wx1 + 15,
+                    -bd_ - 17, -bd_ + 13, wz0 + 74, wz0 + 88); made += 1
+                for _e in (wx0 - 10, wx1 - 4):
+                    box(a, 'Wall_DBalcEnd%d_%d_%d' % (f, b, int(_e)),
+                        _e, _e + 14, -bd_, 12, wz0 + 4, wz0 + 74); made += 1
         jitter(a)
 
     # ---- roof: STEPPED parapet, the deco silhouette -----------------------
     r = mkactor('BLD2_%s_Roof' % n, origin, (0.0, yaw, 0.0))
     mid = BAYS // 2
+    # THE CROWN IS THE TIER. Deco does not gain grandeur by setting floors
+    # back - build_deco runs its pilasters unbroken from base to parapet, and
+    # a setback would tear the shaft apart. It gains it at the TOP, so the
+    # step is a per-tier parameter: a showroom gets a flat coping, a beacon
+    # gets a ziggurat. That is the same lever the vernacular cornice pulls.
+    cs = float(spec.get('crown_step', 1.9))
     for b in range(BAYS):
         px0, px1 = x0 + b * bw, x0 + (b + 1) * bw
-        step = PAR * (1.9 if b == mid else (1.35 if abs(b - mid) == 1 else 1.0))
+        d = abs(b - mid)
+        f = 1.0 + (cs - 1.0) * (1.0 if d == 0 else (0.55 if d == 1 else
+                                                   (0.24 if d == 2 else 0.0)))
+        step = PAR * f
         box(r, 'Wall_Parapet%d' % b, px0, px1, -18, 34, ztop, ztop + step); made += 1
         box(r, 'Band_Cap%d' % b, px0 - 8, px1 + 8, -28, 42,
             ztop + step, ztop + step + 16); made += 1
     box(r, 'Wall_ParapetL', x0, x0 + 26, 30, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
-    box(r, 'Roof_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
-    for u in range(spec.get('roof_units', 1)):
-        ux = x0 + W * (0.3 + 0.4 * u)
-        uw = 150 + rnd.random() * 110
-        box(r, 'Roof_Unit%d' % u, ux, ux + uw, 210 + u * 95, 210 + u * 95 + uw * 0.8,
-            ztop, ztop + 55 + rnd.random() * 40); made += 1
+    box(r, 'Wall_ParapetB', x0, x0 + W, D - 26, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Tile_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
+    # REAL PLANT, not boxes. These were `Roof_Unit` cubes - the same stand-in
+    # the other styles carried until avkit arrived, and deco was simply never
+    # revisited. roof_plant scales the kit to the roof and scatters it.
+    made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
+                       ymin=190.0, yspread=95.0, D=D)
+    if F >= 1 and spec.get('stair_head', True):
+        made += stair_head(r, x0, W, D, ztop, rnd)
+    # THE ZIGGURAT. A single step per bay is a stepped parapet, not a deco
+    # crown - the silhouette that makes the style is a STACK of setbacks
+    # narrowing toward the centre. Built above the tallest bay so it reads as
+    # one mass rising out of the parapet rather than an object placed on it.
+    zt = ztop + PAR * cs + 16
+    if spec.get('clock'):
+        # A TERMINAL'S CLOCK TOWER. Square, set at one end, stepping in twice
+        # before the clock stage - the civic timepiece that every station and
+        # town hall of the period put on the skyline.
+        kh = float(spec['clock'])
+        kw = min(W * 0.20, 190.0)
+        kx = x0 + W * float(spec.get('clock_at', 0.16))
+        kx = max(x0 + 16, min(kx, x0 + W - kw - 16))
+        for st in range(3):
+            o = st * 13.0
+            box(r, 'Wall_Clock%d' % st, kx + o, kx + kw - o, 30 + o,
+                30 + kw - o, ztop + kh * st / 3.0, ztop + kh * (st + 1) / 3.0)
+            made += 1
+            box(r, 'Band_ClockSet%d' % st, kx + o - 10, kx + kw - o + 10,
+                20 + o, 40 + kw - o, ztop + kh * (st + 1) / 3.0 - 16,
+                ztop + kh * (st + 1) / 3.0); made += 1
+        # the dial, on the street face
+        cxm = kx + kw * 0.5
+        box(r, 'Accent_Dial', cxm - 44, cxm + 44, 12, 20,
+            ztop + kh * 0.70, ztop + kh * 0.92); made += 1
+        box(r, 'Frame_DialRim', cxm - 52, cxm + 52, 6, 14,
+            ztop + kh * 0.67, ztop + kh * 0.95); made += 1
+    if spec.get('blade'):
+        # THE BLADE. A cinema's vertical sign, standing clear of the parapet
+        # at one end and running most of the way down the facade - the single
+        # tallest thing on a low building, and the reason you can find the
+        # picture house from the end of the street.
+        bh = float(spec['blade'])
+        bx = x0 + W * float(spec.get('blade_at', 0.14))
+        bx = max(x0 + 40, min(bx, x0 + W - 40))
+        box(r, 'Accent_Blade', bx - 34, bx + 34, -DECO_PROUD - 40,
+            -DECO_PROUD + 6, ztop * 0.34, ztop + PAR + bh); made += 1
+        box(r, 'Frame_BladeEdgeL', bx - 41, bx - 30, -DECO_PROUD - 47,
+            -DECO_PROUD + 10, ztop * 0.34, ztop + PAR + bh); made += 1
+        box(r, 'Frame_BladeEdgeR', bx + 30, bx + 41, -DECO_PROUD - 47,
+            -DECO_PROUD + 10, ztop * 0.34, ztop + PAR + bh); made += 1
+        for k in range(4):
+            box(r, 'Band_BladeStep%d' % k, bx - 34 + k * 5, bx + 34 - k * 5,
+                -DECO_PROUD - 44 + k * 4, -DECO_PROUD + 8,
+                ztop + PAR + bh + k * 15, ztop + PAR + bh + (k + 1) * 15)
+            made += 1
+    if spec.get('stack'):
+        # THE STACK. One tall brick chimney, square, with a corbelled cap -
+        # the silhouette that says works from anywhere on the board, and the
+        # thing canon slot 4 lists first in its rooftop kit.
+        kh = float(spec['stack'])
+        kw = min(W * 0.15, 150.0)
+        kx = x0 + W * float(spec.get('stack_at', 0.80))
+        kx = max(x0 + 20, min(kx, x0 + W - kw - 20))
+        ky = 200.0
+        box(r, 'Wall_Stack', kx, kx + kw, ky, ky + kw, 0.0, ztop + kh); made += 1
+        for k in range(3):
+            o = 7.0 + 6.0 * k
+            box(r, 'Band_StackCap%d' % k, kx - o, kx + kw + o, ky - o,
+                ky + kw + o, ztop + kh + k * 13, ztop + kh + (k + 1) * 13)
+            made += 1
+    if SL:
+        # A streamline building does not step. It has a flat wrapped parapet
+        # and, if it is showing off, one vertical fin - the single upright in
+        # a building made of horizontals, which is what makes it read.
+        if spec.get('fin'):
+            fh = float(spec['fin'])
+            fx = x0 + W * (0.16 if spec.get('corner_side', 'left') == 'left'
+                           else 0.84)
+            box(r, 'Accent_Fin', fx - 20, fx + 20, -DECO_PROUD - 12, 26,
+                ztop, ztop + PAR + fh); made += 1
+            box(r, 'Band_FinCap', fx - 27, fx + 27, -DECO_PROUD - 19, 32,
+                ztop + PAR + fh, ztop + PAR + fh + 15); made += 1
+            box(r, 'Frame_Flagpole', fx - 5, fx + 5, -14, -4,
+                ztop + PAR + fh + 15, ztop + PAR + fh + 15 + fh * 0.55)
+            made += 1
+    elif cs > 1.4:
+        LEVELS = [(0.58, 0.52), (0.34, 0.46)]
+        if cs > 2.2:
+            LEVELS.append((0.17, 0.40))
+        cxm = x0 + W * 0.5
+        for li, (frac, hf) in enumerate(LEVELS):
+            hw = W * frac / 2.0
+            hgt = PAR * hf
+            box(r, 'Wall_Crown%d' % li, cxm - hw, cxm + hw, -10, 46,
+                zt, zt + hgt); made += 1
+            box(r, 'Band_CrownCap%d' % li, cxm - hw - 9, cxm + hw + 9,
+                -19, 55, zt + hgt, zt + hgt + 13); made += 1
+            # a fluted pilaster centred on each setback keeps the vertical
+            # emphasis running all the way to the top
+            for fx in (cxm - hw * 0.55, cxm + hw * 0.55):
+                box(r, 'Band_CrownFlute%d_%d' % (li, int(fx)),
+                    fx - DECO_FLUTE / 2, fx + DECO_FLUTE / 2, -14, -4,
+                    zt + 6, zt + hgt - 6); made += 1
+            zt += hgt + 13
+    # A MAST on the tiers that have earned one - the deco beacon, and the one
+    # piece of the silhouette that is not stone.
+    if spec.get('mast'):
+        mh = float(spec['mast'])
+        mx = x0 + W * 0.5
+        box(r, 'Frame_MastBase', mx - 34, mx + 34, 142, 210, zt, zt + 46); made += 1
+        box(r, 'Frame_Mast', mx - 14, mx + 14, 162, 190,
+            zt + 46, zt + 46 + mh); made += 1
+        box(r, 'Frame_MastTip', mx - 6, mx + 6, 170, 182,
+            zt + 46 + mh, zt + 46 + mh * 1.30); made += 1
     jitter(r)
 
     print('%s [deco]: %d boxes, height %d uu' % (n, made, ztop + PAR))
+    return ztop + PAR
+
+
+# ---------------------------------------------------------------------------
+# Contemporary mixed-use, 2010-2025.
+#
+# The third era, and the one the city actually gets built out of. Our `modern`
+# is 1960s: one extruded prism, a repeating grid, horizontal ribbon glazing
+# behind a proud spandrel band. Deco is vertical. Vernacular is a bay rhythm.
+# None of them is what a mid-rise built in the last fifteen years looks like.
+#
+# Contemporary is MASSING-LED rather than facade-led:
+#   - stacked volumes that shift and step, not one prism
+#   - two cladding systems meeting on a clean vertical line
+#   - fenestration irregular WITHIN a rhythm, some bays solid
+#   - recessed loggias and projecting balconies: shadow is the ornament
+#   - a tall transparent ground floor behind exposed columns, deep soffit
+#
+# WHAT IS DELIBERATELY ABSENT. Mullion detail finer than ~6 uu, gaskets,
+# spandrel texture - the things `modern` uses. At 1:87 they turn to mush, and
+# the studio-director skill puts geometric reveal above all of it. Everything
+# here is a real hole or a real step.
+#
+# Same depth budget as every other style: facade in y 0..60, core front at 62.
+# ---------------------------------------------------------------------------
+CONT_COL_W = 56.0        # exposed ground-floor column
+CONT_SOFFIT = 44.0       # how far the ground-floor soffit projects
+CONT_LOGGIA_D = 150.0    # depth of a recessed loggia - the deepest shadow
+CONT_BALC = 112.0        # how far a balcony slab stands proud
+CONT_GLAZE = 42.0        # window plane, set back behind the cladding face
+
+
+def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
+    BAYS = spec['bays']
+    rnd = random.Random(spec.get('seed', 0))
+    ztop = GF + F * FH
+    bw = W / float(BAYS)
+    made = 0
+
+    # THE SPLIT is a vertical line, not a horizontal band. A contemporary
+    # block changes cladding across the plan - a brick or fibre-cement volume
+    # beside a metal one - which is what makes it read as two masses stuck
+    # together rather than one wall wearing two paints.
+    split_b = max(1, min(BAYS - 1, int(round(BAYS * spec.get('clad_split', 0.55)))))
+
+    def clad(b):
+        """Component prefix for bay `b`. `_B_` is picked up by panel_overrides."""
+        return 'Wall_' if b < split_b else 'Wall_B_'
+
+    # ---- ground floor: glass behind exposed columns, deep soffit ----------
+    g = mkactor('BLD2_%s_GF' % n, origin, (0.0, yaw, 0.0))
+    box(g, 'Wall_Plinth', x0 - 6, x0 + W + 6, -16, D * 0.08, 0, 26); made += 1
+    sx0, sx1 = x0 + 40.0, x0 + W - 40.0
+    # the shopfront is SET BACK, so the columns stand in front of it and the
+    # soffit above throws a shadow down the glass - that recess is the whole
+    # ground-floor idea and it costs four boxes
+    box(g, 'Glass_Shop', sx0, sx1, 96, 99, 26, GF - 52); made += 1
+    box(g, 'Interior_Shop', sx0 - 6, sx1 + 6, 108, 116, 26, GF - 48); made += 1
+    for k in range(1, BAYS):
+        mx = x0 + k * bw
+        box(g, 'Mullion_Shop%d' % k, mx - 3, mx + 3, 90, 97, 26, GF - 52)
+        made += 1
+    for b in range(BAYS + 1):
+        px = min(x0 + b * bw, x0 + W - CONT_COL_W)
+        px = max(px, x0)
+        box(g, 'Wall_Col%d' % b, px, px + CONT_COL_W, -8, 52, 0, GF - 46)
+        made += 1
+    # deep soffit over the whole frontage, projecting past the columns
+    box(g, 'Band_Soffit', x0 - 10, x0 + W + 10, -CONT_SOFFIT, 60,
+        GF - 46, GF - 10); made += 1
+    box(g, 'Accent_SoffitEdge', x0 - 10, x0 + W + 10,
+        -CONT_SOFFIT - 7, -CONT_SOFFIT, GF - 46, GF - 4); made += 1
+
+    # ---- shaft: CURTAIN WALL ----------------------------------------------
+    # CANON SLOT 5 (highrise), blessed for "silhouette and massing carrying
+    # everything, printed-grid facades that are exactly enough at city range".
+    # Its modern towers - the teal, the green, the black - are one idea: a
+    # clean prism wearing an unbroken vertical grid, with a mechanical box on
+    # the roof as the only crown.
+    #
+    # The first version of this style was punched windows between 26 uu piers
+    # with loggias, balconies and stepped terraces. That is relief where the
+    # canon asks for restraint, and at city range it reads as noise. The
+    # owner's verdict was that it did not look modern at all, and it did not.
+    #
+    # MULLIONS RUN THE FULL HEIGHT as single boxes rather than per floor.
+    # That is what makes a curtain wall read as one skin instead of stacked
+    # storeys, and it is far cheaper too: about twenty boxes for a shaft.
+    SH = float(spec.get('setback') or 0.0)
+    SHF = max(0, int(spec.get('setback_floors', 0)))
+
+    def back_at(f):
+        import cores as _co
+        return _co.setback_at(spec, f, F)
+
+    if F >= 1 and spec.get('green_terrace'):
+        # A PLANTED TERRACE AT EVERY FLOOR. The contemporary building that is
+        # a hillside: each storey steps back from the one below and the slab
+        # it leaves is planted. It is the only recipe where the greenery is
+        # structural rather than decoration - take the planting away and the
+        # building is just a ziggurat.
+        sh = mkactor('BLD2_%s_Terr' % n, origin, (0.0, yaw, 0.0))
+        stp = float(spec.get('terrace_step', 46.0))
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            bk = stp * f
+            box(sh, 'Wall_TerrWall%d' % f, x0, x0 + W, bk, bk + 54,
+                z0, z1); made += 1
+            nb2 = max(3, int(round(W / 280.0)))
+            for c in range(nb2):
+                ox0 = x0 + W * c / float(nb2) + 20
+                ox1 = x0 + W * (c + 1) / float(nb2) - 20
+                if ox1 - ox0 < 46:
+                    continue
+                box(sh, 'Glass_Terr%d_%d' % (f, c), ox0, ox1, bk + 40,
+                    bk + 43, z0 + FH * 0.18, z1 - FH * 0.10); made += 1
+                box(sh, 'Interior_Terr%d_%d' % (f, c), ox0, ox1, bk + 50,
+                    bk + 56, z0 + FH * 0.18, z1 - FH * 0.10); made += 1
+            # the slab left by the step back, and the planter on it
+            box(sh, 'Band_TerrSlab%d' % f, x0 - 8, x0 + W + 8, bk - stp - 8,
+                bk + 8, z0 - 14, z0 + 6); made += 1
+            box(sh, 'Wall_Planter%d' % f, x0 + 10, x0 + W - 10,
+                bk - stp - 2, bk - stp + 30, z0 + 6, z0 + 46); made += 1
+            box(sh, 'Grass_Bed%d' % f, x0 + 18, x0 + W - 18,
+                bk - stp + 4, bk - stp + 26, z0 + 40, z0 + 52); made += 1
+            box(sh, 'Rail_Terr%d' % f, x0 + 10, x0 + W - 10, bk - stp - 6,
+                bk - stp + 2, z0 + 46, z0 + 96); made += 1
+            # real planting on the wider terraces
+            import avkit as _av2
+            nt = max(2, int(W / 420.0))
+            for t2 in range(nt):
+                tx = x0 + 60 + (W - 120) * (t2 + 0.5) / nt
+                gsc = 58.0 / _av2.size('grass_tuft')[2]
+                piece(sh, 'TerrTuft%d_%d' % (f, t2),
+                      _av2.path('grass_tuft'), (tx, bk - stp + 14, z0 + 50),
+                      (0.0, rnd.uniform(0, 360), 0.0), scale=gsc,
+                      mat=_av2.mat('grass_tuft')); made += 1
+
+    elif F >= 1 and spec.get('brise'):
+        # BRISE-SOLEIL. A continuous glass box behind a screen of vertical
+        # fins standing well clear of it. The fins are the facade; the glass
+        # behind them barely registers, which is the point - it is a
+        # sunshade doing the architecture, and it throws a different shadow
+        # every hour, which no printed grid does.
+        sh = mkactor('BLD2_%s_Screen' % n, origin, (0.0, yaw, 0.0))
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            box(sh, 'Glass_Behind%d' % f, x0 + 12, x0 + W - 12, 44, 47,
+                z0, z1); made += 1
+            box(sh, 'Interior_Behind%d' % f, x0 + 12, x0 + W - 12, 54, 60,
+                z0, z1); made += 1
+            box(sh, 'Frame_SlabLine%d' % f, x0 - 4, x0 + W + 4, 30, 52,
+                z0 - 6, z0 + 16); made += 1
+        FIN = float(spec.get('fin_proj', 86.0))
+        nf = max(6, int(round(W / float(spec.get('fin_step', 96.0)))))
+        for k in range(nf + 1):
+            fx = x0 + W * k / float(nf)
+            fx = min(max(fx, x0), x0 + W)
+            box(sh, 'Frame_Brise%d' % k, fx - 7, fx + 7, -FIN, 34,
+                GF - 10, GF + F * FH + 10); made += 1
+        # top and bottom rails tying the screen together
+        for zz, tag in ((GF - 22.0, 'Lo'), (GF + F * FH + 10.0, 'Hi')):
+            box(sh, 'Band_BriseRail%s' % tag, x0 - 10, x0 + W + 10,
+                -FIN - 8, 38, zz, zz + 22); made += 1
+
+    elif F >= 1 and spec.get('stacked'):
+        # SHIFTED VOLUMES. The contemporary building that is composed rather
+        # than clad: three or four blocks of floors, each one stepping the
+        # opposite way from the last so the mass cantilevers over itself.
+        # The whole read is the SHADOW under a cantilever, so the shifts have
+        # to be big - 90 uu and up - and there must be very little else on
+        # the elevation competing with them.
+        sh = mkactor('BLD2_%s_Stack' % n, origin, (0.0, yaw, 0.0))
+        blk = max(2, int(spec.get('stack_blocks', 3)))
+        amp = float(spec.get('stack_shift', 105.0))
+        per = max(1, F // blk)
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            bi = min(blk - 1, f // per)
+            off = amp * (1.0 if bi % 2 else 0.0) - amp * 0.5
+            first = (f == bi * per) and bi > 0
+            if first:
+                # the cantilever soffit - the shadow that is the whole idea
+                box(sh, 'Band_Soffit%d' % f, x0 - 10, x0 + W + 10,
+                    off - 16, off + 74, z0 - 20, z0 + 6); made += 1
+            box(sh, 'Wall_Block%s%d' % ('B_' if bi % 2 else '', f),
+                x0, x0 + W, off, off + 56, z0, z1); made += 1
+            nb2 = max(3, int(round(W / 260.0)))
+            for c in range(nb2):
+                ox0 = x0 + W * c / float(nb2) + 22
+                ox1 = x0 + W * (c + 1) / float(nb2) - 22
+                if ox1 - ox0 < 46:
+                    continue
+                box(sh, 'Glass_Blk%d_%d' % (f, c), ox0, ox1, off + 40,
+                    off + 43, z0 + FH * 0.24, z1 - FH * 0.12); made += 1
+                box(sh, 'Interior_Blk%d_%d' % (f, c), ox0, ox1, off + 50,
+                    off + 56, z0 + FH * 0.24, z1 - FH * 0.12); made += 1
+                box(sh, 'Frame_BlkHead%d_%d' % (f, c), ox0 - 8, ox1 + 8,
+                    off + 32, off + 45, z1 - FH * 0.12 - 8,
+                    z1 - FH * 0.12 + 4); made += 1
+        box(sh, 'Band_StackCap', x0 - 12, x0 + W + 12, -amp * 0.5 - 14,
+            amp * 0.5 + 70, GF + F * FH - 14, GF + F * FH + 8); made += 1
+
+    elif F >= 1 and spec.get('rainscreen'):
+        # PANELISED METAL RAINSCREEN with syncopated openings - the third
+        # contemporary building. v1 is a glass prism, v2 is an expressed
+        # timber frame; this is a skin of flat panels with REVEAL JOINTS
+        # between them and the windows placed in a rhythm that deliberately
+        # refuses to line up into a grid.
+        #
+        # The irregularity is the whole point and it has to be a RULE, not a
+        # random scatter: a facade that is random reads as broken, one that
+        # is syncopated reads as designed. The pattern below walks by a
+        # co-prime step so it never repeats within a normal building height.
+        sh = mkactor('BLD2_%s_Skin' % n, origin, (0.0, yaw, 0.0))
+        cols = max(4, int(round(W / 190.0)))
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            box(sh, 'Wall_Skin%d' % f, x0, x0 + W, 18, 56, z0, z1); made += 1
+            # horizontal reveal joint at every floor line
+            box(sh, 'Frame_JointH%d' % f, x0 - 2, x0 + W + 2, 12, 20,
+                z1 - 7, z1); made += 1
+            for c in range(cols):
+                px0 = x0 + W * c / float(cols)
+                px1 = x0 + W * (c + 1) / float(cols)
+                # vertical reveal joint between panels
+                box(sh, 'Frame_JointV%d_%d' % (f, c), px0 - 3, px0 + 3,
+                    12, 20, z0, z1); made += 1
+                # SYNCOPATION: 7 and 3 are co-prime with most column counts,
+                # so the solid bays walk across the elevation instead of
+                # stacking into a stripe
+                # `regular` is contemporary V: same skin, no syncopation.
+                # A quiet building needs the rhythm to line up, and the
+                # difference between v3 and v5 is entirely this branch.
+                if not spec.get('regular'):
+                    if (c * 3 + f * 7) % 5 == 0:
+                        continue                   # a blind panel
+                wide = (not spec.get('regular')) and ((c + f) % 4 == 0)
+                ox0 = px0 + 16
+                ox1 = (px1 + (px1 - px0) * 0.72 - 16) if wide else (px1 - 16)
+                ox1 = min(ox1, x0 + W - 10)
+                if ox1 - ox0 < 44:
+                    continue
+                zz0 = z0 + FH * (0.20 if wide else 0.28)
+                zz1 = z1 - FH * 0.14
+                box(sh, 'Frame_Reveal%d_%d' % (f, c), ox0 - 9, ox1 + 9,
+                    14, 52, zz0 - 9, zz1 + 9); made += 1
+                box(sh, 'Glass_Panel%d_%d' % (f, c), ox0, ox1, 44, 47,
+                    zz0, zz1); made += 1
+                box(sh, 'Interior_Panel%d_%d' % (f, c), ox0, ox1, 54, 60,
+                    zz0, zz1); made += 1
+        box(sh, 'Band_SkinCap', x0 - 9, x0 + W + 9, 8, 62,
+            GF + F * FH - 14, GF + F * FH + 6); made += 1
+
+    elif F >= 1 and spec.get('timber'):
+        # MASS TIMBER. The other contemporary building, and the Portland one:
+        # a CLT frame with its glulam columns and beams SHOWN on the elevation
+        # instead of a curtain wall hiding everything behind glass. Same
+        # decade as the glass tower, opposite structural idea - one is a skin,
+        # this is a frame you can count the members of.
+        #
+        # It is also why this ladder stops low: CLT builds six to eight
+        # storeys, not seventeen, and a mass-timber tower would be a lie about
+        # the material.
+        sh = mkactor('BLD2_%s_Frame' % n, origin, (0.0, yaw, 0.0))
+        cols = max(2, BAYS)
+        cw = 30.0
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            # the glulam BEAM at every floor line, proud of the cladding
+            box(sh, 'Timber_Beam%d' % f, x0 - 8, x0 + W + 8, -26, 30,
+                z0 - 16, z0 + 16); made += 1
+            for b in range(cols):
+                bx0 = x0 + W * b / float(cols)
+                bx1 = x0 + W * (b + 1) / float(cols)
+                # infill panel, set back behind the frame
+                box(sh, 'Wall_B_Infill%d_%d' % (f, b), bx0 + cw, bx1 - cw,
+                    18, 54, z0 + 16, z1 - 16); made += 1
+                ox0, ox1 = bx0 + cw + 20, bx1 - cw - 20
+                if ox1 - ox0 > 50:
+                    # a punched opening with a DEEP timber reveal - the
+                    # shadow a frame building gets instead of a mullion grid
+                    box(sh, 'Timber_RevL%d_%d' % (f, b), ox0 - 14, ox0,
+                        18, 62, z0 + 34, z1 - 34); made += 1
+                    box(sh, 'Timber_RevR%d_%d' % (f, b), ox1, ox1 + 14,
+                        18, 62, z0 + 34, z1 - 34); made += 1
+                    box(sh, 'Timber_RevHead%d_%d' % (f, b), ox0 - 14, ox1 + 14,
+                        18, 62, z1 - 46, z1 - 34); made += 1
+                    box(sh, 'Glass_Punch%d_%d' % (f, b), ox0, ox1, 56, 59,
+                        z0 + 34, z1 - 34); made += 1
+                    box(sh, 'Interior_Punch%d_%d' % (f, b), ox0, ox1, 64, 70,
+                        z0 + 34, z1 - 34); made += 1
+                    mx = (ox0 + ox1) / 2.0
+                    box(sh, 'Mullion_Punch%d_%d' % (f, b), mx - 4, mx + 4,
+                        52, 57, z0 + 34, z1 - 34); made += 1
+                # SLAT BALCONY on a staggered share of the bays - timber
+                # balustrades read as slats at this scale, which no metal
+                # rail does
+                if f >= 1 and ((b + f) % 3 == 1):
+                    box(sh, 'Timber_BalcSlab%d_%d' % (f, b), bx0 + 6, bx1 - 6,
+                        -104, 8, z0 - 2, z0 + 14); made += 1
+                    for sk in range(5):
+                        sz = z0 + 18 + sk * 11
+                        box(sh, 'Timber_Slat%d_%d_%d' % (f, b, sk),
+                            bx0 + 6, bx1 - 6, -104, -96, sz, sz + 6); made += 1
+                    for ex in (bx0 + 6, bx1 - 12):
+                        box(sh, 'Timber_BalcEnd%d_%d_%d' % (f, b, int(ex)),
+                            ex, ex + 6, -104, 8, z0 + 14, z0 + 76); made += 1
+        # the glulam COLUMNS, full height, in front of everything
+        for b in range(cols + 1):
+            bx = x0 + W * b / float(cols)
+            bx = min(max(bx, x0), x0 + W)
+            box(sh, 'Timber_Col%d' % b, bx - cw / 2, bx + cw / 2, -30, 34,
+                GF - 20, GF + F * FH + 18); made += 1
+        box(sh, 'Band_FrameCap', x0 - 12, x0 + W + 12, -36, 40,
+            GF + F * FH + 18, GF + F * FH + 34); made += 1
+
+    elif F >= 1:
+        # THE EXPRESSED CORE - one solid clad strip beside the glass, the
+        # service core shown on the elevation. It gives the second cladding a
+        # job and it matches the canon's solid towers standing beside its
+        # glass ones, without breaking the prism.
+        core_w = bw * float(spec.get('core_bays', 1))
+        core_left = spec.get('core_side', 'right') == 'left'
+        cx0 = x0 if core_left else (x0 + W - core_w)
+        cx1 = cx0 + core_w
+        gx0 = cx1 if core_left else x0
+        gx1 = (x0 + W) if core_left else cx0
+
+        sh = mkactor('BLD2_%s_Shaft' % n, origin, (0.0, yaw, 0.0))
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            bk = back_at(f)
+            box(sh, 'Glass_Curtain%d' % f, gx0 + 8, gx1 - 8,
+                bk + CONT_GLAZE, bk + CONT_GLAZE + 3, z0, z1); made += 1
+            box(sh, 'Interior_Curtain%d' % f, gx0 + 8, gx1 - 8,
+                bk + CONT_GLAZE + 9, bk + CONT_GLAZE + 15, z0, z1); made += 1
+            # a SLIM spandrel at each floor line, set BACK behind the mullion
+            # face so the vertical always wins over the horizontal
+            box(sh, 'Frame_Spandrel%d' % f, gx0 + 8, gx1 - 8,
+                bk + CONT_GLAZE - 4, bk + CONT_GLAZE + 4,
+                z0 - 5, z0 + 20); made += 1
+            box(sh, 'Wall_B_Core%d' % f, cx0, cx1, bk, bk + 54, z0, z1); made += 1
+            box(sh, 'Glass_CoreSlot%d' % f, cx0 + core_w * 0.36,
+                cx0 + core_w * 0.64, bk + 40, bk + 43,
+                z0 + FH * 0.30, z1 - FH * 0.22); made += 1
+
+        bands = []
+        if SHF:
+            bands.append((0, F - SHF))
+            for k in range(SHF):
+                bands.append((F - SHF + k, F - SHF + k + 1))
+        else:
+            bands = [(0, F)]
+        MULL = float(spec.get('mullion_step', 88.0))
+        for bi, (f0, f1) in enumerate(bands):
+            if f1 <= f0:
+                continue
+            bk = back_at(f0)
+            zA, zB = GF + f0 * FH, GF + f1 * FH
+            nm = max(2, int(round((gx1 - gx0) / MULL)))
+            for k in range(nm + 1):
+                mx = gx0 + (gx1 - gx0) * k / float(nm)
+                mw = 11.0 if (k == 0 or k == nm) else 7.0
+                box(sh, 'Mullion_V%d_%d' % (bi, k), mx - mw / 2, mx + mw / 2,
+                    bk + CONT_GLAZE - 13, bk + CONT_GLAZE + 2, zA, zB)
+                made += 1
+            for cxp, tag in ((gx0, 'L'), (gx1, 'R')):
+                box(sh, 'Wall_Corner%d%s' % (bi, tag), cxp - 13, cxp + 13,
+                    bk - 4, bk + 58, zA, zB); made += 1
+            box(sh, 'Band_BandCap%d' % bi, gx0 - 6, gx1 + 6,
+                bk - 8, bk + 60, zB - 12, zB); made += 1
+
+        for f in range(1, F):
+            bk, pk = back_at(f), back_at(f - 1)
+            if bk > pk:
+                a2 = mkactor('BLD2_%s_T%d' % (n, f), origin, (0.0, yaw, 0.0))
+                box(a2, 'Band_TerraceSlab%d' % f, x0, x0 + W, pk - 6, bk + 16,
+                    GF + f * FH - 12, GF + f * FH + 4); made += 1
+                box(a2, 'Rail_Terrace%d' % f, x0 + 10, x0 + W - 10,
+                    pk - 2, pk + 4, GF + f * FH + 4, GF + f * FH + 54); made += 1
+
+
+    # ---- roof -------------------------------------------------------------
+    r = mkactor('BLD2_%s_Roof' % n, origin, (0.0, yaw, 0.0))
+    import cores as _co
+    ty = _co.setback_top(spec, F)
+    box(r, 'Wall_ParapetF', x0, x0 + W, ty - 4, ty + 26, ztop, ztop + PAR); made += 1
+    box(r, 'Band_Coping', x0 - 7, x0 + W + 7, ty - 12, ty + 34,
+        ztop + PAR, ztop + PAR + 12); made += 1
+    box(r, 'Wall_ParapetL', x0, x0 + 24, ty + 26, D, ztop, ztop + PAR - 16); made += 1
+    box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, ty + 26, D, ztop, ztop + PAR - 16); made += 1
+    box(r, 'Wall_ParapetB', x0, x0 + W, D - 24, D, ztop, ztop + PAR - 16); made += 1
+    box(r, 'Tile_Deck', x0, x0 + W, ty + 20, D, ztop - 8, ztop); made += 1
+    made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
+                       ymin=ty + 190.0, yspread=95.0, D=D)
+    if F >= 1 and spec.get('stair_head', True):
+        made += stair_head(r, x0, W, D, ztop, rnd)
+
+    # THE MECHANICAL PENTHOUSE. Canon slot 5's towers all carry one, and it is
+    # the ONLY crown a modern prism gets - no setback, no ornament, no mast.
+    # Smaller footprint than the roof, offset rather than centred, clad in the
+    # core material so it reads as the shaft arriving at the top.
+    mp = spec.get('mech')
+    if mp:
+        mw = W * float(mp.get('w', 0.34))
+        md = min(D * 0.42, 280.0)
+        mh = float(mp.get('h', 150.0))
+        mx = x0 + W * float(mp.get('at', 0.30))
+        mx = max(x0 + 20, min(mx, x0 + W - mw - 20))
+        my = ty + 120.0
+        box(r, 'Wall_B_Mech', mx, mx + mw, my, my + md,
+            ztop + PAR - 10, ztop + PAR - 10 + mh); made += 1
+        box(r, 'Band_MechCap', mx - 9, mx + mw + 9, my - 9, my + md + 9,
+            ztop + PAR - 10 + mh, ztop + PAR - 10 + mh + 13); made += 1
+        # louvre slots, the one piece of detail on it
+        for k in range(3):
+            ly = my + md * (0.22 + 0.26 * k)
+            box(r, 'Frame_MechLouvre%d' % k, mx - 3, mx + 3, ly, ly + md * 0.16,
+                ztop + PAR - 10 + mh * 0.30, ztop + PAR - 10 + mh * 0.78)
+            made += 1
+
+    print('%s [contemporary]: %d boxes, height %d uu' % (n, made, ztop + PAR))
     return ztop + PAR
 
 

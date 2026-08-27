@@ -65,7 +65,8 @@ def exposed_flanks(block):
         # take no commercial elevation slabs - hanging a full-lot-depth pier
         # grid beside a 520-deep walkup built a free-standing wall in its
         # garden
-        if l['kind'] != 'gen' or l.get('style') in ('house', 'walkup', 'works'):
+        import cores as _co
+        if l['kind'] != 'gen' or l.get('style') in _co.DETACHED:
             continue
         low_free = (i == 0 and not block.get('abuts_low')) or \
                    (i > 0 and lots[i-1]['kind'] not in ('gen', 'av'))
@@ -87,7 +88,7 @@ def exposed_rears(block):
         return []
     return [l for l in block['lots']
             if l['kind'] == 'gen'
-            and l.get('style') not in ('house', 'walkup', 'works')]
+            and l.get('style') not in __import__('cores').DETACHED]
 
 
 def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
@@ -145,11 +146,17 @@ def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 def flank(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """Dispatch on style, exactly as genbuild does. A modern corner wearing a
     vernacular side elevation would be two buildings pretending to be one."""
+    # FLAGS FIRST, style only as the fallback. See FLANK_KINDS above.
+    k = flank_kind(spec)
+    if k:
+        return flank_param(spec, sign, origin, yaw, FLANK_KINDS[k])
     st = spec.get('style')
     if st == 'modern':
         return flank_modern(spec, sign, origin, yaw)
     if st == 'deco':
         return flank_deco(spec, sign, origin, yaw)
+    if st == 'contemporary':
+        return flank_contemporary(spec, sign, origin, yaw)
     return flank_vernacular(spec, sign, origin, yaw)
 
 
@@ -278,8 +285,41 @@ FLANK_W = 156.0
 
 
 def flank_allowance(spec):
-    """How much wider a model gets when both flanks are treated."""
-    return 0.0 if spec.get('style') == 'house' else FLANK_W
+    """How much wider a model gets when both flanks are treated.
+
+    STYLE-DEPENDENT, which the first version got wrong. FLANK_W was measured
+    on a walkup - a vernacular flank - and applied to everything. A MODERN
+    flank builds its spandrel bands at depth -BAND_PROUD, i.e. 40 uu PROUD of
+    the flank face, so it needs that much again on each side. The tower's top
+    tier came back 36 uu over the parcel line on BOTH sides and GATE-05 named
+    it; the symmetry was the clue that it was an allowance error rather than
+    a placement one.
+    """
+    st = spec.get('style')
+    if st == 'house':
+        return 0.0
+    if st == 'modern':
+        import genbuild as _g
+        return FLANK_W + 2.0 * _g.BAND_PROUD
+    k = flank_kind(spec)
+    if k:
+        # the parameterised flank stands `proud` off the face on each side,
+        # so the allowance follows the SAME table the geometry does
+        return FLANK_W + 2.0 * float(FLANK_KINDS[k]['proud'])
+    if st == 'contemporary':
+        # a curtain-wall flank is FLAT - nothing stands proud of it, so it
+        # needs no more than the facade thickness either side
+        return FLANK_W
+    if st == 'deco':
+        # A DECO FLANK CARRIES PILASTERS. They stand DECO_PROUD (50) off the
+        # face, and the base cap oversails the pilaster line by another 6 - so
+        # each flank is 56 uu wider than a plain vernacular one. GATE-05 named
+        # it on every deco tier at once, symmetric on both sides, which is the
+        # same signature the tower gave when this function still returned one
+        # number for every style.
+        import genbuild as _g
+        return FLANK_W + 2.0 * (_g.DECO_PROUD + 6.0)
+    return FLANK_W
 
 
 def rear_allowance(spec):
@@ -362,6 +402,174 @@ def run(only=None):
 if __name__ == '__main__':
     import sys
     run(sys.argv[1] if len(sys.argv) > 1 else None)
+
+
+# ---------------------------------------------------------------------------
+# P2: FLANKS DISPATCH ON FEATURE FLAGS, NOT ON STYLE.
+#
+# `flank()` used to read spec['style'] alone. That was right when a style meant
+# one facade. It stopped being right the moment a style carried eight of them:
+# a mass-timber block and a glass tower are both style 'contemporary', and the
+# timber one was being given a curtain-wall side. Deco hit this first and got
+# flank_deco; contemporary hit it and got flank_contemporary; then modern3,
+# modern7, contemporary2, contemporary3 and contemporary7 all hit it at once
+# and writing a builder per recipe was clearly the wrong answer.
+#
+# So: ONE parameterised flank, and a table mapping the generator's OWN flags
+# onto it. A flank is only ever a few decisions - is it blind, does it read
+# vertical or horizontal, how proud do the members stand, how big are the
+# openings - and those decisions are what actually differ between eras.
+# ---------------------------------------------------------------------------
+FLANK_KINDS = {
+    #            vert  horiz  proud  open   blind
+    'grid':     dict(vert=96.0,  horiz=0.0,   proud=13.0, open=0.62),
+    'frame':    dict(vert=210.0, horiz=1.0,   proud=26.0, open=0.50),
+    'panel':    dict(vert=190.0, horiz=1.0,   proud=6.0,  open=0.44),
+    'fins':     dict(vert=96.0,  horiz=0.0,   proud=74.0, open=0.72),
+    'coffer':   dict(vert=250.0, horiz=1.0,   proud=52.0, open=0.40),
+    'steel':    dict(vert=118.0, horiz=1.0,   proud=22.0, open=0.66),
+    'deck':     dict(vert=0.0,   horiz=1.0,   proud=10.0, open=0.30),
+    'banded':   dict(vert=0.0,   horiz=1.0,   proud=14.0, open=0.34),
+    'giant':    dict(vert=430.0, horiz=0.0,   proud=30.0, open=0.46),
+    'stripe':   dict(vert=0.0,   horiz=1.0,   proud=20.0, open=0.40),
+}
+
+
+def flank_kind(spec):
+    """Which flank this spec wants, read from the SAME flags the generator reads.
+
+    Order matters: a spec can carry more than one flag and the most
+    face-defining one wins.
+    """
+    for flag, kind in (('timber', 'frame'), ('brise', 'fins'),
+                       ('rainscreen', 'panel'), ('coffer', 'coffer'),
+                       ('precast', 'coffer'), ('steel_frame', 'steel'),
+                       ('deck_access', 'deck'), ('banded', 'banded'),
+                       ('giant_order', 'giant'), ('streamline', 'stripe'),
+                       ('stacked', 'grid'), ('green_terrace', 'grid')):
+        if spec.get(flag):
+            return kind
+    return None
+
+
+def flank_param(spec, sign, origin, yaw, P):
+    """A flank built from a handful of knobs. See FLANK_KINDS."""
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
+    XP = (x0 - OVER_X - FACADE_T) if sign < 0 else (x0 + W + OVER_X + FACADE_T)
+    ztop = GF + F * FH
+    face = 'W' if sign < 0 else 'E'
+    a = mkactor('ELEV_%s_%s' % (n, face), origin, (0.0, yaw, 0.0))
+    made = 0
+
+    def xr(d0, d1):
+        p, q = XP - sign * d0, XP - sign * d1
+        return (p, q) if p <= q else (q, p)
+
+    def b(name, d0, d1, y0, y1, z0, z1):
+        nonlocal made
+        ax0, ax1 = xr(d0, d1)
+        box(a, name, ax0, ax1, y0, y1, z0, z1)
+        made += 1
+
+    prd = float(P['proud'])
+    b('Wall_FlankBase', 0.0, FACADE_T, 0.0, D, 0.0, GF - 14)
+    b('Band_FlankBaseCap', -7.0, FACADE_T + 7.0, -9.0, D + 9.0, GF - 14, GF)
+    b('Wall_FlankBody', 0.0, FACADE_T, 0.0, D, GF, ztop)
+    y0, y1 = 44.0, D - 44.0
+
+    if F >= 1 and P['open'] > 0.0 and (y1 - y0) > 120.0:
+        nw = max(2, int(round((y1 - y0) / 300.0)))
+        for f in range(F):
+            z0, z1 = GF + f * FH, GF + (f + 1) * FH
+            for k in range(nw):
+                w0 = y0 + (y1 - y0) * k / float(nw)
+                w1 = w0 + (y1 - y0) / float(nw) * float(P['open'])
+                if w1 - w0 < 42:
+                    continue
+                b('Wall_FlankRev%d_%d' % (f, k), FACADE_T - prd, FACADE_T,
+                  w0 - 10, w1 + 10, z0 + FH * 0.24 - 10, z1 - FH * 0.14 + 10)
+                b('Glass_Flank%d_%d' % (f, k), FACADE_T - prd - 3,
+                  FACADE_T - prd, w0, w1, z0 + FH * 0.24, z1 - FH * 0.14)
+                b('Interior_Flank%d_%d' % (f, k), FACADE_T - prd - 11,
+                  FACADE_T - prd - 5, w0, w1, z0 + FH * 0.24, z1 - FH * 0.14)
+
+    if P['vert'] > 0.0:
+        nm = max(2, int(round((D - 40.0) / float(P['vert']))))
+        for k in range(nm + 1):
+            my = 20.0 + (D - 40.0) * k / float(nm)
+            mw = 13.0 if (k == 0 or k == nm) else 8.0
+            b('Mullion_FlankV%d' % k, FACADE_T - prd - 2, FACADE_T + 2,
+              my - mw / 2, my + mw / 2, GF, ztop)
+
+    if P['horiz'] > 0.0 and F >= 1:
+        for f in range(F + 1):
+            z0 = GF + f * FH
+            b('Band_FlankCourse%d' % f, FACADE_T - prd * 0.6, FACADE_T + 3,
+              -6.0, D + 6.0, z0 - 12, z0 + 14)
+
+    b('Wall_FlankParapet', 0.0, FACADE_T, 0.0, D, ztop, ztop + PAR - 14)
+    b('Band_FlankCoping', -8.0, FACADE_T + 8.0, -10.0, D + 10.0,
+      ztop + PAR - 14, ztop + PAR)
+    return made
+
+
+def flank_contemporary(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """A curtain wall turned through 90 degrees.
+
+    It borrowed flank_modern, which is late-modern spandrel-and-ribbon: deep
+    horizontal banding. Against a front that is an unbroken VERTICAL grid that
+    reads as two different buildings stuck together, and on a plain prism the
+    flank is half of what the eye sees. Canon slot 5's towers carry the same
+    skin on every face; that is most of why they read as single objects.
+
+    So: the same mullion run, the same slim spandrel, the same corner pier.
+    """
+    import genbuild as _g
+    n = spec['name']
+    x0, W, D = spec['x0'], spec['width'], spec['depth']
+    F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
+    XP = (x0 - OVER_X - FACADE_T) if sign < 0 else (x0 + W + OVER_X + FACADE_T)
+    ztop = GF + F * FH
+    face = 'W' if sign < 0 else 'E'
+    a = mkactor('ELEV_%s_%s' % (n, face), origin, (0.0, yaw, 0.0))
+    made = 0
+
+    def xr(d0, d1):
+        p, q = XP - sign * d0, XP - sign * d1
+        return (p, q) if p <= q else (q, p)
+
+    def b(name, d0, d1, y0, y1, z0, z1):
+        nonlocal made
+        ax0, ax1 = xr(d0, d1)
+        box(a, name, ax0, ax1, y0, y1, z0, z1)
+        made += 1
+
+    # ground floor: solid, so the glazed front reads as the entrance side
+    b('Wall_FlankBase', 0.0, FACADE_T, 0.0, D, 0.0, GF - 12)
+    b('Band_FlankBaseCap', -6.0, FACADE_T + 6.0, -8.0, D + 8.0, GF - 12, GF)
+    if F >= 1:
+        y0, y1 = 40.0, D - 40.0
+        b('Glass_FlankCurtain', FACADE_T - 6.0, FACADE_T - 3.0,
+          y0, y1, GF, ztop)
+        b('Interior_FlankCurtain', FACADE_T - 15.0, FACADE_T - 9.0,
+          y0, y1, GF, ztop)
+        MULL = float(spec.get('mullion_step', 88.0))
+        nm = max(2, int(round((y1 - y0) / MULL)))
+        for k in range(nm + 1):
+            my = y0 + (y1 - y0) * k / float(nm)
+            mw = 11.0 if (k == 0 or k == nm) else 7.0
+            b('Mullion_FlankV%d' % k, FACADE_T - 13.0, FACADE_T + 2.0,
+              my - mw / 2, my + mw / 2, GF, ztop)
+        for f in range(F):
+            z0 = GF + f * FH
+            b('Frame_FlankSpand%d' % f, FACADE_T - 4.0, FACADE_T + 4.0,
+              y0, y1, z0 - 5, z0 + 20)
+    b('Wall_FlankParapet', 0.0, FACADE_T, 0.0, D, ztop, ztop + PAR - 14)
+    b('Band_FlankCoping', -7.0, FACADE_T + 7.0, -9.0, D + 9.0,
+      ztop + PAR - 14, ztop + PAR)
+    return made
 
 
 def flank_modern(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):

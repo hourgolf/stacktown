@@ -10,9 +10,13 @@ Reversible: pass restore=True to put the pack's own materials back. Nothing
 here saves the level.
 """
 import unreal, json
+import _path  # noqa: F401
+import rolemap
 
-LEAF = {'testleaf_01': '/Game/Stacktown/Materials/MI_leaf_card',
-        'testleaf_02': '/Game/Stacktown/Materials/MI_leaf_card_b'}
+# ONE VOCABULARY. These lived here as local dicts, so the bake path could not
+# see them and bound a single material across every slot of a donor tree.
+LEAF = {k: '/Game/Stacktown/Materials/%s' % v
+        for k, v in rolemap.SLOT.items()}
 TRUNK = '/Game/Stacktown/Materials/MI_wood'
 
 def apply(restore=False):

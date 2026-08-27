@@ -45,7 +45,7 @@ ORIGIN = unreal.GeometryScriptPrimitiveOriginMode.CENTER
 job = json.load(open(JOB))
 boxes = job['boxes']
 out_path = job['out']
-wall, roofmat = job.get('wall'), job.get('roofmat')
+wall, roofmat, trim = job.get('wall'), job.get('roofmat'), job.get('trim')
 # The material study puts six variants on one mesh, so a component can name
 # which panel it belongs to and take that panel's wall material. Keyed on the
 # `_S<n>_` tag in the component name; absent for every normal building.
@@ -83,13 +83,77 @@ def bopts(dist):
         o.set_editor_property('bevel_distance', k)
         _bo[k] = o
     return _bo[k]
-made, unbound, chamfered = 0, [], 0
+made, unbound, chamfered, donors = 0, [], 0, 0
+_donor = {}
+
+
+def donor(path):
+    if path not in _donor:
+        _donor[path] = unreal.EditorAssetLibrary.load_asset(path)
+    return _donor[path]
+
+
 for e in boxes:
+    if e['kind'] == 'mesh':
+        # DONOR GEOMETRY, appended the same way bake_merge does it. Without
+        # this the fast path could only ever emit boxes, and the kit pieces
+        # that fix the things boxes cannot do would be stuck outside it.
+        sm = donor(e['asset'])
+        if not sm:
+            unbound.append('%s (missing %s)' % (e['name'], e['asset']))
+            continue
+        a = actors.get(e['actor'], {})
+        fam = (a.get('name', 'BLD2_x').split('_')[0]) or 'BLD2'
+        mname = e.get('mat') or rolemap.material_for(
+            e['name'], wall_for(e['name']), roofmat, fam, trim)
+        mi = M(mname) if mname else None
+        if not mi:
+            unbound.append('%s (no material)' % e['name'])
+            continue
+        # PER SLOT, not one material for the whole mesh. A donor tree is bark
+        # plus alpha-masked leaf cards; giving every slot the same opaque
+        # material turns the leaf cards into solid dark quads, which is why
+        # every tree and bush baked here came out looking burnt. rolemap.SLOT
+        # is the same vocabulary step_roles uses on the level.
+        slots = sm.get_editor_property('static_materials')
+        mlist = []
+        for _sl in slots:
+            _n = rolemap.material_for_slot(_sl.material_slot_name, mname)
+            _mi = M(_n) if _n else None
+            if not _mi:
+                _mi = mi
+            mlist.append(_mi)
+        if not mlist:
+            mlist = [mi]
+        piece = unreal.DynamicMesh()
+        piece, _ = GSA.copy_mesh_from_static_mesh(
+            sm, piece, unreal.GeometryScriptCopyMeshFromAssetOptions(),
+            unreal.GeometryScriptMeshReadLOD())
+        al, ar = a.get('loc', [0, 0, 0]), a.get('rot', [0, 0, 0])
+        br = e['r']
+        # float or (x, y, z) - a donor trimmed to a bay is scaled on one axis
+        _s = e.get('s', 1.0)
+        sc = [float(_s)] * 3 if isinstance(_s, (int, float)) \
+            else [float(v) for v in _s]
+        local = unreal.Transform(
+            unreal.Vector(e['c'][0], e['c'][1], e['c'][2]),
+            unreal.Rotator(br[2], br[0], br[1]),
+            unreal.Vector(sc[0], sc[1], sc[2]))
+        world = unreal.Transform(
+            unreal.Vector(al[0], al[1], al[2]),
+            unreal.Rotator(ar[2], ar[0], ar[1]),
+            unreal.Vector(1.0, 1.0, 1.0))
+        acc, mats = GSE.append_mesh_transformed_with_materials(
+            acc, mats, piece, mlist, [local], world)
+        made += 1
+        donors += 1
+        continue
     if e['kind'] != 'box':
         continue
     a = actors.get(e['actor'], {})
     fam = (a.get('name', 'BLD2_x').split('_')[0]) or 'BLD2'
-    mname = rolemap.material_for(e['name'], wall_for(e['name']), roofmat, fam)
+    mname = rolemap.material_for(e['name'], wall_for(e['name']), roofmat, fam,
+                                 trim)
     if not mname:
         unbound.append(e['name'])
         continue
@@ -169,9 +233,9 @@ per = tri / float(made)
 json.dump(dict(parts=made, tris=tri, slots=slots, chamfered=chamfered,
                tris_per_part=round(per, 1),
                unbound=sorted(set(unbound))[:8]), open(OUT, 'w'))
-print('  FASTBAKED %s  parts %d  tris %d (%.1f/part)  chamfered %d  slots %d%s'
-      % (name, made, tri, per, chamfered, slots,
+print('  FASTBAKED %s  parts %d (%d donor)  tris %d (%.1f/part)  chamfered %d  slots %d%s'
+      % (name, made, donors, tri, per, chamfered, slots,
          '' if not unbound else '  UNBOUND %s' % sorted(set(unbound))[:4]))
-if chamfered and per < 20.0:
+if chamfered and not donors and per < 20.0:
     raise SystemExit('fastbake: %d parts bevelled but only %.1f tris/part - '
                      'the chamfer did not take' % (chamfered, per))

@@ -51,11 +51,45 @@ walkup are kept as **rough drafts** awaiting the same detailing pass (owner
 decision, 2026-08-25). The per-model gate (`modelgate.py`), stamp
 (`stamp.py`) and `catalogue_audit.py` are in place.
 
+### Session of 2026-08-27 — catalogue, street, block rig
+
+**The catalogue is 32 recipes across four eras**, eight each: vernacular, deco,
+modern, contemporary. `Content/Stacktown/Baked/` holds **284 baked meshes**.
+Contemporary was rebuilt against `CANON.md` slot 5 after the owner rejected the
+first attempt as not reading as modern.
+
+**A two-block street exists** in `Sandbox_Bench` (`street.py`) — sixteen
+buildings in two facing rows against a road and pavements, built to test the
+Stage 2 gate line that the work must read at BOTH block hero and player zoom.
+**Player zoom passes.** Block hero was weak and has been improved by varying
+the building line (setbacks 0–210 uu, gaps 40–300) and composing a crown-rich
+mix so no two neighbours share a crown type.
+
+**A block lighting rig exists** (`blockrig.py`), derived by inverse square from
+the measured board rig rather than reused: key 5,948,117 lm, fill 5,509,606 lm
+at a 14,000 uu rig. Canyon interior 13.4 → 35.8 mean, 0.000% clipped.
+
+**The flicker is fixed** and confirmed by the owner. It was two faults: core
+tops made coplanar with every roof deck by an `open_roof` change (now
+`ROOF_CLEAR = 17.5`, gated by GATE-10), and four Lumen cvars a diagnostic left
+at 0 (`lumen_defaults.py`).
+
+**New knowledge worth not re-deriving is in `Docs/CATALOGUE_PIPELINE.md`** —
+the recording sink, the two execution channels, the measured variation levers,
+and the traps. Read it before touching the generator.
+
 ### Open items
 
-- Street lighting for two facing rows — the rig was derived for a single row
-  (Stage 3 record); the current branch has worked on lighting since, so
-  verify against the newest capture before treating this as open or closed.
+- **The declared width ladder may not be honest.** `recipes.py` declares 548
+  (recipe × tier × width) combinations; 284 are baked. The first attempt to
+  fill a gap was REFUSED by the gate — `vernacular5` at w1230 oversails its
+  parcel by 1162 uu — so an unknown share of the other 264 are not "unbaked"
+  but "unbuildable at that width". Determine which before planning any
+  district placer, because the placement palette is the whole variation story.
+- Street and review bench share one map, so the block rig's attenuation had to
+  be tightened to avoid relighting the shelf, costing the street's far end
+  light. Needs a separate map — blocked because `load_level` crashes the editor
+  over remote execution, so the owner must create and open it.
 - The backdrop does not cover the view down the street.
 - Edge wear does not work on imported geometry (see §5).
 - The single-mesh bake fidelity gap (§9.1).

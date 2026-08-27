@@ -94,7 +94,8 @@ def as_snapshot(rec, spec):
             lo = [cx-dx, cy-dy, cz-dz]
             hi = [cx+dx, cy+dy, cz+dz]
         m = rolemap.material_for(e['name'], spec.get('wall'),
-                                 spec.get('roofmat'), a['family'])
+                                 spec.get('roofmat'), a['family'],
+                                 spec.get('trim'))
         a['comps'].append(dict(name=e['name'], mesh='Cube',
                                aabb=(lo, hi), mats=[m]))
     return dict(actors=actors, unread_material_slots=0, seconds=0.0)
@@ -125,7 +126,13 @@ def main():
 
     asset = recipes.asset_name(rid, tier, w)
     json.dump({'boxes': rec, 'out': '%s/%s' % (OUT, asset),
-               'wall': spec.get('wall'), 'roofmat': spec.get('roofmat')},
+               'wall': spec.get('wall'), 'roofmat': spec.get('roofmat'),
+               'trim': spec.get('trim'),
+               # SECOND CLADDING. fastbake has had panel_overrides since it
+               # was written and nothing ever sent them, so a building could
+               # only ever wear one wall material. A contemporary block is
+               # two masses in two claddings meeting on a vertical line.
+               'panel_overrides': spec.get('panels') or {}},
               open(os.path.join(TMP, 'stacktown_fastbake_job.json'), 'w'))
     t1 = time.time()
     r = subprocess.run([RUNG, 'fastbake.py'], capture_output=True, text=True, cwd=HERE)

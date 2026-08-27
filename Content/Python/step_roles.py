@@ -9,6 +9,7 @@ F='/Game/Stacktown/Materials'
 # KeyError, which took the whole role sweep down and left 7000 components
 # unassigned while every other step reported ok.
 WALL={l['name']: l['wall'] for b in BLOCKS for l in b['lots'] if l.get('wall')}
+TRIM={l['name']: l['trim'] for b in BLOCKS for l in b['lots'] if l.get('trim')}
 # A pitched roof is the largest surface on a house and it was rendering on
 # MI_concrete - the same pale grey as a flat commercial deck - so five houses
 # read as five white wedges. Per lot, like the wall colour.
@@ -65,7 +66,7 @@ for a in eas.get_all_level_actors():
         # did: rolemap grew SPECIAL (penthouse glazing is not window glazing)
         # and this sweep could not see it.
         mname = rolemap.material_for(nm, WALL.get(who), ROOF.get(who),
-                                     labels.family(l))
+                                     labels.family(l), TRIM.get(who))
         if mname:
             c.set_material(0, M(mname))
         elif l.startswith('CORE_'):

@@ -26,6 +26,14 @@ narrowly - what actually separates sanded wood from cast resin from wire.
 STOCK = {
     'card_heavy':  (0.006,  2.0,   0.62, 0.80),  # mounting board: walls
     'card_smooth': (0.014,  1.2,   0.55, 0.70),  # thin cut card: bands, trim
+    # PROP SCALE. PaperTiling is WORLD-scale, so the value that gives a 12 m
+    # wall a card tooth gives a 0.5 m planter burlap. Measured on three
+    # Uniblocks planters side by side: 0.006 reads as sacking, 0.080 is
+    # nearly smooth, 0.030 reads as card. Anything hand-sized takes this.
+    # MASTER_MATERIAL_SPEC asks the master for "texel density normalisation
+    # so a donor mesh's UV scale does not betray it"; until that exists in
+    # the graph, this is the stock that stands in for it.
+    'card_prop':   (0.030,  1.6,   0.58, 0.74),  # cut card at prop scale
     'print':       (0.010,  1.4,   0.60, 0.76),  # printed paper: shingles
     'chipboard':   (0.004,  2.6,   0.70, 0.88),  # the base board
     'basswood':    (0.020,  1.6,   0.48, 0.64),  # carved + sanded timber
@@ -45,6 +53,7 @@ MATERIAL_STOCK = {
     'MI_paint_accent': 'card_heavy',
     'MI_precast': 'card_heavy',
     'MI_card': 'card_heavy',
+    'MI_dist': 'card_heavy',      # the district palette - one family, many paints
     'MI_concrete': 'card_heavy',
     'MI_studio_grey': 'card_heavy',
     'MI_mural': 'card_heavy',      # paint ON card - same stock, painted
@@ -54,6 +63,7 @@ MATERIAL_STOCK = {
     'MI_shingle': 'print',
     'MI_model_board': 'chipboard',
     'MI_wood': 'basswood',
+    'MI_planter': 'card_prop',    # kit beds and pots - prop scale, fine tooth
     'MI_dark_metal': 'wire',
     'MI_brass': 'brass',
     'MI_glass': 'acetate',
@@ -92,6 +102,9 @@ def _selftest():
     assert stock_for('MI_bloom_warm') == 'flock'
     assert stock_for('MI_model_board') == 'chipboard'
     assert stock_for('MI_mural_a') == 'card_heavy'
+    assert stock_for('MI_dist_teal') == 'card_heavy'
+    assert STOCK['card_prop'][0] > STOCK['card_heavy'][0], (
+        'prop stock must be FINER (larger tiling) than wall stock')
     # the whole point: metal and glass carry NO tooth
     assert params_for('MI_dark_metal')['PaperNormalAmount'] == 0.0
     assert params_for('MI_glass_b')['PaperNormalAmount'] == 0.0

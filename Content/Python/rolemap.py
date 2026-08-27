@@ -57,13 +57,46 @@ SPECIAL = {
 
 DEFAULT_WALL = 'MI_paint_cream'
 DEFAULT_ROOF = 'MI_shingle_grey'
+# Band_ used to resolve to the wall colour, so a whole building was one paint.
+# Owner: "buildings don't need to be just one colour either." A band course,
+# a plinth and a parapet cap are the parts a real building picks out in a
+# second colour, and they are already their own role - they just pointed at
+# the same material. `trim` falls back to `wall` when a recipe declares none,
+# so nothing that has not opted in changes.
 
 # roles bound by prefix here, plus the three resolved per-lot below
 BOUND = set(SHARED) | {'Tile_', 'Wall_', 'Band_'} | {
     r for o in FAMILY.values() for r in o}
 
 
-def material_for(comp, wall=None, roofmat=None, family='BLD2'):
+# DONOR MESHES CARRY ROLE IN THE MATERIAL SLOT NAME, not the component name -
+# that is what makes the Assetsville tileset usable. A tree is bark plus
+# alpha-masked leaf cards, and the leaf materials are instances of the MASKED
+# master carrying the pack's own leaf texture as their opacity mask
+# (see mk_leaf_mi.py). Binding one opaque material across every slot of such a
+# mesh renders the leaf cards as solid dark quads - which is exactly what the
+# fastbake merge did to every tree and bush it was given.
+#
+# This vocabulary was in step_foliage.py, where only the level sweep could
+# reach it. It lives here now for the same reason ROLES does: one resolver.
+SLOT = {'testleaf_01': 'MI_leaf_card',
+        'testleaf_02': 'MI_leaf_card_b'}
+
+
+def material_for_slot(slot, fallback=None):
+    """Material for one MATERIAL SLOT of a donor mesh, or `fallback`."""
+    s = str(slot)
+    if s in SLOT:
+        return SLOT[s]
+    low = s.lower()
+    if 'leaf' in low or 'foliage' in low:
+        return 'MI_leaf_card'
+    if 'trunk' in low or 'bark' in low:
+        return 'MI_wood'
+    return fallback
+
+
+def material_for(comp, wall=None, roofmat=None, family='BLD2', trim=None):
     """The material instance name for one component. None if nothing binds it."""
     if comp.startswith('Mural_'):
         return MURAL.get(comp[-1], SHARED['Mural_'])
@@ -79,7 +112,9 @@ def material_for(comp, wall=None, roofmat=None, family='BLD2'):
             return SHARED[r]
     if comp.startswith('Tile_'):
         return roofmat or DEFAULT_ROOF
-    if comp.startswith('Wall_') or comp.startswith('Band_'):
+    if comp.startswith('Band_'):
+        return trim or wall or DEFAULT_WALL
+    if comp.startswith('Wall_'):
         return wall or DEFAULT_WALL
     return None
 
@@ -87,6 +122,9 @@ def material_for(comp, wall=None, roofmat=None, family='BLD2'):
 def _selftest():
     assert material_for('Wall_Pier0', wall='MI_precast_buff') == 'MI_precast_buff'
     assert material_for('Band_Course', wall='MI_precast_buff') == 'MI_precast_buff'
+    # a declared trim picks out the bands; without one they follow the wall
+    assert material_for('Band_Course', wall='MI_a', trim='MI_b') == 'MI_b'
+    assert material_for('Wall_Pier0', wall='MI_a', trim='MI_b') == 'MI_a'
     assert material_for('Tile_Step2', roofmat='MI_shingle_brown') == 'MI_shingle_brown'
     assert material_for('Glass_B0') == 'MI_glass_b'
     assert material_for('Timber_Deck') == 'MI_wood'

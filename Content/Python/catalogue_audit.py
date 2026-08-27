@@ -17,8 +17,15 @@ OUT = '/Game/Stacktown/Baked'
 P = 'Stacktown.'
 
 rows, unverified, failed, missing = [], [], [], []
+# Only the widths the grammar CUTS are expected to exist. XL and XXL arise
+# from parcel assembly at runtime, never from cutting a block, so reporting
+# them MISSING every run is noise that trains people to ignore the line.
+import parcels as _P
+CUT = {820.0, 1230.0, 1640.0}
 for rid in sorted(recipes.RECIPES):
   for w in recipes.widths(rid):
+    if w not in CUT:
+        continue
     for t in range(recipes.tier_count(rid)):
         name = recipes.asset_name(rid, t, w)
         path = '%s/%s' % (OUT, name)

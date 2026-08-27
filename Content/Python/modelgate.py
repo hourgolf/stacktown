@@ -473,6 +473,136 @@ def _t08():
     return len(gate_08(model(SPEC, [_a('BLD2_Probe_H', bad)]))) == 1
 
 
+GLASS_PER_FLOOR = 1.0     # a habitable floor has at least one opening
+
+
+@rule('GATE-09', 'a building with floors carries at least %.0f Glass_ part '
+                 'per floor' % GLASS_PER_FLOOR)
+def gate_09(m):
+    """WHY THIS EXISTS. `build_deco`'s floor loop was written inverted and ran
+    ZERO floors for seven of the eight deco recipes - every one of them baked
+    with no glazing whatsoever, and the gate passed all seven. GATE-05 checks
+    the parcel, GATE-01/06 check naming, MAT_MIN is 4 and DENSITY_MIN is 0.10,
+    so a building with no windows clears every one of them comfortably. Four
+    rounds of looking at renders went by before anyone noticed that the pale
+    stripes between the pilasters were the CORE showing through.
+
+    A floor someone is meant to stand on has a window. That is the whole rule,
+    and it is cheap: measured across the catalogue the tightest healthy model
+    sits at 1.08 parts per floor, so a threshold of 1.0 fires on the defect
+    and on nothing that works.
+    """
+    sp = m['spec']
+    F = int(sp.get('floors') or 0)
+    if F <= 0:
+        return []                       # a hoarding or a lock-up has no floors
+    n = sum(1 for c in building_comps(m)
+            if str(c.get('name', '')).startswith('Glass_'))
+    if n < F * GLASS_PER_FLOOR:
+        return [(sp.get('name', '?'),
+                 '%d Glass_ parts for %d floors - the elevation has no '
+                 'openings' % (n, F))]
+    return []
+
+
+@selftest('GATE-09')
+def _t09():
+    sp = dict(SPEC)
+    sp['floors'] = 4
+    good = [_c('Wall_A%d' % i) for i in range(12)]
+    good += [_c('Glass_W%d' % i) for i in range(6)]
+    if gate_09(model(sp, [_a('BLD2_Probe_H', good)])):
+        return False
+    # the exact defect: a full elevation of walls and not one opening
+    bad = [_c('Wall_A%d' % i) for i in range(30)]
+    bad += [_c('Mullion_M%d' % i) for i in range(8)]
+    if len(gate_09(model(sp, [_a('BLD2_Probe_H', bad)]))) != 1:
+        return False
+    # and a hoarding, which legitimately has none
+    sp0 = dict(SPEC)
+    sp0['floors'] = 0
+    return not gate_09(model(sp0, [_a('BLD2_Probe_H',
+                                      [_c('Wall_A%d' % i) for i in range(9)])]))
+
+
+COPLANAR_TOL = 0.06       # uu; below this the depth buffer cannot choose
+
+
+@rule('GATE-10', 'no part sits exactly on the core top plane (z-fighting)')
+def gate_10(m):
+    """WHY THIS EXISTS. Capping the core at the roof line so the roof would be
+    VISIBLE (see cores.ROOF_CLEAR) put its top face at exactly ztop - which is
+    also where every flat roof puts its deck's top face, its parapet's base,
+    and its top-floor wall boxes. Three coplanar surfaces, nothing for the
+    depth buffer to choose between them, and the result was jagged white
+    patches crawling across every roof in the catalogue, frame after frame.
+
+    It was reported as "flickering" and chased as a lighting fault for a long
+    time. It is not one: two faces at the same depth are a GEOMETRY fault and
+    no amount of GI tuning will fix one. This rule sees it at bake time.
+
+    Only parts that actually sit OVER the core in plan can fight it - a vent
+    on the facade at y < the core front is at the same height and never
+    touches it.
+    """
+    sp = m['spec']
+    try:
+        import cores
+    except Exception:
+        return []
+    bands = cores.bands_for(sp)
+    if not bands:
+        return []                       # a detached style has no core
+    ct = max(b[1] for b in bands)
+    front = bands[-1][2]
+    hits = []
+    for c in building_comps(m):
+        ab = c.get('aabb')
+        if not ab:
+            continue
+        if ab[1][1] <= front + 1.0:
+            continue                    # in front of the core: cannot fight it
+        for z in (ab[0][2], ab[1][2]):
+            if abs(z - ct) < COPLANAR_TOL:
+                hits.append(str(c.get('name', '?')))
+                break
+    if hits:
+        return [(sp.get('name', '?'),
+                 '%d part(s) coplanar with the core top at z=%.1f: %s'
+                 % (len(hits), ct, ', '.join(sorted(set(hits))[:4])))]
+    return []
+
+
+@selftest('GATE-10')
+def _t10():
+    import cores
+    sp = dict(SPEC)
+    sp.update(floors=4, gf_h=400.0, fl_h=280.0, parapet=40.0, open_roof=True,
+              style='vernacular')
+    ct = max(b[1] for b in cores.bands_for(sp))
+    fr = cores.bands_for(sp)[-1][2]
+
+    def bx(z0, z1, y0=None, dy=200.0):
+        y0 = fr + 20.0 if y0 is None else y0
+        return ([0.0, y0, z0], [SPEC['width'], y0 + dy, z1])
+    # clear of the core top: fine
+    good = [_c('Tile_Deck', aabb=bx(ct - 30.0, ct - 8.0))]
+    good += [_c('Wall_A%d' % i, aabb=bx(0.0, ct - 40.0)) for i in range(9)]
+    if gate_10(model(sp, [_a('BLD2_Probe_H', good)])):
+        return False
+    # a deck whose top face lands exactly on the core top: the defect
+    bad = list(good) + [_c('Tile_Deck2', aabb=bx(ct - 8.0, ct))]
+    if len(gate_10(model(sp, [_a('BLD2_Probe_H', bad)]))) != 1:
+        return False
+    # same height but wholly IN FRONT of the core: never touches it, must
+    # pass. `dy` matters - the first version of this test made the box 200
+    # deep starting at y 0, so it ran straight through the core front at 62
+    # and was flagged correctly. The rule was right; the test was wrong.
+    infront = list(good) + [_c('Glass_Vent',
+                               aabb=bx(ct - 8.0, ct, y0=0.0, dy=40.0))]
+    return not gate_10(model(sp, [_a('BLD2_Probe_H', infront)]))
+
+
 def run(m, verbose=True):
     """Returns (ok, findings, facts). Self-tests run FIRST, as in the suite:
     if a rule cannot prove it sees its own defect, the gate reports nothing."""

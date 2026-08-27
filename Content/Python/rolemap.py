@@ -33,7 +33,18 @@ SHARED = {
     'Mural_': 'MI_mural_a',
     # a raised bed is PLANTING; on MI_grass it is a raised bed of grass
     'Bloom_': 'MI_bloom_warm',
+    # DONOR ROLES, 2026-08-27. See labels.ROLES for why the vocabulary grew
+    # rather than the donor names being bent to fit an existing role.
+    'Leaf_': 'MI_leaf_card',
+    'Planter_': 'MI_planter',
+    'Brick_': 'MI_dist_brick',
 }
+
+# Bloom_ is one role with two temperatures, resolved by SUFFIX rather than by
+# a second top-level role - the same shape as MURAL below, and for the same
+# reason: warm and cool planting are the same THING, and role-in-the-name is
+# about what a part is.
+BLOOM = {'Cool': 'MI_bloom_cool', 'Warm': 'MI_bloom_warm'}
 
 # Some families want a different material for the SAME role. A lamp column is
 # dark painted metal, not the window-frame print - both are 'Frame_' because
@@ -100,6 +111,13 @@ def material_for(comp, wall=None, roofmat=None, family='BLD2', trim=None):
     """The material instance name for one component. None if nothing binds it."""
     if comp.startswith('Mural_'):
         return MURAL.get(comp[-1], SHARED['Mural_'])
+    # Bloom_Cool / Bloom_Warm resolve by suffix; a bare Bloom_ stays warm, so
+    # nothing that already used the role moves.
+    if comp.startswith('Bloom_'):
+        for suf, mi in BLOOM.items():
+            if comp[len('Bloom_'):].startswith(suf):
+                return mi
+        return SHARED['Bloom_']
     for pre, mi in SPECIAL.items():
         if comp.startswith(pre):
             return mi
@@ -145,3 +163,51 @@ def _selftest():
 
 if __name__ == '__main__':
     print('rolemap self-test:', _selftest())
+
+
+# ---- donor component naming -------------------------------------------
+# The inverse of the role table, for the one caller that needs it: genbuild
+# chooses a donor's material at the call site (often as avkit.mat(key), which
+# varies per key), and the component NAME must carry a role that resolves back
+# to exactly that material. Deriving the role FROM the material is what makes
+# that guarantee hold by construction rather than by a hand-kept list of
+# call sites - and step_roles binds material FROM the role, so any mismatch
+# would silently repaint the donor.
+ROLE_FOR_MAT = {
+    'MI_leaf_card': 'Leaf_',
+    'MI_planter': 'Planter_',
+    'MI_dist_brick': 'Brick_',
+    'MI_bloom_warm': 'Bloom_Warm',
+    'MI_bloom_cool': 'Bloom_Cool',
+    'MI_grass': 'Grass_',
+    'MI_gravel': 'Gravel_',
+    'MI_wood': 'Timber_',
+    'MI_dark_metal': 'Rail_',
+    'MI_canopy_accent': 'Accent_',
+    'MI_paint_cream': 'Kerbing_',
+}
+
+
+def donor_name(mat, stem):
+    """Component name for a donor piece: a role that resolves back to `mat`.
+
+    RAISES on an unmapped material rather than returning the bare stem. A
+    donor with no role is precisely what GATE-01 refused across all 548
+    combinations, and returning something unroled here would push that failure
+    to bake time - or worse, past a gate that had been taught to shrug.
+    """
+    r = ROLE_FOR_MAT.get(mat)
+    if not r:
+        raise KeyError('no role resolves to donor material %r (component %r) - '
+                       'add it to ROLE_FOR_MAT and labels.ROLES' % (mat, stem))
+    return r + stem
+
+
+def _selftest_donor_names():
+    """Every mapped material must round-trip: role -> that same material."""
+    bad = []
+    for mat, role in ROLE_FOR_MAT.items():
+        got = material_for(donor_name(mat, 'X0'))
+        if got != mat:
+            bad.append((mat, role, got))
+    return bad

@@ -68,7 +68,27 @@ for a in eas.get_all_level_actors():
         mname = rolemap.material_for(nm, WALL.get(who), ROOF.get(who),
                                      labels.family(l), TRIM.get(who))
         if mname:
-            c.set_material(0, M(mname))
+            # PER SLOT, exactly as fastbake does it. This used to be
+            # set_material(0, ...) - one material, slot zero, flat. For a box
+            # that is right; for a DONOR MESH it is two separate faults at
+            # once: every slot past the first keeps the PACK'S OWN material
+            # (their textures are never meant to ship), and binding one opaque
+            # material across a tree renders its alpha-masked leaf cards as
+            # solid dark quads - the burnt-tree defect fastbake's per-slot
+            # resolution already fixed once.
+            #
+            # Donors are about to carry role prefixes, which means this sweep
+            # will start matching them, so the flat bind would have reached
+            # geometry it never reached before. One resolver, one vocabulary,
+            # both paths - which is the actual point of giving donors roles.
+            sm = c.static_mesh
+            slots = (sm.get_editor_property('static_materials') if sm else [])
+            if len(slots) <= 1:
+                c.set_material(0, M(mname))
+            else:
+                for si, sl in enumerate(slots):
+                    n2 = rolemap.material_for_slot(sl.material_slot_name, mname)
+                    c.set_material(si, M(n2 or mname))
         elif l.startswith('CORE_'):
             # A CITY core is still a bare StaticMeshActor built by
             # step_cores3, which assigns its material directly - so its one

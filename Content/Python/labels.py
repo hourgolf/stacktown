@@ -95,10 +95,24 @@ def is_planting(label, mesh):
 # families do. step_roles validates its own table against this on import; a
 # role bound there and missing here is a bug in one of the two, and the gate
 # says which.
+# Leaf_/Planter_/Brick_ added 2026-08-27, owner-approved, recorded in
+# MASTER_MATERIAL_SPEC. DONOR MESHES now carry roles like everything else.
+# They did not, which was invisible only because piece() silently placed
+# nothing; once donors actually landed, GATE-01 refused all 548 combinations
+# for having a component with no role. Three of their materials had no role
+# that resolved to them, so the vocabulary had to grow rather than the names
+# being bent to fit - bending them would have repainted every donor, since
+# step_roles binds material FROM the role.
+#   Leaf_    the alpha-masked foliage cards (per-slot still refines trunk)
+#   Planter_ the ubkit flowerbed parts
+#   Brick_   the chimney - owner's look decision: it stays brick regardless
+#            of the lot's wall colour, which is the classic card-model read
+# MI_bloom_cool is a Bloom_ SUFFIX variant, not a role - see rolemap.BLOOM.
 ROLES = (
     'Wall_', 'Band_', 'Glass_', 'Interior_', 'Frame_', 'Mullion_',
     'Accent_', 'Roof_', 'Tile_', 'Ground_', 'Gravel_', 'Grass_',
     'Kerbing_', 'Bloom_', 'Rail_', 'Timber_', 'Mural_',
+    'Leaf_', 'Planter_', 'Brick_',
 )
 
 

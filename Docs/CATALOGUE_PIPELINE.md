@@ -128,6 +128,11 @@ last line. Count what you asked for against what came back.
 - Donor pieces have **arbitrary pivots**. `SM_drainPipe_ending` spans local
   z −59.8..0, so placing it by its origin buried it. Place by where the bottom
   lands, and self-test it.
+- **A donor's extent is not in the recorded part list.** The record holds a
+  path, a transform and a scale; the shape at the other end comes from
+  `Tools/measure/meshbounds.json`. Anything reasoning over records alone is
+  blind to donor geometry — that blindness sat in `preview.py`'s live,
+  stamping gate path, where it could certify a mesh the editor gate refuses.
 - **Vet a donor by rendering it, not by its name.** `SM_roofStand_donut` was
   picked by name and read as a giant car tyre on a tower crown. `donorsheet.py`
   exists so donors are looked at before use.
@@ -146,3 +151,5 @@ last line. Count what you asked for against what came back.
 | `blockrig.py` | block key/fill, derived by inverse square |
 | `street.py` | the block layout and `vary_repeats()` |
 | `avkit.py` | vetted donor pieces, with a `REJECTED` list and reasons |
+| `meshbounds.py` | measures donor LOCAL bounds + pivot offset once, self-checked |
+| `Tools/measure/meshbounds.json` | the table the offline tools read (NOT in `Content/`) |

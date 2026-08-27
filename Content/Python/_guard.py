@@ -12,7 +12,13 @@ _lvl = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_worl
 # wall were standing in Stage2_Block and turning up in board captures. They
 # are workshop furniture, not city, so they get their own map. bench.py and
 # study_place.py additionally refuse to run anywhere BUT that map.
-_ALLOWED = ('Stage1_Building', 'Stage2_Block', 'Sandbox_Bench')
+# Stage2_Street added 2026-08-27: the street was sharing Sandbox_Bench with
+# the catalogue shelf, 19 street actors against 249 of workshop furniture, and
+# the block rig had to be detuned so it would not relight the bench. Its own
+# map lets the rig be sized for the street. streetroom.py additionally refuses
+# to run anywhere BUT that map - it is a purge, and pointed at the bench it
+# would destroy the shelf.
+_ALLOWED = ('Stage1_Building', 'Stage2_Block', 'Sandbox_Bench', 'Stage2_Street')
 if not any(k in _lvl for k in _ALLOWED):
     raise SystemExit('WRONG LEVEL: %s (allowed: %s)' % (_lvl, ', '.join(_ALLOWED)))
 # Put the repository's own script and tool directories on sys.path. rung.sh

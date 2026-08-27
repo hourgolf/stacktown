@@ -17,15 +17,26 @@ OUT = '/Game/Stacktown/Baked'
 P = 'Stacktown.'
 
 rows, unverified, failed, missing = [], [], [], []
-# Only the widths the grammar CUTS are expected to exist. XL and XXL arise
-# from parcel assembly at runtime, never from cutting a block, so reporting
-# them MISSING every run is noise that trains people to ignore the line.
-import parcels as _P
-CUT = {820.0, 1230.0, 1640.0}
+# EVERY DECLARED WIDTH, derived from the recipe rather than asserted here.
+#
+# This used to read `CUT = {820, 1230, 1640}` with the rationale that XL and
+# XXL "arise from parcel assembly at runtime, never from cutting a block", so
+# reporting them MISSING was noise. That rationale was true when it was
+# written and is not true now: the catalogue bakes w2050 and w2460 as first
+# class assets, and the offline ladder sweep confirms all 548 declared
+# (recipe x tier x width) combinations are buildable.
+#
+# The cost of leaving it was worse than noise. A hardcoded set SILENTLY SKIPS
+# whatever falls outside it while the totals still read as complete - every
+# w2050 and w2460 mesh, and every tier of any recipe that declares no width
+# inside the set at all. An audit whose coverage is narrower than it appears
+# is the same species as a gate that cannot see its own defect: it reports
+# confidently about a population it never looked at.
+#
+# Derived from recipes.widths(), so a recipe that gains or loses a width
+# cannot silently fall out of the audit. (`import parcels` was dead here.)
 for rid in sorted(recipes.RECIPES):
   for w in recipes.widths(rid):
-    if w not in CUT:
-        continue
     for t in range(recipes.tier_count(rid)):
         name = recipes.asset_name(rid, t, w)
         path = '%s/%s' % (OUT, name)

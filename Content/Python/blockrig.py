@@ -28,12 +28,17 @@ import math
 import os
 import tempfile
 
-SANDBOX = 'Sandbox_Bench'
+# Sandbox_Bench built these first; Stage2_Street is now their own room
+# (streetroom.py). Both are allowed: the bench copy stays usable until
+# the owner confirms the new map, which was their explicit instruction.
+SANDBOX = ('Sandbox_Bench', 'Stage2_Street')
 eus = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-if SANDBOX not in eus.get_editor_world().get_path_name():
-    raise SystemExit('blockrig.py is sandbox only')
+if not any(k in eus.get_editor_world().get_path_name() for k in SANDBOX):
+    raise SystemExit('blockrig.py runs only in %s' % ', '.join(SANDBOX))
 
 # the board rig, MEASURED - the reference the inverse square is taken from
+RIG_DIST_DEFAULT = 14000.0   # streetroom.py sizes the room from this
+
 REF = {'key': (950000.0, 5595.0, 2600.0, 1700.0, 4500.0),
        'fill': (520000.0, 4301.0, 4000.0, 2600.0, 7200.0)}
 
@@ -52,7 +57,7 @@ if job.get('clear'):
 cx = (float(job['x0']) + float(job['x1'])) / 2.0
 cy = (float(job['y0']) + float(job['y1'])) / 2.0
 cz = float(job.get('z1', 2000.0)) * 0.42
-RD = float(job.get('rig_dist', 14000.0))
+RD = float(job.get('rig_dist', RIG_DIST_DEFAULT))
 REACH = math.hypot(float(job['x1']) - float(job['x0']),
                    float(job['y1']) - float(job['y0'])) / 2.0 + 900.0
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -96,7 +101,16 @@ def put(name, which, az_deg, elev_deg):
         # the review bench is exactly the kind of side effect that makes two
         # captures incomparable later. Sized to the rig distance plus the
         # subject's own half-diagonal, and no further.
-        c.set_editor_property('attenuation_radius', RD + REACH)
+        # In a dedicated street map there is no review bench to protect, so
+        # the rig can reach the whole room. In Sandbox_Bench it must not:
+        # RD*2.6 = 36,400 uu reached the shelf's near corner 21,000 away, and
+        # a block rig quietly relighting the review surface makes two captures
+        # incomparable. Keyed on the LEVEL because that is the actual fact
+        # that decides it.
+        _room = 'Stage2_Street' in unreal.get_editor_subsystem(
+            unreal.UnrealEditorSubsystem).get_editor_world().get_path_name()
+        c.set_editor_property('attenuation_radius',
+                              RD * 2.6 if _room else RD + REACH)
         c.set_editor_property('use_temperature', True)
         c.set_editor_property('temperature', temp)
         c.set_editor_property('cast_shadows', which == 'key')

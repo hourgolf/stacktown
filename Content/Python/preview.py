@@ -18,6 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _path  # noqa: F401
 import math
+import json
 import genbuild, recipes, step_elevations, cores, rolemap, modelgate
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -41,6 +42,20 @@ def collect(rid, tier, w):
     step_elevations.freestanding(spec, origin=STAGE, yaw=0.0)
     cores.build_core(spec, origin=STAGE, yaw=0.0)
     return spec, genbuild.drain()
+
+
+def _load_bounds():
+    """Donor bounds, measured once by meshbounds.py. Keyed by asset path."""
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    f = os.path.join(here, 'Tools', 'measure', 'meshbounds.json')
+    try:
+        with open(f) as fh:
+            return {v['asset']: v for v in json.load(fh)['meshes'].values()}
+    except Exception:
+        return {}
+
+
+_BOUNDS = _load_bounds()
 
 
 def as_snapshot(rec, spec):
@@ -98,7 +113,59 @@ def as_snapshot(rec, spec):
                                  spec.get('trim'))
         a['comps'].append(dict(name=e['name'], mesh='Cube',
                                aabb=(lo, hi), mats=[m]))
-    return dict(actors=actors, unread_material_slots=0, seconds=0.0)
+
+    # DONOR MESHES. This loop did not exist, and its absence was not a gap in
+    # coverage - it was a route around the gate. The fast path is LIVE and it
+    # STAMPS, so a model whose oversail comes from a donor piece could be
+    # stamped Gate=PASS here while the editor gate refuses the identical mesh,
+    # and catalogue_audit then inherited the same blind spans. A donor's true
+    # extent is not in the record (the record holds a path, a transform and a
+    # scale), so it comes from Tools/measure/meshbounds.json - measured once
+    # per asset by meshbounds.py, which self-checks against a bound somebody
+    # had already measured by hand.
+    blind = []
+    for e in rec:
+        if e['kind'] != 'mesh':
+            continue
+        a = by_ref.get(e['actor'])
+        if a is None:
+            continue
+        b = _BOUNDS.get(e.get('asset'))
+        if not b:
+            blind.append(e.get('asset'))
+            continue
+        sx, sy, sz = (e.get('s') or [1.0, 1.0, 1.0])
+        cx, cy, cz = e['c']
+        pitch, yaw, roll = e.get('r') or (0.0, 0.0, 0.0)
+        cp, sp = math.cos(math.radians(pitch)), math.sin(math.radians(pitch))
+        cy_, sy_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+        cr, sr = math.cos(math.radians(roll)), math.sin(math.radians(roll))
+        lo = [1e18]*3
+        hi = [-1e18]*3
+        for i in (0, 1):
+            for j in (0, 1):
+                for k in (0, 1):
+                    x = (b['hi'][0] if i else b['lo'][0]) * sx
+                    y = (b['hi'][1] if j else b['lo'][1]) * sy
+                    z = (b['hi'][2] if k else b['lo'][2]) * sz
+                    y, z = y*cr - z*sr, y*sr + z*cr        # roll  about X
+                    x, z = x*cp + z*sp, -x*sp + z*cp       # pitch about Y
+                    x, y = x*cy_ - y*sy_, x*sy_ + y*cy_    # yaw   about Z
+                    for n, v in enumerate((cx+x, cy+y, cz+z)):
+                        lo[n] = min(lo[n], v)
+                        hi[n] = max(hi[n], v)
+        mm = e.get('mat') or rolemap.material_for_slot(e['name'], spec.get('wall'))
+        a['comps'].append(dict(name=e['name'], mesh=str(e.get('asset', '')).rsplit('/', 1)[-1],
+                               aabb=(lo, hi), mats=[mm]))
+
+    # LOUD, not silent. Silent omission is what let this path certify a mesh
+    # the editor gate refuses; a donor with no bounds entry must announce
+    # itself so the gap is visible the first time rather than the fiftieth.
+    if blind:
+        print('  DONOR-BLIND: %d piece(s) with no bounds entry - run '
+              'meshbounds.py: %s' % (len(blind), ', '.join(sorted(set(blind))[:4])))
+    return dict(actors=actors, unread_material_slots=0, seconds=0.0,
+                donor_blind=len(blind))
 
 
 def main():
@@ -147,7 +214,12 @@ def main():
     # ...and STAMP, so a previewed mesh is evidence like any other
     json.dump({'asset': '%s/%s' % (OUT, asset), 'recipe': rid, 'tier': tier,
                'tier_name': recipes.tier_name(rid, tier), 'width': w,
-               'verdict': {'ok': ok, 'facts': facts}},
+               'verdict': {'ok': ok, 'facts': facts},
+               # fastbake reads the recorded parts directly, so its donors
+               # cannot silently fail the way the live path's did
+               'bake_path': 'fastbake',
+               'donors': sum(1 for e in rec if e['kind'] == 'mesh'),
+               'donor_fails': 0},
               open(os.path.join(TMP, 'stacktown_stamp_job.json'), 'w'))
     sr = subprocess.run([RUNG, 'stamp.py'], capture_output=True, text=True, cwd=HERE)
     st = [l[7:] for l in sr.stdout.splitlines() if 'STAMPED' in l]

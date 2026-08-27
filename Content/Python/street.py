@@ -38,9 +38,12 @@ import stagegeo
 import json
 import random
 
-SANDBOX = 'Sandbox_Bench'
+# Sandbox_Bench built these first; Stage2_Street is now their own room
+# (streetroom.py). Both are allowed: the bench copy stays usable until
+# the owner confirms the new map, which was their explicit instruction.
+SANDBOX = ('Sandbox_Bench', 'Stage2_Street')
 eus = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-if SANDBOX not in eus.get_editor_world().get_path_name():
+if not any(k in eus.get_editor_world().get_path_name() for k in SANDBOX):
     raise SystemExit('street.py is sandbox only - open /Game/Maps/%s' % SANDBOX)
 
 eal = unreal.EditorAssetLibrary

@@ -14,10 +14,12 @@ hold at the 19 mm player-zoom threshold, not because it reads from 112 m.
 import _path  # noqa: F401 - puts Tools/measure (ue.py) on sys.path
 import ue, json, math, random
 import paths
+import rolemap
 
 S = 'editor_toolset.toolsets.scene.SceneTools'
 P = 'editor_toolset.toolsets.primitive.PrimitiveTools'
 A = 'editor_toolset.toolsets.actor.ActorTools'
+O = 'editor_toolset.toolsets.object.ObjectTools'
 
 
 # --- the RECORDING SINK -----------------------------------------------------
@@ -36,6 +38,7 @@ A = 'editor_toolset.toolsets.actor.ActorTools'
 # slab record instead of emitting, and the whole building comes back as plain
 # data that fastbake.py turns into a mesh in one pass.
 _SINK = None
+_PIECE_FAILS = []   # donor placements the editor refused; see piece()
 
 
 def record():
@@ -49,6 +52,19 @@ def drain():
     global _SINK
     out = _SINK if _SINK is not None else []
     _SINK = None
+    return out
+
+
+def piece_failures(reset=False):
+    """Donor placements the editor refused since the last reset.
+
+    A caller that bakes should REFUSE on a non-empty list rather than stamp a
+    model that is missing parts it thinks it has.
+    """
+    global _PIECE_FAILS
+    out = list(_PIECE_FAILS)
+    if reset:
+        _PIECE_FAILS = []
     return out
 
 
@@ -178,12 +194,83 @@ def piece(actor, name, asset, loc, rot=(0.0, 0.0, 0.0), scale=1.0, mat=None):
         _SINK.append(dict(kind='mesh', actor=actor, name=name, asset=asset,
                           c=list(loc), r=list(rot), s=sc, mat=mat))
         return
-    ue.tool(S, 'add_static_mesh', {
-        'actor': actor, 'name': name, 'mesh': {'refPath': asset},
-        'local_transform': {'location': {'x': loc[0], 'y': loc[1], 'z': loc[2]},
-                            'rotation': {'pitch': rot[0], 'yaw': rot[1],
-                                         'roll': rot[2]},
-                            'scale': {'x': sc[0], 'y': sc[1], 'z': sc[2]}}})
+    # ADD_STATIC_MESH NEVER EXISTED. This branch called
+    # ue.tool(S, 'add_static_mesh', ...) - a tool that is on no toolset at all
+    # (not SceneTools, not PrimitiveTools, not StaticMeshTools) - and threw the
+    # response away, so it failed silently for every donor on every live build
+    # since it was written. Models baked through the LIVE path carry no roof
+    # planting, no tanks, no drainpipes and no flowerbeds, and were stamped
+    # Gate=PASS regardless; models baked through fastbake DO carry them,
+    # because that path never comes through here. See POLISH_BACKLOG S11.
+    #
+    # The working sequence is a composite of two tools that do exist, and the
+    # encoding is not guessable - it was probed:
+    #   * StaticMesh takes the DOTTED object path ('/Game/x/SM_y.SM_y').
+    #     A bare path string and an object-shaped {refPath:...} are both
+    #     REJECTED. This is the one that would have been got wrong by guessing.
+    #   * the transform structs accept either case.
+    # Verified by bounds growth, not by a returnValue: placing the Assetsville
+    # tank grew the actor's bounds to match its measured (288, 295, 877) from
+    # Tools/measure/meshbounds.json, which proves the mesh actually resolved
+    # rather than that a property string was accepted.
+    global _PIECE_FAILS
+    dotted = '%s.%s' % (asset, asset.rsplit('/', 1)[-1])
+    try:
+        comp = json.loads(ue.tool(A, 'add_component', {
+            'owner': actor,
+            'component_type': {'refPath': '/Script/Engine.StaticMeshComponent'},
+            'name': name}))['returnValue']
+    except Exception as e:
+        _PIECE_FAILS.append((name, asset, 'add_component: %s' % str(e)[:110]))
+        if len(_PIECE_FAILS) <= 3:
+            print('  PIECE FAILED %s <- %s : add_component %s'
+                  % (name, asset, str(e)[:110]))
+        return
+    vals = {'StaticMesh': dotted,
+            'RelativeLocation': {'X': loc[0], 'Y': loc[1], 'Z': loc[2]},
+            'RelativeRotation': {'Pitch': rot[0], 'Yaw': rot[1], 'Roll': rot[2]},
+            'RelativeScale3D': {'X': sc[0], 'Y': sc[1], 'Z': sc[2]}}
+    resp = ue.tool(O, 'set_properties',
+                   {'instance': comp, 'values': json.dumps(vals)})
+    try:
+        if json.loads(resp)['returnValue'] is not True:
+            raise ValueError('returnValue not true')
+    except Exception:
+        _PIECE_FAILS.append((name, asset, str(resp)[:110]))
+        if len(_PIECE_FAILS) <= 3:
+            print('  PIECE FAILED %s <- %s : %s'
+                  % (name, asset, str(resp)[:110].replace('\n', ' ')))
+
+
+def _setprops(args):
+    """ObjectTools.set_properties for HAND TOLERANCE - and a NO-OP while
+    recording.
+
+    These calls set a floor actor a percent or two off square, which is the
+    deliberate maker's imperfection the look depends on. They were written
+    straight against the editor with no `_SINK` branch, unlike every other
+    emitter in this file - so they fired even in RECORD mode, where they are
+    both useless and harmful:
+
+      * `instance` is the sink's integer ref, not an actor path, so the call
+        could only ever fail - and its return was discarded, so it failed
+        silently, exactly like piece() did;
+      * an offline sweep that should never touch the editor opened an MCP
+        socket and made a blocking HTTP round trip PER FLOOR. With the editor
+        busy those calls sit on a 180s timeout each, which is what stalled the
+        ladder sweep at low CPU with an ESTABLISHED connection to port 8000.
+
+    KNOWN CONSEQUENCE, recorded rather than fixed here: the jitter is applied
+    to the LEVEL, never to the recorded parts. So a mesh baked through the
+    live path carries hand tolerance and one baked through fastbake does not.
+    That is the same live-vs-fastbake divergence family as the donor bug
+    (POLISH_BACKLOG S11) and wants the same treatment - record the jitter and
+    have fastbake apply it - but that is a change to the bake output, so it is
+    a separate, deliberate piece of work rather than a drive-by.
+    """
+    if _SINK is not None:
+        return None
+    return ue.tool(O, 'set_properties', args)
 
 
 def stair_head(actor, x0, W, D, ztop, rnd, back=True):
@@ -267,7 +354,7 @@ def roof_plant(actor, x0, W, ztop, n, rnd, ymin=180.0, yspread=90.0,
             + rnd.uniform(-40.0, 40.0)
         uy = ymin + (span_y * (cy_ + 0.5) / max(1, rows)) \
             + rnd.uniform(-30.0, 30.0)
-        piece(actor, 'RoofPlant%d' % u, avkit.path(key), (ux, uy, ztop),
+        piece(actor, rolemap.donor_name(avkit.mat(key), 'RoofPlant%d' % u), avkit.path(key), (ux, uy, ztop),
               (0.0, rnd.choice((0.0, 90.0, 180.0, 270.0)), 0.0),
               scale=sc, mat=avkit.mat(key))
         made += 1
@@ -585,7 +672,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     fy + 30, fy + 35, z0 + 26, z1 - 26); made += 1
             box(a, 'Wall_CofR%d' % f, x0 + W - 26, x0 + W, fy - CF, fy + 58,
                 z0, z1); made += 1
-            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+            _setprops({
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.4, 1.4) * (W / 100.0),
                                          'y': rnd.uniform(-1.0, 1.0), 'z': 0.0},
@@ -625,7 +712,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                         fy + 18, z0 + 44, z1 - 34); made += 1
                     box(a, 'Frame_FlatCill%d_%d' % (f, u), wx0 - 6, wx1 + 6,
                         fy - 4, fy + 8, z0 + 36, z0 + 46); made += 1
-            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+            _setprops({
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.4, 1.4) * (W / 100.0),
                                          'y': rnd.uniform(-1.0, 1.0), 'z': 0.0},
@@ -659,7 +746,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     box(a, 'Frame_IbeamFl%s%d_%d' % (fl, f, k),
                         mx - 14, mx + 14, fy + dy, fy + dy + 7,
                         z0 + 26, z1); made += 1
-            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+            _setprops({
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.2, 1.2) * (W / 100.0),
                                          'y': rnd.uniform(-0.9, 0.9), 'z': 0.0},
@@ -697,7 +784,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     fy + REV - 4, fy + REV + 1, z0 + sp + 20, z1 - 22); made += 1
             box(a, 'Wall_Mullion%d_end' % f, x0 + W - 15, x0 + W + 15,
                 fy - 18, fy + 62, z0 + sp, z1); made += 1
-            ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+            _setprops({
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.6, 1.6) * (W / 100.0),
                                          'y': rnd.uniform(-1.1, 1.1), 'z': 0.0},
@@ -755,7 +842,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 box(a, 'Frame_B%dCorbel%s' % (b, cb), cx_ - 11, cx_ + 11,
                     gy - 12, gy + 2, wz0 - 20, wz0 - 6); made += 1
         # hand-made tolerance: model tolerances, 1-2% of width, not 0.15%
-        ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+        _setprops({
             'instance': a, 'values': json.dumps({
                 'RelativeLocation': {'x': rnd.uniform(-2.2, 2.2) * (W / 100.0),
                                      'y': rnd.uniform(-1.6, 1.6), 'z': 0.0},
@@ -958,10 +1045,24 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         for i in range(npl * len(pys)):
             px = gx0 + gap + (i % npl) * (blen + gap)
             py = pys[i // npl]
-            for mesh, (mx, my, mz), yaw in ubkit.bed(seg, x=px, y=py,
-                                                     z=ztop + 9):
-                piece(r, 'Bed%d_%s' % (i, ubkit.short(mesh)),
-                      mesh, (mx, my, mz), (0.0, yaw, 0.0),
+            # bed_yaw, NOT yaw. This loop variable used to be called `yaw`,
+            # which SHADOWED the function parameter of the same name - and
+            # Python leaks a loop variable into the enclosing scope, so after
+            # the last flowerbed piece `yaw` held ITS rotation for the rest of
+            # the builder. The only mkactor after this point is the canopy, so
+            # the canopy alone was created at yaw 180 and flipped whole about
+            # the actor origin: local x 68..width became world x -(width-68)
+            # ..-68, entirely off the parcel.
+            #
+            # That is the exact width-minus-68 signature the ladder sweep saw
+            # - 752 / 1162 / 1572 uu over on parcels of 820 / 1230 / 1640 -
+            # and it fired only on the two recipes that have BOTH a flowerbed
+            # and a canopy (vernacular t4, vernacular5 t5). GATE-05 was right
+            # every time it refused them.
+            for mesh, (mx, my, mz), bed_yaw in ubkit.bed(seg, x=px, y=py,
+                                                         z=ztop + 9):
+                piece(r, rolemap.donor_name('MI_planter', 'Bed%d_%s' % (i, ubkit.short(mesh))),
+                      mesh, (mx, my, mz), (0.0, bed_yaw, 0.0),
                       mat='MI_planter')
                 made += 1
             # REAL PLANTING, not a green box. A bed holds something growing;
@@ -975,7 +1076,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             for k, (key, (plx, ply, plz), pyaw) in enumerate(
                     avkit.bed_planting(x0b + 22, y0b + 18, x1b - 22, y1b - 18,
                                        ztop + 9 + 58, rnd)):
-                piece(r, 'Plant%d_%d' % (i, k), avkit.path(key),
+                piece(r, rolemap.donor_name(avkit.mat(key), 'Plant%d_%d' % (i, k)), avkit.path(key),
                       (plx, ply, plz), (0.0, pyaw, 0.0), mat=avkit.mat(key))
                 made += 1
             # A SHRUB in every other bed, so the roof has height. This was a
@@ -989,7 +1090,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 ty = (y0b + y1b) / 2.0
                 bw = avkit.size('bush')[0]
                 sc = min(0.30, (y1b - y0b) * 2.6 / bw)
-                piece(r, 'Shrub%d' % i, avkit.path('bush'),
+                piece(r, rolemap.donor_name(avkit.mat('bush'), 'Shrub%d' % i), avkit.path('bush'),
                       (tx, ty, ztop + 9 + 58), (0.0, rnd.uniform(0, 360), 0.0),
                       scale=sc, mat=avkit.mat('bush'))
                 made += 1
@@ -1062,7 +1163,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 tw = avkit.size(key)[0] * tsc
                 tx = gx0 + 50 + (gx1 - gx0 - 100) * tx_f
                 ty = pky0 + (pky1 - pky0) * ty_f
-                piece(r, 'Tree%d' % ti, avkit.path(key),
+                piece(r, rolemap.donor_name(avkit.mat(key), 'Tree%d' % ti), avkit.path(key),
                       (tx, ty, deck + LAWN_T),
                       (0.0, rnd.uniform(0, 360), 0.0), scale=tsc,
                       mat=avkit.mat(key))
@@ -1085,7 +1186,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 sxp = gx0 + 70 + (gx1 - gx0 - 140) * sf_x
                 syp = pky0 + (pky1 - pky0) * sf_y
                 bsc = sh / avkit.size('bush')[2]
-                piece(r, 'ShrubP%d' % si, avkit.path('bush'),
+                piece(r, rolemap.donor_name(avkit.mat('bush'), 'ShrubP%d' % si), avkit.path('bush'),
                       (sxp, syp, deck + LAWN_T),
                       (0.0, rnd.uniform(0, 360), 0.0), scale=bsc,
                       mat=avkit.mat('bush'))
@@ -1116,7 +1217,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                         continue
                     if gxp > shx - 40 and gyp > shy - 44:
                         continue
-                    piece(r, 'Tuft%d' % gi, avkit.path('grass_tuft'),
+                    piece(r, rolemap.donor_name(avkit.mat('grass_tuft'), 'Tuft%d' % gi), avkit.path('grass_tuft'),
                           (gxp, gyp, deck + LAWN_T),
                           (0.0, rnd.uniform(0, 360), 0.0), scale=gsc,
                           mat=avkit.mat('grass_tuft'))
@@ -1126,7 +1227,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             # A BENCH, facing the parapet and the street beyond it. Placed off
             # the path so it reads as somewhere to sit rather than an obstacle.
             bnl = avkit.size('bench')[1]
-            piece(r, 'Bench0', avkit.path('bench'),
+            piece(r, rolemap.donor_name(avkit.mat('bench'), 'Bench0'), avkit.path('bench'),
                   (gx0 + (gx1 - gx0) * 0.66, pky0 + 40, deck + LAWN_T),
                   (0.0, 90.0, 0.0), scale=1.0, mat=avkit.mat('bench'))
             made += 1
@@ -1212,7 +1313,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         for _sx in (x0 + 14.0, x0 + W - 14.0):
             for key, (dx, dy, dz), _dyaw in _av.downpipe(
                     36.0, ztop - 20.0, _sx, -18.0, rnd):
-                piece(r, 'Pipe%d_%d' % (int(_sx), int(dz)), _av.path(key),
+                piece(r, rolemap.donor_name(_av.mat(key), 'Pipe%d_%d' % (int(_sx), int(dz))), _av.path(key),
                       (dx, dy, dz), (0.0, 0.0, 0.0), mat=_av.mat(key))
                 made += 1
 
@@ -1422,7 +1523,7 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             fy + GLAZE_Y + 2, gz0 + 2, gz0 + 12)
         made += 2
         # hand tolerance: MODEL tolerances, 1-2%, not building tolerances
-        ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+        _setprops({
             'instance': a, 'values': json.dumps({
                 'RelativeLocation': {'x': rnd.uniform(-2.0, 2.0) * (W / 100.0),
                                      'y': rnd.uniform(-1.4, 1.4), 'z': 0.0},
@@ -1532,7 +1633,7 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                   rnd.uniform(-1.4, 1.4), rnd.uniform(-0.8, 0.8))
 
     def jitter(act):
-        ue.tool('editor_toolset.toolsets.object.ObjectTools', 'set_properties', {
+        _setprops({
             'instance': act, 'values': json.dumps({
                 'RelativeLocation': {'x': jx, 'y': jy, 'z': 0.0},
                 'RelativeRotation': {'pitch': 0.0, 'yaw': jr, 'roll': 0.0}})})
@@ -2080,7 +2181,7 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             for t2 in range(nt):
                 tx = x0 + 60 + (W - 120) * (t2 + 0.5) / nt
                 gsc = 58.0 / _av2.size('grass_tuft')[2]
-                piece(sh, 'TerrTuft%d_%d' % (f, t2),
+                piece(sh, rolemap.donor_name(_av2.mat('grass_tuft'), 'TerrTuft%d_%d' % (f, t2)),
                       _av2.path('grass_tuft'), (tx, bk - stp + 14, z0 + 50),
                       (0.0, rnd.uniform(0, 360), 0.0), scale=gsc,
                       mat=_av2.mat('grass_tuft')); made += 1

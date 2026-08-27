@@ -1,0 +1,2238 @@
+{
+ "meshes": {
+  "SM_UBP_Flowerbed_GI_PROXY_1": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_GI_PROXY_1",
+   "declared": null,
+   "ext": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -100.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_GI_PROXY_2": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_GI_PROXY_2",
+   "declared": null,
+   "ext": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -100.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_base_x50": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_base_x50",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_base_x50C": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_base_x50C",
+   "declared": null,
+   "ext": [
+    60.0,
+    60.0,
+    10.0
+   ],
+   "hi": [
+    60.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -60.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_base_x50E": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_base_x50E",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_t25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_t25",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_top_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_top_t10",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_top_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_top_t15",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_top_t25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_top_t25",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerR_ext_wall_top_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerR_ext_wall_top_t5",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_base_r50": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_base_r50",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_base_r50C": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_base_r50C",
+   "declared": null,
+   "ext": [
+    60.0,
+    60.0,
+    10.0
+   ],
+   "hi": [
+    60.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -60.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_base_r50E": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_base_r50E",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.01,
+    10.01
+   ],
+   "hi": [
+    50.0,
+    0.01,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_r50t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_r50t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_r50t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_r50t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_r50t25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_r50t25",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_r50t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_r50t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t25",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_cornerS_ext_wall_top_r50t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_base": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_base",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    50.01,
+    -0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_baseC": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_baseC",
+   "declared": null,
+   "ext": [
+    60.01,
+    70.0,
+    10.0
+   ],
+   "hi": [
+    50.01,
+    10.0,
+    10.0
+   ],
+   "lo": [
+    -10.0,
+    -60.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_baseE": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_baseE",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    50.01,
+    -0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_wall_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_wall_t10",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_wall_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_wall_t15",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_wall_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_wall_t5",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_wall_top_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_wall_top_t10",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_wall_top_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_wall_top_t15",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_endS_wall_top_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_endS_wall_top_t5",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_base": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_base",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    10.21
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    10.2
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_baseC": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_baseC",
+   "declared": null,
+   "ext": [
+    60.0,
+    70.0,
+    10.01
+   ],
+   "hi": [
+    50.0,
+    10.0,
+    10.0
+   ],
+   "lo": [
+    -10.0,
+    -60.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_baseE": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_baseE",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    10.21
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    10.2
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_wall_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_wall_t10",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_wall_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_wall_t15",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_wall_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_wall_t5",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_wall_top_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_wall_top_t10",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_wall_top_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_wall_top_t15",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_end_wall_top_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_end_wall_top_t5",
+   "declared": null,
+   "ext": [
+    50.01,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    50.01,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_grass_1": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_grass_1",
+   "declared": null,
+   "ext": [
+    62.65,
+    64.14,
+    24.67
+   ],
+   "hi": [
+    31.74,
+    31.74,
+    15.28
+   ],
+   "lo": [
+    -30.91,
+    -32.39,
+    -9.4
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_grass_2": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_grass_2",
+   "declared": null,
+   "ext": [
+    25.84,
+    60.29,
+    24.46
+   ],
+   "hi": [
+    25.68,
+    29.51,
+    15.31
+   ],
+   "lo": [
+    -0.17,
+    -30.78,
+    -9.15
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_grass_3": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_grass_3",
+   "declared": null,
+   "ext": [
+    30.85,
+    31.02,
+    24.58
+   ],
+   "hi": [
+    27.79,
+    2.44,
+    15.3
+   ],
+   "lo": [
+    -3.06,
+    -28.58,
+    -9.28
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_grass_4": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_grass_4",
+   "declared": null,
+   "ext": [
+    32.74,
+    33.64,
+    24.38
+   ],
+   "hi": [
+    30.3,
+    2.82,
+    15.25
+   ],
+   "lo": [
+    -2.44,
+    -30.82,
+    -9.12
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_grass_5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_grass_5",
+   "declared": null,
+   "ext": [
+    57.07,
+    56.22,
+    24.76
+   ],
+   "hi": [
+    28.84,
+    27.45,
+    15.4
+   ],
+   "lo": [
+    -28.23,
+    -28.77,
+    -9.36
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_grass_6": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_grass_6",
+   "declared": null,
+   "ext": [
+    53.42,
+    54.4,
+    24.77
+   ],
+   "hi": [
+    26.71,
+    27.2,
+    15.37
+   ],
+   "lo": [
+    -26.71,
+    -27.2,
+    -9.4
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_ground_center": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_ground_center",
+   "declared": null,
+   "ext": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -100.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_ground_circular": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_ground_circular",
+   "declared": null,
+   "ext": [
+    100.0,
+    100.0,
+    0.0
+   ],
+   "hi": [
+    50.0,
+    50.0,
+    0.0
+   ],
+   "lo": [
+    -50.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_ground_corner": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_ground_corner",
+   "declared": null,
+   "ext": [
+    100.0,
+    100.0,
+    0.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    0.0
+   ],
+   "lo": [
+    -0.0,
+    -100.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_ground_corner_R": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_ground_corner_R",
+   "declared": null,
+   "ext": [
+    100.2,
+    100.2,
+    0.0
+   ],
+   "hi": [
+    100.0,
+    0.2,
+    0.0
+   ],
+   "lo": [
+    -0.2,
+    -100.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_base_x25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_base_x25",
+   "declared": null,
+   "ext": [
+    100.0,
+    25.1,
+    10.01
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -25.1,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_base_x25C": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_base_x25C",
+   "declared": null,
+   "ext": [
+    100.0,
+    35.0,
+    10.01
+   ],
+   "hi": [
+    100.0,
+    10.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -25.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_base_x25E": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_base_x25E",
+   "declared": null,
+   "ext": [
+    100.0,
+    25.1,
+    10.01
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -25.1,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_base_x50": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_base_x50",
+   "declared": null,
+   "ext": [
+    100.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_base_x50C": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_base_x50C",
+   "declared": null,
+   "ext": [
+    100.0,
+    60.0,
+    10.01
+   ],
+   "hi": [
+    100.0,
+    10.0,
+    10.01
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_base_x50E": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_base_x50E",
+   "declared": null,
+   "ext": [
+    100.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    10.0
+   ],
+   "lo": [
+    -0.0,
+    -50.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_top_x50t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_top_x50t10",
+   "declared": null,
+   "ext": [
+    100.0,
+    10.0,
+    6.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -10.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_top_x50t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_top_x50t15",
+   "declared": null,
+   "ext": [
+    100.0,
+    15.0,
+    6.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -15.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_top_x50t25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_top_x50t25",
+   "declared": null,
+   "ext": [
+    100.0,
+    25.0,
+    6.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_top_x50t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_top_x50t5",
+   "declared": null,
+   "ext": [
+    100.0,
+    5.0,
+    6.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    6.0
+   ],
+   "lo": [
+    -0.0,
+    -5.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_x50t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_x50t10",
+   "declared": null,
+   "ext": [
+    100.0,
+    10.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -10.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_x50t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_x50t15",
+   "declared": null,
+   "ext": [
+    100.0,
+    15.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -15.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_x50t25": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_x50t25",
+   "declared": null,
+   "ext": [
+    100.0,
+    25.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_side_wall_x50t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_side_wall_x50t5",
+   "declared": null,
+   "ext": [
+    100.0,
+    5.0,
+    100.0
+   ],
+   "hi": [
+    100.0,
+    0.0,
+    100.0
+   ],
+   "lo": [
+    -0.0,
+    -5.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_base": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_base",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    10.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_baseC": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_baseC",
+   "declared": null,
+   "ext": [
+    70.0,
+    70.0,
+    10.0
+   ],
+   "hi": [
+    35.0,
+    35.0,
+    10.0
+   ],
+   "lo": [
+    -35.0,
+    -35.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_baseE": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_baseE",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.01
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    10.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_wall_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_wall_t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    100.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_wall_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_wall_t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    100.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_wall_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_wall_t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    100.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_wall_top_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_wall_top_t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.02
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    6.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.02
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_wall_top_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_wall_top_t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.02
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    6.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.02
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_singleS_wall_top_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_singleS_wall_top_t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.02
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    6.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.02
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_base": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_base",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.02
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    10.01
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_baseC": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_baseC",
+   "declared": null,
+   "ext": [
+    70.0,
+    70.0,
+    10.01
+   ],
+   "hi": [
+    35.0,
+    35.0,
+    10.01
+   ],
+   "lo": [
+    -35.0,
+    -35.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_baseE": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_baseE",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    10.02
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    10.01
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    -0.01
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_wall_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_wall_t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    100.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_wall_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_wall_t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    100.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_wall_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_wall_t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    100.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_wall_top_t10": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_wall_top_t10",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    6.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_wall_top_t15": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_wall_top_t15",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    6.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "SM_UBP_Flowerbed_single_wall_top_t5": {
+   "asset": "/Game/Uniblocks/Meshes/Garden/Parts/SM_UBP_Flowerbed_single_wall_top_t5",
+   "declared": null,
+   "ext": [
+    50.0,
+    50.0,
+    6.0
+   ],
+   "hi": [
+    25.0,
+    25.0,
+    6.0
+   ],
+   "lo": [
+    -25.0,
+    -25.0,
+    0.0
+   ],
+   "src": "folder"
+  },
+  "ac_large": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_airCondition_01",
+   "declared": [
+    42,
+    108,
+    63
+   ],
+   "ext": [
+    42.47,
+    107.77,
+    63.29
+   ],
+   "hi": [
+    42.47,
+    53.89,
+    31.65
+   ],
+   "lo": [
+    -0.0,
+    -53.89,
+    -31.65
+   ],
+   "src": "PIECES"
+  },
+  "ac_small": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_airCondition_02",
+   "declared": [
+    51,
+    76,
+    93
+   ],
+   "ext": [
+    50.54,
+    75.71,
+    93.19
+   ],
+   "hi": [
+    48.61,
+    37.86,
+    22.97
+   ],
+   "lo": [
+    -1.93,
+    -37.86,
+    -70.22
+   ],
+   "src": "PIECES"
+  },
+  "antenna": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_AntennaBig_01",
+   "declared": [
+    322,
+    322,
+    968
+   ],
+   "ext": [
+    321.69,
+    321.67,
+    968.09
+   ],
+   "hi": [
+    160.84,
+    160.84,
+    968.09
+   ],
+   "lo": [
+    -160.85,
+    -160.84,
+    -0.0
+   ],
+   "src": "PIECES"
+  },
+  "awning": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_shopAwing_01",
+   "declared": [
+    293,
+    1402,
+    324
+   ],
+   "ext": [
+    293.2,
+    1401.75,
+    324.48
+   ],
+   "hi": [
+    309.43,
+    700.87,
+    324.48
+   ],
+   "lo": [
+    16.22,
+    -700.87,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "bench": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_bench_02",
+   "declared": [
+    68,
+    150,
+    92
+   ],
+   "ext": [
+    67.82,
+    150.0,
+    92.44
+   ],
+   "hi": [
+    33.91,
+    75.0,
+    92.43
+   ],
+   "lo": [
+    -33.91,
+    -75.0,
+    -0.01
+   ],
+   "src": "PIECES"
+  },
+  "bush": {
+   "asset": "/Game/AssetsvilleTown/Meshes/Nature/SM_bush_01",
+   "declared": [
+    614,
+    641,
+    485
+   ],
+   "ext": [
+    613.93,
+    640.88,
+    484.52
+   ],
+   "hi": [
+    300.34,
+    316.59,
+    415.59
+   ],
+   "lo": [
+    -313.58,
+    -324.29,
+    -68.93
+   ],
+   "src": "PIECES"
+  },
+  "canopy": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_shopCanopy_01",
+   "declared": [
+    155,
+    700,
+    78
+   ],
+   "ext": [
+    155.0,
+    700.0,
+    77.5
+   ],
+   "hi": [
+    168.34,
+    350.0,
+    332.5
+   ],
+   "lo": [
+    13.35,
+    -350.0,
+    255.0
+   ],
+   "src": "PIECES"
+  },
+  "chimney": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_chimney_02",
+   "declared": [
+    225,
+    100,
+    240
+   ],
+   "ext": [
+    224.56,
+    99.62,
+    240.23
+   ],
+   "hi": [
+    112.28,
+    49.81,
+    240.23
+   ],
+   "lo": [
+    -112.28,
+    -49.81,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "cornice": {
+   "asset": "/Game/AssetsvilleTown/Meshes/BuildingTilset/SM_cornice_01",
+   "declared": [
+    96,
+    800,
+    113
+   ],
+   "ext": [
+    96.5,
+    800.0,
+    112.5
+   ],
+   "hi": [
+    71.5,
+    0.0,
+    112.5
+   ],
+   "lo": [
+    -25.0,
+    -800.0,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "cornice_corner": {
+   "asset": "/Game/AssetsvilleTown/Meshes/BuildingTilset/SM_cornice_01_corner",
+   "declared": [
+    71,
+    71,
+    113
+   ],
+   "ext": [
+    71.5,
+    71.5,
+    112.5
+   ],
+   "hi": [
+    71.5,
+    0.0,
+    112.5
+   ],
+   "lo": [
+    0.0,
+    -71.5,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "drainpipe": {
+   "asset": "/Game/AssetsvilleTown/Meshes/BuildingTilset/SM_drainPipe",
+   "declared": [
+    27,
+    27,
+    300
+   ],
+   "ext": [
+    26.95,
+    26.95,
+    300.0
+   ],
+   "hi": [
+    13.48,
+    13.48,
+    300.0
+   ],
+   "lo": [
+    -13.48,
+    -13.48,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "drainpipe_end": {
+   "asset": "/Game/AssetsvilleTown/Meshes/BuildingTilset/SM_drainPipe_ending",
+   "declared": [
+    47,
+    27,
+    60
+   ],
+   "ext": [
+    46.94,
+    26.95,
+    59.77
+   ],
+   "hi": [
+    33.47,
+    13.48,
+    0.0
+   ],
+   "lo": [
+    -13.48,
+    -13.48,
+    -59.77
+   ],
+   "src": "PIECES"
+  },
+  "grass_tuft": {
+   "asset": "/Game/AssetsvilleTown/Meshes/Nature/SM_grassVerticalSingle",
+   "declared": [
+    498,
+    479,
+    122
+   ],
+   "ext": [
+    497.65,
+    479.44,
+    122.07
+   ],
+   "hi": [
+    277.61,
+    232.88,
+    90.06
+   ],
+   "lo": [
+    -220.04,
+    -246.55,
+    -32.02
+   ],
+   "src": "PIECES"
+  },
+  "pillar": {
+   "asset": "/Game/AssetsvilleTown/Meshes/BuildingTilset/SM_pillar_01",
+   "declared": [
+    40,
+    40,
+    300
+   ],
+   "ext": [
+    40.0,
+    40.0,
+    300.0
+   ],
+   "hi": [
+    20.0,
+    20.0,
+    300.0
+   ],
+   "lo": [
+    -20.0,
+    -20.0,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "plant_l": {
+   "asset": "/Game/AssetsvilleTown/Meshes/InteriorProps/Office/SM_Plant_03",
+   "declared": [
+    44,
+    47,
+    82
+   ],
+   "ext": [
+    44.14,
+    46.75,
+    81.87
+   ],
+   "hi": [
+    21.04,
+    16.91,
+    85.01
+   ],
+   "lo": [
+    -23.09,
+    -29.84,
+    3.14
+   ],
+   "src": "PIECES"
+  },
+  "plant_m": {
+   "asset": "/Game/AssetsvilleTown/Meshes/InteriorProps/Office/SM_Plant_02",
+   "declared": [
+    62,
+    101,
+    165
+   ],
+   "ext": [
+    62.0,
+    101.04,
+    164.55
+   ],
+   "hi": [
+    26.53,
+    47.59,
+    161.59
+   ],
+   "lo": [
+    -35.47,
+    -53.45,
+    -2.96
+   ],
+   "src": "PIECES"
+  },
+  "plant_s": {
+   "asset": "/Game/AssetsvilleTown/Meshes/InteriorProps/Office/SM_Plant_01",
+   "declared": [
+    39,
+    39,
+    101
+   ],
+   "ext": [
+    39.06,
+    39.06,
+    100.87
+   ],
+   "hi": [
+    19.53,
+    19.53,
+    100.88
+   ],
+   "lo": [
+    -19.53,
+    -19.53,
+    0.01
+   ],
+   "src": "PIECES"
+  },
+  "rock": {
+   "asset": "/Game/AssetsvilleTown/Meshes/Nature/SM_rock_01",
+   "declared": [
+    21,
+    22,
+    6
+   ],
+   "ext": [
+    21.35,
+    22.31,
+    6.08
+   ],
+   "hi": [
+    10.26,
+    11.11,
+    5.96
+   ],
+   "lo": [
+    -11.09,
+    -11.21,
+    -0.13
+   ],
+   "src": "PIECES"
+  },
+  "shop_top": {
+   "asset": "/Game/AssetsvilleTown/Meshes/BuildingTilset/SM_shopTop_01",
+   "declared": [
+    44,
+    814,
+    177
+   ],
+   "ext": [
+    44.14,
+    814.14,
+    177.5
+   ],
+   "hi": [
+    22.07,
+    7.07,
+    177.5
+   ],
+   "lo": [
+    -22.07,
+    -807.07,
+    0.0
+   ],
+   "src": "PIECES"
+  },
+  "tree_s": {
+   "asset": "/Game/AssetsvilleTown/Meshes/Nature/SM_tree_01",
+   "declared": [
+    656,
+    675,
+    1379
+   ],
+   "ext": [
+    655.6,
+    674.63,
+    1378.59
+   ],
+   "hi": [
+    327.79,
+    334.28,
+    1378.59
+   ],
+   "lo": [
+    -327.82,
+    -340.35,
+    -0.0
+   ],
+   "src": "HERO"
+  },
+  "tree_t": {
+   "asset": "/Game/AssetsvilleTown/Meshes/Nature/SM_tree_04",
+   "declared": [
+    438,
+    413,
+    1624
+   ],
+   "ext": [
+    438.06,
+    412.65,
+    1624.47
+   ],
+   "hi": [
+    201.33,
+    202.55,
+    1624.47
+   ],
+   "lo": [
+    -236.73,
+    -210.1,
+    -0.0
+   ],
+   "src": "HERO"
+  },
+  "vent_tank": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_tank",
+   "declared": [
+    183,
+    512,
+    277
+   ],
+   "ext": [
+    183.34,
+    512.04,
+    276.52
+   ],
+   "hi": [
+    91.67,
+    256.02,
+    275.03
+   ],
+   "lo": [
+    -91.67,
+    -256.02,
+    -1.49
+   ],
+   "src": "PIECES"
+  },
+  "water_tank": {
+   "asset": "/Game/AssetsvilleTown/Meshes/StreetProps/SM_Water_Tank_01",
+   "declared": [
+    288,
+    295,
+    877
+   ],
+   "ext": [
+    288.28,
+    294.82,
+    876.54
+   ],
+   "hi": [
+    144.14,
+    147.41,
+    864.74
+   ],
+   "lo": [
+    -144.14,
+    -147.41,
+    -11.8
+   ],
+   "src": "HERO"
+  }
+ },
+ "note": "local-space bounds, pivot at origin; uu",
+ "selfcheck_drainpipe_end": true
+}

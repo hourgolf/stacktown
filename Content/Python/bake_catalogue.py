@@ -55,6 +55,12 @@ for rid, w in JOBS:
         spec['parcel_x0'] = 0.0
         spec['parcel_depth'] = spec['depth']
         spec['depth'] = spec['depth'] - step_elevations.rear_allowance(spec)
+        # how many donor pieces this model SHOULD carry - recorded off the
+        # sink, so the stamp can be compared against reality later
+        genbuild.record()
+        genbuild.build(spec, origin=STAGE, yaw=0.0)
+        _ndonors = sum(1 for e in genbuild.drain() if e.get('kind') == 'mesh')
+        genbuild.piece_failures(reset=True)
         genbuild.build(spec, origin=STAGE, yaw=0.0)
         # EVERY face, because a catalogue model has no neighbours. Without this
         # the commercial generators bake a street facade and a roof - they emit
@@ -126,9 +132,21 @@ for rid, w in JOBS:
         print('  ' + line[0])
 
         # --- the stamp: the mesh carries the verdict it earned --------------
+        # A BAKER MUST NOT STAMP A MODEL MISSING PARTS IT THINKS IT HAS.
+        # piece() now reports every donor the editor refused; before it did,
+        # this path silently produced donorless meshes and stamped them PASS.
+        _fails = genbuild.piece_failures(reset=True)
+        if _fails:
+            raise SystemExit(
+                'REFUSED to stamp %s - %d donor placement(s) failed, so the '
+                'mesh is missing geometry the gate believed it had:\n  %s'
+                % (asset, len(_fails),
+                   '\n  '.join('%s <- %s : %s' % f for f in _fails[:6])))
         json.dump({'asset': '%s/%s' % (OUT, asset), 'recipe': rid, 'tier': t,
                    'tier_name': recipes.tier_name(rid, t), 'width': w,
-                   'verdict': verdict},
+                   'verdict': verdict,
+                   'bake_path': 'live', 'donors': _ndonors,
+                   'donor_fails': 0},
                   open(os.path.join(TMP, 'stacktown_stamp_job.json'), 'w'))
         sr = subprocess.run([RUNG, 'stamp.py'], capture_output=True,
                             text=True, cwd=HERE)

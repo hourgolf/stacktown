@@ -38,6 +38,21 @@ tags = {
     'SpanX':      '%.0f' % (f.get('span_x') or 0.0),
     'SpanY':      '%.0f' % (f.get('span_y') or 0.0),
     'Stamped':    datetime.date.today().isoformat(),
+    # WHICH PATH BUILT THIS, and whether its donors actually landed.
+    #
+    # Two bake paths exist and they disagreed for months without saying so:
+    # the LIVE path (bake_catalogue) placed no donor geometry at all, because
+    # piece() called a tool that exists on no toolset and discarded the error,
+    # while FASTBAKE (preview) reads the recorded parts directly and always
+    # carried them. Both stamped Gate=PASS. Nothing on the asset said which
+    # path built it, so telling a complete mesh from a donorless one meant
+    # inferring from material slots - see POLISH_BACKLOG S11.
+    #
+    # A mesh is meant to be evidence. Evidence that cannot say how it was
+    # produced is a good deal weaker than it looks.
+    'BakePath':   str(job.get('bake_path', 'unknown')),
+    'Donors':     str(int(job.get('donors', -1))),
+    'DonorFails': str(int(job.get('donor_fails', -1))),
 }
 for k, v in tags.items():
     unreal.EditorAssetLibrary.set_metadata_tag(sm, PREFIX + k, v)

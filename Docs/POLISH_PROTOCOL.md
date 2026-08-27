@@ -80,14 +80,16 @@ also earned the rule that keeps it fixed.
   is part of the fix. Other checks in this repo calibrated against real
   defects should be audited for the same shape.
 - **The honest catalogue precedes breadth.** No zoning or archetype plan is
-  sized against declared (recipe × tier × width) combinations — only
-  against baked-and-stamped ones. RESOLVED 2026-08-27 by the un-quarantined
-  ladder sweep (548 swept, 0 errors, 0 blind donors): **543 of 548 fit
-  their parcel; 5 are unbuildable, all one canopy yaw-180 bug** (oversail =
-  width − 68 exactly, at every offered width); **257 buildable combos are
-  simply unbaked** — a batch job, not a repair project. The earlier
-  "unknown mix" framing was honest at the time and is now superseded.
-
+  sized against declared combinations — only against baked-and-stamped
+  ones. CORRECTED 2026-08-27 (S18): the ladder sweep measures the X axis
+  ONLY, so its "548/548 buildable" was a WIDTH claim misreported as a
+  GATE-05 claim. The wave found the depth axis honestly: 18 refusals, all
+  contemporary6 (every tier x width), donor-driven — boxes span 961 inside
+  the allowance, boxes+donors span 1107, exceeding depth 900+130. Current
+  honest state: 530/548 baked and fastbake-stamped; 18 contemporary6
+  combos OUTSTANDING BY DESIGN pending a real recipe fix; 6 old
+  contemporary6 assets on disk are falsely certified (they passed depth
+  only because their donors were missing).
 ## Sequencing (owner-approved 2026-08-27)
 
 1. Width sweep (donor-bounds table first) → the honest catalogue number.

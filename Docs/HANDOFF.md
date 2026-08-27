@@ -186,6 +186,30 @@ Every item cost hours. They are ordered by how much.
   sweep's unapplied actor rotation, and a loop variable shadowing a yaw
   parameter (four instances by 2026-08-27). When geometry lies, check the
   frame before the geometry.
+- **This machine has persistent MetalRHI (GPU) render-thread crashes**
+  (S19): MetalCommandList assertion failures killed the editor twice on
+  2026-08-27, before AND after the 5.8.2 update, unrelated to scripts or
+  memory. Long-running batch drivers must be RESUMABLE, stop clean against
+  a dead bridge, and stamp progress so the resume set is computable.
+  Set the viewport non-realtime for long batches - the fault is the render
+  thread and a fastbake needs no viewport. Trigger UNIDENTIFIED: the dummy
+  display is a plausible contributor, but capture activity is NOT
+  correlated on the timeline to date (neither crash followed a capture;
+  fastbake does no viewport work). If a third crash lands, record what ran
+  in the seconds before it, so the correlation is tested, not assumed.
+- **Re-baking an asset NULLS every placed actor that references it** (S17).
+  The actor keeps its label, renders nothing, and reports zero bounds - a
+  street silently empties and the frame reads as a lighting fault. After
+  ANY re-bake, re-run the placers (street.py, place_catalogue) BEFORE any
+  capture. Same species as the import-persist trap: a reference that dies
+  without an error.
+- **The live merge DROPS masked material slots.** SceneTools.merge_actors
+  cannot carry a masked blend mode and exposes no setting to reach for:
+  leaf cards keep their triangles and lose their material, rendering as
+  dark quads. Measured 2026-08-27: live 350s/16 slots/no leaf vs fastbake
+  2.6s/19 slots/both leaf materials, identical bounds. FASTBAKE is the
+  production path; the live merge is for geometry that carries no masked
+  slots.
 - **NEVER purge `LOOK_`.** `LOOK_Post` is the unbound PostProcessVolume
   holding the fixed grade (AEM_Manual, ISO 800, shutter 60). Deleting it
   silently reverts the level to UE default AUTO exposure - the same camera
@@ -230,7 +254,15 @@ Every item cost hours. They are ordered by how much.
   must run immediately before every capture.
 - **`import_file` does not persist.** Save explicitly or the assets vanish on
   restart, silently nulling components.
-- **Delete `.mcp_sid` after an editor restart** or every MCP call 404s.
+- **FIRST ACTION after ANY editor restart: clear `.mcp_sid` — next to
+  WHICHEVER ue.py the script imports.** There are TWO: Tools/measure/ and a
+  scratchpad copy. The cached session id makes every MCP call return HTTP
+  404, which reads exactly like a dead server - mistaken for one twice.
+- **rung.sh forwards NO ARGUMENTS to scripts.** An argv branch inside a
+  rung script never fires - wave_throttle.py's `restore` silently
+  re-applied the throttle while PRINTING that it had restored. Caught by
+  reading output, not exit codes. State changes prove themselves by
+  READ-BACK (cvar.py), never by printing intent.
 
 ### Material and geometry
 

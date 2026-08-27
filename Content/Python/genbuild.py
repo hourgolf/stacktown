@@ -269,8 +269,82 @@ def _setprops(args):
     a separate, deliberate piece of work rather than a drive-by.
     """
     if _SINK is not None:
+        # RECORD IT, don't discard it. Jitter used to be applied to the LEVEL
+        # only, so a live-baked mesh carried hand tolerance and a fastbaked one
+        # did not - the two paths differed in the LOOK, not just in metadata
+        # (POLISH_BACKLOG S14). Folding the offset into the ACTOR's recorded
+        # transform is all it takes: fastbake already composes each part's
+        # world transform from actor loc/rot, so it picks this up with no
+        # change at its end and the live path is untouched.
+        idx = args.get('instance')
+        rec = _SINK[idx] if isinstance(idx, int) and 0 <= idx < len(_SINK) else None
+        if rec is None or rec.get('kind') != 'actor':
+            raise ValueError('hand tolerance aimed at %r, which is not an '
+                             'actor record - jitter would be lost silently' % (idx,))
+        vals = json.loads(args.get('values') or '{}')
+        loc = vals.get('RelativeLocation') or {}
+        rot = vals.get('RelativeRotation') or {}
+        rec['loc'] = [rec['loc'][0] + float(loc.get('x', 0.0)),
+                      rec['loc'][1] + float(loc.get('y', 0.0)),
+                      rec['loc'][2] + float(loc.get('z', 0.0))]
+        rec['rot'] = [rec['rot'][0] + float(rot.get('pitch', 0.0)),
+                      rec['rot'][1] + float(rot.get('yaw', 0.0)),
+                      rec['rot'][2] + float(rot.get('roll', 0.0))]
         return None
     return ue.tool(O, 'set_properties', args)
+
+
+# HAND TOLERANCE MUST FIT INSIDE THE TOLERANCE THE PLOT ALLOWS.
+#
+# The jitter yaws a whole floor a fraction of a degree, which is right - a card
+# model is not perfectly square. But a rotation grows the footprint in DEPTH by
+# about W*sin(yaw), and W is up to 2460: half a degree costs ~21 uu of depth.
+# Once S14 made the jitter real in the baked mesh, that pushed 30 marginal
+# models past their parcel depth allowance (deco4 10, deco6 18, tower 2, worst
+# 22.4 uu over) - a defect I introduced, and one GATE-05 cannot see because it
+# measures component AABBs in ACTOR-LOCAL space and never applies the actor's
+# own transform.
+#
+# So the yaw is bounded by its PROJECTED cost rather than by a flat number:
+# wide buildings rotate less, which is also what a modelmaker's hand does -
+# absolute misalignment does not grow with the size of the piece.
+# 2.0, not 6.0. Measured: deco6 spans 867 uu against an allowed 870 - it
+# oversails 127 of its permitted 130 BY DESIGN - so a 6 uu rotation budget was
+# larger than the margin the recipe leaves and pushed all 18 of its
+# combinations over. A budget only works if it is smaller than the tightest
+# margin in the catalogue. Recorded as a design fragility in its own right:
+# any recipe built to within 3 uu of its allowance has no room for the
+# deliberate imperfection the look depends on.
+JITTER_DEPTH_BUDGET = 2.0      # uu of depth a floor's rotation may cost
+
+
+def jit_yaw(rnd, W, limit):
+    """A yaw in +-limit degrees, clamped so W*sin(yaw) <= JITTER_DEPTH_BUDGET."""
+    import math as _m
+    w = max(float(W or 0.0), 1.0)
+    cap = _m.degrees(_m.asin(min(1.0, JITTER_DEPTH_BUDGET / w)))
+    lim = min(float(limit), cap)
+    return rnd.uniform(-lim, lim)
+
+
+def fit_scale(size, height, max_plan):
+    """Uniform scale meeting a HEIGHT target without exceeding a PLAN budget.
+
+    Scaling a donor by `height / size[2]` alone is only safe for a piece that
+    is tall and narrow. SM_grassVerticalSingle is the opposite - a wide flat
+    ground-cover card, 498 x 479 x 122 - so scaling it to 58 uu tall left a
+    236 x 227 footprint, and the random yaw swung its diagonal to 328 uu. On a
+    terrace whose planter bed is 22 uu deep, that one tuft pushed
+    contemporary6 77 uu past its parcel depth and cost all 18 of its
+    combinations at the gate. The mesh was never wrong; the axis chosen to
+    scale it by was.
+    """
+    z = max(float(size[2]), 1e-6)
+    s = float(height) / z
+    plan = max(float(size[0]), float(size[1])) * s
+    if max_plan and plan > max_plan:
+        s = float(max_plan) / max(float(size[0]), float(size[1]))
+    return s
 
 
 def stair_head(actor, x0, W, D, ztop, rnd, back=True):
@@ -676,7 +750,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.4, 1.4) * (W / 100.0),
                                          'y': rnd.uniform(-1.0, 1.0), 'z': 0.0},
-                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.5, 0.5),
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': jit_yaw(rnd, W, 0.5),
                                          'roll': rnd.uniform(-0.4, 0.4)}})})
             continue
         if spec.get('deck_access'):
@@ -716,7 +790,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.4, 1.4) * (W / 100.0),
                                          'y': rnd.uniform(-1.0, 1.0), 'z': 0.0},
-                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.5, 0.5),
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': jit_yaw(rnd, W, 0.5),
                                          'roll': rnd.uniform(-0.4, 0.4)}})})
             continue
         if spec.get('steel_frame'):
@@ -750,7 +824,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.2, 1.2) * (W / 100.0),
                                          'y': rnd.uniform(-0.9, 0.9), 'z': 0.0},
-                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.4, 0.4),
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': jit_yaw(rnd, W, 0.4),
                                          'roll': rnd.uniform(-0.3, 0.3)}})})
             continue
         if spec.get('precast'):
@@ -788,7 +862,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 'instance': a, 'values': json.dumps({
                     'RelativeLocation': {'x': rnd.uniform(-1.6, 1.6) * (W / 100.0),
                                          'y': rnd.uniform(-1.1, 1.1), 'z': 0.0},
-                    'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.6, 0.6),
+                    'RelativeRotation': {'pitch': 0.0, 'yaw': jit_yaw(rnd, W, 0.6),
                                          'roll': rnd.uniform(-0.5, 0.5)}})})
             continue
         bw = (W - pier_w) / float(BAYS)
@@ -846,7 +920,7 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             'instance': a, 'values': json.dumps({
                 'RelativeLocation': {'x': rnd.uniform(-2.2, 2.2) * (W / 100.0),
                                      'y': rnd.uniform(-1.6, 1.6), 'z': 0.0},
-                'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.9, 0.9),
+                'RelativeRotation': {'pitch': 0.0, 'yaw': jit_yaw(rnd, W, 0.9),
                                      'roll': rnd.uniform(-0.7, 0.7)}})})
 
     # ---- roof ---------------------------------------------------------------
@@ -1059,9 +1133,13 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             # and it fired only on the two recipes that have BOTH a flowerbed
             # and a canopy (vernacular t4, vernacular5 t5). GATE-05 was right
             # every time it refused them.
-            for mesh, (mx, my, mz), bed_yaw in ubkit.bed(seg, x=px, y=py,
-                                                         z=ztop + 9):
-                piece(r, rolemap.donor_name('MI_planter', 'Bed%d_%s' % (i, ubkit.short(mesh))),
+            # ENUMERATED, like the downpipes: a bed returns BOTH end caps and
+            # BOTH side walls, which share a short() name, so 'Bed%d_%s'
+            # collided and UE auto-renamed the losers to StaticMesh1 - default
+            # material, GATE-01/02/06 together. Five combos carried it.
+            for _bi, (mesh, (mx, my, mz), bed_yaw) in enumerate(
+                    ubkit.bed(seg, x=px, y=py, z=ztop + 9)):
+                piece(r, rolemap.donor_name('MI_planter', 'Bed%d_%d_%s' % (i, _bi, ubkit.short(mesh))),
                       mesh, (mx, my, mz), (0.0, bed_yaw, 0.0),
                       mat='MI_planter')
                 made += 1
@@ -1311,9 +1389,15 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     if spec.get('downpipes', True) and F >= 1:
         import avkit as _av
         for _sx in (x0 + 14.0, x0 + W - 14.0):
-            for key, (dx, dy, dz), _dyaw in _av.downpipe(
-                    36.0, ztop - 20.0, _sx, -18.0, rnd):
-                piece(r, rolemap.donor_name(_av.mat(key), 'Pipe%d_%d' % (int(_sx), int(dz))), _av.path(key),
+            # ENUMERATED. 'Pipe%d_%d' % (x, z) collides whenever two pipe
+            # segments round to the same pair - measured, twice per model on
+            # vernacular t1/t2 - and UE silently auto-renames the loser to
+            # 'StaticMesh1', which lands on WorldGridMaterial and trips
+            # GATE-01/02/06 together. Invisible until piece() started actually
+            # placing donors; the gate caught it on the first bake that could.
+            for _pi, (key, (dx, dy, dz), _dyaw) in enumerate(_av.downpipe(
+                    36.0, ztop - 20.0, _sx, -18.0, rnd)):
+                piece(r, rolemap.donor_name(_av.mat(key), 'Pipe%d_%d_%d' % (int(_sx), int(dz), _pi)), _av.path(key),
                       (dx, dy, dz), (0.0, 0.0, 0.0), mat=_av.mat(key))
                 made += 1
 
@@ -1335,7 +1419,11 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # striped shadows. Neither is fabric. A modelmaker cuts a canopy from
         # card and paints the fascia, which is exactly these two boxes, and
         # the fascia is where this building's accent colour lives.
-        box(c, 'Wall_CanopySlab', x0 - 10, x0 + W + 10, -proj, 8, GF - 26, GF - 10); made += 1
+        # 'Wall_CanopySlabU', not a second 'Wall_CanopySlab' - the head and
+        # the underslab are two boxes and were given ONE name, so UE renamed
+        # the second and the gate correctly refused it. Same role, so the
+        # material is unchanged.
+        box(c, 'Wall_CanopySlabU', x0 - 10, x0 + W + 10, -proj, 8, GF - 26, GF - 10); made += 1
         box(c, 'Accent_CanopyFascia', x0 - 10, x0 + W + 10, -proj - 8, -proj, GF - 40, GF - 4); made += 1
         made += 1
     print('%s: %d boxes, height %d uu' % (n, made, total))
@@ -1527,7 +1615,7 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             'instance': a, 'values': json.dumps({
                 'RelativeLocation': {'x': rnd.uniform(-2.0, 2.0) * (W / 100.0),
                                      'y': rnd.uniform(-1.4, 1.4), 'z': 0.0},
-                'RelativeRotation': {'pitch': 0.0, 'yaw': rnd.uniform(-0.8, 0.8),
+                'RelativeRotation': {'pitch': 0.0, 'yaw': jit_yaw(rnd, W, 0.8),
                                      'roll': rnd.uniform(-0.6, 0.6)}})})
 
     # ---- canted supports ------------------------------------------------
@@ -1629,8 +1717,12 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # independently, which is fine when every floor is a separate plane - but
     # a deco pilaster is a single piece running the full height, and floors
     # sliding under it would tear the shaft apart.
+    # jit_yaw, not a bare uniform: build_deco precomputes its jitter into a
+    # tuple rather than inline, so the width-bounded clamp has to be applied
+    # HERE too. Missing this site is what left deco4 and deco6 20 uu over
+    # their parcel depth after the first pass at bounding the yaw.
     jx, jy, jr = (rnd.uniform(-2.0, 2.0) * (W / 100.0),
-                  rnd.uniform(-1.4, 1.4), rnd.uniform(-0.8, 0.8))
+                  rnd.uniform(-1.4, 1.4), jit_yaw(rnd, W, 0.8))
 
     def jitter(act):
         _setprops({
@@ -2180,11 +2272,19 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             nt = max(2, int(W / 420.0))
             for t2 in range(nt):
                 tx = x0 + 60 + (W - 120) * (t2 + 0.5) / nt
-                gsc = 58.0 / _av2.size('grass_tuft')[2]
-                piece(sh, rolemap.donor_name(_av2.mat('grass_tuft'), 'TerrTuft%d_%d' % (f, t2)),
-                      _av2.path('grass_tuft'), (tx, bk - stp + 14, z0 + 50),
+                # plant_s, NOT grass_tuft. A 22 uu planter bed wants a piece
+                # that is tall and narrow; the grass card is 498 x 479 in plan
+                # and no uniform scale makes it both visible and small enough.
+                # plant_s is 39 x 39 x 101, so at 58 uu tall it occupies
+                # 22 x 22 - the bed exactly. The plan budget is belt and
+                # braces: a little overhang is natural for planting, a
+                # 328 uu diagonal is not.
+                _tk = 'plant_s'
+                gsc = fit_scale(_av2.size(_tk), 58.0, 30.0)
+                piece(sh, rolemap.donor_name(_av2.mat(_tk), 'TerrTuft%d_%d' % (f, t2)),
+                      _av2.path(_tk), (tx, bk - stp + 14, z0 + 50),
                       (0.0, rnd.uniform(0, 360), 0.0), scale=gsc,
-                      mat=_av2.mat('grass_tuft')); made += 1
+                      mat=_av2.mat(_tk)); made += 1
 
     elif F >= 1 and spec.get('brise'):
         # BRISE-SOLEIL. A continuous glass box behind a screen of vertical

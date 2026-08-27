@@ -55,6 +55,21 @@ also earned the rule that keeps it fixed.
 7. **Cold human reads punctuate the waves.** One per major wave, on the
    street or a block, per the gate's contract: no agent opinion — the
    reviewer agent's included — ever settles the illusion question.
+   **Timing (owner, 2026-08-27):** a read triggers on the FIRST CLEAN
+   CAPTURE from current framing — never on polish converging. "Show it
+   when it's better" is the procrastination shape that ate the
+   predecessors; the read's value is diagnostic and decays.
+   **Lens protocol (owner, 2026-08-27):** the reader sees the SHOW-camera
+   frame FIRST — the shipped claim, and a real photo of a real miniature
+   HAS macro optics; their absence is itself a render-tell — optionally
+   followed by a judge-mode frame, which MEASURES how much the lens buys
+   in the reader's own words. The judge-with-DOF-off rule is for US, so we
+   never hide weak geometry from ourselves: all production judging and all
+   gate evidence stays lens-off. Two named camera modes (judge | show)
+   with settings READ BACK after applying, show-mode DOF DERIVED from the
+   fiction (a real camera at model distance from a 1:87 subject — macro,
+   never tilt-shift filter), and EVERY capture stamped with the mode that
+   took it, so a show frame can never quietly become judging evidence.
 
 ## Standing instruments
 

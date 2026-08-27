@@ -78,6 +78,7 @@ COLS = 4
 GUTTER = 900.0
 
 rnd = random.Random(20260826)
+ROWS = {}      # row index -> measured extent, for the per-row cameras (P7)
 
 
 def repaint(actor, sm, rid, scheme):
@@ -142,6 +143,7 @@ for idx, rid in enumerate(RIDS):
                                        unreal.Rotator(0, 0, 0))
         a.set_actor_label('SHELF_%s_t%d' % (rid, t))
         a.static_mesh_component.set_editor_property('static_mesh', sm)
+        ROWS.setdefault(row, {'x0': 1e18, 'x1': -1e18, 'top': -1e18, 'y': y})
         # ONE SCHEME PER BUILDING, HELD ACROSS EVERY TIER. This used to
         # pick a colour per MODEL, so vernacular t0..t5 - the same building
         # growing - came out in six unrelated colours. A building does not
@@ -150,6 +152,10 @@ for idx, rid in enumerate(RIDS):
         if repaint(a, sm, rid, palette.scheme_for(rid)) == 0:
             print('  %s: no scheme slots matched - paint not applied' % asset)
         o, e = a.get_actor_bounds(False)
+        _r = ROWS[row]
+        _r['x0'] = min(_r['x0'], o.x - e.x)
+        _r['x1'] = max(_r['x1'], o.x + e.x)
+        _r['top'] = max(_r['top'], o.z + e.z)
         for i, (oo, ee) in enumerate(((o.x, e.x), (o.y, e.y), (o.z, e.z))):
             lo[i] = min(lo[i], oo - ee)
             hi[i] = max(hi[i], oo + ee)
@@ -197,5 +203,97 @@ json.dump({'x0': lo[0], 'y0': lo[1], 'x1': hi[0], 'y1': hi[1], 'margin': 2600.0}
 print('  ground wanted: x %.0f..%.0f  y %.0f..%.0f  (run groundfit.py)'
       % (lo[0], hi[0], lo[1], hi[1]))
 print('SHELFBOUNDS ' + json.dumps(dict(lo=lo, hi=hi, n=n)))
+# ---- one camera per row (P7) --------------------------------------------
+# Rows used to be shot from a single hand-placed camera, so every row capture
+# needed its viewpoint nudged by hand - which is how a run gets spent chasing
+# framing instead of defects.
+#
+# Two things make a row camera non-trivial and both are DERIVED, not guessed:
+#
+#   FRAMING. The project's camera is 70 mm on a 36x24 back, hFOV 28.84 deg
+#   (cap2.FOV). To hold a row of width Wr the camera must stand back
+#   (Wr/2) / tan(hFOV/2).
+#
+#   OCCLUSION. Rows march away in -y at ROW_GAP, so at ground level every row
+#   sits behind the ones in front of it. The camera rises until its sight line
+#   to this row's BASE clears the measured top of every intervening row -
+#   computed from what was actually placed, not from an assumed height.
+import math as _math
+
+CAM_FOV = 28.84                  # keep in step with cap2.FOV
+CAM_CLEAR = 260.0                # uu of daylight over an intervening row
+_cams = {}
+_skipped = []
+for _ri in sorted(ROWS):
+    _r = ROWS[_ri]
+    if _r['x1'] <= _r['x0']:
+        continue
+    _wide = (_r['x1'] - _r['x0']) * 1.06
+    _back = (_wide / 2.0) / _math.tan(_math.radians(CAM_FOV / 2.0))
+    _cx = (_r['x0'] + _r['x1']) / 2.0
+    _cy = _r['y'] - _back
+    _z = SHELF_Z + _r['top'] * 0.55
+    for _oi in sorted(ROWS):
+        if _oi == _ri:
+            continue
+        _o = ROWS[_oi]
+        _d_row = _r['y'] - _cy
+        _d_obst = _o['y'] - _cy
+        # WHICH ROWS ARE ACTUALLY IN THE WAY is a geometric question, not an
+        # index one. Rows march away in -y and the camera stands further -y
+        # still, so the rows BETWEEN camera and subject are the ones with a
+        # HIGHER index - the opposite of what an index test suggests. Filtering
+        # on `_oi < _ri` checked the rows beyond the subject and left every
+        # real obstruction unconsidered; the offline clearance check caught it
+        # because it verified the property instead of trusting the loop.
+        if _d_obst <= 0 or _d_row <= 0 or _d_obst >= _d_row:
+            continue
+        _f = _d_obst / _d_row
+        _need = SHELF_Z + _o['top'] + CAM_CLEAR
+        _z = max(_z, (_need - SHELF_Z * _f) / (1.0 - _f))
+    # HONEST REFUSAL. If clearing the rows in front demands a camera far
+    # above the models, the shot is a plan view of a shelf, not a review of a
+    # ladder - and emitting it anyway would hand the next person a camera that
+    # looks placed but is useless. Measured: ROW_GAP is 1500 uu, so a camera
+    # standing in the gap frames 617 uu of row, while the NARROWEST building
+    # in the catalogue is 1230 uu. Per-row cameras are not placeable at this
+    # spacing with the project's 70 mm lens; the layout has to change. See
+    # POLISH_BACKLOG P7.
+    _ceiling = SHELF_Z + _r['top'] * 3.0
+    if _z > _ceiling:
+        _skipped.append((_ri, round(_z, 0), round(_ceiling, 0)))
+        continue
+    _aim = SHELF_Z + _r['top'] * 0.45
+    _pitch = -_math.degrees(_math.atan2(_z - _aim, _back))
+    _a = eas.spawn_actor_from_class(unreal.CameraActor,
+                                    unreal.Vector(_cx, _cy, _z),
+                                    unreal.Rotator(0.0, _pitch, 90.0))
+    _a.set_actor_label('SHELF_CAM_r%d' % _ri)
+    _cams['r%d' % _ri] = {'loc': [round(_cx, 1), round(_cy, 1), round(_z, 1)],
+                          'rot': {'pitch': round(_pitch, 2), 'yaw': 90.0,
+                                  'roll': 0.0},
+                          'row_width': round(_wide, 1),
+                          'standback': round(_back, 1)}
+if _cams:
+    print('  cameras: %d rows, standback %.0f..%.0f uu, height %.0f..%.0f uu'
+          % (len(_cams),
+             min(c['standback'] for c in _cams.values()),
+             max(c['standback'] for c in _cams.values()),
+             min(c['loc'][2] for c in _cams.values()),
+             max(c['loc'][2] for c in _cams.values())))
+if _skipped:
+    print('  CAMERAS NOT PLACEABLE for %d row(s): clearing the rows in front '
+          'needs a camera above 3x the model height.' % len(_skipped))
+    for _ri, _zz, _cc in _skipped[:3]:
+        print('    row %d wanted z %.0f, ceiling %.0f' % (_ri, _zz, _cc))
+    print('    ROW_GAP %.0f frames %.0f uu of row; narrowest building is 1230.'
+          % (ROW_GAP, 2 * (ROW_GAP - 200) * _math.tan(_math.radians(CAM_FOV / 2))))
+    print('    This is a LAYOUT constraint, not a camera bug - see P7.')
+import os as _os
+_camf = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(
+    _os.path.abspath(__file__)))), 'Tools', 'measure', 'shelf_cams.json')
+json.dump(_cams, open(_camf, 'w'), indent=1, sort_keys=True)
+print('  camera transforms -> Tools/measure/shelf_cams.json')
+
 les.save_current_level()
 print('shelf: %d models' % n)

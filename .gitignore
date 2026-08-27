@@ -73,3 +73,8 @@ Content/Mega_Street_Props_Pack/
 # occurrence of exactly this mistake, each time by a different hand. The rule
 # below now exists in tooling form too: NEVER commit with add -A; enumerate.
 Content/Uniblocks/
+
+# Lens rig session state: which mode the editor is currently in. Runtime
+# state like .mcp_sid, not source - a fresh checkout has no mode until
+# lensrig runs, and captures correctly stamp "unknown" until it does.
+Tools/measure/lens_mode.json

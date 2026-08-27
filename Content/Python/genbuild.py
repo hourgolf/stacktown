@@ -1051,17 +1051,30 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # floor, and the gantry projecting over the street is the single
         # detail that says "warehouse" from across a block.
         hx = x0 + W * 0.5
-        box(r, 'Timber_HoistPost', hx - 15, hx + 15, 10, 40,
+        # SIZED TO THE READ THRESHOLD, not to a drawing. A feature must
+        # subtend about 0.4% of frame width to register; at the hero framing
+        # we actually ship (camera 18,083 uu out, 28.84 deg) the frame is
+        # 9,299 uu wide, so that threshold is 37.2 uu. Every member here was
+        # 18-30 uu - ALL of them under it - which is why a gantry that is
+        # present in the model reads as a small box on the parapet (P1).
+        #
+        # The members grow; the OVERSAIL does not. GATE-05 allows 130 uu over
+        # the pavement and the beam already reaches 118, so reach was never
+        # the problem - mass was. At 1:87 a 56 uu baulk is a half-metre timber,
+        # which is what a warehouse hoist actually is.
+        box(r, 'Timber_HoistPost', hx - 28, hx + 28, 10, 62,
             ztop, ztop + PAR + 92); made += 1
         # 118, not 140: GATE-05 allows 130 uu of ornament over the pavement
         # and the beam was the deepest thing on the building. A gantry that
         # oversails further than the rule is a gantry that hits the model's
         # neighbour on a real street.
-        box(r, 'Timber_HoistBeam', hx - 13, hx + 13, -118, 34,
-            ztop + PAR + 62, ztop + PAR + 92); made += 1
-        box(r, 'Frame_HoistBrace', hx - 9, hx + 9, -88, 22,
+        box(r, 'Timber_HoistBeam', hx - 24, hx + 24, -118, 34,
+            ztop + PAR + 52, ztop + PAR + 104); made += 1
+        box(r, 'Frame_HoistBrace', hx - 19, hx + 19, -88, 22,
             ztop + PAR + 18, ztop + PAR + 66); made += 1
-        box(r, 'Frame_HoistBlock', hx - 11, hx + 11, -112, -90,
+        # the block grows INWARD from its outer face: -112 stays put so the
+        # oversail is untouched, and the mass arrives behind it.
+        box(r, 'Frame_HoistBlock', hx - 22, hx + 22, -112, -68,
             ztop + PAR + 30, ztop + PAR + 62); made += 1
     # ROOF ACCESS. Skipped when a roof garden is built, because that lays its
     # own shed; skipped on a single-storey lock-up, which gets a hatch through
@@ -1668,7 +1681,18 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         stw = W * 0.19
         stx = x0 + W * (0.08 if rnd.random() < 0.5 else 0.73)
         stx = max(x0 + 10, min(stx, x0 + W - stw - 10))
-        box(r, 'Wall_ServiceShaft', stx, stx + stw, -34, 74,
+        # Band_, NOT Wall_. The role decides the material, and Wall_ resolves
+        # to the lot's wall colour - which for modern2 is MI_concrete, the
+        # same material as the wall the shaft stands against. A full-height
+        # EXPRESSED core painted its background is not expressed at all, and
+        # that is P3: the shaft has 34 uu of projection and no contrast, so it
+        # disappears at any range where the shadow is soft.
+        #
+        # Band_ resolves to `trim`, whose documented purpose in rolemap is
+        # exactly this - "the parts a real building picks out in a second
+        # colour". An expressed service core is that part. The cap beside it
+        # was already Band_ and already read; only the shaft body was wrong.
+        box(r, 'Band_ServiceShaft', stx, stx + stw, -34, 74,
             0.0, ztop + PAR + 120.0); made += 1
         box(r, 'Band_ServiceCap', stx - 11, stx + stw + 11, -45, 85,
             ztop + PAR + 120.0, ztop + PAR + 138.0); made += 1
@@ -1838,10 +1862,25 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # modelmaker fakes a radius, and it reads as one at this scale.
         rad = float(spec.get('corner_radius', 150.0))
         rl = spec.get('corner_side', 'left') == 'left'
-        for k in range(4):
-            t0 = rad * (k / 4.0)
-            t1 = rad * ((k + 1) / 4.0)
-            inset = rad - (rad * rad - (rad - t1) * (rad - t1)) ** 0.5
+        # EQUAL LAMINATIONS, not a sampled circle. Sampling a quarter-round at
+        # even ANGLES puts nearly all the depth change in the first step: at
+        # rad 150 the four returns sat at 50.8, 20.1, 4.8 and 0 uu, so the
+        # steps BETWEEN them were 30.7, 15.3 and 4.8 - every one below the
+        # 37.2 uu a feature needs to subtend at our hero framing to register.
+        # The radius was present and unreadable, which is P5.
+        #
+        # A card modeller does not sample a curve; they laminate equal strips
+        # and let the stack read as a radius. Three facets of rad/3 in BOTH
+        # axes give steps of 50 uu - above the threshold in plan and in depth -
+        # and the result is a faceted quarter-round, which is what the material
+        # would actually produce. Fewer, bigger steps read as a curve; more,
+        # smaller ones read as a smudge.
+        NF = 3
+        step = rad / NF
+        for k in range(NF):
+            t0 = step * k
+            t1 = step * (k + 1)
+            inset = step * (NF - 1 - k)
             cx_0 = (x0 - 6 + t0) if rl else (x0 + W + 6 - t1)
             cx_1 = (x0 - 6 + t1) if rl else (x0 + W + 6 - t0)
             box(sh, 'Wall_Round%d' % k, cx_0, cx_1,
@@ -2164,8 +2203,6 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 # ---------------------------------------------------------------------------
 CONT_COL_W = 56.0        # exposed ground-floor column
 CONT_SOFFIT = 44.0       # how far the ground-floor soffit projects
-CONT_LOGGIA_D = 150.0    # depth of a recessed loggia - the deepest shadow
-CONT_BALC = 112.0        # how far a balcony slab stands proud
 CONT_GLAZE = 42.0        # window plane, set back behind the cladding face
 
 

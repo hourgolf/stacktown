@@ -134,7 +134,40 @@ def capture(path, view='zoom', fov=True):
     except Exception:
         raise SystemExit('capture failed: %s' % r[:300])
     open(path,'wb').write(base64.b64decode(d))
+    _stamp(path)
     return os.path.getsize(path)
+
+
+def _stamp(path):
+    """Record WHICH LENS MODE took this frame, beside the frame.
+
+    A show frame and a judge frame are the same file type and look like the
+    same kind of evidence; only one of them is admissible for judging. Without
+    a stamp the difference lives in whoever remembers running lensrig, which
+    is the same weakness a baked mesh had before BakePath. The sidecar travels
+    with the image and costs nothing.
+
+    Silent about failure BY DESIGN in one direction only: if no mode has ever
+    been set the stamp records 'unknown' rather than blocking a capture, and
+    'unknown' is the honest answer - never assume judge.
+    """
+    import json as _json
+    try:
+        _lr = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           'lens_mode.json')
+        mode = _json.load(open(_lr)) if os.path.exists(_lr) else None
+    except Exception:
+        mode = None
+    rec = {'frame': os.path.basename(path),
+           'lens_mode': (mode or {}).get('mode', 'unknown'),
+           'focus': (mode or {}).get('focus'),
+           'lens_applied': (mode or {}).get('applied'),
+           'readback': (mode or {}).get('readback', {})}
+    try:
+        _json.dump(rec, open(os.path.splitext(path)[0] + '.lens.json', 'w'),
+                   indent=1, sort_keys=True)
+    except Exception:
+        pass
 
 if __name__ == '__main__':
     p = sys.argv[1]; v = sys.argv[2] if len(sys.argv)>2 else 'zoom'

@@ -181,6 +181,36 @@ Every item cost hours. They are ordered by how much.
 
 ### Editor and tooling
 
+- **Every transform bug in this project has been a FRAME applied in the
+  wrong place** - Rotator argument order, GATE-10 world-vs-local, the
+  sweep's unapplied actor rotation, and a loop variable shadowing a yaw
+  parameter (four instances by 2026-08-27). When geometry lies, check the
+  frame before the geometry.
+- **NEVER purge `LOOK_`.** `LOOK_Post` is the unbound PostProcessVolume
+  holding the fixed grade (AEM_Manual, ISO 800, shutter 60). Deleting it
+  silently reverts the level to UE default AUTO exposure - the same camera
+  read 87.71 before and 245.95 after, every frame blown white - and it is
+  invisible to every natural hypothesis, because no geometry or light you
+  change is the cause. Cost hours on 2026-08-27. Any script that wipes
+  actors excludes `LOOK_` explicitly; and a wipe list is MEASURED from the
+  level inventory first, never asserted from memory - the coordinator's
+  remembered prefix list would have left 249 of 266 furniture actors
+  standing while reporting success.
+- **Every emitter needs a `_SINK` branch.** Seven ue.tool calls sat
+  directly in the builders (the hand-tolerance jitter) with no record-mode
+  guard: record-mode runs silently did one blocking HTTP round trip per
+  floor per building - a 548-combo sweep was 1635s of ~99.9% network wait
+  (1s once guarded), and with a busy editor each call sat on the 180s
+  timeout, presenting as a low-CPU hang. A builder-level editor call is a
+  live-only branch by construction; guard it or record it.
+- **An MCP call from inside a rung script DEADLOCKS.** `rung.sh` executes
+  on the editor's game thread over remote exec; `genbuild.build()` in live
+  mode calls `ue.tool`, and an MCP call issued from inside that script
+  waits on the very thread it is running on. Documented in
+  CATALOGUE_PIPELINE §2 and still walked into on 2026-08-27 - same species
+  as the LOOK_ trap: written down is not the same as remembered. Live
+  builds are driven from LOCAL python (which calls MCP from outside);
+  rung scripts must never import the live build path.
 - **`load_level` over remote execution crashes the editor.** SIGSEGV in
   `Map_Load` from inside the remote-exec ticker. Change levels from the Content
   Browser or set the startup map in config and restart. Do not retry it.

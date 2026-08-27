@@ -92,3 +92,26 @@ on the table. 36 mm photographs a city; 400 mm photographs a model of one.
 **The level's saved state stays DOF-off.** Building and grading need the
 geometry visible, and the gate amendment keeps every A–E line judged with depth
 of field off. `hero()` is turned on for a frame and `reset()` afterwards.
+
+## Role vocabulary extension — owner approved 2026-08-27
+
+Four roles added so DONOR components can carry real roles (the GATE-01
+unblock, option (a)): donor materials previously had no role that resolved
+to them, and a role that does not reproduce the donor's existing material
+would repaint the catalogue silently.
+
+    Leaf_       -> MI_leaf_card     per-slot resolution still refines
+                                    trunk vs leaf on multi-slot donors
+    Planter_    -> MI_planter       every ubkit flowerbed
+    Bloom_Cool  -> MI_bloom_cool    SUFFIX variant of Bloom_, following the
+                                    MURAL suffix precedent - not a second
+                                    top-level role
+    Brick_      -> MI_dist_brick    the chimney STAYS BRICK regardless of
+                                    wall colour - owner look decision, the
+                                    classic card-model read, consistent
+                                    with CANON slot 4's works-brick blessing
+
+Verification contract for the rename that uses these: the pre-change
+baseline (donor_mats_baseline.json, 548 combos / 3,831 records) must
+reproduce byte-identically on materials after the change. The gate going
+quiet is never the proof.

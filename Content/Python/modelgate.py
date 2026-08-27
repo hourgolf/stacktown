@@ -22,17 +22,41 @@ be proved able to detect a real one. gate_run.py supplies the real snapshot.
 
 Thresholds come from qc.py - the SAME numbers the suite uses. A gate that
 passed a model the suite would fail is worse than no gate at all.
+
+ARCHETYPES. The rules above encode "articulated street building" as the one
+definition of good, and GATE-03/07/08 would refuse a CORRECT warehouse or
+barn - which teaches people to pass the gate with --force, the failure mode
+that must never install itself. So every rule declares, via `judges=`, which
+archetypes it is entitled to judge, and archetypes.py declares the other half
+of the ledger: what "good" means per archetype, which rules are exempt (with
+reasons), and which thresholds are overridden (still qc.py constants). With
+`archetype` absent or 'street' the verdict is byte-identical to the
+pre-archetype gate - archetypes.py proves that against planted defects. An
+exempted rule is SKIPPED WITH AN EXPLICIT LINE in the verdict, never
+silently; an unknown archetype raises, never defaults.
 """
+import sys
+
 import labels
+import archetypes
 from qc import DETAIL_MIN, MAT_MIN, AUTO_NAME, DEFAULT_MATS
 
 RULES = []
 SELFTESTS = {}
 
+# every archetype, spelled out - a rule that judges everything says so
+# explicitly, because a NEW archetype must be a decision on every rule, not
+# an inheritance
+ALL_ARCHES = ('street', 'industrial', 'agricultural-structure')
 
-def rule(rid, statement):
+
+def rule(rid, statement, judges=None):
+    """`judges` is the rule's half of the applicability ledger: the
+    archetypes this rule is entitled to judge. archetypes.check_declarations
+    fails the gate if it is missing or disagrees with the registry."""
     def deco(fn):
-        RULES.append(dict(id=rid, statement=statement, check=fn))
+        RULES.append(dict(id=rid, statement=statement, check=fn,
+                          judges=judges))
         return fn
     return deco
 
@@ -114,13 +138,15 @@ def span(m):
 
 
 # =========================== the rules ======================================
-@rule('GATE-01', 'every component carries a role from labels.ROLES')
+@rule('GATE-01', 'every component carries a role from labels.ROLES',
+      judges=ALL_ARCHES)
 def gate_01(m):
     return [(c['name'], 'no role prefix') for c in role_comps(m)
             if not labels.role(c['name'])]
 
 
-@rule('GATE-02', 'no component sits on a default or missing material')
+@rule('GATE-02', 'no component sits on a default or missing material',
+      judges=ALL_ARCHES)
 def gate_02(m):
     out = []
     for c in comps(m):
@@ -132,8 +158,10 @@ def gate_02(m):
     return out
 
 
+# street's density, and industrial's LOWER density (qc.DETAIL_MIN_INDUSTRIAL,
+# via the registry override) - but a barn is exempt: plainness is its point
 @rule('GATE-03', 'the model carries at least %.2f parts per m2 of elevation'
-                 % DETAIL_MIN)
+                 % DETAIL_MIN, judges=('street', 'industrial'))
 def gate_03(m):
     area = elevation_m2(m['spec'])
     n = len(building_comps(m))
@@ -147,7 +175,8 @@ def gate_03(m):
     return []
 
 
-@rule('GATE-04', 'the model uses at least %d distinct materials' % MAT_MIN)
+@rule('GATE-04', 'the model uses at least %d distinct materials' % MAT_MIN,
+      judges=ALL_ARCHES)
 def gate_04(m):
     seen = {x for c in building_comps(m) for x in (c.get('mats') or []) if x}
     if len(seen) < MAT_MIN:
@@ -167,7 +196,8 @@ SIDE_TOL = 8.0            # a plinth's 6 uu passes; a 22 uu garage roof fails
 
 
 @rule('GATE-05', 'the model fits its parcel: each SIDE within %.0f uu, %.0f '
-                 'uu front oversail allowed' % (SIDE_TOL, OVERSAIL))
+                 'uu front oversail allowed' % (SIDE_TOL, OVERSAIL),
+      judges=ALL_ARCHES)
 def gate_05(m):
     sp = m['spec']
     b = bounds(m)
@@ -206,7 +236,8 @@ def gate_05(m):
     return out
 
 
-@rule('GATE-06', 'no component was auto-renamed by a name collision')
+@rule('GATE-06', 'no component was auto-renamed by a name collision',
+      judges=ALL_ARCHES)
 def gate_06(m):
     # Only on MULTI-PART actors, exactly as NAME-02 does it: the engine calls
     # a StaticMeshActor's one component StaticMeshComponent0 and always has.
@@ -248,8 +279,20 @@ def _clean(n=None, aabb=True):
     # the LAST dozen of the SAME n parts sit at the rear, so every count a
     # self-test does against n still holds
     k = min(n, REAR_PARTS + 2)
+    # ...and a few of the FRONT contingent are GLAZING, for the same reason
+    # and by the same trick. GATE-09 asks a building with floors for at least
+    # GLASS_PER_FLOOR openings per floor; this fixture had none, so the
+    # __main__ footer printed 'clean model passes: False' and a reader would
+    # reasonably conclude the gate was broken rather than the fixture. A model
+    # every rule must pass has to actually pass every rule - a fixture that
+    # fails is a self-test suite quietly disagreeing with itself. Converted
+    # rather than appended so the part count stays exactly n.
+    _fl = max(1, int(SPEC.get('floors') or 1))
+    g = min(max(1, int(GLASS_PER_FLOOR * _fl + 0.999)), max(0, n - k))
     comps = [_c('Wall_P%d' % i, aabb=box if aabb else None)
-             for i in range(n - k)]
+             for i in range(n - k - g)]
+    comps += [_c('Glass_G%d' % i, aabb=box if aabb else None)
+              for i in range(g)]
     comps += [_c('Wall_R%d' % i, aabb=rear if aabb else None)
               for i in range(k)]
     return model(SPEC, [_a('BLD2_Probe_H', comps)])
@@ -384,8 +427,11 @@ def _t06():
 REAR_MIN = 0.20
 
 
+# the street question only: an industrial or agricultural shell is one honest
+# volume, and "articulation behind the front third" is exactly the measure it
+# is defined by not having - see archetypes.py for the exemption reasons
 @rule('GATE-07', 'at least %.0f%% of the model sits behind its own front third'
-                 % (REAR_MIN*100))
+                 % (REAR_MIN*100), judges=('street',))
 def gate_07(m):
     cs = [c for c in building_comps(m) if c.get('aabb')]
     if len(cs) < 8:
@@ -440,7 +486,7 @@ REAR_PARTS = 10           # parts that must sit in it
 
 
 @rule('GATE-08', 'the rear face carries at least %d parts, not a blank wall'
-                 % REAR_PARTS)
+                 % REAR_PARTS, judges=('street',))
 def gate_08(m):
     cs = [c for c in building_comps(m) if c.get('aabb')]
     if len(cs) < 8:
@@ -476,8 +522,12 @@ def _t08():
 GLASS_PER_FLOOR = 1.0     # a habitable floor has at least one opening
 
 
+# a habitable floor has a window whether the building is a terrace or a
+# works office - but a barn's hay loft carries no window mandate, so the
+# agricultural archetype is exempt
 @rule('GATE-09', 'a building with floors carries at least %.0f Glass_ part '
-                 'per floor' % GLASS_PER_FLOOR)
+                 'per floor' % GLASS_PER_FLOOR,
+      judges=('street', 'industrial'))
 def gate_09(m):
     """WHY THIS EXISTS. `build_deco`'s floor loop was written inverted and ran
     ZERO floors for seven of the eight deco recipes - every one of them baked
@@ -528,7 +578,8 @@ def _t09():
 COPLANAR_TOL = 0.06       # uu; below this the depth buffer cannot choose
 
 
-@rule('GATE-10', 'no part sits exactly on the core top plane (z-fighting)')
+@rule('GATE-10', 'no part sits exactly on the core top plane (z-fighting)',
+      judges=ALL_ARCHES)
 def gate_10(m):
     """WHY THIS EXISTS. Capping the core at the roof line so the roof would be
     VISIBLE (see cores.ROOF_CLEAR) put its top face at exactly ztop - which is
@@ -603,21 +654,59 @@ def _t10():
     return not gate_10(model(sp, [_a('BLD2_Probe_H', infront)]))
 
 
+def judge(m, arch=None):
+    """(findings, skips) for one model under one archetype. No self-tests -
+    run() adds those.
+
+    For 'street' - which is every spec that carries no `archetype` key, the
+    entire existing catalogue - this loop reduces EXACTLY to the
+    pre-archetype gate loop: every rule runs, no skips, no overrides, and
+    archetypes.py's ARCH-STREET-IDENTICAL selftest proves the findings are
+    byte-identical against planted defects.
+
+    An unknown archetype raises UnknownArchetype - fail closed, never
+    default to street. An exempted rule contributes an explicit SKIPPED
+    entry, never silence. An override rebinds this module's constant for
+    one rule call via archetypes.patched, so the rule bodies stay untouched.
+    """
+    if arch is None:
+        arch = archetypes.of_spec(m['spec'])
+    else:
+        archetypes.get(arch)            # spelled but unknown: raise here too
+    findings, skips = [], []
+    for r in RULES:
+        ok, why = archetypes.applies(arch, r)
+        if not ok:
+            skips.append((r['id'],
+                          'SKIPPED for archetype %s: %s' % (arch, why)))
+            continue
+        ov = archetypes.overrides_for(arch, r['id'])
+        with archetypes.patched(sys.modules[__name__], ov):
+            for subj, detail in r['check'](m):
+                findings.append((r['id'], subj, detail))
+    return findings, skips
+
+
 def run(m, verbose=True):
     """Returns (ok, findings, facts). Self-tests run FIRST, as in the suite:
-    if a rule cannot prove it sees its own defect, the gate reports nothing."""
+    if a rule cannot prove it sees its own defect, the gate reports nothing.
+    The archetype machinery is held to the same bar: its selftests (unknown
+    names raise, skips are visible, street stays byte-identical) run with
+    the rules', and the gate reports nothing if any fail."""
     broken = [r['id'] for r in RULES
               if not SELFTESTS.get(r['id'], lambda: False)()]
+    if not archetypes.selftest():
+        broken.append('ARCHETYPES')
     if broken:
         print('GATE SELF-TEST FAILED: %s - reporting nothing' % broken)
         return False, [('selftest', ','.join(broken))], {}
     if verbose:
         print('  gate self-tests: %d/%d rules see their own defect'
               % (len(RULES), len(RULES)))
-    findings = []
-    for r in RULES:
-        for subj, detail in r['check'](m):
-            findings.append((r['id'], subj, detail))
+    findings, skips = judge(m)
+    if verbose:
+        for rid, line in skips:
+            print('  %s %s' % (rid, line))
     s = span(m)
     facts = dict(parts=len(building_comps(m)),
                  parts_total=len(comps(m)),
@@ -628,7 +717,14 @@ def run(m, verbose=True):
                                / max(elevation_m2(m['spec']), 1e-6), 3),
                  span_x=round(s[0], 1) if s else None,
                  span_y=round(s[1], 1) if s else None,
-                 rules=len(RULES))
+                 rules=len(RULES),
+                 # which definition of good judged this model, and which
+                 # rules stood aside - in the FACTS so the stamp carries
+                 # them: a skip that is not in the verdict is a check that
+                 # silently stopped having an opinion. Empty/'street' for
+                 # every spec without an archetype key.
+                 archetype=archetypes.of_spec(m['spec']),
+                 skipped=['%s %s' % (rid, line) for rid, line in skips])
     return (not findings), findings, facts
 
 

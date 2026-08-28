@@ -55,9 +55,23 @@ the four keys it always did.
 #   tooth_fine: fine octave tiling, for when route 1 revives per-stock
 #   amount:     normal strength - relief honesty, half the point of the split
 #   rough:      the narrow fabricated band
-def _st(tooth, amount, rlo, rhi, normal=None, tooth_fine=None, source=None):
+def _st(tooth, amount, rlo, rhi, normal=None, tooth_fine=None, source=None,
+        needs=None):
+    """`needs` records the IMPORT SETTINGS an admitted map must carry.
+
+    WHY THIS EXISTS. Content/Uniblocks/ is gitignored - every admitted FAB
+    texture lives outside version control, so its import settings are LOCAL
+    STATE. The owner spotted that brick read inverted (faces recessed, mortar
+    proud); the fix was flip_green_channel on the texture, which is a property
+    of the MAP, not of the stock. On a fresh clone that flag is back to the
+    pack default and the brick silently renders backwards again - and nothing
+    in the acceptance numbers would catch it, because an inverted normal has
+    exactly the same amount of high-frequency content, just pointing the wrong
+    way. check_textures() turns that into a loud failure.
+    """
     return dict(normal=normal, tooth=tooth, tooth_fine=tooth_fine,
-                amount=amount, rough=(rlo, rhi), source=source)
+                amount=amount, rough=(rlo, rhi), source=source,
+                needs=needs or {})
 
 
 STOCK = {
@@ -91,16 +105,22 @@ STOCK = {
     # brick sheet has real depth; a skim coat has almost none.
     'brick_sheet':  _st(0.0133, 2.4, 0.64, 0.82,
                         normal='/Game/Uniblocks/Textures/T_UB_brickwork_N',
-                        source='Uniblocks PolyHaven CC0'),
+                        source='Uniblocks PolyHaven CC0',
+                        # authored in the other green convention: without this
+                        # the brick faces read RECESSED and the mortar PROUD
+                        needs={'flip_green_channel': True,
+                               'srgb': False}),
     'plaster_cast': _st(0.0100, 1.6, 0.62, 0.80,
                         normal='/Game/Uniblocks/Textures/T_UB_concrete_1_N',
-                        source='Uniblocks PolyHaven CC0'),
+                        source='Uniblocks PolyHaven CC0',
+                        needs={'srgb': False}),
     # 0.9 was an over-correction: at 800 uu the pier read as untextured
     # plastic, not as a skim coat. The split's purpose is that brick is
     # DEEPER than render, not that render is bare.
     'render_smooth': _st(0.0080, 1.4, 0.58, 0.74,
                          normal='/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N',
-                         source='Uniblocks PolyHaven CC0'),
+                         source='Uniblocks PolyHaven CC0',
+                         needs={'srgb': False}),
 }
 
 # the three that must stay identical to card_heavy until Phase 1 tunes them
@@ -174,6 +194,19 @@ def params_for(name):
                 RoughMin=st['rough'][0], RoughMax=st['rough'][1])
 
 
+def texture_requirements():
+    """(path, {property: value}) for every admitted map that states them.
+
+    Checked against the live assets by check_textures.py. Kept here rather
+    than in the checker so the requirement sits beside the map it belongs to.
+    """
+    out = []
+    for st in STOCK.values():
+        if st.get('normal') and st.get('needs'):
+            out.append((st['normal'], dict(st['needs'])))
+    return out
+
+
 def normal_for(name):
     """The admitted map for this material's stock, or None for the master's
     default paper. Under the texture rule an admitted map lends MICRO-RELIEF
@@ -206,6 +239,11 @@ def _selftest():
     assert STOCK['card_heavy']['normal'] is None
     assert normal_for('MI_dist_brick') != normal_for('MI_concrete')
     assert normal_for('MI_paint_cream') is None
+    # an admitted map that lives outside version control must state what it
+    # needs, or a fresh clone renders it with the pack's defaults
+    reqs = dict(texture_requirements())
+    assert '/Game/Uniblocks/Textures/T_UB_brickwork_N' in reqs
+    assert reqs['/Game/Uniblocks/Textures/T_UB_brickwork_N']['flip_green_channel'] is True
     # every stock a material names must still exist, INCLUDING the new ones
     assert set(SPLIT_OF_CARD_HEAVY) <= set(STOCK)
     assert stock_for('MI_paint_cream_2S') == 'card_heavy'

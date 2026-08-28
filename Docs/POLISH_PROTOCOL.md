@@ -115,8 +115,11 @@ also earned the rule that keeps it fixed.
   into RULES in one line when the debt is paid down. The debt curve is the
   progress metric (GATE-11: 73,582 -> 32,060 in wave 1a).
 
-- **The fix-class ladder: instance param < stock swap < graph change <
-  doctrine.** Every finding is triaged to a rung - the rungs have different
+- **The fix-class ladder: instance param < stock swap < NEW ASSET < graph
+  change < doctrine** (owner, 2026-08-28: a new asset ships with its
+  GENERATION SCRIPT committed alongside — reproducible, never a
+  hand-painted orphan — gated by study acceptance plus the owner's look;
+  hand-made assets without a script need explicit per-asset sign-off).** Every finding is triaged to a rung - the rungs have different
   approval gates and different blast radii - and findings are placed AFTER
   isolation, never from the symptom: the vehicle finding looked like rung
   four when the reader described it and landed on rung two once the A4
@@ -124,6 +127,53 @@ also earned the rule that keeps it fixed.
   any multi-part change starts (the no-op half proves byte-identity; the
   look-change half proves itself on the study wall plus owner eyes), so a
   no-op instruction can never quietly cover a look change.
+
+- **Every sweep table carries a KNOWN-ANSWER CELL** - one row whose value
+  is already established (e.g. the master-default configuration must
+  reproduce the baseline panel's numbers). A table without one cannot be
+  believed: the first route-2 sweep read plausibly and monotonically and
+  was garbage - the far camera was photographing another panel's back.
+  The known-answer cell is what caught it.
+- **A measurement floor is measured ACROSS the perturbation class it will
+  judge.** A noise floor from two captures of a static scene does not
+  cover a comparison spanning a shader recompile - Lumen's cache
+  invalidation measured 47.5 between captures of an IDENTICAL scene, a
+  false positive shaped exactly like a real finding. Settle to a
+  criterion; take null-state bands across the same class of change.
+
+- **The detail metric has no opinion on STRUCTURE.** Detail >= 3.0 at both
+  standoffs measures how much fine variation exists; a lattice motif is
+  dense in exactly the band the metric rewards. Demonstrated four times in
+  one work item: cross-hatched linen, houndstooth, tweed and camouflage
+  all PASSED the numbers - several with the best scores yet - and every
+  one failed the look. The numbers gate admission to the look; they never
+  substitute for it.
+- **Attribution and acceptance are different jobs on different surfaces**
+  (owner, 2026-08-28). The study wall - one variable, one flat sample - is
+  the ATTRIBUTION instrument. ACCEPTANCE happens on a BUILDING: windows,
+  bands, reveals, grazing light and silhouette change the verdict (the
+  same material read as tweed on the wall and stucco on a building), and
+  the flat slab hides amplitude entirely (2.0 reads as texture on a slab
+  and as RELIEF on a pier). Amplitude is in every sweep from now on.
+- **FAB-FIRST: survey what is installed before generating** (owner,
+  2026-08-28). The new-asset rung's gate now BEGINS with "prove nothing
+  installed serves." 722 textures were available; a noise generator was
+  written first, its axis-aligned lattice artifact survived six tuning
+  attempts because it was constructional, and the FIRST surveyed
+  photographic normal beat it at both standoffs. Reproducibility is not
+  a reason to synthesize what photography already did better.
+
+- **Two acceptance buildings, two jobs** (2026-08-28): ACCEPT_Vernacular
+  judges ARTICULATION - piers, bands, reveals, grazing light, one surface.
+  ACCEPT_Modern judges MATERIAL SPREAD - the ensemble, whether the family
+  coheres (it is the one mass carrying concrete, brick, two paints,
+  timber, shingle, metal and glass). Standoffs are DERIVED per building
+  from its own dimensions, never inherited, or two buildings frame
+  different fractions of mass and their numbers stop being comparable.
+- **Convert the FULL slot set of the building under test.** A partial
+  conversion judges a mixture: the first per-stock pass read SMOOTHER
+  because half the facade was still on the old paper. The conversion list
+  is derived from the building under test, never drawn up in advance.
 
 ## Sequencing (owner-approved 2026-08-27)
 

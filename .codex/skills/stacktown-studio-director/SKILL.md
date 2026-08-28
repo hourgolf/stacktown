@@ -56,7 +56,10 @@ In rough order of impact:
 - Tilt-shift on a scene without real depth. It reads as a filter on a render.
 - Bloom, warm grading, or a long lens applied to weak geometry.
 - More props. Density is not the same as specificity.
-- Photoreal donor assets dropped next to flat-shaded ones. Detail tier must match, and it must
+- Photoreal donor assets dropped next to flat-shaded ones. *(Owner amendment
+  2026-08-28: installed FAB textures MAY serve stocks under the closed-list rule in
+  MASTER_MATERIAL_SPEC — their micro-relief, our color and sheen; normals and
+  in-band roughness only, never albedo or weathering; accepted on a building.)* Detail tier must match, and it must
   match at the fabrication tier, not the reality tier.
 
 ## Palette discipline

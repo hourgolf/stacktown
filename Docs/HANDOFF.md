@@ -193,6 +193,19 @@ Every item cost hours. They are ordered by how much.
   sweep's unapplied actor rotation, and a loop variable shadowing a yaw
   parameter (four instances by 2026-08-27). When geometry lies, check the
   frame before the geometry.
+- **A clearance check that ignores ROOM walls is not a clearance check.**
+  A derived whole-building standoff placed the camera OUTSIDE the studio
+  room, photographing the scene through its wall. Clearance is checked
+  against everything that occludes, including the room itself.
+- **UV maths on WorldPosition goes AFTER the tiling scale, never before.**
+  World position is LWC; at -22,000 uu a decompose/re-append costs
+  precision the sampler sees (a proven-identity rotation failed its no-op
+  proof by 0.28 against a 0.25 floor). Downstream of the multiply the
+  values are ~132 and the maths is safe.
+- **A study row needs clear ground BEHIND it for the camera and IN FRONT
+  for the light.** The route-2 sweep's far camera stood 189 uu behind an
+  existing row, photographing another panel's back, while that row
+  shadowed the new one - producing a plausible, monotonic, garbage table.
 - **This machine has persistent MetalRHI (GPU) render-thread crashes**
   (S19): MetalCommandList assertion failures killed the editor twice on
   2026-08-27, before AND after the 5.8.2 update, unrelated to scripts or

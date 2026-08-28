@@ -115,3 +115,26 @@ Verification contract for the rename that uses these: the pre-change
 baseline (donor_mats_baseline.json, 548 combos / 3,831 records) must
 reproduce byte-identically on materials after the change. The gate going
 quiet is never the proof.
+
+## FAB textures in the fabrication system — owner approved 2026-08-28
+
+The texture analogue of the donor-mesh rule ("their shapes, our surface"):
+
+**Their MICRO-RELIEF, our color and sheen.** An installed FAB texture may
+lend a stock its geometric micro-structure — its NORMAL map, and
+ROUGHNESS DETAIL within the doctrine's narrow band — never its albedo,
+color, or weathering. Our MI instances keep the palette, the lamp, and
+the sheen discipline; photography supplies what the tooth actually looks
+like, because a surveyed photographic normal beat six generated attempts
+(the value-noise lattice was constructional and untunable).
+
+Admission is CLOSED-LIST, like the canon: survey -> shortlist -> the
+owner's eye. An admitted texture lands as a named property of a stock in
+fabrication.py with its source recorded. Acceptance happens on a
+BUILDING (never the flat study wall), judge mode, both standoffs, with
+amplitude swept. Ad-hoc per-material texture picks are prohibited.
+
+"A model is unified by fabrication" stands: the fabrication story (card,
+resin, brick) remains ours; the studio-director warning about photoreal
+donors beside flat-shaded work is answered by tier-matching at the STOCK
+level rather than banning photography outright.

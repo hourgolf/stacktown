@@ -68,3 +68,15 @@ away"; called a SUCCESS by the owner, deliberately.
    rule); the PAPER-TELL STUDY above - hypotheses (a)/(b)/(c) one
    variable apart on the study wall, before any material-system change
    ships; the lens rig confirmed load-bearing.
+
+## Addendum, 2026-08-28 — the open question resolves
+
+Hypothesis (c) was confirmed first (grain scale; fixed the vehicles and
+exposed the metric's structure-blindness). But the deep answer is (a),
+and it is LITERAL: every building in the city resolves to six stocks,
+with card_heavy covering brick, slate, bone, ochre, cream and concrete
+alike - one normal map at different tilings, one amplitude, "one family,
+many paints" in fabrication.py's own words. The reader's sentence was an
+accurate description of the material graph. The card_heavy split
+(owner-blessed) is the response; hypothesis (b) remains parked with the
+octave work.

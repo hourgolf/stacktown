@@ -40,7 +40,7 @@ def clear():
     filter that matches the label, which is the thing we actually set.
     """
     n = 0
-    for pat in ('HERO_', 'LAMP_Hero'):
+    for pat in ('HERO_End',):
         r = ue.tool(S, 'find_actors',
                     {'name': pat, 'tag': '', 'collision_channels': []})
         try:

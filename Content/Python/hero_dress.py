@@ -52,7 +52,11 @@ def clear():
     filter that matches the label, which is the thing we actually set.
     """
     n = 0
-    for pat in ('HERO_', 'LAMP_Hero'):
+    # ONLY THIS SCRIPT'S OWN ACTORS. 'HERO_' also matches
+    # hero_backdrop's HERO_End* buildings, so a broad prefix made the
+    # two scripts clobber each other - dressing the street silently
+    # deleted the row closing the vista, and the frame came back open.
+    for pat in ('HERO_Props', 'HERO_Cars', 'LAMP_Hero'):
         r = ue.tool(S, 'find_actors',
                     {'name': pat, 'tag': '', 'collision_channels': []})
         try:

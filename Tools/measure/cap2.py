@@ -161,6 +161,10 @@ def _stamp(path):
     rec = {'frame': os.path.basename(path),
            'lens_mode': (mode or {}).get('mode', 'unknown'),
            'focus': (mode or {}).get('focus'),
+           # grain travels with the frame too: a show frame with grain and one
+           # without are different claims, and the sidecar exists so a frame
+           # never has to be taken on trust about how it was made.
+           'grain': (mode or {}).get('grain'),
            'lens_applied': (mode or {}).get('applied'),
            'readback': (mode or {}).get('readback', {})}
     try:

@@ -79,7 +79,7 @@ def _set(pairs):
     return b
 
 
-def apply(mode, focus=None):
+def apply(mode, focus=None, grain=True):
     """Apply a mode and RETURN WHAT THE EDITOR ACTUALLY HOLDS afterwards.
 
     Read-back is not decoration. A restore that printed its intent rather than
@@ -97,7 +97,17 @@ def apply(mode, focus=None):
     elif mode == 'show':
         if not focus:
             raise SystemExit('lensrig: show mode needs --focus <uu to subject>')
+        # GRAIN IS OPT-OUT, and the default is under review. filmlook.py
+        # turned grain OFF and recorded why: at 1.05 with shadows at 1.25 it
+        # is visible as noise on every flat surface, and it FIGHTS DEPTH OF
+        # FIELD - "blur plus grain reads as a bad scan rather than as a
+        # photograph" - to be reconsidered once the DOF work is settled. Show
+        # mode is that DOF work, so the two arrived together and the warning
+        # applies to exactly this combination. The authored values live in
+        # filmlook so they return exactly; that is not the same as approved.
         want = dict(FINISH_ON)
+        if not grain:
+            want['film_grain_intensity'] = 0.0
         want.update({'depth_of_field_fstop': dof.HERO['fstop'],
                      'depth_of_field_sensor_width': dof.HERO['sensor'],
                      'depth_of_field_focal_distance': float(focus),
@@ -118,7 +128,7 @@ def apply(mode, focus=None):
     if bad:
         raise SystemExit('lensrig: READ-BACK MISMATCH, mode NOT applied: %s'
                          % ['%s wanted %.3f got %s' % b for b in bad])
-    rec = {'mode': mode, 'focus': focus,
+    rec = {'mode': mode, 'focus': focus, 'grain': bool(grain) if mode == 'show' else False,
            'applied': datetime.datetime.now().isoformat(timespec='seconds'),
            'readback': got}
     json.dump(rec, open(STAMP, 'w'), indent=1, sort_keys=True)
@@ -139,8 +149,8 @@ if __name__ == '__main__':
     for i, a in enumerate(sys.argv):
         if a == '--focus' and i + 1 < len(sys.argv):
             f = float(sys.argv[i + 1])
-    r = apply(m, f)
-    print('LENS MODE = %s%s' % (r['mode'],
+    r = apply(m, f, grain=('--no-grain' not in sys.argv))
+    print('LENS MODE = %s  grain=%s%s' % (r['mode'], r['grain'],
                                 '  focus %.0f uu' % r['focus'] if r['focus'] else ''))
     for k in sorted(r['readback']):
         print('   %-34s %.3f' % (k, r['readback'][k]))

@@ -35,6 +35,7 @@ pre-archetype gate - archetypes.py proves that against planted defects. An
 exempted rule is SKIPPED WITH AN EXPLICIT LINE in the verdict, never
 silently; an unknown archetype raises, never defaults.
 """
+import math
 import sys
 
 import labels
@@ -289,12 +290,32 @@ def _clean(n=None, aabb=True):
     # rather than appended so the part count stays exactly n.
     _fl = max(1, int(SPEC.get('floors') or 1))
     g = min(max(1, int(GLASS_PER_FLOOR * _fl + 0.999)), max(0, n - k))
-    comps = [_c('Wall_P%d' % i, aabb=box if aabb else None)
-             for i in range(n - k - g)]
-    comps += [_c('Glass_G%d' % i, aabb=box if aabb else None)
-              for i in range(g)]
-    comps += [_c('Wall_R%d' % i, aabb=rear if aabb else None)
-              for i in range(k)]
+    # EVERY PART GETS ITS OWN CELL. This fixture used to be n copies of one
+    # identical box stacked on the same coordinates - which passed every rule
+    # only because no rule had ever looked at whether parts overlap. GATE-11
+    # looks, and called it what it is: forty coincident surfaces. A model that
+    # every rule must pass cannot be built out of the defect one rule hunts.
+    # Counts, names, y-ranges and the rear/glazing structure are unchanged, so
+    # every other self-test that counts against n still holds; only the x and
+    # z positions are new. The 1 uu inset leaves a 2 uu gap between
+    # neighbours, well inside GATE-05's 8 uu side tolerance.
+    cols = int(math.ceil(math.sqrt(max(n, 1))))
+    rows = int(math.ceil(float(n) / cols))
+    cw, ch = SPEC['width'] / cols, 400.0 / rows
+
+    def cell(i, y0, y1):
+        if not aabb:
+            return None
+        cx, cz = (i % cols) * cw, (i // cols) * ch
+        return ([cx + 1.0, y0, cz + 1.0], [cx + cw - 1.0, y1, cz + ch - 1.0])
+
+    comps, i = [], 0
+    for j in range(n - k - g):
+        comps.append(_c('Wall_P%d' % j, aabb=cell(i, 0.0, D))); i += 1
+    for j in range(g):
+        comps.append(_c('Glass_G%d' % j, aabb=cell(i, 0.0, D))); i += 1
+    for j in range(k):
+        comps.append(_c('Wall_R%d' % j, aabb=cell(i, D*0.9, D))); i += 1
     return model(SPEC, [_a('BLD2_Probe_H', comps)])
 
 
@@ -654,6 +675,152 @@ def _t10():
     return not gate_10(model(sp, [_a('BLD2_Probe_H', infront)]))
 
 
+COPLANAR_MIN_OVERLAP = 8.0    # uu; below this the fight is sub-pixel at zoom
+
+
+def coplanar_pairs(cs, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP, cap=None):
+    """Parts whose LIKE-FACING faces share a plane AND overlap behind it.
+
+    LIKE-FACING is the whole discrimination, and getting it wrong makes the
+    rule useless in one direction or the other:
+
+      max vs max, or min vs min - two surfaces pointing the SAME way at the
+      same depth. Nothing for the depth buffer to choose between them. This
+      is the defect.
+
+      max vs min - one part's top at another's bottom. That is a JOINT, how
+      every stacked wall in the catalogue is built, and flagging it would
+      condemn the entire library.
+
+    The second discrimination is the overlap test on the other two axes. An
+    elevation of wall panels all sharing a front plane is normal and correct
+    - they sit side by side and do not overlap. Two parts that share a plane
+    AND overlap behind it are fighting, and that also catches a band which
+    was meant to PROJECT and was left flush: the reveal doctrine says a model
+    reads as physical because light catches real edges, and a band at the
+    same depth as the wall has no edge to catch.
+
+    Sorted sweep with a break, not the O(n^2) pair loop: a building carries
+    ~640 boxes and the gate runs over hundreds of models.
+    """
+    boxes = [(str(c.get('name', '?')), c['aabb']) for c in cs if c.get('aabb')]
+    seen, out = set(), []
+    for k in (0, 1, 2):
+        o1, o2 = [a for a in (0, 1, 2) if a != k]
+        for side in (0, 1):
+            order = sorted(range(len(boxes)), key=lambda i: boxes[i][1][side][k])
+            for ai in range(len(order)):
+                na, ba = boxes[order[ai]]
+                va = ba[side][k]
+                for bi in range(ai + 1, len(order)):
+                    nb, bb = boxes[order[bi]]
+                    if bb[side][k] - va >= tol:
+                        break               # sorted: nothing further is close
+                    ov1 = (min(ba[1][o1], bb[1][o1])
+                           - max(ba[0][o1], bb[0][o1]))
+                    ov2 = (min(ba[1][o2], bb[1][o2])
+                           - max(ba[0][o2], bb[0][o2]))
+                    if ov1 < minov or ov2 < minov:
+                        continue
+                    key = (order[ai], order[bi])
+                    if key in seen:
+                        continue            # a coincident pair fights on all
+                    seen.add(key)           # three axes; report it once
+                    out.append((na, nb, 'xyz'[k]))
+                    if cap and len(out) >= cap:
+                        return out
+    return out
+
+
+# GATE-11 IS WRITTEN, SELF-TESTED, AND DELIBERATELY NOT YET ENFORCED.
+#
+# Measured over a 24-model sample of the catalogue on 2026-08-27: ZERO models
+# carry no coplanar pairs, and the median model carries 84. Registering it in
+# RULES today would refuse 100% of the library - and this file's own header
+# says what happens next when a gate refuses everything correct: "that teaches
+# people to pass the gate with --force, the failure mode that must never
+# install itself." GATE-01 already did this once when donors became real.
+#
+# So it sits in PENDING: it runs its self-test with the rules, so it cannot
+# rot, and it does not vote. It moves into RULES when the generator pass
+# lands, and the move is one line.
+PENDING = []
+
+
+def pending(rid, statement, judges=None):
+    def deco(fn):
+        PENDING.append(dict(id=rid, statement=statement, check=fn,
+                            judges=judges))
+        return fn
+    return deco
+
+
+@pending('GATE-11', 'no two parts share a face plane while overlapping behind it',
+         judges=ALL_ARCHES)
+def gate_11(m):
+    """The class rule GATE-10 is one member of.
+
+    GATE-10 knows about ONE plane - the core top - because that is the one
+    that was found by chasing jagged white patches across every roof in the
+    catalogue for a long time, as a lighting fault, which it never was. Cold
+    read #1 found the rest of the class from the other side: a stranger
+    looking closely said rendering artifacts and clipping gave it away.
+
+    Keeping both is deliberate. GATE-10 names the specific plane and explains
+    the specific cause, which is what makes a verdict actionable; this one
+    catches the members nobody has met yet.
+    """
+    hits = coplanar_pairs(building_comps(m), cap=40)
+    if not hits:
+        return []
+    shown = ', '.join('%s/%s(%s)' % h for h in hits[:3])
+    return [(m['spec'].get('name', '?'),
+             '%d coplanar overlapping pair(s)%s: %s'
+             % (len(hits), '+' if len(hits) >= 40 else '', shown))]
+
+
+@selftest('GATE-11')
+def _t11():
+    def bx(x0, x1, y0, y1, z0, z1):
+        return ([x0, y0, z0], [x1, y1, z1])
+    # side by side on one front plane: the normal elevation, must pass
+    ok = [_c('Wall_%d' % i, aabb=bx(i*100.0, i*100.0 + 90.0, 0.0, 300.0,
+                                    0.0, 260.0)) for i in range(6)]
+    if gate_11(model(SPEC, [_a('BLD2_Probe_H', ok)])):
+        return False
+    # stacked: A's top IS B's bottom. A joint, not a fight, must pass
+    joint = [_c('Wall_L', aabb=bx(0.0, 200.0, 0.0, 300.0, 0.0, 260.0)),
+             _c('Wall_U', aabb=bx(0.0, 200.0, 0.0, 300.0, 260.0, 520.0))]
+    if gate_11(model(SPEC, [_a('BLD2_Probe_H', joint)])):
+        return False
+    # two tops at the same z, overlapping in plan: the defect
+    fight = [_c('Deck_A', aabb=bx(0.0, 200.0, 0.0, 300.0, 0.0, 260.0)),
+             _c('Deck_B', aabb=bx(100.0, 300.0, 0.0, 300.0, 40.0, 260.0))]
+    if len(gate_11(model(SPEC, [_a('BLD2_Probe_H', fight)]))) != 1:
+        return False
+    # a band left FLUSH with the wall it was meant to project from
+    flush = [_c('Wall_A', aabb=bx(0.0, 400.0, 0.0, 300.0, 0.0, 600.0)),
+             _c('Band_B', aabb=bx(0.0, 400.0, 0.0, 300.0, 200.0, 260.0))]
+    if len(gate_11(model(SPEC, [_a('BLD2_Probe_H', flush)]))) != 1:
+        return False
+    # ...and the same band PROJECTING, which is the fix, must pass.
+    # It has to stand proud on the faces it actually EXPOSES, not just the
+    # front: the first version of this fixture pushed the band 12 uu forward
+    # in y but left it exactly as wide as its wall, so both END faces still
+    # sat at x=0 and x=400 over a shared y/z patch and fought there. The rule
+    # was right and the fixture was wrong - the same way round as GATE-10's.
+    # ...and shallow, for the same reason at the back: a band is a strip on
+    # the front, not a block running the wall's full depth.
+    proud = [_c('Wall_A', aabb=bx(0.0, 400.0, 0.0, 300.0, 0.0, 600.0)),
+             _c('Band_B', aabb=bx(-6.0, 406.0, -12.0, 20.0, 200.0, 260.0))]
+    if gate_11(model(SPEC, [_a('BLD2_Probe_H', proud)])):
+        return False
+    # a sliver overlap is sub-pixel even at zoom: not worth a refusal
+    sliver = [_c('Deck_A', aabb=bx(0.0, 200.0, 0.0, 300.0, 0.0, 260.0)),
+              _c('Deck_B', aabb=bx(197.0, 400.0, 0.0, 300.0, 40.0, 260.0))]
+    return not gate_11(model(SPEC, [_a('BLD2_Probe_H', sliver)]))
+
+
 def judge(m, arch=None):
     """(findings, skips) for one model under one archetype. No self-tests -
     run() adds those.
@@ -693,7 +860,7 @@ def run(m, verbose=True):
     The archetype machinery is held to the same bar: its selftests (unknown
     names raise, skips are visible, street stays byte-identical) run with
     the rules', and the gate reports nothing if any fail."""
-    broken = [r['id'] for r in RULES
+    broken = [r['id'] for r in RULES + PENDING
               if not SELFTESTS.get(r['id'], lambda: False)()]
     if not archetypes.selftest():
         broken.append('ARCHETYPES')
@@ -702,7 +869,9 @@ def run(m, verbose=True):
         return False, [('selftest', ','.join(broken))], {}
     if verbose:
         print('  gate self-tests: %d/%d rules see their own defect'
-              % (len(RULES), len(RULES)))
+              ' (%d pending, not voting)'
+              % (len(RULES) + len(PENDING), len(RULES) + len(PENDING),
+                 len(PENDING)))
     findings, skips = judge(m)
     if verbose:
         for rid, line in skips:

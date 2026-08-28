@@ -488,7 +488,7 @@ def flank_param(spec, sign, origin, yaw, P):
                 w1 = w0 + (y1 - y0) / float(nw) * float(P['open'])
                 if w1 - w0 < 42:
                     continue
-                b('Wall_FlankRev%d_%d' % (f, k), FACADE_T - prd, FACADE_T,
+                b('Wall_FlankRev%d_%d' % (f, k), FACADE_T - prd, FACADE_T + 4,
                   w0 - 10, w1 + 10, z0 + FH * 0.24 - 10, z1 - FH * 0.14 + 10)
                 b('Glass_Flank%d_%d' % (f, k), FACADE_T - prd - 3,
                   FACADE_T - prd, w0, w1, z0 + FH * 0.24, z1 - FH * 0.14)
@@ -501,7 +501,7 @@ def flank_param(spec, sign, origin, yaw, P):
             my = 20.0 + (D - 40.0) * k / float(nm)
             mw = 13.0 if (k == 0 or k == nm) else 8.0
             b('Mullion_FlankV%d' % k, FACADE_T - prd - 2, FACADE_T + 2,
-              my - mw / 2, my + mw / 2, GF, ztop)
+              my - mw / 2, my + mw / 2, GF + 3, ztop - 3)
 
     if P['horiz'] > 0.0 and F >= 1:
         for f in range(F + 1):
@@ -628,21 +628,21 @@ def flank_modern(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
         z0 = GF + f * FH
         z1 = z0 + FH
         sp = FH * _g.SPAND_F
-        b('Band_L%dSpandrel' % f, -_g.BAND_PROUD, 20, Y0 - 10, Y1 + 10, z0, z0 + sp)
-        b('Wall_L%dEndF' % f, -_g.BAND_PROUD, 60, Y0 - 10, Y0 + 16, z0, z1)
-        b('Wall_L%dEndR' % f, -_g.BAND_PROUD, 60, Y1 - 16, Y1 + 10, z0, z1)
+        b('Band_L%dSpandrel' % f, -_g.BAND_PROUD, 20, Y0 - 7, Y1 + 7, z0 + 3, z0 + sp)
+        b('Wall_L%dEndF' % f, -_g.BAND_PROUD - 4, 60, Y0 - 10, Y0 + 16, z0, z1)
+        b('Wall_L%dEndR' % f, -_g.BAND_PROUD - 4, 60, Y1 - 16, Y1 + 10, z0, z1)
         gz0, gz1 = z0 + sp, z1
         gy0, gy1 = Y0 + 16, Y1 - 16
         b('Glass_L%dRibbon' % f, _g.GLAZE_Y, _g.GLAZE_Y + 2, gy0, gy1, gz0 + 4, gz1 - 4)
         b('Interior_L%dRibbon' % f, _g.GLAZE_Y + 8, _g.GLAZE_Y + 14, gy0, gy1, gz0, gz1)
-        b('Frame_L%dRibbonS' % f, _g.GLAZE_Y - 8, _g.GLAZE_Y + 2, gy0 - 4, gy1 + 4, gz0, gz0 + 6)
-        b('Frame_L%dRibbonT' % f, _g.GLAZE_Y - 8, _g.GLAZE_Y + 2, gy0 - 4, gy1 + 4, gz1 - 6, gz1)
+        b('Frame_L%dRibbonS' % f, _g.GLAZE_Y - 8, _g.GLAZE_Y + 2, gy0 - 4, gy1 + 4, gz0 + 3, gz0 + 9)
+        b('Frame_L%dRibbonT' % f, _g.GLAZE_Y - 8, _g.GLAZE_Y + 2, gy0 - 4, gy1 + 4, gz1 - 9, gz1 - 3)
         for k in range(1, bays):
             fy = gy0 + (gy1 - gy0) * k / float(bays)
-            b('Wall_L%dFin%d' % (f, k), -_g.FIN_PROUD, _g.GLAZE_Y + 2,
+            b('Wall_L%dFin%d' % (f, k), -_g.FIN_PROUD, _g.GLAZE_Y + 7,
               fy - _g.FIN_W / 2, fy + _g.FIN_W / 2, gz0, gz1)
         mz = gz0 + (gz1 - gz0) * 0.58
-        b('Mullion_L%dRibbonH' % f, _g.GLAZE_Y - 5, _g.GLAZE_Y + 1, gy0, gy1, mz - 3, mz + 3)
+        b('Mullion_L%dRibbonH' % f, _g.GLAZE_Y - 9, _g.GLAZE_Y - 3, gy0, gy1, mz - 3, mz + 3)
 
     b('Wall_Parapet', 0, 40, Y0, Y1, ztop, ztop + PAR - 12)
     b('Band_Coping', -6, 44, Y0 - 6, Y1 + 6, ztop + PAR - 12, ztop + PAR)

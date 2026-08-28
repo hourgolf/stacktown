@@ -1546,16 +1546,23 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         fy = _co.setback_at(spec, f, F)
         a = mkactor('BLD2_%s_F%d' % (n, f), origin, (0.0, yaw, 0.0))
         # spandrel: full width, standing proud. The primary horizontal.
-        box(a, 'Band_Spandrel', x0 - 10, x0 + W + 10, fy - BAND_PROUD, fy + 20, z0, z0 + sp); made += 1
-        # returns at each end so the band does not read as a floating slab
-        box(a, 'Wall_EndL', x0 - 10, x0 + 16, fy - BAND_PROUD, fy + 60, z0, z1); made += 1
-        box(a, 'Wall_EndR', x0 + W - 16, x0 + W + 10, fy - BAND_PROUD, fy + 60, z0, z1); made += 1
+        box(a, 'Band_Spandrel', x0 - 7, x0 + W + 7, fy - BAND_PROUD, fy + 20, z0 + 3, z0 + sp); made += 1
+        # returns at each end so the band does not read as a floating slab.
+        # They WRAP it - 4 uu proud in y, 4 wider in x, and the band lifted 3
+        # off the floor line - because flush with it they shared the min-x,
+        # min-y AND min-z planes with the band, all three at once. The outer
+        # bound is unchanged: the return still holds x0-10, so the parcel
+        # measurement GATE-05 makes is exactly what it was.
+        box(a, 'Wall_EndL', x0 - 10, x0 + 16, fy - BAND_PROUD - 4, fy + 60, z0, z1); made += 1
+        box(a, 'Wall_EndR', x0 + W - 16, x0 + W + 10, fy - BAND_PROUD - 4, fy + 60, z0, z1); made += 1
         gz0, gz1 = z0 + sp, z1
         gx0, gx1 = x0 + 16, x0 + W - 16
         box(a, 'Glass_Ribbon', gx0, gx1, fy + GLAZE_Y, fy + GLAZE_Y + 2, gz0 + 4, gz1 - 4); made += 1
         box(a, 'Interior_Ribbon', gx0, gx1, fy + GLAZE_Y + 8, fy + GLAZE_Y + 14, gz0, gz1); made += 1
-        box(a, 'Frame_RibbonS', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz0, gz0 + 6); made += 1
-        box(a, 'Frame_RibbonT', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz1 - 6, gz1); made += 1
+        # OFF the floor and ceiling lines by 3: at gz0 and gz1 exactly these
+        # shared a plane with every fin's end face.
+        box(a, 'Frame_RibbonS', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz0 + 3, gz0 + 9); made += 1
+        box(a, 'Frame_RibbonT', gx0 - 4, gx1 + 4, fy + GLAZE_Y - 8, fy + GLAZE_Y + 2, gz1 - 9, gz1 - 3); made += 1
         # A RIBBON IS NOT A SHEET OF GLASS. It is a run of lights divided by
         # mullions every metre or so, with a transom across it - and the
         # spandrel below is panels with joints between them, not one casting.
@@ -1565,10 +1572,19 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         nmul = max(4, BAYS*3)
         for k in range(1, nmul):
             mx = gx0 + (gx1 - gx0)*k/float(nmul)
+            # RUNS UNDER THE HEAD, and stops at its soffit. Ending at
+            # gz1-4 put the mullion's top face on exactly the same plane as
+            # Frame_MullHead's, over an 8x8 patch, on every vertical of every
+            # ribbon floor - 21% of every coplanar pair in the catalogue, and
+            # a piece of card cannot end flush with the piece laid across it.
             box(a, 'Mullion_R%dV%d' % (f, k), mx - 4, mx + 4,
-                fy + GLAZE_Y - 7, fy + GLAZE_Y + 1, gz0 + 4, gz1 - 4); made += 1
+                fy + GLAZE_Y - 7, fy + GLAZE_Y + 1, gz0 + 4, gz1 - 12); made += 1
         tz = gz0 + (gz1 - gz0)*0.62
-        box(a, 'Mullion_R%dT' % f, gx0, gx1, fy + GLAZE_Y - 6, fy + GLAZE_Y + 1,
+        # PROUD OF THE VERTICALS, not in their plane. A transom crossing a
+        # mullion at the same depth shares both faces where they cross; a
+        # modelmaker laminates the horizontal over the verticals, which is
+        # both buildable and the reveal the eye reads as thickness.
+        box(a, 'Mullion_R%dT' % f, gx0, gx1, fy + GLAZE_Y - 10, fy + GLAZE_Y - 2,
             tz - 4, tz + 4); made += 1
         # spandrel panel joints, one per bay, and a reveal under the band
         for b in range(1, BAYS):
@@ -1576,8 +1592,8 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             box(a, 'Frame_Sp%dJ%d' % (f, b), jx - 4, jx + 4,
                 fy - BAND_PROUD - 2, fy - BAND_PROUD + 14, z0 + 4, z0 + sp - 4)
             made += 1
-        box(a, 'Frame_Sp%dReveal' % f, x0 - 6, x0 + W + 6,
-            fy - BAND_PROUD - 3, fy - BAND_PROUD + 9, z0 + sp - 10, z0 + sp)
+        box(a, 'Frame_Sp%dReveal' % f, x0 - 4, x0 + W + 4,
+            fy - BAND_PROUD - 3, fy - BAND_PROUD + 9, z0 + sp - 10, z0 + sp - 3)
         box(a, 'Frame_Sp%dCill' % f, x0 - 12, x0 + W + 12,
             fy - BAND_PROUD - 9, fy - BAND_PROUD + 6, z0 - 8, z0 + 4)
         made += 2
@@ -1589,9 +1605,9 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         for k in range(1, fins):
             fx = gx0 + (gx1 - gx0) * k / float(fins)
             box(a, 'Wall_Fin%d' % k, fx - FIN_W / 2, fx + FIN_W / 2,
-                fy - FIN_PROUD, fy + GLAZE_Y + 2, gz0, gz1); made += 1
+                fy - FIN_PROUD, fy + GLAZE_Y + 7, gz0, gz1); made += 1
         mz = gz0 + (gz1 - gz0) * 0.58
-        box(a, 'Mullion_RibbonH', gx0, gx1, fy + GLAZE_Y - 5, fy + GLAZE_Y + 1, mz - 3, mz + 3); made += 1
+        box(a, 'Mullion_RibbonH', gx0, gx1, fy + GLAZE_Y - 9, fy + GLAZE_Y - 3, mz - 3, mz + 3); made += 1
         # OPENING LIGHTS. A sealed ribbon is a curtain wall; a 60s office block
         # has top-hung vents, and every third light being proud of the plane is
         # what stops a run of glass reading as one sheet.

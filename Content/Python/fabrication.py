@@ -105,21 +105,41 @@ STOCK = {
     # brick sheet has real depth; a skim coat has almost none.
     'brick_sheet':  _st(0.0133, 2.4, 0.64, 0.82,
                         normal='/Game/Uniblocks/Textures/T_UB_brickwork_N',
-                        source='Uniblocks PolyHaven CC0',
+                        # PROVENANCE UNVERIFIED. I recorded "Uniblocks
+                        # PolyHaven CC0" without checking, and the pack's own
+                        # organisation contradicts it: Uniblocks segregates its
+                        # Poly Haven material into a folder named
+                        # PolyHaven_CC0 (56 textures), and brickwork is NOT in
+                        # it - it sits with the other 77 at the Textures root.
+                        # The Fab listing says its set draws on Poly Haven for
+                        # SOME textures; this is evidence this is not one of
+                        # them. Do not copy into tracked content on this.
+                        source='Uniblocks pack (root Textures) - PROVENANCE '
+                               'UNVERIFIED, not in the pack PolyHaven_CC0 folder',
                         # authored in the other green convention: without this
                         # the brick faces read RECESSED and the mortar PROUD
                         needs={'flip_green_channel': True,
                                'srgb': False}),
     'plaster_cast': _st(0.0100, 1.6, 0.62, 0.80,
                         normal='/Game/Uniblocks/Textures/T_UB_concrete_1_N',
-                        source='Uniblocks PolyHaven CC0',
+                        # same as brick: root Textures, not the CC0 folder
+                        source='Uniblocks pack (root Textures) - PROVENANCE '
+                               'UNVERIFIED, not in the pack PolyHaven_CC0 folder',
                         needs={'srgb': False}),
     # 0.9 was an over-correction: at 800 uu the pier read as untextured
     # plastic, not as a skim coat. The split's purpose is that brick is
     # DEEPER than render, not that render is bare.
     'render_smooth': _st(0.0080, 1.4, 0.58, 0.74,
-                         normal='/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N',
-                         source='Uniblocks PolyHaven CC0',
+                         # COPIED INTO TRACKED CONTENT. Its settings are now
+                         # versioned with it, so a fresh clone cannot render it
+                         # with the pack's defaults. The two maps still living
+                         # in the ignored pack are the ones whose provenance is
+                         # unverified - they stay under check_textures.
+                         normal='/Game/Stacktown/Textures/T_UB_plaster_2_N',
+                         # the one of the three that IS in the pack's own
+                         # PolyHaven_CC0 folder - the author's own CC0 assertion
+                         source='Uniblocks/Textures/PolyHaven_CC0 - CC0 per '
+                                'the pack author\'s own segregation',
                          needs={'srgb': False}),
 }
 
@@ -244,6 +264,24 @@ def _selftest():
     reqs = dict(texture_requirements())
     assert '/Game/Uniblocks/Textures/T_UB_brickwork_N' in reqs
     assert reqs['/Game/Uniblocks/Textures/T_UB_brickwork_N']['flip_green_channel'] is True
+    # a source string is a CLAIM, and two of these were claims I had not
+    # checked. Anything not in the pack's own CC0 folder says so out loud, so
+    # it cannot be copied into tracked content by someone reading the table.
+    for _s in SPLIT_OF_CARD_HEAVY:
+        src = STOCK[_s]['source'] or ''
+        nrm = STOCK[_s]['normal'] or ''
+        tracked = nrm.startswith('/Game/Stacktown/')
+        unverified = 'UNVERIFIED' in src
+        # THE INVARIANT: only a map whose provenance is established may be
+        # copied into tracked content. Donor packs are never committed; the
+        # carve-out is evidence-bound, and this is where the evidence is
+        # enforced rather than described.
+        assert not (tracked and unverified), (
+            '%s: an UNVERIFIED map has been copied into tracked content' % _s)
+        # and an unverified one must still be sitting in the ignored pack,
+        # where check_textures is the standing guard
+        assert unverified == (not tracked), (
+            '%s: provenance claim and location disagree' % _s)
     # every stock a material names must still exist, INCLUDING the new ones
     assert set(SPLIT_OF_CARD_HEAVY) <= set(STOCK)
     assert stock_for('MI_paint_cream_2S') == 'card_heavy'

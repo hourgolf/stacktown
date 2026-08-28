@@ -105,6 +105,26 @@ also earned the rule that keeps it fixed.
   combos OUTSTANDING BY DESIGN pending a real recipe fix; 6 old
   contemporary6 assets on disk are falsely certified (they passed depth
   only because their donors were missing).
+- **Graduated rules: a new rule that would mass-refuse the existing corpus
+  enters PENDING, not RULES.** Registering GATE-11 on day one would have
+  refused all 548 models (73,582 coplanar pairs, median 72 per model) and
+  taught everyone to pass the gate with --force - the failure mode the
+  gate's own header says must never install itself; GATE-01 did exactly
+  this when donors became real. A PENDING rule runs its self-test with the
+  voting rules so it cannot rot, MEASURES the debt on every run, and moves
+  into RULES in one line when the debt is paid down. The debt curve is the
+  progress metric (GATE-11: 73,582 -> 32,060 in wave 1a).
+
+- **The fix-class ladder: instance param < stock swap < graph change <
+  doctrine.** Every finding is triaged to a rung - the rungs have different
+  approval gates and different blast radii - and findings are placed AFTER
+  isolation, never from the symptom: the vehicle finding looked like rung
+  four when the reader described it and landed on rung two once the A4
+  panel isolated scale from family. A split proof standard is named BEFORE
+  any multi-part change starts (the no-op half proves byte-identity; the
+  look-change half proves itself on the study wall plus owner eyes), so a
+  no-op instruction can never quietly cover a look change.
+
 ## Sequencing (owner-approved 2026-08-27)
 
 1. Width sweep (donor-bounds table first) → the honest catalogue number.

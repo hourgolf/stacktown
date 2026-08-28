@@ -78,6 +78,13 @@ at 0 (`lumen_defaults.py`).
 the recording sink, the two execution channels, the measured variation levers,
 and the traps. Read it before touching the generator.
 
+**First cold read, 2026-08-27** (Saved/ColdRead1/RECORD.md): PASS at
+block/hero range - the first in project history - FAIL at player zoom with
+named causes (rendering artifacts, clipping/planar geometry, and the
+uniform 'paper' texture itself reading as a render-tell - cause not yet
+isolated; see the record's open question). Owner called it a success; wave 1
+priorities come from the reader's own findings.
+
 ### Open items
 
 - **The declared width ladder may not be honest.** `recipes.py` declares 548

@@ -7,16 +7,23 @@ seen from outside only. M_StacktownMaster is two_sided=False, so a normal card
 material culls their backfaces and the road shows through the bodywork - Stage
 2 audit defect 2. The *_2S siblings exist for exactly this.
 
-Cars get card colours because at 1:87 a car IS a painted card shape; giving
-them their own palette would be a second colour language on the same board.
+Cars keep the card COLOURS - giving them their own palette would be a second
+colour language on the same board - but no longer the card STOCK. This file
+used to claim "at 1:87 a car IS a painted card shape". The study wall says
+otherwise, and cold read #1 said it first: the vehicles carried byte-identical
+paper parameters to the walls behind them, and at inspection range the tooth
+wrapped the bodywork like canvas. They are cast resin now. Same palette,
+different material - which is the distinction the claim above had collapsed.
 """
 import unreal, _path, rolemap
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 eal = unreal.EditorAssetLibrary
 
-CARD_2S = ['MI_card_lift_2S', 'MI_card_ochre_2S', 'MI_card_rose_2S',
-           'MI_card_sage_2S', 'MI_paint_cream_2S']
+# resin bodies, one per card colour - see mk_veh_mats.py. The stock comes
+# from fabrication.MATERIAL_STOCK['MI_veh'], not from numbers typed here.
+VEH_2S = ['MI_veh_lift_2S', 'MI_veh_ochre_2S', 'MI_veh_rose_2S',
+           'MI_veh_sage_2S', 'MI_veh_cream_2S']
 GLASS_2S = 'MI_glass_b_2S'
 
 
@@ -45,7 +52,7 @@ for a in eas.get_all_level_actors():
             # from the asset - if a vehicle ever comes through with a
             # different order it will be visible immediately as a car with
             # glass where its paint should be.
-            body = M(CARD_2S[i % len(CARD_2S)])
+            body = M(VEH_2S[i % len(VEH_2S)])
             ORDER = [body, M(GLASS_2S), M('MI_dark_metal'), M('MI_dark_metal')]
             n = len(sm.get_editor_property('static_materials'))
             for si in range(n):

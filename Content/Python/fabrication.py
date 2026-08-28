@@ -64,6 +64,15 @@ MATERIAL_STOCK = {
     'MI_model_board': 'chipboard',
     'MI_wood': 'basswood',
     'MI_planter': 'card_prop',    # kit beds and pots - prop scale, fine tooth
+    # VEHICLES ARE CAST, NOT CUT. Cold read #1 said the paper texture was
+    # most visible on the vehicles, and it was: they borrowed the buildings'
+    # MI_card_*_2S, so stock_for() handed a car the same card_heavy a wall
+    # gets - byte-identical tooth and amount. The study wall settled it at
+    # inspection range: card at 0.006 wraps the bodywork like canvas, card at
+    # 0.025 reads as papercraft, and resin reads as a cast and painted model
+    # car. 'resin' was already declared here and had no user; a modelmaker
+    # casts what cannot be cut from card, which is exactly a car.
+    'MI_veh': 'resin',
     'MI_dark_metal': 'wire',
     'MI_brass': 'brass',
     'MI_glass': 'acetate',
@@ -99,6 +108,11 @@ def _selftest():
     assert stock_for('MI_glass_b') == 'acetate'
     assert stock_for('MI_glass_pent') == 'acetate'
     assert stock_for('MI_wood') == 'basswood'
+    # a car is not cut from the same sheet as the wall behind it
+    assert stock_for('MI_veh_rose_2S') == 'resin'
+    assert stock_for('MI_veh_cream_2S') == 'resin'
+    assert stock_for('MI_card_rose_2S') == 'card_heavy'
+    assert params_for('MI_veh_rose_2S') != params_for('MI_card_rose_2S')
     assert stock_for('MI_bloom_warm') == 'flock'
     assert stock_for('MI_model_board') == 'chipboard'
     assert stock_for('MI_mural_a') == 'card_heavy'

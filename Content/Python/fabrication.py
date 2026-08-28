@@ -78,10 +78,29 @@ STOCK = {
     'clay':        _st(0.008, 2.2, 0.72, 0.90),   # modelling putty: ground
     'flock':       _st(0.003, 3.0, 0.85, 0.98),   # scatter/foam: planting
     'glue':        _st(0.024, 0.8, 0.30, 0.46),   # dried PVA
-    # --- the card_heavy split. PHASE 0: aliases, identical by construction. --
-    'brick_sheet': _st(0.006, 2.0, 0.62, 0.80),
-    'plaster_cast': _st(0.006, 2.0, 0.62, 0.80),
-    'render_smooth': _st(0.006, 2.0, 0.62, 0.80),
+    # --- the card_heavy split. PHASE 1: each stock is its own material now.
+    #
+    # TILING IS DERIVED FROM WHAT THE MAP DEPICTS, not inherited. The world is
+    # 1:1, so a brick course is ~7.5 uu; card_heavy's 0.006 puts one texture
+    # tile across 167 uu and would make a course 1.4-2 m. Every value below is
+    # feature-size arithmetic, not a number that looked right on a panel.
+    #
+    # AMPLITUDE IS HALF THE POINT. It was ONE constant (2.0) for all of
+    # card_heavy, so brick, concrete and skimmed render were pushed at
+    # identical strength regardless of what their relief actually is. Embossed
+    # brick sheet has real depth; a skim coat has almost none.
+    'brick_sheet':  _st(0.0133, 2.4, 0.64, 0.82,
+                        normal='/Game/Uniblocks/Textures/T_UB_brickwork_N',
+                        source='Uniblocks PolyHaven CC0'),
+    'plaster_cast': _st(0.0100, 1.6, 0.62, 0.80,
+                        normal='/Game/Uniblocks/Textures/T_UB_concrete_1_N',
+                        source='Uniblocks PolyHaven CC0'),
+    # 0.9 was an over-correction: at 800 uu the pier read as untextured
+    # plastic, not as a skim coat. The split's purpose is that brick is
+    # DEEPER than render, not that render is bare.
+    'render_smooth': _st(0.0080, 1.4, 0.58, 0.74,
+                         normal='/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N',
+                         source='Uniblocks PolyHaven CC0'),
 }
 
 # the three that must stay identical to card_heavy until Phase 1 tunes them
@@ -143,13 +162,24 @@ def stock_for(name):
 
 
 def params_for(name):
-    """Exactly the four keys this has always emitted. The fine tooth and the
-    normal map live in the table but are NOT emitted in Phase 0 - adding a key
-    would change what callers write to a material instance, and this phase has
-    to be provably invisible."""
+    """Scalars only - the four keys this has always emitted.
+
+    The normal map is deliberately NOT in here. Callers write scalars with
+    set_material_instance_scalar_parameter_value and a texture needs a
+    different setter, so folding it in would silently break every existing
+    caller. normal_for() is the separate accessor; apply_stocks.py uses both.
+    """
     st = STOCK[stock_for(name)]
     return dict(PaperTiling=st['tooth'], PaperNormalAmount=st['amount'],
                 RoughMin=st['rough'][0], RoughMax=st['rough'][1])
+
+
+def normal_for(name):
+    """The admitted map for this material's stock, or None for the master's
+    default paper. Under the texture rule an admitted map lends MICRO-RELIEF
+    only - never albedo, colour or weathering - so this is the whole of what a
+    FAB texture contributes."""
+    return STOCK[stock_for(name)].get('normal')
 
 
 def _selftest():
@@ -162,14 +192,20 @@ def _selftest():
     assert stock_for('MI_precast') == 'plaster_cast'
     assert stock_for('MI_card') == 'card_heavy'
     assert stock_for('MI_mural_a') == 'card_heavy'
-    # --- PHASE 0 IS A NO-OP, asserted rather than asserted-in-prose -------
+    # --- PHASE 1: the split stocks are now DISTINCT, which is the point ---
     for _s in SPLIT_OF_CARD_HEAVY:
-        assert STOCK[_s] == STOCK['card_heavy'], (
-            '%s has drifted from card_heavy - that is Phase 1, and Phase 1 '
-            'is judged on the acceptance buildings, not merged quietly' % _s)
-    for _m in ('MI_dist_brick', 'MI_dist_teal', 'MI_concrete', 'MI_precast'):
-        assert params_for(_m) == params_for('MI_paint_cream'), (
-            '%s no longer renders identically to card_heavy' % _m)
+        assert STOCK[_s] != STOCK['card_heavy'], (
+            '%s is still a card_heavy alias - Phase 1 did not happen' % _s)
+        assert STOCK[_s]['normal'], '%s has no admitted map' % _s
+        assert STOCK[_s]['source'], (
+            '%s names a map with no recorded source - the admission list is '
+            'closed and every entry carries its provenance' % _s)
+    # a modelmaker would not push a skim coat as hard as embossed brick sheet
+    assert STOCK['brick_sheet']['amount'] > STOCK['render_smooth']['amount']
+    # and card keeps the paper: it is the one stock that really is card
+    assert STOCK['card_heavy']['normal'] is None
+    assert normal_for('MI_dist_brick') != normal_for('MI_concrete')
+    assert normal_for('MI_paint_cream') is None
     # every stock a material names must still exist, INCLUDING the new ones
     assert set(SPLIT_OF_CARD_HEAVY) <= set(STOCK)
     assert stock_for('MI_paint_cream_2S') == 'card_heavy'
@@ -206,7 +242,7 @@ if __name__ == '__main__':
     for s in sorted(STOCK):
         st = STOCK[s]
         used = sorted(k for k, v in MATERIAL_STOCK.items() if v == s)
-        alias = '  = card_heavy (Phase 0)' if s in SPLIT_OF_CARD_HEAVY else ''
-        print('  %-14s tooth %.3f amount %.1f rough %.2f-%.2f%s   %s'
+        nm = st['normal'].split('/')[-1] if st['normal'] else 'T_PaperNormal'
+        print('  %-14s tooth %.4f amount %.1f rough %.2f-%.2f  %-24s %s'
               % (s, st['tooth'], st['amount'], st['rough'][0], st['rough'][1],
-                 alias, ', '.join(used) or '(unused)'))
+                 nm, ', '.join(used) or '(unused)'))

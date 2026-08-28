@@ -58,7 +58,22 @@ def _load_bounds():
 _BOUNDS = _load_bounds()
 
 
-def as_snapshot(rec, spec):
+def _rotate(p_, y_, r_, pts):
+    """Rotate points by (pitch, yaw, roll) - the one composition order this
+    file uses everywhere: roll about X, pitch about Y, yaw about Z."""
+    cp, sp = math.cos(math.radians(p_)), math.sin(math.radians(p_))
+    cyw, syw = math.cos(math.radians(y_)), math.sin(math.radians(y_))
+    cr, sr = math.cos(math.radians(r_)), math.sin(math.radians(r_))
+    out = []
+    for x, y, z in pts:
+        y, z = y*cr - z*sr, y*sr + z*cr        # roll  about X
+        x, z = x*cp + z*sp, -x*sp + z*cp       # pitch about Y
+        x, y = x*cyw - y*syw, x*syw + y*cyw    # yaw   about Z
+        out.append((x, y, z))
+    return out
+
+
+def as_snapshot(rec, spec, stage=(0.0, 0.0, 0.0)):
     """Turn the recorded box list into the shape modelgate reads.
 
     The fast path baked without ever running the gate - so every preview
@@ -69,6 +84,16 @@ def as_snapshot(rec, spec):
     It costs nothing to close: the sink already holds every box, its name and
     its transform, and the material follows from the name through rolemap.
     No editor, no snapshot, no round trip.
+
+    S20 (2026-08-27): comps arrive at the gate in PARCEL FRAME. Every corner
+    is composed through its parent ACTOR's transform - which is where S14
+    folded the hand-tolerance jitter - and `stage` is subtracted, so a driver
+    that stages away from the origin passes its stage and the gate still
+    judges the parcel. The first version applied only the RECORD transform:
+    deco6 read 867 in the gate's frame and 887 in the world, and the gate
+    could not see the very jitter it was supposed to judge. Corners are
+    composed BEFORE the AABB is taken - an AABB-of-AABB over-bounds, and
+    deco6 holds a 3 uu margin BY DESIGN.
     """
     actors, by_ref = [], {}
     for i, e in enumerate(rec):
@@ -79,6 +104,24 @@ def as_snapshot(rec, spec):
                  comps=[])
         by_ref[i] = a
         actors.append(a)
+
+    def compose(a, corners):
+        """Actor-frame corners -> parcel-frame AABB, through the actor's
+        recorded rot and loc, minus the stage."""
+        ar = a['rot']
+        if any(abs(v) > 1e-6 for v in ar):
+            corners = _rotate(ar[0], ar[1], ar[2], corners)
+        ax = a['loc'][0] - stage[0]
+        ay = a['loc'][1] - stage[1]
+        az = a['loc'][2] - stage[2]
+        lo = [1e18]*3
+        hi = [-1e18]*3
+        for x, y, z in corners:
+            for k, v in enumerate((x + ax, y + ay, z + az)):
+                lo[k] = min(lo[k], v)
+                hi[k] = max(hi[k], v)
+        return lo, hi
+
     for e in rec:
         if e['kind'] != 'box':
             continue
@@ -88,26 +131,11 @@ def as_snapshot(rec, spec):
         cx, cy, cz = e['c']
         dx, dy, dz = (v/2.0 for v in e['d'])
         pitch, yaw, roll = e['r']
+        base = [(sxs*dx, sys_*dy, szs*dz)
+                for sxs in (-1, 1) for sys_ in (-1, 1) for szs in (-1, 1)]
         if any(abs(v) > 1e-6 for v in (pitch, yaw, roll)):
-            # exact AABB of a rotated box: transform all eight corners
-            cp, sp = math.cos(math.radians(pitch)), math.sin(math.radians(pitch))
-            cy_, sy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
-            cr, sr = math.cos(math.radians(roll)), math.sin(math.radians(roll))
-            lo = [1e18]*3
-            hi = [-1e18]*3
-            for sxs in (-1, 1):
-                for sys_ in (-1, 1):
-                    for szs in (-1, 1):
-                        x, y, z = sxs*dx, sys_*dy, szs*dz
-                        y, z = y*cr - z*sr, y*sr + z*cr        # roll  about X
-                        x, z = x*cp + z*sp, -x*sp + z*cp       # pitch about Y
-                        x, y = x*cy_ - y*sy, x*sy + y*cy_      # yaw   about Z
-                        for k, v in enumerate((cx+x, cy+y, cz+z)):
-                            lo[k] = min(lo[k], v)
-                            hi[k] = max(hi[k], v)
-        else:
-            lo = [cx-dx, cy-dy, cz-dz]
-            hi = [cx+dx, cy+dy, cz+dz]
+            base = _rotate(pitch, yaw, roll, base)
+        lo, hi = compose(a, [(cx + x, cy + y, cz + z) for x, y, z in base])
         m = rolemap.material_for(e['name'], spec.get('wall'),
                                  spec.get('roofmat'), a['family'],
                                  spec.get('trim'))
@@ -137,23 +165,13 @@ def as_snapshot(rec, spec):
         sx, sy, sz = (e.get('s') or [1.0, 1.0, 1.0])
         cx, cy, cz = e['c']
         pitch, yaw, roll = e.get('r') or (0.0, 0.0, 0.0)
-        cp, sp = math.cos(math.radians(pitch)), math.sin(math.radians(pitch))
-        cy_, sy_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
-        cr, sr = math.cos(math.radians(roll)), math.sin(math.radians(roll))
-        lo = [1e18]*3
-        hi = [-1e18]*3
-        for i in (0, 1):
-            for j in (0, 1):
-                for k in (0, 1):
-                    x = (b['hi'][0] if i else b['lo'][0]) * sx
-                    y = (b['hi'][1] if j else b['lo'][1]) * sy
-                    z = (b['hi'][2] if k else b['lo'][2]) * sz
-                    y, z = y*cr - z*sr, y*sr + z*cr        # roll  about X
-                    x, z = x*cp + z*sp, -x*sp + z*cp       # pitch about Y
-                    x, y = x*cy_ - y*sy_, x*sy_ + y*cy_    # yaw   about Z
-                    for n, v in enumerate((cx+x, cy+y, cz+z)):
-                        lo[n] = min(lo[n], v)
-                        hi[n] = max(hi[n], v)
+        base = [((b['hi'][0] if i else b['lo'][0]) * sx,
+                 (b['hi'][1] if j else b['lo'][1]) * sy,
+                 (b['hi'][2] if k else b['lo'][2]) * sz)
+                for i in (0, 1) for j in (0, 1) for k in (0, 1)]
+        if any(abs(v) > 1e-6 for v in (pitch, yaw, roll)):
+            base = _rotate(pitch, yaw, roll, base)
+        lo, hi = compose(a, [(cx + x, cy + y, cz + z) for x, y, z in base])
         mm = e.get('mat') or rolemap.material_for_slot(e['name'], spec.get('wall'))
         a['comps'].append(dict(name=e['name'], mesh=str(e.get('asset', '')).rsplit('/', 1)[-1],
                                aabb=(lo, hi), mats=[mm]))
@@ -166,6 +184,42 @@ def as_snapshot(rec, spec):
               'meshbounds.py: %s' % (len(blind), ', '.join(sorted(set(blind))[:4])))
     return dict(actors=actors, unread_material_slots=0, seconds=0.0,
                 donor_blind=len(blind))
+
+
+def s20_selftest():
+    """Known answers for the parcel-frame contract. Runs before any gate use
+    of as_snapshot - a frame bug reports nothing about a model, loudly.
+
+    Three plants: (1) identity - zero actor transform must reproduce the
+    plain AABB exactly; (2) the S20 defect - an actor yaw pushing a
+    near-line box past the parcel line must be SEEN (the old code passed
+    it); (3) stage subtraction - a model staged at +60000 Y with its stage
+    declared must judge identically to one at the origin."""
+    spec = dict(width=820.0, parcel_width=820.0, parcel_x0=0.0)
+    box = dict(kind='box', actor=0, name='Wall_P',
+               c=[410.0, 300.0, 100.0], d=[820.0, 600.0, 200.0],
+               r=[0.0, 0.0, 0.0])
+
+    def emit(arot, aloc=(0.0, 0.0, 0.0), stage=(0.0, 0.0, 0.0)):
+        rec = [dict(kind='actor', name='BLD2_S20_H', loc=list(aloc),
+                    rot=list(arot)), dict(box)]
+        return as_snapshot(rec, spec, stage=stage)['actors'][0]['comps'][0]['aabb']
+
+    lo, hi = emit((0.0, 0.0, 0.0))
+    assert [round(v, 6) for v in lo] == [0.0, 0.0, 0.0] and            [round(v, 6) for v in hi] == [820.0, 600.0, 200.0], (lo, hi)
+
+    # The planted S20 defect. SIGN MATTERS: yaw rotates about the ACTOR
+    # origin, so +2 deg pulls this box's far corner IN (hi_x 819.5 - the
+    # first version of this plant proved nothing, and failed honestly);
+    # -2 deg swings the (820, 600) corner OUT to ~840.
+    lo, hi = emit((0.0, -2.0, 0.0))
+    assert hi[0] > 820.0 + modelgate.SIDE_TOL, \
+        'jittered corner not seen: hi_x=%r' % hi[0]
+
+    l2, h2 = emit((0.0, 0.0, 0.0), aloc=(0.0, 60000.0, 0.0),
+                  stage=(0.0, 60000.0, 0.0))
+    assert [round(v, 6) for v in l2] == [0.0, 0.0, 0.0] and            [round(v, 6) for v in h2] == [820.0, 600.0, 200.0], (l2, h2)
+    return True
 
 
 def main():
@@ -181,6 +235,7 @@ def main():
     t_gen = time.time() - t0
 
     # GATE FIRST, on data, before anything is written
+    s20_selftest()                     # frame contract proves itself first
     ok, findings, facts = modelgate.run(modelgate.model(spec, as_snapshot(rec, spec)['actors']))
     print('  gate %s  parts %d  materials %d  %.2f/m2  span %sx%s'
           % ('PASS' if ok else 'FAIL', facts.get('parts', 0),

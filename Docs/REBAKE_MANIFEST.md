@@ -118,7 +118,20 @@ the class cannot recur silently). The axis lesson twice in one day: once
 in the instrument, once in the generator. S21 fixed alongside (jitter
 bounded by PROJECTED cost, budget 2.0 uu against deco6's 3-uu margin).
 
-S20 REMAINS OPEN (coordinator's): the record-path gate (as_snapshot)
+S20 CLOSED (coordinator, 2026-08-27). The parcel-frame contract landed in
+both suppliers together: as_snapshot composes every corner through its
+parent actor's transform (corners BEFORE the AABB - an AABB-of-AABB
+over-bounds and deco6 holds a 3 uu margin by design) and subtracts a
+declared stage; gate_run subtracts job['stage'] from the world snapshot,
+which also revives GATE-10's dead exemption; bake_catalogue declares its
+stage in the gate job. Three-plant self-test (identity, planted jittered
+actor - whose first version proved nothing and failed honestly, sign
+matters - and stage subtraction) wired to run before any gate use.
+Catalogue-scale verification: ALL 548 combos re-judged through the fixed
+record path - 548 PASS, 0 FAIL, in full agreement with the wave's stamps
+and the two-axis sweep. modelgate rule bodies untouched, as predicted.
+
+Original open note, for the record: S20 WAS (coordinator's): the record-path gate (as_snapshot)
 judges in ACTOR-LOCAL frame and never composes the actor transform where
 S14's jitter now lives - deco6 reads 867 in gate frame, 887 in world.
 Mitigation in force: the two-axis sweep COMPOSES actor rotation, so the

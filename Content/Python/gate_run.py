@@ -23,6 +23,22 @@ want = set(job['labels'])
 snap = snapshot.take()
 actors = [a for a in snap['actors'] if a['label'] in want]
 
+# S20: comps arrive at the gate in PARCEL FRAME. snapshot.take() is WORLD
+# (get_world_transform), and the bake stages at job['stage'] - without this
+# subtraction GATE-10's in-front-of-the-core exemption compared world Y
+# against a spec-local plane and was dead at the (0, 60000, 0) stage while
+# alive at the preview's origin: the two gate paths disagreed. A job with no
+# stage declares it stages at the origin.
+_sx, _sy, _sz = job.get('stage', (0.0, 0.0, 0.0))
+if any((_sx, _sy, _sz)):
+    for a in actors:
+        a['loc'] = (a['loc'][0] - _sx, a['loc'][1] - _sy, a['loc'][2] - _sz)
+        for c in a['comps']:
+            if c.get('aabb'):
+                lo, hi = c['aabb']
+                c['aabb'] = ([lo[0]-_sx, lo[1]-_sy, lo[2]-_sz],
+                             [hi[0]-_sx, hi[1]-_sy, hi[2]-_sz])
+
 # The label list is a SUPERSET covering every style - bake_merge picks whichever
 # of them exist and skips the rest, so a house having no BLD2_*_A actor is
 # normal, not a defect. The gate has to agree with the merger about what it is

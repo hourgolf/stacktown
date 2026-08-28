@@ -97,7 +97,9 @@ for rid, w in JOBS:
         asset = recipes.asset_name(rid, t, w)
 
         # --- the gate, while the model is still boxes -----------------------
-        json.dump({'labels': labels, 'spec': spec},
+        # 'stage' is the S20 frame contract: the gate judges the PARCEL, so
+        # it must know where the parcel was staged.
+        json.dump({'labels': labels, 'spec': spec, 'stage': list(STAGE)},
                   open(os.path.join(TMP, 'stacktown_gate_job.json'), 'w'))
         verdict_path = os.path.join(TMP, 'stacktown_gate_verdict.json')
         if os.path.exists(verdict_path):

@@ -138,3 +138,30 @@ amplitude swept. Ad-hoc per-material texture picks are prohibited.
 resin, brick) remains ours; the studio-director warning about photoreal
 donors beside flat-shaded work is answered by tier-matching at the STOCK
 level rather than banning photography outright.
+
+### Texture custody — owner approved 2026-08-28
+
+An admitted map whose CC0 provenance is INDIVIDUALLY VERIFIED (matched to
+its Poly Haven catalogue source — the UNIBLOCKS Fab listing states its
+texture set draws on polyhaven.com/textures, CC0) is COPIED into
+Content/Stacktown/Textures: versioned, import settings baked (green
+convention included), source and license recorded beside its stock in
+fabrication.py. It ceases to be donor content and becomes a project
+asset — the one carve-out to the donor-packs-never-committed rule, and
+it exists because an inverted green channel passed every number while
+rendering brick coursing backwards, and the fix lived outside version
+control. Non-verified admits stay pack-resident under check_textures.py,
+which runs after any fresh clone or pack re-download and fails loudly.
+
+Refinement, 2026-08-28: the pack's own `PolyHaven_CC0/` folder is the
+usable per-texture PROXY for CC0 verification — the author's own
+assertion, per file. A map OUTSIDE that folder is refused from tracked
+content regardless of what any admission note claims, until externally
+verified (an owner decision to check, never a quiet assumption).
+copy_admitted.py enforces this; the map that motivated the carve-out
+(the backwards brick) is itself outside the folder and stays
+pack-resident under check_textures — the guard, not the copy, is the
+floor. A source string is a CLAIM: the admission list marks unverified
+claims louder than absent ones, and its self-test enforces that a
+tracked map is never unverified and an unverified map never leaves the
+guarded pack.

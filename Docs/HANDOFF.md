@@ -193,6 +193,14 @@ Every item cost hours. They are ordered by how much.
   sweep's unapplied actor rotation, and a loop variable shadowing a yaw
   parameter (four instances by 2026-08-27). When geometry lies, check the
   frame before the geometry.
+- **The editor caches Python modules for the whole session.** An edited
+  module imported in-editor is STALE until explicitly reloaded - and the
+  worse mode is quiet: it writes the OLD table's values while reporting
+  success. Any in-editor script that consumes a table someone may have
+  just edited reloads it explicitly.
+- **A restore file a re-run can clobber is not a restore file.** Restore
+  snapshots are WRITE-ONCE; the second run of apply_stocks overwrote the
+  only route back to the pre-split look.
 - **A clearance check that ignores ROOM walls is not a clearance check.**
   A derived whole-building standoff placed the camera OUTSIDE the studio
   room, photographing the scene through its wall. Clearance is checked

@@ -163,6 +163,38 @@ also earned the rule that keeps it fixed.
   photographic normal beat it at both standoffs. Reproducibility is not
   a reason to synthesize what photography already did better.
 
+- **The metric sees QUANTITY, not DIRECTION** (sixth numbers-said-yes
+  case, distinct in kind): an inverted-green normal map carries exactly
+  the same high-frequency content as a correct one - brick coursing
+  rendered RECESSED with proud mortar and measured identically either
+  side of the fix (2.39/1.24 vs 2.39/1.26). Right subject, right
+  instrument, accurate number, backwards surface: only an eye that knows
+  which way light falls can catch it. The admission gate therefore
+  verifies GREEN CONVENTION alongside TC_NORMALMAP and sRGB, and
+  check_textures.py runs after any fresh clone, pack re-download, or
+  before any survey - it exits non-zero on a live-asset mismatch.
+- **A plausible mechanism plus a matching axis is not evidence the axis
+  is the right one.** The inverted brick was investigated as a STOCK
+  problem (relief depth swept 2.4->1.0, roughness narrowed, with a tidy
+  fabrication argument attached) when the fault was a TEXTURE property.
+  Depth moved the number 7%; the actual fault moved it 0%. When sweeping
+  an axis barely moves the symptom, the axis is wrong - stop arguing and
+  change axes.
+- **A figure in an old log is not a measurement.** A regression worry was
+  built on comparing a fresh measurement against a number REPORTED by an
+  earlier run - from a capture that had not converged. Both frames were
+  still on disk; re-measuring them with identical code took one command
+  and dissolved the alarm. When two numbers disagree, re-measure both
+  from artifacts before trusting either. (Flagging the inconsistency was
+  still right - 'amplitude up, detail down' should never pass unexamined.)
+- **When every arm of a sweep agrees, doubt the instrument before
+  accepting the result.** Twice a suspiciously flat table meant the
+  metric was not looking at the subject - once measuring frame centre to
+  judge an off-centre pier, once a measurement patch STRADDLING the
+  pier's silhouette edge, where the bright-dark boundary dominated the
+  residual and overstated every magnitude by double. The subject-present
+  rule applies one level down: to the metric's own window, not just the
+  frame. Flatness across arms was the only clue, both times.
 - **Two acceptance buildings, two jobs** (2026-08-28): ACCEPT_Vernacular
   judges ARTICULATION - piers, bands, reveals, grazing light, one surface.
   ACCEPT_Modern judges MATERIAL SPREAD - the ensemble, whether the family
@@ -174,6 +206,26 @@ also earned the rule that keeps it fixed.
   conversion judges a mixture: the first per-stock pass read SMOOTHER
   because half the facade was still on the old paper. The conversion list
   is derived from the building under test, never drawn up in advance.
+
+- **CONFIRM THE SURFACE UNDER TEST IS PRESENT AND VISIBLE IN THE FRAME
+  before trusting the frame.** Proven four separate ways in one arc: a
+  flat panel showing a material in a condition no city surface is seen
+  in; an acceptance building whose relevant slots were all one plaster,
+  so a seven-map change looked like nothing; a standoff photographing the
+  BACK of another row; and a building that DECLARES a stock without
+  wearing it (deco3 declares a brick wall; the district palette overrides
+  it). Every one produced a confident, coherent, wrong reading with fine
+  numbers - the subject was wrong, not the measurement. A FIFTH instance
+  arrived in the same report that proposed the rule, recorded at its
+  author's own insistence: two buildings were sampled for a marked
+  material, both happened to miss it, and 'brick is effectively unused'
+  was generalized to the city - when brick walls one building in nine by
+  active palette rotation. The correct move is to FIND a building that
+  HAS the subject first, never to infer absence from a sample that lacks
+  it. Corollary: the
+  acceptance rig is ONE BUILDING PER STOCK UNDER TEST, chosen because its
+  WALL is the material being judged - never the building listing the most
+  stocks (ACCEPT_Modern lists seven and shows two at any size).
 
 ## Sequencing (owner-approved 2026-08-27)
 

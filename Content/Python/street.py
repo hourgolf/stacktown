@@ -225,7 +225,11 @@ def place(row, y, yaw, tag):
         # PER-PARCEL PAINT. The palette is keyed on the parcel, not the
         # recipe, so two of the same building are different colours - which
         # is what a real street does and what the shelf could not show.
-        repaint(a, sm, rid, palette.scheme_for('%s%d' % (tag, i)))
+        # PASS THE RECIPE. Brick is an era material: palette.scheme_for
+        # weights it to one-in-three on vernacular and leaves every other era
+        # on the flat rotation. Without rid the call is byte-identical to what
+        # it always did, which is what makes the weighting attributable.
+        repaint(a, sm, rid, palette.scheme_for('%s%d' % (tag, i), rid))
         o, e = a.get_actor_bounds(False)
         for k, ax in enumerate('xyz'):
             lo[k] = min(lo[k], getattr(o, ax) - getattr(e, ax))

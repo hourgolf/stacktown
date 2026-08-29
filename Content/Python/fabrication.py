@@ -90,7 +90,31 @@ STOCK = {
     'acetate':     _st(0.000, 0.0, 0.04, 0.12),   # glazing film
     'resin':       _st(0.030, 0.5, 0.38, 0.52),   # cast resin: fittings
     'clay':        _st(0.008, 2.2, 0.72, 0.90),   # modelling putty: ground
-    'flock':       _st(0.003, 3.0, 0.85, 0.98),   # scatter/foam: planting
+    # FLOCK WAS WEARING THE PAPER TOOTH, and wearing it worse than anything
+    # else in the table: amount 3.0 (the highest here) at tiling 0.003 (the
+    # lowest), with no normal of its own, so it inherited the master's card
+    # weave at triple amplitude and three times concrete's feature size. On a
+    # roof lawn that reads as bright green felt with rectangular print
+    # blotches - the most visible fault in any frame of 29 Aug, and visible
+    # without an instrument, which is more than the coplanar debt can say.
+    #
+    # Scatter is not paper. Flock at 1:87 is ground foam: fine, soft, and
+    # near-grainless at any distance a building is seen from. So it gets its
+    # own micro-relief, tiled FINE rather than coarse, at an amplitude below
+    # card rather than above it.
+    #
+    # T_Grass002 is a photographic grass normal from Mega_Street_Props_Pack,
+    # an OWNED pack - recorded as owned, NOT as CC0, because this project has
+    # already shipped one provenance claim it could not support. Tiled this
+    # fine the blades fall below a pixel and what survives is granularity,
+    # which is exactly what ground foam is. Their micro-relief, our colour and
+    # sheen - the admitted scope of the rule.
+    'flock':       _st(0.060, 0.9, 0.85, 0.98,
+                       normal='/Game/Mega_Street_Props_Pack/Street_Props_pack_V2'
+                              '/Textures/Grass/T_Grass002_4K_Normal',
+                       source='Mega_Street_Props_Pack (owned donor pack) - '
+                              'normal map only, no colour or roughness shipped',
+                       needs={'srgb': False}),   # scatter/foam: planting
     'glue':        _st(0.024, 0.8, 0.30, 0.46),   # dried PVA
     # --- the card_heavy split. PHASE 1: each stock is its own material now.
     #
@@ -191,6 +215,7 @@ MATERIAL_STOCK = {
     'MI_glue': 'glue',
     'MI_gravel': 'clay',
     'MI_grass': 'flock',
+    'MI_grass_card': 'flock',
     'MI_bloom': 'flock',
     'MI_leaf': 'flock',
 }

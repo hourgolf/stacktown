@@ -29,7 +29,13 @@ PIECES = {
     # park planting. Both pivot at their base, so they seat on a deck by z
     # alone. tree_02 is 3,194 tris and stays out; tree_03 is 1,916 and is in
     # HERO, not here.
-    'grass_tuft': (NATURE + 'SM_grassVerticalSingle', (498, 479, 122), 18, 'MI_grass'),
+    # MI_grass_card, NOT MI_grass. 18 triangles across this footprint is a
+    # pair of crossed ALPHA-CUTOUT cards, and MI_grass is BLEND_OPAQUE, so
+    # every tuft rendered as a solid quad lying on the lawn - the dark
+    # rectangular patches on every roof garden. Same class as S16: a cutout
+    # mesh bound to an opaque material. MI_grass stays as it is for the lawn
+    # BOXES, which are solid and want an opaque material.
+    'grass_tuft': (NATURE + 'SM_grassVerticalSingle', (498, 479, 122), 18, 'MI_grass_card'),
     'rock':      (NATURE + 'SM_rock_01',       (21, 22, 6),       36, 'MI_gravel'),
     'bench':     (STREET + 'SM_bench_02',      (68, 150, 92),    452, 'MI_wood'),
     # rooftop equipment

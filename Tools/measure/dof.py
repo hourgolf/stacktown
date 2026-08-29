@@ -61,7 +61,30 @@ def set_dof(fstop, focus, blades=8, sensor=36.0, shutter=None, iso=None):
 # The LEVEL'S SAVED STATE STAYS DOF-OFF. Building and grading need the geometry
 # visible, and the gate amendment of 25 Aug keeps every A-E line judged with
 # depth of field off. hero() is something you turn on for a frame and reset().
-HERO = dict(fstop=2.0, sensor=400.0, blades=8, shutter=240.0)
+#
+# f/2 -> f/2.8, 29 Aug, ON READER EVIDENCE. Shown the block frame in both lens
+# modes, a reader said the BRICK TEXTURE was more convincing in judge and the
+# LENSWORK was preferred in show - against what they called judge's "infinite
+# focus". Not a vote against the lens: a vote against THIS MUCH BLUR. f/2 was
+# chosen when every surface underneath was one paper texture and there was
+# nothing to lose to defocus; there is now - brick coursing, three stocks,
+# resin vehicles.
+#
+# Measured on the block frame with EXPOSURE HELD CONSTANT (ISO scaled by
+# (N/N0)^2, because UE's post volume is a physical camera and f-stop drives
+# exposure as well as defocus - the first run of that sweep changed the stop
+# alone and produced a brightness ladder wearing a depth-of-field label):
+#     f/2.0  ISO 800   brick detail 0.996   <- what the reader saw
+#     f/2.8  ISO 1568  brick detail 1.300   <- chosen
+#     f/4.0  ISO 3200  brick detail 1.536
+#     f/5.6  ISO 6272  brick detail 1.889   nearly sharp throughout
+# Brick legibility roughly doubles across the ladder; f/5.6 loses the miniature
+# falloff the reader explicitly wanted. f/2.8 is where both halves survive.
+#
+# ISO RISES WITH THE STOP and that is physical, not a bug: 1568 at f/2.8. If a
+# future rig treats ISO as a grain source rather than a number, this trade
+# stops being free.
+HERO = dict(fstop=2.8, sensor=400.0, blades=8, shutter=240.0, iso=1568.0)
 
 
 def hero(focus):

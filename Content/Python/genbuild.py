@@ -942,7 +942,15 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # above the parapet, so the missing back wall could not be seen. With
     # `open_roof` the core stops at the roof line and the void is real, so the
     # roof has to be closed on all four sides like an actual parapet.
-    box(r, 'Wall_ParapetB', x0, x0 + W, D - 26, D, ztop, ztop + PAR - 20); made += 1
+    # MITRED, not lapped. The back run used to span x0..x0+W while the flank
+    # runs also reached the back wall, so both back corners were built TWICE -
+    # 1,422 visible coplanar pairs across all 548 models, the third-largest
+    # mechanism in the catalogue. Same material and same silhouette either
+    # way, so cutting the back run to the flanks' inner faces is a no-op to
+    # look at and removes the fight. It is also what a card builder does: you
+    # cut four strips to length and butt them, you do not overlap them at the
+    # corner and hope.
+    box(r, 'Wall_ParapetB', x0 + 26, x0 + W - 26, D - 26, D, ztop, ztop + PAR - 20); made += 1
     # Tile_, not Roof_. `Roof_` is structure and binds to concrete; `Tile_` is
     # the roof SURFACE and binds to the recipe's `roofmat`, which vernacular
     # has declared as MI_shingle_grey since it was written and never once
@@ -1683,7 +1691,8 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # longer fills the roof void: with `open_roof` it stops at the roof line,
     # so the back of the roof is a real hole and the deck is a real surface
     # instead of something buried inside the core. See cores.bands_for.
-    box(r, 'Wall_ParapetB', x0, x0 + W, D - 24, D, ztop, ztop + PAR - 18); made += 1
+    # mitred to the flank runs - see the ParapetB note above
+    box(r, 'Wall_ParapetB', x0 + 24, x0 + W - 24, D - 24, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Tile_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
     made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
                        ymin=200.0, yspread=100.0, D=D)
@@ -2075,7 +2084,8 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             ztop + step, ztop + step + 16); made += 1
     box(r, 'Wall_ParapetL', x0, x0 + 26, 30, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
-    box(r, 'Wall_ParapetB', x0, x0 + W, D - 26, D, ztop, ztop + PAR - 18); made += 1
+    # mitred to the flank runs - see the ParapetB note above
+    box(r, 'Wall_ParapetB', x0 + 26, x0 + W - 26, D - 26, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Tile_Deck', x0, x0 + W, 20, D, ztop - 8, ztop); made += 1
     # REAL PLANT, not boxes. These were `Roof_Unit` cubes - the same stand-in
     # the other styles carried until avkit arrived, and deco was simply never
@@ -2593,7 +2603,8 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         ztop + PAR, ztop + PAR + 12); made += 1
     box(r, 'Wall_ParapetL', x0, x0 + 24, ty + 26, D, ztop, ztop + PAR - 16); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, ty + 26, D, ztop, ztop + PAR - 16); made += 1
-    box(r, 'Wall_ParapetB', x0, x0 + W, D - 24, D, ztop, ztop + PAR - 16); made += 1
+    # mitred to the flank runs - see the ParapetB note above
+    box(r, 'Wall_ParapetB', x0 + 24, x0 + W - 24, D - 24, D, ztop, ztop + PAR - 16); made += 1
     box(r, 'Tile_Deck', x0, x0 + W, ty + 20, D, ztop - 8, ztop); made += 1
     made += roof_plant(r, x0, W, ztop, spec.get('roof_units', 1), rnd,
                        ymin=ty + 190.0, yspread=95.0, D=D)

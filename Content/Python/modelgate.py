@@ -732,6 +732,106 @@ def coplanar_pairs(cs, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP, cap=None):
     return out
 
 
+# --- EXPOSURE: is the shared plane one the camera can ever see? -------------
+#
+# GATE-11 measured 32,060 coplanar pairs over the 548-model catalogue and I
+# was about to go and fix them. Then the same question that has caught this
+# project twice already: is the instrument measuring what its name says?
+#
+# It was not. coplanar_pairs asks whether two faces share a plane and overlap
+# behind it. It does NOT ask whether that plane is ever PRESENTED to a camera.
+# 28.1% of the debt was boxes sharing their UNDERSIDES on the board - a plinth,
+# a column base and a column all correctly starting at z=0 - which is not a
+# fight anyone can photograph, it is three parts standing on the same floor.
+# Another 8.0% was planes with a third box built straight across them.
+#
+# So 36% of GATE-11's verdict was geometry, not defect. That matters twice
+# over: it is a third of the work, and a rule that refuses correct models is
+# the documented road to passing gates with --force.
+#
+# Direction-blindness again, one level up. The detail metric counted quantity
+# and not direction; this counted coincidence and not visibility.
+
+def _shared_plane(A, B, k, tol=COPLANAR_TOL):
+    """The plane two like-facing boxes share on axis k, and which way it looks.
+
+    Returns (value, outward) where outward is -1 if the shared faces are the
+    boxes' MIN faces (they look toward -k) and +1 if they are the MAX faces.
+    None when the boxes do not actually share a like-facing plane.
+    """
+    for side, outward in ((0, -1), (1, 1)):
+        if abs(A[side][k] - B[side][k]) < tol:
+            return A[side][k], outward
+    return None
+
+
+def _occluded(v, outward, k, A, B, boxes, skip, tol=COPLANAR_TOL):
+    """Does a THIRD box sit against this plane on its outward side?
+
+    Conservative on purpose: the occluder must cover the whole shared
+    footprint in the other two axes and must reach the plane. Anything it
+    cannot prove buried is reported as exposed, so the error runs toward
+    MORE work rather than toward a gate that quietly forgives real faults.
+    """
+    lo = [max(A[0][i], B[0][i]) for i in range(3)]
+    hi = [min(A[1][i], B[1][i]) for i in range(3)]
+    for j, (_n, C) in enumerate(boxes):
+        if j in skip:
+            continue
+        if outward < 0:
+            if not (C[0][k] < v - tol and C[1][k] > v - tol):
+                continue
+        else:
+            if not (C[1][k] > v + tol and C[0][k] < v + tol):
+                continue
+        if all(C[0][i] <= lo[i] + tol and C[1][i] >= hi[i] - tol
+               for i in range(3) if i != k):
+            return True
+    return False
+
+
+def visible_coplanar_pairs(cs, ground=None, cap=None, **kw):
+    """coplanar_pairs, minus the planes nothing can ever look at.
+
+    ground defaults to the lowest face in the set: the board the model stands
+    on. The board is an opaque occluder that is not one of the building's own
+    components, so it has to be supplied rather than discovered.
+    """
+    boxes = [(str(c.get('name', '?')), c['aabb']) for c in cs if c.get('aabb')]
+    if not boxes:
+        return []
+    if ground is None:
+        ground = min(b[1][0][2] for b in boxes)
+    idx = {n: i for i, (n, _) in enumerate(boxes)}
+    out = []
+    for na, nb, ax in coplanar_pairs(cs, cap=None, **kw):
+        A, B = boxes[idx[na]][1], boxes[idx[nb]][1]
+        skip = {idx[na], idx[nb]}
+        # EVERY shared plane, not just the reported one. coplanar_pairs
+        # dedupes a pair to the first axis it finds it on, so a pair that
+        # fights on two planes arrives labelled with one; judging only that
+        # label would forgive a pair whose x faces are buried and whose y
+        # faces are wide open, purely because of axis order. The pair
+        # survives if ANY like-facing plane it shares is exposed.
+        keep = False
+        for k in (0, 1, 2):
+            sp = _shared_plane(A, B, k)
+            if sp is None:
+                continue
+            v, outward = sp
+            if k == 2 and outward < 0 and abs(v - ground) < 1.0:
+                continue                       # undersides, on the board
+            if _occluded(v, outward, k, A, B, boxes, skip):
+                continue
+            keep = True
+            break
+        if keep:
+            out.append((na, nb, ax))
+            if cap and len(out) >= cap:
+                break
+    return out
+
+
 # GATE-11 IS WRITTEN, SELF-TESTED, AND DELIBERATELY NOT YET ENFORCED.
 #
 # Measured over a 24-model sample of the catalogue on 2026-08-27: ZERO models
@@ -770,13 +870,80 @@ def gate_11(m):
     the specific cause, which is what makes a verdict actionable; this one
     catches the members nobody has met yet.
     """
-    hits = coplanar_pairs(building_comps(m), cap=40)
+    # VISIBLE pairs, not all pairs. 36% of the raw count is boxes sharing
+    # undersides on the board or planes with a third box built across them -
+    # coincidence the camera never sees. See visible_coplanar_pairs.
+    hits = visible_coplanar_pairs(building_comps(m), cap=40)
     if not hits:
         return []
     shown = ', '.join('%s/%s(%s)' % h for h in hits[:3])
     return [(m['spec'].get('name', '?'),
              '%d coplanar overlapping pair(s)%s: %s'
              % (len(hits), '+' if len(hits) >= 40 else '', shown))]
+
+
+@selftest('GATE-11/visible')
+def _t11v():
+    """The exposure filter, against answers worked out by hand.
+
+    Written because the filter is the thing that decides how much of the
+    catalogue is actually broken, and an instrument that has not been checked
+    against a known answer is not a measurement. Each fixture below has one
+    obvious right answer that does not depend on the implementation.
+    """
+    def bx(x0, x1, y0, y1, z0, z1):
+        return ([x0, y0, z0], [x1, y1, z1])
+    C = lambda n, b: _c(n, aabb=b)
+
+    # 1. THREE PARTS STANDING ON THE BOARD. A plinth, a column base and a
+    #    column, all correctly starting at z=0, all overlapping in plan.
+    #    Raw: undersides coincide, three pairs. Visible: none - it is a floor.
+    stack = [C('Wall_Plinth',  bx(0.0, 300.0, 0.0, 300.0, 0.0,  30.0)),
+             C('Wall_ColBase', bx(40.0, 260.0, 40.0, 260.0, 0.0, 80.0)),
+             C('Wall_Col',     bx(60.0, 240.0, 60.0, 240.0, 0.0, 600.0))]
+    if len(coplanar_pairs(stack)) != 3:
+        return False
+    if visible_coplanar_pairs(stack):
+        return False
+
+    # 2. THE SAME STACK LIFTED OFF THE BOARD. Identical geometry, ground now
+    #    below it, so those undersides ARE presented and must all come back.
+    lift = [C(n, ([a[0][0], a[0][1], a[0][2] + 500.0],
+                  [a[1][0], a[1][1], a[1][2] + 500.0]))
+            for n, a in ((c['name'], c['aabb']) for c in stack)]
+    if len(visible_coplanar_pairs(lift, ground=0.0)) != 3:
+        return False
+
+    # 3. A PLANE WITH A THIRD BOX BUILT ACROSS IT. Two boxes share their max-y
+    #    face; a facing panel covers that whole face. Nothing to see.
+    #    Written wrong the first time: the two boxes also shared their x
+    #    faces, so the pair was reported on x and the y panel was irrelevant.
+    #    These share exactly ONE plane - the max-y face - and nothing else.
+    hidden = [C('Wall_A', bx(0.0, 200.0, 0.0, 100.0, 0.0, 300.0)),
+              C('Wall_B', bx(20.0, 180.0, 40.0, 100.0, 50.0, 250.0)),
+              C('Wall_Face', bx(-10.0, 210.0, 100.0, 140.0, -10.0, 310.0))]
+    if not coplanar_pairs(hidden):
+        return False
+    if any(set(h[:2]) == {'Wall_A', 'Wall_B'}
+           for h in visible_coplanar_pairs(hidden)):
+        return False
+
+    # 4. THE SAME PAIR WITH THE PANEL PULLED CLEAR. Now it is a real fight.
+    shown = hidden[:2] + [C('Wall_Face', bx(-10.0, 210.0, 200.0, 240.0,
+                                            -10.0, 310.0))]
+    if not coplanar_pairs(hidden):
+        return False
+    if not any(set(h[:2]) == {'Wall_A', 'Wall_B'}
+               for h in visible_coplanar_pairs(shown)):
+        return False
+
+    # 5. THE FILTER MUST NEVER INVENT. Visible is a subset of raw, always.
+    for fx in (stack, lift, hidden, shown):
+        raw = {tuple(sorted(h[:2])) for h in coplanar_pairs(fx)}
+        vis = {tuple(sorted(h[:2])) for h in visible_coplanar_pairs(fx)}
+        if not vis <= raw:
+            return False
+    return True
 
 
 @selftest('GATE-11')
@@ -862,16 +1029,25 @@ def run(m, verbose=True):
     the rules', and the gate reports nothing if any fail."""
     broken = [r['id'] for r in RULES + PENDING
               if not SELFTESTS.get(r['id'], lambda: False)()]
+    # HELPERS GET TESTED TOO. A selftest whose id is not a rule id was, until
+    # 29 Aug, registered and never called - GATE-11/visible sat there passing
+    # by never running. Anything in SELFTESTS that no rule claims runs here,
+    # so a test cannot be silently orphaned by the name it was given.
+    claimed = {r['id'] for r in RULES + PENDING}
+    broken += [rid for rid in sorted(SELFTESTS)
+               if rid not in claimed and not SELFTESTS[rid]()]
     if not archetypes.selftest():
         broken.append('ARCHETYPES')
     if broken:
         print('GATE SELF-TEST FAILED: %s - reporting nothing' % broken)
         return False, [('selftest', ','.join(broken))], {}
     if verbose:
+        _helpers = len([r for r in SELFTESTS
+                        if r not in {x['id'] for x in RULES + PENDING}])
         print('  gate self-tests: %d/%d rules see their own defect'
-              ' (%d pending, not voting)'
+              ' (%d pending, not voting) + %d helper test(s)'
               % (len(RULES) + len(PENDING), len(RULES) + len(PENDING),
-                 len(PENDING)))
+                 len(PENDING), _helpers))
     findings, skips = judge(m)
     if verbose:
         for rid, line in skips:

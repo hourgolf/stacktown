@@ -5,10 +5,12 @@
             itself by - gate evidence, A-E lines, sweeps - is a judge frame,
             so weak geometry can never hide behind optics.
 
-    show    the shipped claim: the 25 Aug hero look (f/2 on a 400 mm BACK,
-            8 blades, 1/240) plus the authored finishing set. A photograph of
-            a real miniature has macro optics; their absence is itself a
-            render-tell, so the cold reader sees this first.
+    show    the shipped claim: the hero look (f/2.8 on a 400 mm BACK, 8
+            blades, 1/240, ISO 1568) plus the authored finishing set. A
+            photograph of a real miniature has macro optics; their absence is
+            itself a render-tell, so the cold reader sees this first.
+            Stopped down from f/2 on 29 Aug after a reader read the brick as
+            more convincing in judge - see dof.HERO for the ladder.
 
 WHY THE BACK AND NOT THE APERTURE. Derived, and the derivation is already in
 MASTER_MATERIAL_SPEC: at these subject distances aperture alone does nothing,
@@ -108,11 +110,18 @@ def apply(mode, focus=None, grain=True):
         want = dict(FINISH_ON)
         if not grain:
             want['film_grain_intensity'] = 0.0
+        # ISO COMES FROM HERO, NOT FROM A LITERAL. UE's post volume is a
+        # physical camera: f-stop drives exposure as well as defocus, so a
+        # stop change with ISO pinned at 800 darkens the frame by exactly the
+        # amount it defocuses less. That coupling is what invalidated the
+        # first f-stop sweep - it produced a brightness ladder wearing a
+        # depth-of-field label. HERO['iso'] is 800*(N/2)^2, which holds the
+        # exposure the shutter was chosen to match.
         want.update({'depth_of_field_fstop': dof.HERO['fstop'],
                      'depth_of_field_sensor_width': dof.HERO['sensor'],
                      'depth_of_field_focal_distance': float(focus),
                      'camera_shutter_speed': dof.HERO['shutter'],
-                     'camera_iso': 800.0, 'bloom_intensity': 0.0})
+                     'camera_iso': dof.HERO['iso'], 'bloom_intensity': 0.0})
         body = _set(want)
         body += ('    st.set_editor_property("depth_of_field_blade_count", %d)\n'
                  '    st.set_editor_property("override_depth_of_field_blade_count", True)\n'

@@ -47,7 +47,7 @@ def instances():
 
 
 def main():
-    restore, changed = {}, 0
+    restore, changed, skipped = {}, 0, []
     for name, mi in instances():
         stock = F.stock_for(name)
         want = F.params_for(name)
@@ -57,6 +57,19 @@ def main():
         pt = mel.get_material_instance_texture_parameter_value(mi, 'PaperNormal')
         prev['PaperNormal'] = pt.get_path_name() if pt else None
         restore[name] = prev
+        # WRITE ONLY WHAT DIFFERS. Saving an instance rewrites the .uasset
+        # whether or not anything changed, and this walks all 97 - so every
+        # run dirtied ~95 files that were byte-churn with no change in
+        # meaning. On an LFS repo that is a new object per file per run, and
+        # it buries the handful of real changes in a 100-file diff that
+        # nobody can read.
+        tex_now = mel.get_material_instance_texture_parameter_value(mi, 'PaperNormal')
+        tex_differs = bool(tex) and (
+            not tex_now or tex.split('/')[-1] != tex_now.get_name())
+        scal_differs = any(abs(prev[k] - float(v)) > 1e-6 for k, v in want.items())
+        if not (tex_differs or scal_differs):
+            skipped.append(name)
+            continue
         for k, v in want.items():
             mel.set_material_instance_scalar_parameter_value(mi, k, float(v))
         if tex:
@@ -90,7 +103,8 @@ def main():
         with open(p, 'w') as f:
             json.dump(restore, f, indent=1, sort_keys=True)
         print('  restore data written to %s' % p)
-    print('APPLIED %d material instances from the stock table' % changed)
+    print('APPLIED %d material instance(s) from the stock table; %d already '
+          'matched and were left untouched' % (changed, len(skipped)))
 
 
 if __name__ == '__main__':

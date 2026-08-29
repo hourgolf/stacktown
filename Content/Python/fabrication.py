@@ -104,22 +104,28 @@ STOCK = {
     # identical strength regardless of what their relief actually is. Embossed
     # brick sheet has real depth; a skim coat has almost none.
     'brick_sheet':  _st(0.0133, 2.4, 0.64, 0.82,
-                        normal='/Game/Uniblocks/Textures/T_UB_brickwork_N',
-                        # PROVENANCE UNVERIFIED. I recorded "Uniblocks
-                        # PolyHaven CC0" without checking, and the pack's own
-                        # organisation contradicts it: Uniblocks segregates its
-                        # Poly Haven material into a folder named
-                        # PolyHaven_CC0 (56 textures), and brickwork is NOT in
-                        # it - it sits with the other 77 at the Textures root.
-                        # The Fab listing says its set draws on Poly Haven for
-                        # SOME textures; this is evidence this is not one of
-                        # them. Do not copy into tracked content on this.
-                        source='Uniblocks pack (root Textures) - PROVENANCE '
-                               'UNVERIFIED, not in the pack PolyHaven_CC0 folder',
-                        # authored in the other green convention: without this
-                        # the brick faces read RECESSED and the mortar PROUD
-                        needs={'flip_green_channel': True,
-                               'srgb': False}),
+                        # POLY HAVEN Brick Wall 001, CC0, copied into tracked
+                        # content with its settings baked in. It replaces the
+                        # Uniblocks pack brick, whose provenance could not be
+                        # established: machine-regular running bond against
+                        # Poly Haven's photogrammetry, most plausibly the pack
+                        # author's own work - which is why their PolyHaven_CC0
+                        # folder excluded it. That map was also the one whose
+                        # green-convention fix could not be committed, so
+                        # replacing it closes the fresh-clone regression class
+                        # for brick outright rather than guarding it.
+                        #
+                        # nor_gl source: OpenGL green, UE samples DirectX, so
+                        # flip_green_channel is set AT IMPORT and recorded in
+                        # needs. The owner caught the pack brick rendering
+                        # inverted - faces recessed, mortar proud - and the
+                        # detail metric read it identically either way,
+                        # because it sees quantity and not direction.
+                        normal='/Game/Stacktown/Textures/T_brick_wall_001_N',
+                        source='Poly Haven "Brick Wall 001" CC0 - '
+                               'https://polyhaven.com/a/brick_wall_001 - '
+                               'see Tools/textures/source/polyhaven/PROVENANCE.md',
+                        needs={'flip_green_channel': True, 'srgb': False}),
     'plaster_cast': _st(0.0100, 1.6, 0.62, 0.80,
                         normal='/Game/Uniblocks/Textures/T_UB_concrete_1_N',
                         # same as brick: root Textures, not the CC0 folder
@@ -262,8 +268,15 @@ def _selftest():
     # an admitted map that lives outside version control must state what it
     # needs, or a fresh clone renders it with the pack's defaults
     reqs = dict(texture_requirements())
-    assert '/Game/Uniblocks/Textures/T_UB_brickwork_N' in reqs
-    assert reqs['/Game/Uniblocks/Textures/T_UB_brickwork_N']['flip_green_channel'] is True
+    # the brick map is nor_gl (OpenGL green) and UE samples DirectX. This
+    # assertion used to name the Uniblocks path; it names the STOCK now, so
+    # swapping the map cannot silently drop the flip that the owner caught
+    # missing in the first place.
+    _brick = STOCK['brick_sheet']['normal']
+    assert _brick in reqs, 'brick_sheet states no import requirements'
+    assert reqs[_brick]['flip_green_channel'] is True, (
+        'the brick map is nor_gl - without the flip it renders faces '
+        'recessed and mortar proud, and no number will catch it')
     # a source string is a CLAIM, and two of these were claims I had not
     # checked. Anything not in the pack's own CC0 folder says so out loud, so
     # it cannot be copied into tracked content by someone reading the table.

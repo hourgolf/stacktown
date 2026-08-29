@@ -193,11 +193,17 @@ Every item cost hours. They are ordered by how much.
   sweep's unapplied actor rotation, and a loop variable shadowing a yaw
   parameter (four instances by 2026-08-27). When geometry lies, check the
   frame before the geometry.
-- **The editor caches Python modules for the whole session.** An edited
-  module imported in-editor is STALE until explicitly reloaded - and the
-  worse mode is quiet: it writes the OLD table's values while reporting
-  success. Any in-editor script that consumes a table someone may have
-  just edited reloads it explicitly.
+- **A build script must RELOAD the project modules it reads, or it is
+  reporting on session state rather than on the repository.** The editor
+  caches modules for the whole session; the quiet mode is the dangerous
+  one - two consecutive rebuilds ran a superseded palette and reported
+  success, and the before/after frames delivered from them showed
+  behaviour the owner had already rejected (retracted and replaced).
+  apply_stocks, street.py and shelf.py reload; anything that reads
+  project modules and writes to the level belongs on that list. The
+  warning was already written in apply_stocks' own comment by the person
+  who then walked past it - written down is not the same as remembered,
+  third instance.
 - **A restore file a re-run can clobber is not a restore file.** Restore
   snapshots are WRITE-ONCE; the second run of apply_stocks overwrote the
   only route back to the pre-split look.
@@ -231,13 +237,17 @@ Every item cost hours. They are ordered by how much.
   ANY re-bake, re-run the placers (street.py, place_catalogue) BEFORE any
   capture. Same species as the import-persist trap: a reference that dies
   without an error.
-- **The live merge DROPS masked material slots.** SceneTools.merge_actors
-  cannot carry a masked blend mode and exposes no setting to reach for:
-  leaf cards keep their triangles and lose their material, rendering as
-  dark quads. Measured 2026-08-27: live 350s/16 slots/no leaf vs fastbake
-  2.6s/19 slots/both leaf materials, identical bounds. FASTBAKE is the
-  production path; the live merge is for geometry that carries no masked
-  slots.
+- **The live merge DROPS material slots — and NOT only masked ones.**
+  SceneTools.merge_actors cannot carry a masked blend mode (leaf cards
+  keep their triangles and lose their material, rendering as dark quads)
+  — but the 2026-08-29 slot diff on vernacular_t4_w820 showed it also
+  dropped MI_paint_cream, a plain BLEND_OPAQUE facade trim material
+  (expected 18 slots, baked 16, both leaf AND paint_cream missing). The
+  "masked" diagnosis was incomplete: a live-merged mesh may be missing
+  ARBITRARY materials, so no appearance judgment may be made on one.
+  Measured 2026-08-27: live 350s vs fastbake 2.6s, identical bounds.
+  FASTBAKE is the production path; the live merge is for nothing on the
+  judgment path at all.
 - **NEVER purge `LOOK_`.** `LOOK_Post` is the unbound PostProcessVolume
   holding the fixed grade (AEM_Manual, ISO 800, shutter 60). Deleting it
   silently reverts the level to UE default AUTO exposure - the same camera

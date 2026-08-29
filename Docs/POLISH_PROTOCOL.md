@@ -114,6 +114,26 @@ also earned the rule that keeps it fixed.
   voting rules so it cannot rot, MEASURES the debt on every run, and moves
   into RULES in one line when the debt is paid down. The debt curve is the
   progress metric (GATE-11: 73,582 -> 32,060 in wave 1a).
+- **GATE-11 ARMING (owner, 2026-08-29): budget + ratchet.** Baseline is the
+  SQUARE catalogue census, independently re-derived by the coordinator
+  before the number went to the owner: 548 models, 13,976 visible pairs,
+  37 clean, median 19 / p90 55 / max 208. Armed as:
+    1. REGRESSION, effective immediately: a rebaked/changed model may not
+       INCREASE its visible-pair count. Full stop, no tolerance.
+    2. BUDGET, opening at **N = 75 visible pairs per model** (refuses 25 of
+       548 at arming), ratcheting 75 -> 50 -> 30 as fix waves clear. N only
+       decreases; every change to N is the owner's word; the gate prints
+       the budget it judged against in every verdict; the per-model count
+       is stamped into provenance so nothing hides in an aggregate.
+  Zero-tolerance was rejected because a bar the corpus can never clear is
+  how --force installs itself (above); the size-threshold alternative was
+  MEASURED closed (minov=8.0 already exceeds the 0.4% player-zoom
+  threshold of 1.85 uu, and per-framing thresholds would forgive debt only
+  at block hero, against the both-framings rule). Sequenced owner calls,
+  same date: targeted contemporary2 pass FIRST (the tail is that one
+  recipe - excluding it the max falls 208 -> 115), and roof planting
+  outranks the whole pair list (green plaid is naked-eye; pairs need an
+  instrument). Code arming in modelgate.py follows the planting work.
 
 - **The fix-class ladder: instance param < stock swap < NEW ASSET < graph
   change < doctrine** (owner, 2026-08-28: a new asset ships with its
@@ -180,6 +200,21 @@ also earned the rule that keeps it fixed.
   Depth moved the number 7%; the actual fault moved it 0%. When sweeping
   an axis barely moves the symptom, the axis is wrong - stop arguing and
   change axes.
+- **A sweep does not start without a pre-registered stop condition, and
+  two nulls on one axis means STOP.** The render_smooth chase ran five
+  nulls and an instrument fault; the signal was clear after two, and
+  three more rounds were spent not believing a correct answer. Tuning
+  tasks declare their frame budget and their stop rule before the first
+  capture - open-ended sweeps are how instrument-perfecting replaces
+  project-advancing without anyone deciding it should.
+- **A share change is a PROMOTION on an untouched base draw, never an
+  edit to the draw list.** Appending to a hashed draw list changes
+  `hash %% len` and re-deals EVERY outcome downstream - the first brick
+  share attempt repainted every vernacular building while hitting the
+  target share exactly, invisible to every share statistic and visible
+  only in frames. The shipped mechanism promotes on a separate hash
+  decision and self-tests three preservation properties, including "any
+  building that changes must change TO the promoted value."
 - **A figure in an old log is not a measurement.** A regression worry was
   built on comparing a fresh measurement against a number REPORTED by an
   earlier run - from a capture that had not converged. Both frames were
@@ -187,6 +222,28 @@ also earned the rule that keeps it fixed.
   and dissolved the alarm. When two numbers disagree, re-measure both
   from artifacts before trusting either. (Flagging the inconsistency was
   still right - 'amplitude up, detail down' should never pass unexamined.)
+- **An accurate observation without the backlog read is not a diagnosis**
+  (2026-08-29). The specific shape, recorded at the request of the session
+  that made it: a delivered frame showed roof trees as "bare sticks with
+  dark polygon clusters" - described correctly, in the right words, and
+  offered as a NOVEL look problem for someone's future attention. It was
+  S16, a documented, diagnosed, already-RESOLVED fault (the live merge
+  dropping masked leaf slots), recognisable in one grep of the backlog.
+  The sibling rule to "a figure in an old log is not a measurement": eyes
+  tell you WHAT is there, only the record tells you whether it is KNOWN.
+  Before offering any observed defect as new, grep the backlog and HANDOFF
+  for its symptom - the cost is seconds, and the failure mode otherwise is
+  re-discovering a resolved fault as fresh work while the resolution
+  (use the other bake path) goes unapplied in the very run producing the
+  frame. THE OTHER HALF, added the same day when the scoping itself fell:
+  **a scoping claim is a measurement too.** "The coping verdicts are
+  unaffected because no masked slot is involved" was reasoned from S16's
+  STATED cause; diffing the actual slot lists showed the live merge had
+  also dropped MI_paint_cream - opaque, and the facade trim of the very
+  elements being pronounced on. Twice in one session a confident "this is
+  fine because <mechanism>" substituted for checking; both retracted. A
+  claim about what a fault does or does not touch is judged like any other
+  measurement: from the artifact, not from the diagnosis of record.
 - **When every arm of a sweep agrees, doubt the instrument before
   accepting the result.** Twice a suspiciously flat table meant the
   metric was not looking at the subject - once measuring frame centre to
@@ -222,7 +279,13 @@ also earned the rule that keeps it fixed.
   was generalized to the city - when brick walls one building in nine by
   active palette rotation. The correct move is to FIND a building that
   HAS the subject first, never to infer absence from a sample that lacks
-  it. Corollary: the
+  it. A further instance upgraded the stakes from wrong MEASUREMENT to
+  wrong STOP: non-existence was asserted from the wrong level, the wrong
+  actor prefix, and a parameterised builder's missing filename - and a
+  decided owner item was nearly cancelled on it. An ABSENCE claim demands
+  the rule at full strength: find the thing first, in the level where it
+  lives, by the name it actually has, through the mechanism that actually
+  builds it. Corollary: the
   acceptance rig is ONE BUILDING PER STOCK UNDER TEST, chosen because its
   WALL is the material being judged - never the building listing the most
   stocks (ACCEPT_Modern lists seven and shows two at any size).

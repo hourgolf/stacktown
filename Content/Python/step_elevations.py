@@ -531,7 +531,13 @@ def flank_param(spec, sign, origin, yaw, P):
     prd = float(P['proud'])
     b('Wall_FlankBase', 0.0, FACADE_T, 0.0, D, 0.0, GF - 14)
     b('Band_FlankBaseCap', -7.0, FACADE_T + 7.0, -9.0, D + 9.0, GF - 14, GF)
-    b('Wall_FlankBody', 0.0, FACADE_T, 0.0, D, GF, ztop)
+    # ONLY IF THERE ARE UPPER FLOORS. ztop is GF + F*FH, so a single-storey
+    # model (F=0) asked for a box of zero height on every build - 46 of them
+    # across contemporary2. add_cube refused each one and the refusal was
+    # discarded. Nothing is missing from those models: there IS no flank body
+    # above a ground floor. The box simply should never have been requested.
+    if ztop > GF:
+        b('Wall_FlankBody', 0.0, FACADE_T, 0.0, D, GF, ztop)
     y0, y1 = 44.0, D - 44.0
 
     if F >= 1 and P['open'] > 0.0 and (y1 - y0) > 120.0:

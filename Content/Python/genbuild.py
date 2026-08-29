@@ -87,8 +87,29 @@ def mkactor(name, loc=(0, 0, 0), rot=None):
     return ref
 
 
+# HAND TOLERANCE IS OFF, BY THE OWNER'S DECISION OF 29 Aug 2026.
+#
+# Shown a square building and a jittered one side by side - same seed, same
+# spec, same light, exposure raised equally on both - the owner preferred the
+# SQUARE one. That is the whole reason; it is a look call and it is theirs.
+#
+# The machinery below is CORRECT and stays. It was broken for the entire life
+# of the feature - RelativeLocation/RelativeRotation were set on the Actor,
+# which refuses them, and the refusal was discarded - and it now goes through
+# ActorTools.set_actor_transform, which works. So this flag is a DECISION,
+# not a workaround for something that does not function. Flip it to True and
+# the jitter applies on the live and the recorded path alike.
+#
+# KNOWN COST, measured over the 548-model catalogue rather than assumed:
+# 11,166 visible coplanar pairs with the jitter, 13,897 without. Nudging a
+# floor off square is the cheapest way there is to stop two planes being
+# exactly coincident, so square costs ~2,731 extra pairs of GATE-11 debt as
+# the deliberate price of a deliberate look. ANY GATE-11 BUDGET MUST BE SET
+# AGAINST THE SQUARE NUMBER - 13,897 is the real baseline, not 11,166.
+HAND_TOLERANCE = False
+
 DEGENERATE = []   # (name, dx, dy, dz) for boxes skipped as zero-sized
-JITTER_REFUSED = []   # hand-tolerance calls the editor refused
+JITTER_APPLIED = []   # actors the hand tolerance actually moved
 
 
 def box(actor, name, x0, x1, y0, y1, z0, z1):
@@ -277,14 +298,31 @@ def _setprops(args):
         busy those calls sit on a 180s timeout each, which is what stalled the
         ladder sweep at low CPU with an ESTABLISHED connection to port 8000.
 
-    KNOWN CONSEQUENCE, recorded rather than fixed here: the jitter is applied
-    to the LEVEL, never to the recorded parts. So a mesh baked through the
-    live path carries hand tolerance and one baked through fastbake does not.
-    That is the same live-vs-fastbake divergence family as the donor bug
-    (POLISH_BACKLOG S11) and wants the same treatment - record the jitter and
-    have fastbake apply it - but that is a change to the bake output, so it is
-    a separate, deliberate piece of work rather than a drive-by.
+    THE DIVERGENCE WAS THE OTHER WAY ROUND, and this docstring asserted it
+    backwards until 29 Aug. It said the live path carried hand tolerance and
+    the recorded path did not. The truth, tested directly rather than
+    inferred: RelativeLocation and RelativeRotation live on the ROOT
+    COMPONENT, not on the Actor, so ObjectTools.set_properties refused this
+    call every single time it was ever made - and the refusal was discarded.
+    The recorded path applies jitter (fixed for S14). The LIVE path never
+    applied any. Every baked mesh in the catalogue is machine-square.
+
+    That is not only a look bug. Measured over the 548-model catalogue on
+    29 Aug: 11,166 visible coplanar pairs WITH the jitter, 13,897 without -
+    the hand tolerance suppresses 2,731 of them, 24.5%, more than every
+    generator fix of that week put together. Nudging a floor off square is
+    the cheapest way there is to stop two planes being exactly coincident,
+    which is most of what GATE-11 measures.
+
+    So the live path now goes through ActorTools.set_actor_transform, which
+    can actually move an actor, and adds the offsets the SAME way the sink
+    does - world-space location delta, direct rotation delta - because the
+    two paths agreeing matters more here than either being independently
+    purer. They disagreed for the whole life of the feature and nobody could
+    see it.
     """
+    if not HAND_TOLERANCE:
+        return None            # owner's call, see HAND_TOLERANCE
     if _SINK is not None:
         # RECORD IT, don't discard it. Jitter used to be applied to the LEVEL
         # only, so a live-baked mesh carried hand tolerance and a fastbaked one
@@ -325,11 +363,23 @@ def _setprops(args):
     # verification bake. Swallowing it silently again is not an option
     # either. So it is counted, and the bake behaves exactly as it always
     # has while the debt is on the books.
-    try:
-        return ue.tool(O, 'set_properties', args)
-    except ue.ToolError as e:
-        JITTER_REFUSED.append(str(e))
-        return None
+    ref = args.get('instance')
+    vals = json.loads(args.get('values') or '{}')
+    dl = vals.get('RelativeLocation') or {}
+    dr = vals.get('RelativeRotation') or {}
+    cur = json.loads(ue.tool(A, 'get_actor_transform',
+                             {'actor': ref}))['returnValue']
+    loc, rot = cur['location'], cur['rotation']
+    ue.tool(A, 'set_actor_transform', {
+        'actor': ref, 'worldspace': True,
+        'xform': {'location': {'x': loc['x'] + float(dl.get('x', 0.0)),
+                               'y': loc['y'] + float(dl.get('y', 0.0)),
+                               'z': loc['z'] + float(dl.get('z', 0.0))},
+                  'rotation': {'pitch': rot['pitch'] + float(dr.get('pitch', 0.0)),
+                               'yaw': rot['yaw'] + float(dr.get('yaw', 0.0)),
+                               'roll': rot['roll'] + float(dr.get('roll', 0.0))}}})
+    JITTER_APPLIED.append(ref)
+    return None
 
 
 # HAND TOLERANCE MUST FIT INSIDE THE TOLERANCE THE PLOT ALLOWS.
@@ -534,6 +584,15 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             for j in range(5):
                 t = (j + 1) / 5.0
                 ins = (ax1 - ax0) * 0.5 * (1.0 - (1.0 - t * t) ** 0.5)
+                # THE CROWN COURSE HAD ZERO WIDTH. At j=4, t is exactly 1.0
+                # and the ellipse inset equals the half-width, so ax0+ins and
+                # ax1-ins are the same point. add_cube refuses a zero
+                # dimension and the refusal was discarded, so every market
+                # arch in the catalogue has been missing its top course - 82
+                # boxes, silently, for the whole life of the construct.
+                # Capping the inset leaves a narrow keystone course, which is
+                # what the top of a real arch looks like anyway.
+                ins = min(ins, (ax1 - ax0) * 0.5 - 6.0)
                 box(g, 'Wall_MktArch%d_%d' % (k, j), ax0 + ins, ax1 - ins,
                     -10, 56, GF - 40 - ah + ah * t * 0.98,
                     GF - 40 - ah + ah * (t + 0.24)); made += 1

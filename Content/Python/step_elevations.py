@@ -118,13 +118,26 @@ def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     bands = [(0.0, GF)] + [(GF + f * FH, GF + (f + 1) * FH) for f in range(F)]
     for lvl, (z0, z1) in enumerate(bands):
-        for k in range(bays + 1):
-            px = min(x0 + k * bw, x0 + W - PIER_W)
+        # THE PIERS DECIDE WHERE THE OPENINGS ARE, and until 29 Aug they did
+        # not. The last pier is clamped inward so it cannot overhang the
+        # corner, but the opening beside it was still measured off the bay
+        # grid - so on every level of every model the last window ran PIER_W uu
+        # UNDER that pier, and its right jamb ended flush with the pier's
+        # outer face. Two like-facing surfaces at one depth, on a face the
+        # camera sees square on: that is the largest single source of visible
+        # coplanar pairs in the catalogue, and it is what cold read #1
+        # described from the other side as clipping.
+        #
+        # Deriving both from ONE list of pier positions is the fix. Every bay
+        # but the last is unchanged; the last becomes a properly formed
+        # narrower window instead of a wide one with its end buried.
+        pxs = [min(x0 + k * bw, x0 + W - PIER_W) for k in range(bays + 1)]
+        for k, px in enumerate(pxs):
             b('Wall_L%dPier%d' % (lvl, k), 0, 60, px, px + PIER_W, z0, z1 - 34)
         b('Band_L%dCourse' % lvl, -8, 58, x0 - 8, x0 + W + 8, z1 - 34, z1)
         for k in range(bays):
-            wx0 = x0 + k * bw + PIER_W
-            wx1 = x0 + (k + 1) * bw
+            wx0 = pxs[k] + PIER_W
+            wx1 = pxs[k + 1]
             if wx1 - wx0 < 60:
                 continue
             wz0, wz1 = z0 + 62, z1 - 66
@@ -215,13 +228,14 @@ def flank_vernacular(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
         usable = D - front
         bays = max(1, int(round(usable / BAY_TARGET)))
         bw = usable / float(bays)
-        for k in range(bays + 1):
-            py = min(front + k * bw, D - PIER_W)
+        # same clamp, same fix as the front elevation above
+        pys = [min(front + k * bw, D - PIER_W) for k in range(bays + 1)]
+        for k, py in enumerate(pys):
             b('Wall_L%dPier%d' % (lvl, k), 0, 60, py, py + PIER_W, z0, z1 - 34)
         b('Band_L%dCourse' % lvl, -8, 58, front - 8, D + 8, z1 - 34, z1)
         for k in range(bays):
-            wy0 = front + k * bw + PIER_W
-            wy1 = front + (k + 1) * bw
+            wy0 = pys[k] + PIER_W
+            wy1 = pys[k + 1]
             if wy1 - wy0 < 60:
                 continue                      # too narrow to be a window
             wz0, wz1 = z0 + 62, z1 - 66

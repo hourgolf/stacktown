@@ -27,6 +27,31 @@ STAGE = (0.0, 60000.0, 0.0)          # well clear of the board
 # S/M/L ladder it accepts, so a works refusing a small parcel is data
 # rather than a special case here.
 
+# PREFLIGHT: PIE BLOCKS ACTOR CREATION, so find out at second zero.
+#
+# On 29 Aug both verification bakes died on their first actor because a play
+# session was still running from a flight - Sandbox_Bench carries an
+# auto-possess pawn, so any casual Play leaves a session up with nothing
+# moving and no one watching. The editor said exactly that ("Cannot create
+# actors while PIE is active") and three separate tools fed the sentence to
+# json.loads, so what surfaced was a JSONDecodeError about column 1.
+#
+# ue.tool now raises with the real message, which makes the loss legible.
+# This makes it impossible: one line, before any geometry is built.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)),
+                                'StacktownAlpha', 'Tools', 'measure'))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), '..', 'Tools', 'measure'))
+try:
+    import ue as _ue
+    if json.loads(_ue.tool('EditorToolset.EditorAppToolset',
+                           'IsPIERunning', {}))['returnValue']:
+        raise SystemExit('bake_catalogue: PIE is active - stop play before '
+                         'baking (nothing was built)')
+except SystemExit:
+    raise
+except Exception as _e:
+    print('bake_catalogue: could not check PIE state (%s); continuing' % _e)
+
 argv = [a for a in sys.argv[1:] if not a.startswith('--')]
 FORCE = '--force' in sys.argv
 want = argv or list(recipes.RECIPES)

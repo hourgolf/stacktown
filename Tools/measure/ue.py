@@ -49,10 +49,36 @@ def call(name, args=None, sid=None):
     if res.get("isError"): txt = "TOOL-ERROR: " + txt
     return txt
 
-def tool(toolset, name, args=None):
+class ToolError(RuntimeError):
+    """An MCP tool refused the call and said why, in plain text."""
+
+
+def tool(toolset, name, args=None, raw=False):
+    """Call an MCP tool. RAISES ToolError when the editor refuses.
+
+    WHY THIS RAISES. The server answers a refusal with a bare string -
+    "TOOL-ERROR: Cannot create actors while PIE is active." - not with JSON
+    and not with a non-200. Every caller here does json.loads() on the reply,
+    so a refusal surfaced as JSONDecodeError: Expecting value: line 1 column
+    1, which names neither the tool nor the reason.
+
+    That cost a real diagnosis on 29 Aug: a whole verification bake failed on
+    every actor, and the traceback sent me looking at a dead MCP session and
+    then at a missing toolset before the actual message - PIE was running -
+    turned up three layers down, only because I called the tool by hand and
+    printed the reply instead of parsing it.
+
+    The message was there the entire time. Nothing was reading it. Pass
+    raw=True to get the old behaviour when a caller wants to inspect the
+    refusal itself.
+    """
     a = {"tool_name": name, "arguments": args or {}}
     if toolset: a["toolset_name"] = toolset
-    return call("call_tool", a)
+    r = call("call_tool", a)
+    if not raw and isinstance(r, str) and r.lstrip().startswith('TOOL-ERROR'):
+        raise ToolError('%s.%s: %s' % (toolset or '?', name,
+                                       r.lstrip()[len('TOOL-ERROR'):].lstrip(': ')))
+    return r
 
 if __name__ == "__main__":
     print(call(sys.argv[1], json.loads(sys.argv[2]) if len(sys.argv)>2 else {}))

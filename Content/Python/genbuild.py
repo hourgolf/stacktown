@@ -87,12 +87,29 @@ def mkactor(name, loc=(0, 0, 0), rot=None):
     return ref
 
 
+DEGENERATE = []   # (name, dx, dy, dz) for boxes skipped as zero-sized
+JITTER_REFUSED = []   # hand-tolerance calls the editor refused
+
+
 def box(actor, name, x0, x1, y0, y1, z0, z1):
     if _SINK is not None:
         _SINK.append(dict(kind='box', actor=actor, name=name,
                           c=[(x0 + x1)/2.0, (y0 + y1)/2.0, (z0 + z1)/2.0],
                           d=[abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)],
                           r=[0.0, 0.0, 0.0]))
+        return
+    # DEGENERATE BOXES ARE RECORDED, NOT CRASHED ON AND NOT HIDDEN.
+    #
+    # add_cube refuses a zero dimension. Until ue.tool started raising on
+    # 29 Aug that refusal was DISCARDED - the box never appeared and the bake
+    # reported success - so the catalogue has been missing geometry silently:
+    # 128 boxes over 7 names, measured offline. Raising here instead would
+    # kill a 548-model batch on the first bad one, which is not better.
+    #
+    # So: skip it, name it, count it, and let the caller report. The defect
+    # stays exactly as visible as it is real.
+    if min(abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)) <= 0.0:
+        DEGENERATE.append((name, abs(x1 - x0), abs(y1 - y0), abs(z1 - z0)))
         return
     ue.tool(P, 'add_cube', {
         'actor': actor, 'name': name,
@@ -291,7 +308,28 @@ def _setprops(args):
                       rec['rot'][1] + float(rot.get('yaw', 0.0)),
                       rec['rot'][2] + float(rot.get('roll', 0.0))]
         return None
-    return ue.tool(O, 'set_properties', args)
+    # HAND TOLERANCE HAS NEVER BEEN APPLIED, and this records that rather
+    # than crashing on it or going back to hiding it.
+    #
+    # RelativeLocation and RelativeRotation live on the ROOT COMPONENT, not
+    # on the Actor, so this call has been refused every time it was ever
+    # made. Until ue.tool started raising on 29 Aug the refusal was
+    # discarded, so the jitter read as implemented and did nothing: every
+    # building in the catalogue is machine-square. That is item 7 of what
+    # makes a model read as physical - deliberate imperfection - absent for
+    # the whole life of the feature.
+    #
+    # NOT FIXED HERE ON PURPOSE. Setting it on the root component would make
+    # all 548 models slightly non-square, which is a visible change across
+    # the entire catalogue and the owner's call, not a repair to slip into a
+    # verification bake. Swallowing it silently again is not an option
+    # either. So it is counted, and the bake behaves exactly as it always
+    # has while the debt is on the books.
+    try:
+        return ue.tool(O, 'set_properties', args)
+    except ue.ToolError as e:
+        JITTER_REFUSED.append(str(e))
+        return None
 
 
 # HAND TOLERANCE MUST FIT INSIDE THE TOLERANCE THE PLOT ALLOWS.
@@ -1685,8 +1723,15 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # separate cut piece rather than a moulding
     box(r, 'Wall_ParapetF', x0, x0 + W, 12, 40, ztop, ztop + PAR - 12); made += 1
     box(r, 'Band_Coping', x0 - 6, x0 + W + 6, -6, 44, ztop + PAR - 12, ztop + PAR); made += 1
-    box(r, 'Wall_ParapetL', x0, x0 + 24, 30, D, ztop, ztop + PAR - 18); made += 1
-    box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1
+    # THE FRONT CORNERS, and this is the back-run bug again at the other end.
+    # ParapetF occupies y 12..40; the flank runs started at 30, so they lapped
+    # it by 10 uu while also sharing its x faces - two like-facing surfaces at
+    # one depth on the roofline, which is where the owner saw it. Starting the
+    # flanks at F's back face makes it a butt joint, which the rule allows and
+    # a card builder cuts. I mitred ParapetB and never looked at ParapetF: a
+    # fix applied to one instance of a mechanism is not a fix to the mechanism.
+    box(r, 'Wall_ParapetL', x0, x0 + 24, 40, D, ztop, ztop + PAR - 18); made += 1
+    box(r, 'Wall_ParapetR', x0 + W - 24, x0 + W, 40, D, ztop, ztop + PAR - 18); made += 1
     # REAR PARAPET, and the deck as a SURFACE. Both exist because the core no
     # longer fills the roof void: with `open_roof` it stops at the roof line,
     # so the back of the roof is a real hole and the deck is a real surface
@@ -2579,8 +2624,29 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     bk + CONT_GLAZE - 13, bk + CONT_GLAZE + 2, zA, zB)
                 made += 1
             for cxp, tag in ((gx0, 'L'), (gx1, 'R')):
+                # STOPS UNDER THE CAP, not level with it. The post used to
+                # run to zB and the cap covered its top 12 uu, so both tops
+                # sat on one plane - the white stripe meeting the brick
+                # corner the owner reported on 29 Aug. 78 visible pairs.
+                #
+                # THIS IS NOT A SILHOUETTE NO-OP, and I first wrote here that
+                # it was. The claim was that the cap is wider than the post in
+                # both axes so the removed 12 uu was already inside it. In y,
+                # yes. In X IT IS NOT: the cap spans 72..656.8 and the posts
+                # sit at 65..91 and 637.8..663.8, so the cap is 7 uu SHORT of
+                # each post's outer face. Shortening the post therefore cuts a
+                # 7 x 12 uu notch at each end of every band - measured at 168
+                # cells per band in front elevation, on all five test models.
+                #
+                # Kept because it was LOOKED AT: at inspection range the notch
+                # reads as a stepped capital where the band dies into the
+                # corner, which is a detail a card builder would cut, not a
+                # fault. If it ever reads wrong, the no-op alternative is to
+                # widen the cap to the posts' outer faces instead of
+                # shortening the posts - that also clears the fight and gains
+                # rather than loses material.
                 box(sh, 'Wall_Corner%d%s' % (bi, tag), cxp - 13, cxp + 13,
-                    bk - 4, bk + 58, zA, zB); made += 1
+                    bk - 4, bk + 58, zA, zB - 12); made += 1
             box(sh, 'Band_BandCap%d' % bi, gx0 - 6, gx1 + 6,
                 bk - 8, bk + 60, zB - 12, zB); made += 1
 

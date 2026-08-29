@@ -151,7 +151,15 @@ def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             b('Mullion_L%dB%dV' % (lvl, k), 21, 28, mx - 3, mx + 3, wz0, wz1)
             mz = wz0 + (wz1 - wz0) * 0.62
             b('Mullion_L%dB%dH' % (lvl, k), 21, 28, wx0, wx1, mz - 3, mz + 3)
-    b('Band_RearCap', -10, 60, x0 - 10, x0 + W + 10, ztop + PAR, ztop + PAR + 14)
+    # RUNS BETWEEN THE FLANK CAPS, which now own the rear corners outright.
+    # The bound is DERIVED, not measured off one model and pasted: a flank
+    # slab's inner face lands at x0 -+ (OVER_X - BITE), which is the same
+    # x0+6 the geometry reported for w820. Writing 6.0 here would have been a
+    # constant that happened to be right for one width and silently wrong the
+    # day OVER_X or BITE moved.
+    cap0, cap1 = ((x0 - OVER_X + BITE, x0 + W + OVER_X - BITE)
+                  if has_flank_cap(spec) else (x0 - 10, x0 + W + 10))
+    b('Band_RearCap', -10, 60, cap0, cap1, ztop + PAR, ztop + PAR + 14)
     print('  ELEV_%s_R: %d boxes' % (n, made))
     return made
 
@@ -251,7 +259,22 @@ def flank_vernacular(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
             b('Mullion_L%dB%dH' % (lvl, k), 21, 28, wy0, wy1, mz - 3, mz + 3)
 
     # parapet cap, matching the front's Band_ParapetCap so the corner reads
-    b('Band_FlankCap', -10, 60, FRONT - 10, D + 10, ztop + PAR, ztop + PAR + 14)
+    # CARRIES THROUGH TO THE REAR CAP'S BACK FACE, completing the coping ring.
+    # It used to stop at D+10 while Band_RearCap sits behind that plane at
+    # YP-60..YP+10, so the two lapped 16x10 uu at each rear corner - 240
+    # pairs, the largest roofline mechanism, and part of what the owner saw
+    # on the roofs on 29 Aug.
+    #
+    # THIS ONE GAINS COVERAGE and that is the point, not a side effect. Both
+    # simple mitres were tried and PROVEN WRONG by the union check before
+    # anything shipped: the two pieces interlock in an L and each covered
+    # part of what the other would have given up, so trimming either left a
+    # hole - 12,600 cells the first time, 2,240 the second. Carrying the
+    # flank through and pulling the rear cap in between the flanks is the
+    # only arrangement that removes the lap AND leaves no gap; it closes the
+    # outer rear corner the old ring never covered. Owner's call, 29 Aug.
+    b('Band_FlankCap', -10, 60, FRONT - 10, D + FACADE_T + 10,
+      ztop + PAR, ztop + PAR + 14)
 
     # ---- a MURAL, on one flank only ---------------------------------------
     # A painted image at 1:87 is mud - the whole facade is 14 mm across on the
@@ -464,6 +487,24 @@ def flank_kind(spec):
         if spec.get(flag):
             return kind
     return None
+
+
+def has_flank_cap(spec):
+    """Do this spec's flanks carry a Band_FlankCap for the rear cap to meet?
+
+    ONLY flank_vernacular builds one. rear() has to know, because the rear
+    cap is trimmed back to the flank caps' inner faces to stop the two
+    lapping at the corners - and on a model whose flanks carry no cap that
+    same trim is a 2,240-cell hole in the coping, which is exactly what the
+    union proof caught on five of eight test models before this existed.
+
+    Written as one function rather than repeating the condition, because the
+    two places that need it are 300 lines apart and a copy would rot the
+    first time flank() gains a style.
+    """
+    if flank_kind(spec):
+        return False
+    return spec.get('style') not in ('modern', 'deco', 'contemporary')
 
 
 def flank_param(spec, sign, origin, yaw, P):

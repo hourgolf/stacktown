@@ -675,7 +675,19 @@ def _t10():
     return not gate_10(model(sp, [_a('BLD2_Probe_H', infront)]))
 
 
-COPLANAR_MIN_OVERLAP = 8.0    # uu; below this the fight is sub-pixel at zoom
+# uu. Was justified as "sub-pixel at zoom", which was a feel rather than a
+# derivation. Measured against the 0.4% table on 29 Aug so the number has a
+# provenance: a feature must subtend ~0.4% of frame width to read, and at
+# player zoom (900 uu distance, 463 uu frame width) that is 1.85 uu. This
+# constant is 4.3x stricter than the threshold it was guessing at.
+#
+# KEEP IT STRICTER, DELIBERATELY. Relaxing to the principled 1.85 would let
+# in patches nobody can resolve, and judging each face at only the framing it
+# is "usually" seen from would forgive 52.5% of the catalogue's debt on the
+# grounds that nobody looks closely - which is the argument the gate exists
+# to refuse. HANDOFF requires Stage 2 work to read at BOTH block hero and
+# player zoom, so the strictest framing governs and player zoom is it.
+COPLANAR_MIN_OVERLAP = 8.0
 
 
 def coplanar_pairs(cs, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP, cap=None):

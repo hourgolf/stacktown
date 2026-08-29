@@ -14,6 +14,16 @@ import random
 import stagegeo
 import palette
 
+# THE EDITOR CACHES MODULES FOR THE WHOLE SESSION. Two street rebuilds
+# in a row silently used a palette that had been REPLACED on disk - it
+# does not error, it runs the old code and reports success, which is the
+# failure mode apply_stocks.py already carries a reload for. A build
+# script that reads project data must reload it or it is reporting on
+# whatever happened to be imported first this session.
+import importlib
+importlib.reload(palette)
+importlib.reload(recipes)
+
 SANDBOX = 'Sandbox_Bench'
 eus = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
 lvl = eus.get_editor_world().get_path_name()

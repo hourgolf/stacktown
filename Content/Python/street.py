@@ -38,6 +38,16 @@ import stagegeo
 import json
 import random
 
+# THE EDITOR CACHES MODULES FOR THE WHOLE SESSION. Two street rebuilds
+# in a row silently used a palette that had been REPLACED on disk - it
+# does not error, it runs the old code and reports success, which is the
+# failure mode apply_stocks.py already carries a reload for. A build
+# script that reads project data must reload it or it is reporting on
+# whatever happened to be imported first this session.
+import importlib
+importlib.reload(palette)
+importlib.reload(recipes)
+
 # Sandbox_Bench built these first; Stage2_Street is now their own room
 # (streetroom.py). Both are allowed: the bench copy stays usable until
 # the owner confirms the new map, which was their explicit instruction.

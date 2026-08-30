@@ -1783,11 +1783,23 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             box(a, _pn, px0, px1,
                 fy - BAND_PROUD - 6, fy - BAND_PROUD + 10, z0 + 12, z0 + sp - 12)
             made += 1
-        # heads and cills to the mullion run
+        # heads and cills to the mullion run. THEY CAPTURE THE GLASS rather
+        # than stopping level with it: both ended at fy+GLAZE_Y+2, which is
+        # the Glass_Ribbon's own back face, so a frame member and the pane it
+        # holds shared a plane on every ribbon floor of every modern block -
+        # 1,348 pairs across 141 models, head and cill together, the largest
+        # mechanism left in the catalogue.
+        #
+        # +6 puts the back of the frame 4 uu behind the glass. Interior_Ribbon
+        # starts at +8, so there is 2 uu of clearance and nothing new to
+        # fight. Free to look at: the frame's FRONT faces at -9 and -13 do not
+        # move, and the added depth sits behind the pane where nothing sees
+        # it. A glazing bar that stops flush with its own glass is not holding
+        # anything.
         box(a, 'Frame_MullHead%d' % f, gx0 - 6, gx1 + 6, fy + GLAZE_Y - 9,
-            fy + GLAZE_Y + 2, gz1 - 12, gz1 - 4)
+            fy + GLAZE_Y + 6, gz1 - 12, gz1 - 4)
         box(a, 'Frame_MullCill%d' % f, gx0 - 8, gx1 + 8, fy + GLAZE_Y - 13,
-            fy + GLAZE_Y + 2, gz0 + 2, gz0 + 12)
+            fy + GLAZE_Y + 6, gz0 + 2, gz0 + 12)
         made += 2
         # hand tolerance: MODEL tolerances, 1-2%, not building tolerances
         _setprops({

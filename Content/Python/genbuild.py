@@ -1614,7 +1614,21 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     col_w = 64.0
     for b in range(BAYS + 1):
         px = min(x0 + b * (W / float(BAYS)), x0 + W - col_w)
-        box(g, 'Wall_Col%d' % b, px, px + col_w, 0, 62, 0, GF); made += 1
+        # THE COLUMN STOPS AT THE SOFFIT'S UNDERSIDE. It ran to GF, the
+        # soffit's TOP face, so every arcade column passed through the slab
+        # it holds up and finished flush with its upper surface - 800 pairs
+        # across 136 models, the largest mechanism left after the pilasters.
+        #
+        # Free to look at: the removed 14 uu is entirely inside the soffit,
+        # which covers the column in x and y both. Proved by union raster
+        # rather than asserted - I have called a trim invisible before and
+        # been wrong about the axis it was on.
+        #
+        # I first "fixed" this by making the soffit 6 uu proud in y, on the
+        # grounds that both shared the y=0 front plane. They did, and the
+        # pair did not care: it was flagged on Z the whole time. The count
+        # did not move, which is the only reason I looked again.
+        box(g, 'Wall_Col%d' % b, px, px + col_w, 0, 62, 0, GF - 14); made += 1
     # the soffit is the whole point of an arcade - it is what casts the shadow
     box(g, 'Wall_Soffit', x0 - 4, x0 + W + 4, 0, ARCADE, GF - 14, GF); made += 1
     sx0, sx1 = x0 + col_w, x0 + W - col_w

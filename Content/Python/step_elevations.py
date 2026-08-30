@@ -764,8 +764,15 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
         b('Wall_BaseInfill', 0, 60, Y0, Y1, 46, GF - 46)
 
     # ---- pilasters, full height -------------------------------------------
-    for k in range(bays + 1):
-        py = min(Y0 + k * bw, Y1 - PW)
+    # THE PILASTERS DECIDE WHERE THE BAYS ARE. Same fault as the front
+    # elevation's clamped pier, third construct to carry it: the LAST
+    # pilaster is clamped inward so it cannot overhang the corner, and the
+    # bay beside it was still measured off the unclamped grid - so every
+    # spandrel ran to where the pilaster WOULD have been and shared its far
+    # face instead of butting against its near one. 1,044 pairs across 75
+    # models, the largest mechanism left.
+    pys = [min(Y0 + k * bw, Y1 - PW) for k in range(bays + 1)]
+    for k, py in enumerate(pys):
         b('Wall_Pilaster%d' % k, -_g.DECO_PROUD, 60, py, py + PW, GF - 12, ztop + PAR - 26)
         for j in (1, 2):
             fy = py + PW * j / 3.0
@@ -776,7 +783,7 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     for f in range(F):
         z0, z1 = GF + f * FH, GF + (f + 1) * FH
         for k in range(bays):
-            wy0, wy1 = Y0 + k * bw + PW, Y0 + (k + 1) * bw
+            wy0, wy1 = pys[k] + PW, pys[k + 1]
             if wy1 - wy0 < 80: continue
             b('Frame_L%dSpandrel%d' % (f, k), 18, 30, wy0, wy1, z0, z0 + FH * 0.24)
             wz0, wz1 = z0 + FH * 0.24, z1

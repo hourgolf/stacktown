@@ -1,11 +1,11 @@
 # District placer contract — metadata emission (draft)
 
-**STATUS: owner-adopted DIRECTION, 2026-08-30 (all three City Sample
-research recommendations, Docs/RESEARCH_CITYSAMPLE.md). This document is
-the declare-before-geometry contract for the district placer's metadata
-layer. DRAFT — co-authorship invited from the design session; nothing
-here is implemented, and nothing here touches the current wave, works-
-brick, or read #2.**
+**STATUS: SCHEMA v0 OWNER-BLESSED, 2026-08-30 — after the design
+session's five-finding adversarial pass, all absorbed. This is the
+declare-before-geometry contract the placer implements against, known-
+answer parcel test first (including the unframeable parcel). Fields
+beyond v0 land only WITH their consumers, per the named-futures
+paragraph.**
 
 ## The adopted decisions, verbatim scope
 
@@ -34,26 +34,60 @@ do not understand.
   the same side-effect principle as the regression ledger.
 - **New fields are PENDING until a consumer exists** — no speculative
   fields ("YAGNI with a gate"): each field lands WITH the system that
-  reads it, or not at all. The schema below is therefore a RESERVATION
-  of names, not a build list.
+  reads it, or not at all. (The first draft tried to soften this with a
+  "reservation of names" — the adversarial pass rejected that defence
+  with same-day evidence, and the futures now live in a paragraph, not
+  the schema.)
 
-## Reserved per-parcel emission (draft schema, v0)
+## Per-parcel emission (schema v0 — revised after the design
+## session's adversarial pass, 2026-08-30; all five findings absorbed)
 
-    parcel_id        stable identity (block, index)
-    recipe/tier/width  already planned - the catalogue pointer
-    frontage         street edge, MEASURED centre + width (corner-origin
-                     lesson: centres are computed from extents, never
-                     assumed)
-    econ             {} - RESERVED, schema arrives with the owner's
-                     economy notes; parcels carry hooks, never logic
+    meta_version     schema version; every consumer asserts on it
+    parcel_id        IDENTITY, defined: (block_name, lot_ordinal_at_
+                     first_placement) - the ordinal is ASSIGNED ONCE at
+                     first placement and NEVER renumbers on insertion,
+                     split, or recipe change (a split mints new ids;
+                     the old id retires, never reused). The self-test
+                     FAILS on collision or renumber across a
+                     re-placement. (Today's detector bug was an
+                     identity bug - non-unique names silently returning
+                     the wrong geometry; this is the same hazard one
+                     level up, closed by definition + test.)
+    geometry_head    THE STALENESS STAMP: the catalogue commit every
+                     geometry-derived field below was computed against.
+                     Consumers REFUSE or RE-DERIVE when it does not
+                     match the staleness ledger. (548 meshes changed in
+                     one day this weekend; data computed from meshes
+                     without a ledger is the S16 shape as data.)
+    recipe/tier/width  the catalogue pointer
+    frontage         street edge: centre + width, measured from
+                     PER-COMPONENT MESH BOUNDS AGAINST WORLD TRANSFORMS
+                     - the METHOD is contractual, because the obvious
+                     accessor (get_actor_bounds) measurably lies
+                     (today's phantom 3,604 uu Depot).
     camera_poi       facade centre + whole-building standoff at the
-                     gate optic (pre-computed so framings are measured,
-                     not authored - the reel/precast lesson as data)
-    practicals       anchor points for lit fixtures (nightlight canon)
-    parking          list of stand points on the parcel's frontage -
-                     the traffic prototype's substrate
-    ambience         zone tag (street / yard / rooftop) - soundscape
-                     consumer, far future
+                     gate optic, OR NULL WITH A REASON CODE when the
+                     framing does not exist (unfittable: needed
+                     standoff exceeds clear space - the Foundry stack
+                     case, measured at 7,494 needed vs 4,506 clear).
+                     The known-answer test includes one parcel that
+                     CANNOT be framed; a schema tested only on the
+                     easy parcel is not tested.
+    practicals       anchor points for lit fixtures (consumer: the
+                     lighting pass, which exists)
+
+## Named futures (NOT fields - a paragraph, deliberately)
+
+econ hooks, parking/route points, and ambience zones are NOT in schema
+v0. Cut by the adversarial pass under the contract's own rule ("each
+field lands WITH the system that reads it"): reserving a name fixes a
+shape before the consumer can say what shape it needs, and the day this
+contract was revised, exactly that failure shipped - preview.py emitted
+coplanar_visible as the RAW count while gate_11 judged the exempt
+count, and the mismatch reached the regression ledger unnoticed. When
+the economy notes land, econ fields land with them; when the traffic
+prototype starts, parking lands with it; ambience lands with audio.
+This paragraph is their reservation.
 
 ## Sequencing (nothing moves before its gate)
 

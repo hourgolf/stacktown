@@ -19,12 +19,15 @@ DEFAULTS = [
     ('r.Lumen.ScreenProbeGather.ScreenTraces', 1, 'screen-space tracing'),
     ('r.LumenScene.SurfaceCache.CardCaptureRefreshFraction', 0.125,
      'surface cache refresh'),
-    # FLOAT, not int. Reading it with get_console_variable_int_value returns
-    # 0 whatever it actually holds, so the first version of this file reported
-    # "NOT SET" on a cvar it had set correctly - the read was wrong, not the
-    # write. Same class as measuring a thin plane with get_actor_bounds.
-    ('r.LumenScene.SurfaceCache.MeshCardsUpdateFrequencyScale', 1.0,
-     'mesh card updates'),
+    # r.LumenScene.SurfaceCache.MeshCardsUpdateFrequencyScale was RETIRED
+    # from this list 2026-08-29: the 5.8 upgrade REMOVED the cvar entirely
+    # (SearchCVars finds nothing), so its verify could never pass, and the
+    # assert below stopped the restore BEFORE TemporalFilterProbes - the
+    # direct anti-noise term - was reached. The flicker "came back" because
+    # this restore half-ran. A restore list must be kept current with the
+    # engine or it becomes the fault it exists to fix. (Its old float-read
+    # trap note: get_console_variable_int_value reads 0 on any float cvar -
+    # verify with the read that matches the type.)
     ('r.Lumen.ScreenProbeGather.TemporalFilterProbes', 1,
      'temporal filtering of screen probes - the direct anti-noise term'),
 ]

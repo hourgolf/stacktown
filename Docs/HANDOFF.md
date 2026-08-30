@@ -27,6 +27,11 @@ say so.
 
 ## 2. Current state
 
+**MESHES CURRENT THROUGH d30dc8b** (staleness ledger, maintained per bake
+wave under the 2026-08-30 bake policy — POLISH_PROTOCOL "The bake
+policy". HARD RULE: no acceptance or reader frames while this line names
+a commit older than the fix being judged.)
+
 **Updated 2026-08-25.** The authoritative current state is always the newest
 record under `Saved/Stage*/` and `Saved/Lane*/` plus `Docs/RECIPES_DRAFT.md`
 and `Docs/RUNTIME_SLICE.md` — this section is a summary and loses to the

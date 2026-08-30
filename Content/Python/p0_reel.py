@@ -51,6 +51,9 @@ def capture(pose, focal, path, centre=CENTRE):
         'annotations': {'gridSpacing': 0, 'gridExtent': 0, 'gridHeight': 0,
                         'maxLabelDistance': 0, 'classFilter': None,
                         'maxLabels': 0}})
+    # Editor refusals (e.g. PIE active) raise ue.ToolError inside tool()
+    # itself, with the editor's own message - handled there for every
+    # caller, not per call site. Anything that reaches json.loads is JSON.
     d = json.loads(r)['returnValue']['image']['data']
     open(path, 'wb').write(base64.b64decode(d))
 

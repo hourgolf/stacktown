@@ -163,6 +163,60 @@ against TSR so racks do not smear; every effect budgeted with the
 machine's Metal instability in mind (the breathing layer is many small
 cheap things, never one expensive thing).
 
+## The feed layer (owner-approved direction, 2026-08-29)
+
+The player is the FEED — so beyond lens artifacts, a subtle analog-
+transmission layer sells the signal between the camera and the viewer.
+Owner decisions of record:
+
+- **Flavor: MONITOR, not tape.** Faint scanline/aperture-grille texture,
+  slight curvature, phosphor bloom on practicals — "modern superzoom,
+  old studio monitor" is coherent kit; VHS tape artifacts against a
+  modern digital lens would be two eras in one image. (Tape variant may
+  be shot once for comparison, then discarded or kept on the owner's
+  frames.)
+- **One master intensity scalar 0→1** multiplying every component;
+  per-component scalars underneath. Tested at multiple intensities —
+  the owner's explicit worry is overdoing it.
+- **Show-side only, by construction:** the layer lives in its own post
+  volume/blendable, never in LOOK_Post, so the judge path cannot inherit
+  it. Same one-rig/flags-off discipline as everything else.
+- **Judged IN MOTION.** Analog artifacts are temporal (noise dances,
+  wobble drifts) and scanlines can moiré against mullions and coursing
+  during arcs — verdicts come from a motion clip through the reel
+  pipeline plus stills, at off/subtle/visible intensities.
+- **Interaction with DOF:** the reader wanted lens character but less
+  blur; analog texture is an alternate carrier of "a camera existed" —
+  test the feed layer and aperture together, since it may buy back blur.
+- Legibility rule stays senior: if the layer ever fights economy cues or
+  practicals, the layer loses.
+- **Zero is byte-identical** (DESIGN, accepted): master intensity 0 must
+  produce a frame byte-identical to no-layer-at-all, proven by capture
+  diff, not assumed. And **every frame's sidecar stamps the intensity**,
+  the way cap2 stamps the lens mode — a feed frame and a show frame are
+  the same file type and look like the same kind of evidence; that trap
+  already has one entry in cap2 and does not get a second one layer up.
+- **The layer is, functionally, defect-hiding** (DESIGN, on the record):
+  everything this week's instruments caught — weave tiling, solid quads,
+  coplanar shimmer, missing trim — is the class of fault a soft analog
+  overlay obscures. Safe while judge is the acceptance path; what a
+  COLD READER sees is therefore an explicit owner decision, recorded
+  below when made, not a per-session choice.
+- **Reader exposure (owner, 2026-08-29): BOTH, LABELED.** Readers see
+  judge frames first, feed-layered frames second, and are told which is
+  which. Preserves the defect-finding instrument and cold-reads the
+  layer itself. Feed-only reader frames are prohibited.
+
+Status: **SHELVED (owner, 2026-08-29)** after the A/B/C delivery — "it
+needs refinement and we're not there yet." The prototype is complete and
+parked, not discarded: M_FeedLayer / MI_FeedLayer exist with their
+generation scripts (mk_feedlayer.py, mk_feedvolume.py — rerunnable), the
+LOOK_Feed volume was removed from the level, and the A/B/C footage
+(stills + motion at off/0.35/0.70) is the reference for what "refinement"
+means when this reopens. All spec guarantees above were implemented and
+verified: zero-position noise-floor-equivalent, judge path untouched,
+one master scalar.
+
 ## Prototype plan (when the owner hands this over)
 
 - **P0 — the skeleton.** Boom-space pose + stop ladder + cuts + focus-

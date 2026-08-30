@@ -244,6 +244,63 @@ also earned the rule that keeps it fixed.
   fine because <mechanism>" substituted for checking; both retracted. A
   claim about what a fault does or does not touch is judged like any other
   measurement: from the artifact, not from the diagnosis of record.
+- **Assert the level before any destructive level action** (2026-08-29,
+  demonstrated, not hypothetical): an owner-approved remove-and-resave
+  script ran seconds after the owner switched the loaded level at the
+  GUI; a one-line `assert world.get_name() == ...` was the only thing
+  that stopped it deleting the correct actor from the correct level. The
+  loaded level is user-controlled GLOBAL state that can change between
+  writing a script and running it. Companion, same weekend: **"temporary"
+  is not a category the guard rule recognises** — an exploratory mutation
+  run outside rung's guard because it would be reverted is still a
+  mutation; the rule is "anything that mutates", with no exploratory
+  tier. And **a convenient accessor returning something plausible is not
+  a measurement**: get_actor_bounds inflated a shed's width by its
+  neighbour's extent and nearly set a framing-doctrine question on the
+  wrong building; per-mesh bounds against world transforms was the real
+  number. Same family as the name-keyed lookup. Related, same day, three instances of
+  one failure: **the message was on screen and nothing was reading it** —
+  a TOOL-ERROR string fed to a JSON parser, a single CPU sample over-read
+  as "loading" while the editor sat at the project browser, and rung's
+  own "[guard] ... /Game/Maps/<level>" line discarded by a grep filter
+  while both sessions reasoned about the wrong level for an hour. Filters
+  you write are instruments too: a grep that drops the guard line is the
+  TOOL-ERROR swallow wearing your own initials.
+- **THE LAPPED-SPAN FAMILY** (named 2026-08-29, on the third instance):
+  a run that spans its neighbours' OUTER faces instead of butting between
+  them. Parapet ring (both back corners built twice on all 548), coping
+  ring (two rejected attempts before has_flank_cap), timber reveal head
+  (spanning ox0-14..ox1+14, lapping its own jambs at every opening's top
+  corners - 1,479 pairs, the entire recipe-shaped census tail). Three
+  fixes, one sentence each time: FOUR STRIPS CUT TO LENGTH AND BUTTED,
+  NOT LAPPED AT THE CORNER. Fixed three times before being seen as one
+  thing; if a fourth instance exists, nothing in the current process
+  finds it except another accident - so the family needs a DETECTOR (a
+  census query for runs whose extent equals a neighbour pair's outer
+  span), owed by the design session, not another incident report.
+- **THE CROWN-COLLAPSE FAMILY** (closed 2026-08-30): any course series
+  driven by `(1.0 - t*t) ** 0.5` collapses to zero width at t = 1 — the
+  ellipse inset equals the half-span and both edges land on the midpoint.
+  Two instances (market arch, found by eye; deco3 relieving arch, found
+  by a degeneracy sweep), both now capped to a keystone course, which is
+  what the top of a real arch looks like anyway. The family's detector
+  is a GREP for the expression: run 2026-08-30, exactly two hits, both
+  guarded — closed by search, not by waiting for a third accident. When
+  a fault family has a syntactic signature, grep IS the detector; a
+  sweep is for families that only geometry can reveal.
+- **Prefer a WITHIN-FRAME control, and state your settle criterion**
+  (2026-08-30). FOUR measurements went wrong in one day and every one was
+  a BETWEEN-SUBJECT comparison in a scene that drifts: the grass alpha
+  cutoff's "improvement" was its control moving; the tree-card "1.57x
+  instability" vanished (0.97x) when canopy and wall were measured in the
+  SAME frames; and the drift itself was live the whole time - both
+  patches decayed in lockstep 0.8 -> 0.45 and did not flatten until
+  frame 8, so a 4-frame settle was not settled and everything before it
+  measured Lumen convergence wearing the experiment's label. Two subjects
+  in one frame share their lighting, their convergence state and their
+  exposure; two frames share nothing you have not proven. And "settled"
+  is a CRITERION you state (delta flat across N frames), not a wait you
+  guessed.
 - **When every arm of a sweep agrees, doubt the instrument before
   accepting the result.** Twice a suspiciously flat table meant the
   metric was not looking at the subject - once measuring frame centre to
@@ -289,6 +346,43 @@ also earned the rule that keeps it fixed.
   acceptance rig is ONE BUILDING PER STOCK UNDER TEST, chosen because its
   WALL is the material being judged - never the building listing the most
   stocks (ACCEPT_Modern lists seven and shows two at any size).
+
+## The bake policy (owner-adopted 2026-08-30)
+
+Answering the owner's own question after four waves in two days: yes, it
+was a rebake treadmill — fix a mechanism, bake, census, find the next,
+bake again. Every mechanism that week was found OFFLINE in sink data in
+seconds; not one was found in a baked mesh. Baking is needed to SEE a
+fix, never to FIND one. Therefore:
+
+- **Fixes batch offline**, census after each. Per-mechanism offline
+  proofs (union rasters, box counts, known-answer checks) stay MANDATORY
+  — a batched look confirms, it does not discover.
+- **Bake only on a pre-registered trigger**, whichever lands first:
+  (a) a LOOK-RISKY mechanism — any change altering silhouette or
+      material on a shipped surface (fin clamp, proud quoin: yes; a
+      coplanar trim inside a wall: no);
+  (b) the changed-model set exceeds 150;
+  (c) any acceptance, precast confirmation, or reader event approaches.
+- **The staleness ledger is first-class**: HANDOFF carries one line,
+  "MESHES CURRENT THROUGH <commit>", maintained per wave, and the hard
+  rule beside it: **no acceptance or reader frames while stale** — the
+  S16 shape (evidence that looks current) is the hole this closes.
+  **Scope is decided by what the change reaches, not by what list the
+  subject appears on** (2026-08-30): the works sheds were ruled shootable
+  while the catalogue sat six commits stale — but "not in the 548" was
+  not the licensing claim, because the sheds are generator-built too. The
+  licensing claim was MEASURED: build_works byte-identical across the
+  stale span, sharing no helper with any changed builder (ast-level diff,
+  no editor needed). A subject-list argument would have been right by
+  accident and wrong the next time a shared helper moved.
+- **Batched looks ship with a named checklist** (mechanism, model, where
+  to look); a failed look bake-bisects via checkpoint waves.
+- **The regression ledger populates as a side effect** of whatever wave
+  comes next — never as a reason to bake.
+- The treadmill's real cost is EDITOR-WINDOW SERIALIZATION AND ATTENTION
+  (16 min per 156 models — compute is not the scarce resource; the one
+  writer is).
 
 ## Sequencing (owner-approved 2026-08-27)
 

@@ -1931,8 +1931,11 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # ---- base: a heavy horizontal storefront the shaft stands on ----------
     g = mkactor('BLD2_%s_GF' % n, origin, (0.0, yaw, 0.0))
     box(g, 'Wall_Plinth', x0 - 8, x0 + W + 8, -22, D * 0.08, 0, 46); made += 1
+    # one list, so the shopfront bays below derive from where the base piers
+    # ACTUALLY are. Clamped-neighbour family, found by the source audit.
+    BASE_PXS = [min(x0 + k * bw, x0 + W - DECO_PIL_W) for k in range(BAYS + 1)]
     for b in range(BAYS + 1):
-        px = min(x0 + b * bw, x0 + W - DECO_PIL_W)
+        px = BASE_PXS[b]
         box(g, 'Wall_BasePier%d' % b, px - 8, px + DECO_PIL_W + 8,
             -DECO_PROUD - 8, 62, 46, GF - 46); made += 1
     box(g, 'Band_BaseCap', x0 - 16, x0 + W + 16, -DECO_PROUD - 16, 62,
@@ -1954,7 +1957,7 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             box(g, 'Frame_MarqueeHang%d' % k, hx - 5, hx + 5, -mq * 0.5,
                 -mq * 0.5 + 8, GF - 78, GF - 40); made += 1
     for b in range(BAYS):
-        sx0, sx1 = x0 + b * bw + DECO_PIL_W, x0 + (b + 1) * bw
+        sx0, sx1 = BASE_PXS[b] + DECO_PIL_W, BASE_PXS[b + 1]
         if sx1 - sx0 < 80: continue
         box(g, 'Glass_Shop%d' % b, sx0, sx1, 34, 36, 58, GF - 52); made += 1
         box(g, 'Interior_Shop%d' % b, sx0 - 6, sx1 + 6, 48, 54, 50, GF - 48); made += 1
@@ -1998,13 +2001,14 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         # rather than as offices, and it is the cheapest facade in the
         # catalogue - a handful of very large boxes.
         pw = DECO_PIL_W * 1.35
+        GIANT_PXS = [min(x0 + k * bw, x0 + W - pw) for k in range(BAYS + 1)]
         for b in range(BAYS + 1):
-            px = min(x0 + b * bw, x0 + W - pw)
+            px = GIANT_PXS[b]
             box(sh, 'Wall_GiantPier%d' % b, px, px + pw, -DECO_PROUD * 0.55,
                 60, 0.0, ztop + PAR - 20); made += 1
         for b in range(BAYS):
-            rx0 = x0 + b * bw + pw
-            rx1 = x0 + (b + 1) * bw
+            rx0 = GIANT_PXS[b] + pw
+            rx1 = GIANT_PXS[b + 1]
             if rx1 - rx0 < 70:
                 continue
             # the ARCH, stepped: five courses narrowing to the crown, which is
@@ -2072,13 +2076,23 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     zb + FH * dz, zb + FH * dz + th); made += 1
         made += 0
     else:
+      # ONE LIST OF PILASTER POSITIONS, so the bays below can be derived from
+      # where the pilasters ACTUALLY are. The last one is clamped inward to
+      # keep it off the corner, and the bay code measured off the unclamped
+      # grid - the clamped-neighbour fault a fourth time, after the front
+      # pier/window and the flank pilaster/spandrel. 322 pairs.
+      #
+      # It also assumed the FULL pilaster width. FLT halves it, so on every
+      # deco-flats model the bay started 45% of a pier too far in as well.
+      _pilw = DECO_PIL_W * (0.55 if FLT else 1.0)
+      DECO_PXS = [min(x0 + k * bw, x0 + W - _pilw) for k in range(BAYS + 1)]
       for b in range(BAYS + 1):
         # DECO VI - FLATS uses SHALLOW piers and no fluting. A block of flats
         # of this date is not a commercial palace: the piers are a structural
         # rhythm, not an order, and the balcony is what you are meant to see.
-        pilw = DECO_PIL_W * (0.55 if FLT else 1.0)
+        pilw = _pilw
         prd = DECO_PROUD * (0.34 if FLT else 1.0)
-        px = min(x0 + b * bw, x0 + W - pilw)
+        px = DECO_PXS[b]
         box(sh, 'Wall_Pilaster%d' % b, px, px + pilw,
             -prd, 60, GF - 12, ztop + PAR - 26); made += 1
         if FLT:
@@ -2178,7 +2192,7 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             jitter(a)
             continue
         for b in range(BAYS):
-            wx0, wx1 = x0 + b * bw + DECO_PIL_W, x0 + (b + 1) * bw
+            wx0, wx1 = DECO_PXS[b] + _pilw, DECO_PXS[b + 1]
             if wx1 - wx0 < 80: continue
             # spandrel panel between floors, set BACK from the pilaster face
             box(a, 'Frame_Spandrel%d' % b, wx0, wx1, 18, 30, z0, z0 + FH * 0.24); made += 1

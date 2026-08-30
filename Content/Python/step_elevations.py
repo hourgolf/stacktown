@@ -672,7 +672,10 @@ def flank_modern(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
         col_w = 64.0
         for k in range(bays + 1):
             py = min(Y0 + k * bw, Y1 - col_w)
-            b('Wall_Col%d' % k, 0, 62, py, py + col_w, 0, GF)
+            # stops at the soffit's UNDERSIDE, not its top face - the same
+            # fault fixed on the front elevation's arcade. A column that runs
+            # to GF passes through the slab it holds up.
+            b('Wall_Col%d' % k, 0, 62, py, py + col_w, 0, GF - 14)
         b('Wall_Soffit', 0, _g.ARCADE, Y0 - 4, Y1 + 4, GF - 14, GF)
         b('Glass_Shop', _g.ARCADE, _g.ARCADE + 2, Y0 + col_w, Y1 - col_w, 26, GF - 20)
         b('Interior_Shop', _g.ARCADE + 16, _g.ARCADE + 22, Y0 + col_w - 6, Y1 - col_w + 6,
@@ -747,13 +750,16 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     # ---- base --------------------------------------------------------------
     b('Wall_Plinth', -22, 66, Y0 - 8, Y1 + 8, 0, 46)
+    # one list, so the corner shopfront bays derive from where the base piers
+    # ACTUALLY are rather than from the grid the last one was clamped off.
+    BPYS = [min(Y0 + k * bw, Y1 - PW) for k in range(bays + 1)]
     for k in range(bays + 1):
-        py = min(Y0 + k * bw, Y1 - PW)
+        py = BPYS[k]
         b('Wall_BasePier%d' % k, -_g.DECO_PROUD - 8, 62, py - 8, py + PW + 8, 46, GF - 46)
     b('Band_BaseCap', -_g.DECO_PROUD - 16, 62, Y0 - 16, Y1 + 16, GF - 46, GF - 12)
     if corner:
         for k in range(bays):
-            sy0, sy1 = Y0 + k * bw + PW, Y0 + (k + 1) * bw
+            sy0, sy1 = BPYS[k] + PW, BPYS[k + 1]
             if sy1 - sy0 < 80: continue
             b('Glass_Shop%d' % k, 34, 36, sy0, sy1, 58, GF - 52)
             b('Interior_Shop%d' % k, 48, 54, sy0 - 6, sy1 + 6, 50, GF - 48)

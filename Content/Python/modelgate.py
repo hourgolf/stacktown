@@ -35,6 +35,7 @@ pre-archetype gate - archetypes.py proves that against planted defects. An
 exempted rule is SKIPPED WITH AN EXPLICIT LINE in the verdict, never
 silently; an unknown archetype raises, never defaults.
 """
+import collections
 import math
 import sys
 
@@ -826,6 +827,95 @@ def _occluded(v, outward, k, A, B, boxes, skip, tol=COPLANAR_TOL):
                for i in range(3) if i != k):
             return True
     return False
+
+
+def lapped_spans(cs, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP):
+    """Runs that span their neighbours' OUTER faces instead of butting between.
+
+    THE NAMED FAMILY, recorded in POLISH_PROTOCOL after its third instance in
+    one week: the parapet ring's back run over the flank runs, the coping
+    ring's flank cap over the rear cap, and the punched opening's reveal head
+    over its two jambs. Each was found by censusing coplanar pairs and reading
+    the geometry by hand, which is to say each was found by accident. Three
+    accidents is a family; a family gets a detector.
+
+    THE SHAPE: a RUN whose extent on one axis reaches exactly from one
+    neighbour's outer face to another neighbour's outer face, while
+    overlapping both behind it. The fix is always the same sentence - four
+    strips cut to length and BUTTED, not lapped at the corner - so a detector
+    that names the three parts names the edit too.
+
+    SYMMETRIC ONLY, and that discriminator is the whole difference between a
+    detector and a noise generator. The first version returned 2,546 hits
+    over the catalogue and most were correct construction: Wall_Col over
+    Wall_ColBase + Wall_Soffit is a column running from its base to its
+    soffit, which is what a column does. The FAMILY is a RING - a run and two
+    caps that are the SAME construct, meeting at a corner - so both caps must
+    share a name stem. Parapet over two flank runs, coping over two caps,
+    reveal head over two jambs: all symmetric. Column over base and soffit:
+    not, and not a defect.
+
+    Returns (run, capA, capB, axis) triples. This is a SEARCH, not a gate
+    rule: it is O(n^3) in the worst case and is meant to be run over the
+    catalogue when looking for a fourth instance, not on every bake.
+    """
+    import re as _re
+
+    def _stem(n):
+        n = _re.sub(r'_L\d+', '_', str(n))
+        n = _re.sub(r'\d+$', '', n)
+        return _re.sub(r'[LRBFTS]$', '', n)
+    boxes = [(str(c.get('name', '?')), c['aabb']) for c in cs if c.get('aabb')]
+    out = []
+    for k in (0, 1, 2):
+        o1, o2 = [a for a in (0, 1, 2) if a != k]
+        # index candidates by their min and max on k so the run's two ends can
+        # be looked up rather than scanned
+        by_min = collections.defaultdict(list)
+        by_max = collections.defaultdict(list)
+        for i, (n, b) in enumerate(boxes):
+            by_min[round(b[0][k] / tol)].append(i)
+            by_max[round(b[1][k] / tol)].append(i)
+        for ri, (rn, rb) in enumerate(boxes):
+            for ai in by_min.get(round(rb[0][k] / tol), ()):
+                if ai == ri:
+                    continue
+                an, ab = boxes[ai]
+                if ab[1][k] >= rb[1][k] - tol:
+                    continue                      # cap is not shorter: not a cap
+                for bi in by_max.get(round(rb[1][k] / tol), ()):
+                    if bi in (ri, ai):
+                        continue
+                    bn, bb = boxes[bi]
+                    if bb[0][k] <= rb[0][k] + tol:
+                        continue
+                    if ab[1][k] > bb[0][k] + tol:
+                        continue                  # caps must not overlap
+                    ok = True
+                    for cb in (ab, bb):
+                        for o in (o1, o2):
+                            if (min(rb[1][o], cb[1][o])
+                                    - max(rb[0][o], cb[0][o])) < minov:
+                                ok = False; break
+                        if not ok:
+                            break
+                    # AND THEY MUST LIE IN ONE PLANE. The symmetric filter
+                    # alone still caught a parapet seated on two pilasters -
+                    # a vertical element spanning two supports it rests on,
+                    # which is correct construction. A RING is flat: its run
+                    # and both caps share the ring's thickness, so on at
+                    # least one of the two remaining axes all three have the
+                    # same extent. Parapet ring shares z; coping ring shares
+                    # z; reveal head and jambs share y. Parapet-on-pilasters
+                    # shares neither, and is not a ring.
+                    flat = any(abs(rb[0][o] - ab[0][o]) < tol
+                               and abs(rb[1][o] - ab[1][o]) < tol
+                               and abs(rb[0][o] - bb[0][o]) < tol
+                               and abs(rb[1][o] - bb[1][o]) < tol
+                               for o in (o1, o2))
+                    if ok and flat and _stem(an) == _stem(bn):
+                        out.append((rn, an, bn, 'xyz'[k]))
+    return out
 
 
 def visible_coplanar_pairs(cs, ground=None, cap=None, **kw):

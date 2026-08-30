@@ -1472,7 +1472,11 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             pz0 + 8, pz0 + 190); made += 1
         box(r, 'Frame_PentDoorR', dx + 54, dx + 66, py0 - 4, py0 + 6,
             pz0 + 8, pz0 + 190); made += 1
-        box(r, 'Frame_PentDoorH', dx - 66, dx + 66, py0 - 4, py0 + 6,
+        # BETWEEN THE JAMBS. Fifth and last instance of the lapped-span
+        # family, and like the fourth it was found by lapped_spans rather
+        # than by eye. Head ran dx-66..dx+66, exactly the jambs' outer faces.
+        # The jambs already reach pz0+190, so the union is unchanged.
+        box(r, 'Frame_PentDoorH', dx - 54, dx + 54, py0 - 4, py0 + 6,
             pz0 + 180, pz0 + 190); made += 1
         box(r, 'Timber_PentStep', dx - 90, dx + 90, py0 - 44, py0 - 6,
             ztop + 9, ztop + 22); made += 1
@@ -2159,13 +2163,26 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 bd_ = 100.0
                 box(a, 'Band_DBalc%d_%d' % (f, b), wx0 - 10, wx1 + 10,
                     -bd_, 16, wz0 - 20, wz0 + 4); made += 1
-                box(a, 'Wall_DBalcFront%d_%d' % (f, b), wx0 - 10, wx1 + 10,
+                # RUNS BETWEEN THE ENDS. Found by lapped_spans, which is the
+                # detector written after the same mechanism turned up three
+                # times by hand - parapet ring, coping ring, reveal head.
+                # This is the fourth, and the first one nothing found by
+                # accident: the front spanned wx0-10..wx1+10, exactly the
+                # ends' outer faces, so every deco balcony lapped its own
+                # returns at both corners.
+                #
+                # The ends are extended to the front's outer face BEFORE the
+                # front is trimmed, because the front projects 10 uu further
+                # out than they did - trimming alone would open the balcony's
+                # outer corners. Same resolution as the coping ring: carry
+                # the caps through, then run the strip between them.
+                box(a, 'Wall_DBalcFront%d_%d' % (f, b), wx0 + 4, wx1 - 4,
                     -bd_ - 10, -bd_ + 8, wz0 + 4, wz0 + 74); made += 1
                 box(a, 'Accent_DBalcRail%d_%d' % (f, b), wx0 - 15, wx1 + 15,
                     -bd_ - 17, -bd_ + 13, wz0 + 74, wz0 + 88); made += 1
                 for _e in (wx0 - 10, wx1 - 4):
                     box(a, 'Wall_DBalcEnd%d_%d_%d' % (f, b, int(_e)),
-                        _e, _e + 14, -bd_, 12, wz0 + 4, wz0 + 74); made += 1
+                        _e, _e + 14, -bd_ - 10, 12, wz0 + 4, wz0 + 74); made += 1
         jitter(a)
 
     # ---- roof: STEPPED parapet, the deco silhouette -----------------------

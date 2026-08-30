@@ -27,7 +27,7 @@ say so.
 
 ## 2. Current state
 
-**MESHES CURRENT THROUGH d30dc8b** (staleness ledger, maintained per bake
+**MESHES CURRENT THROUGH d90957f** (staleness ledger, maintained per bake
 wave under the 2026-08-30 bake policy — POLISH_PROTOCOL "The bake
 policy". HARD RULE: no acceptance or reader frames while this line names
 a commit older than the fix being judged.)

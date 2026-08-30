@@ -253,7 +253,15 @@ def main():
     except Exception as _e:
         print('  baseline ledger unreadable (%s) - judging on budget alone' % _e)
     _m = modelgate.model(spec, as_snapshot(rec, spec)['actors'])
-    _n_coplanar = len(modelgate.visible_coplanar_pairs(modelgate.building_comps(_m)))
+    # THE LEDGERED NUMBER MUST BE THE JUDGED NUMBER. gate_11 exempts scatter
+    # pairs when it judges; taking the raw length here recorded a DIFFERENT
+    # quantity as the regression baseline. Scatter placement is seed-driven,
+    # so the ratchet would have reported growth in exempted grass cards as a
+    # regression on its first real use - and a ledger max of 86 read as a
+    # breach of a budget of 75 that the gate had correctly passed at 42.
+    _pairs = modelgate.visible_coplanar_pairs(modelgate.building_comps(_m))
+    _n_coplanar = sum(1 for _a, _b, _x in _pairs
+                      if not modelgate._scatter_pair(_a, _b))
     ok, findings, facts = modelgate.run(_m)
     print('  gate %s  parts %d  materials %d  %.2f/m2  span %sx%s'
           % ('PASS' if ok else 'FAIL', facts.get('parts', 0),

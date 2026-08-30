@@ -978,9 +978,23 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             for q in range(4):
                 qw = 34.0 if q % 2 else 22.0
                 qz = z0 + (z1 - z0)*q/4.0
+                # A QUOIN WRAPS THE CORNER, so it stands proud on BOTH faces
+                # it meets. It already projected in y - 14 uu forward of the
+                # pier - and sat dead flush in x, which is a corner stone
+                # glued to the front and painted onto the side. That flush
+                # side face against the pier's is the single largest coplanar
+                # mechanism left in the catalogue: 2,168 pairs, 18.1% of the
+                # whole debt, and the pair GATE-11 names first when it refuses
+                # a vernacular.
+                #
+                # 4 uu proud, matching the y projection's own reveal, and it
+                # stays well inside the plot: the pier face sits 78 uu in from
+                # the parcel line, so this oversails nothing. Side projections
+                # would cross into the neighbour and nothing is allowed to do
+                # that - measured before writing it rather than assumed.
                 box(a, 'Wall_Quoin%s%d' % (qs, q),
-                    qx if qs == 'L' else qx - qw,
-                    qx + qw if qs == 'L' else qx,
+                    qx - 4 if qs == 'L' else qx - qw,
+                    qx + qw if qs == 'L' else qx + 4,
                     fy - 14, fy + 26, qz + 4, qz + (z1 - z0)/4.0 - 4); made += 1
         # A RECLAIMED building keeps its holes and gets new glass. `glaze`
         # drops the cill and raises the head so the opening reads bigger in

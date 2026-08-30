@@ -714,6 +714,34 @@ COPLANAR_BUDGET = 75          # visible pairs per model; refuses 25 of 548 at ar
 COPLANAR_BASELINES = {}       # model name -> visible-pair count at last bake
 
 
+# SCATTER ROLES ARE EXEMPT FROM GATE-11, owner's word 30 Aug 2026.
+#
+# A scattered donor prop is judged by its BOUNDING BOX, and for a grass tuft
+# that box is mostly air: 18 triangles of crossed alpha card inside 264 x 269
+# x 52 uu. Two tufts on one flat roof therefore share their top and bottom
+# planes trivially and overlap in plan, and the rule flags them - while the
+# actual cards rarely touch. Intermingling is what scatter IS.
+#
+# 277 pairs across 11 models, and it pushed two vernacular3 tier-5s over
+# budget - a refusal caused by an instrument artefact rather than by anything
+# that renders wrong. Without them those models sit at 35 and 39 against 75.
+#
+# NARROW AND NAMED ON PURPOSE. Only pairs where BOTH parts carry the same
+# scatter role are exempt; a scatter prop against a wall still counts, and a
+# role has to be added here deliberately to join the list. The exemption is
+# PRINTED in the verdict every time it applies - an exemption nobody can see
+# is how a gate quietly stops meaning anything.
+COPLANAR_SCATTER_ROLES = ('GrassCard_',)
+
+
+def _scatter_pair(a, b):
+    """Both parts the same scattered prop role - AABB is air, not surface."""
+    for r in COPLANAR_SCATTER_ROLES:
+        if str(a).startswith(r) and str(b).startswith(r):
+            return r
+    return None
+
+
 COPLANAR_MIN_OVERLAP = 8.0
 
 
@@ -1002,7 +1030,18 @@ def gate_11(m):
     # VISIBLE pairs, not all pairs. 36% of the raw count is boxes sharing
     # undersides on the board or planes with a third box built across them -
     # coincidence the camera never sees. See visible_coplanar_pairs.
-    hits = visible_coplanar_pairs(building_comps(m))
+    raw = visible_coplanar_pairs(building_comps(m))
+    hits, skipped = [], collections.Counter()
+    for h in raw:
+        r = _scatter_pair(h[0], h[1])
+        if r:
+            skipped[r] += 1
+        else:
+            hits.append(h)
+    for r, c in sorted(skipped.items()):
+        print('    GATE-11  exempt %d %s pair(s): scattered props judged by '
+              'bounding box, which is air - no rendered surface is fighting'
+              % (c, r.rstrip('_')))
     n = len(hits)
     name = m['spec'].get('name', '?')
     # THE BASELINE KEY IS NOT THE SPEC NAME. preview.collect names every model
@@ -1147,6 +1186,27 @@ def _t11():
             return False
     finally:
         COPLANAR_BASELINES.pop('PROBE_few', None)
+
+    # SCATTER EXEMPTION: both parts the same scatter role is exempt; the same
+    # geometry under any other role still refuses. Pins that the exemption is
+    # about WHAT the parts are, not about the count being inconvenient.
+    def scat(n, name):
+        return [_c('GrassCard_Tuft%d' % i,
+                   aabb=bx(0.0, 400.0, 0.0, 400.0, float(i), 260.0))
+                for i in range(n)]
+    sp = dict(SPEC); sp['name'] = 'PROBE_scatter'
+    if gate_11(model(sp, [_a('BLD2_Probe_H', scat(30, 'x'))])):
+        return False                       # 435 pairs, all exempt -> passes
+    # the identical fixture under a non-scatter role must still refuse
+    if not gate_11(probe(30, 'PROBE_notscatter')):
+        return False
+    # a scatter prop against a WALL is not exempt - only pairs of scatter
+    mixed = [_c('GrassCard_Tuft0', aabb=bx(0.0, 400.0, 0.0, 400.0, 0.0, 260.0))]
+    mixed += [_c('Wall_%d' % i, aabb=bx(0.0, 400.0, 0.0, 400.0, float(i+1), 260.0))
+              for i in range(30)]
+    smx = dict(SPEC); smx['name'] = 'PROBE_mixed'
+    if not gate_11(model(smx, [_a('BLD2_Probe_H', mixed)])):
+        return False
 
     # NO BASELINE: judged on the budget alone rather than silently skipped.
     return not gate_11(few)

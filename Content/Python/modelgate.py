@@ -1005,11 +1005,17 @@ def gate_11(m):
     hits = visible_coplanar_pairs(building_comps(m))
     n = len(hits)
     name = m['spec'].get('name', '?')
+    # THE BASELINE KEY IS NOT THE SPEC NAME. preview.collect names every model
+    # 'PRE', so keying baselines on it would give all 548 models ONE shared
+    # entry and the regression arm would compare each model against whichever
+    # ran last. Found before wiring the read-back rather than after: the arm
+    # would have fired, looked live, and been nonsense.
+    key = m['spec'].get('baseline_key') or name
     out = []
     # THE VERDICT NAMES THE BAR IT USED. A frame that passed at 75 and one
     # that passed at 30 are not the same claim, and a reader of an old log
     # cannot tell them apart unless the number is in the line.
-    base = COPLANAR_BASELINES.get(name)
+    base = COPLANAR_BASELINES.get(key)
     if base is not None and n > base:
         out.append((name, 'REGRESSION: %d visible coplanar pair(s), was %d - '
                           'a rebuilt model may not increase (no tolerance)'

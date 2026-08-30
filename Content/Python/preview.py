@@ -236,6 +236,22 @@ def main():
 
     # GATE FIRST, on data, before anything is written
     s20_selftest()                     # frame contract proves itself first
+    # SEED THE REGRESSION BASELINE BEFORE JUDGING. GATE-11's "may not
+    # increase, full stop" needs the previous count, and until 30 Aug nothing
+    # loaded one - COPLANAR_BASELINES was written only by the gate's own
+    # self-test, so half the armed contract could not fire. stamp.py keeps
+    # the ledger; this reads it.
+    _asset = recipes.asset_name(rid, tier, w)
+    spec['baseline_key'] = _asset
+    _led = os.path.join(os.path.dirname(os.path.dirname(HERE)),
+                        'Saved', 'coplanar_baselines.json')
+    try:
+        if os.path.exists(_led):
+            _b = json.load(open(_led))
+            if _asset in _b and int(_b[_asset]) >= 0:
+                modelgate.COPLANAR_BASELINES[_asset] = int(_b[_asset])
+    except Exception as _e:
+        print('  baseline ledger unreadable (%s) - judging on budget alone' % _e)
     _m = modelgate.model(spec, as_snapshot(rec, spec)['actors'])
     _n_coplanar = len(modelgate.visible_coplanar_pairs(modelgate.building_comps(_m)))
     ok, findings, facts = modelgate.run(_m)

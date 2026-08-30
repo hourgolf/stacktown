@@ -53,6 +53,19 @@ tags = {
     'BakePath':   str(job.get('bake_path', 'unknown')),
     'Donors':     str(int(job.get('donors', -1))),
     'DonorFails': str(int(job.get('donor_fails', -1))),
+    # GATE-11's per-model count and the budget it was judged against. The
+    # arming contract (0766570) requires this on the asset "so nothing hides
+    # in an aggregate", and it is also the ONLY thing that can make the
+    # regression arm work - "may not increase" needs a number from last time.
+    #
+    # It was missing until 30 Aug. preview.py put coplanar_visible in the job
+    # payload and this dict never carried it through, so the tag was never
+    # written, so nothing could read it back, so the regression half of the
+    # armed gate had no baselines and could not fire on any real model. I
+    # reported the stamp as working because I had checked the JOB and not the
+    # ASSET - the input, not the artifact.
+    'Coplanar':       str(int(job.get('coplanar_visible', -1))),
+    'CoplanarBudget': str(int(job.get('coplanar_budget', -1))),
 }
 for k, v in tags.items():
     unreal.EditorAssetLibrary.set_metadata_tag(sm, PREFIX + k, v)
@@ -64,6 +77,27 @@ bad = [k for k in tags if back[k] != tags[k]]
 if bad:
     raise SystemExit('stamp: wrote %s but read back %s'
                      % ({k: tags[k] for k in bad}, {k: back[k] for k in bad}))
-print('  STAMPED %s  gate=%s parts=%s mats=%s density=%s'
+# THE BASELINE LEDGER, written by the same code that writes the tag so the
+# two cannot disagree. The gate needs the previous count at JUDGE time, which
+# is before any editor call in the fastbake path - reading it back off the
+# asset would cost a round trip per model. One writer, two outputs.
+import os as _os
+# PROJECT PATH FROM UNREAL, not from __file__. rung.sh concatenates the guard
+# and the script into a temp file before running it, so __file__ here is
+# /var/folders/... and deriving the project root from it wrote the ledger into
+# the system temp directory - where preview.py would never find it, and the
+# regression arm would have stayed dead while looking wired.
+_led = _os.path.join(unreal.Paths.convert_relative_path_to_full(
+    unreal.Paths.project_saved_dir()), 'coplanar_baselines.json')
+try:
+    _prev = json.load(open(_led)) if _os.path.exists(_led) else {}
+except Exception:
+    _prev = {}
+_prev[path.rsplit('/', 1)[-1]] = int(job.get('coplanar_visible', -1))
+_os.makedirs(_os.path.dirname(_led), exist_ok=True)
+json.dump(_prev, open(_led, 'w'), indent=0, sort_keys=True)
+
+print('  STAMPED %s  gate=%s parts=%s mats=%s density=%s coplanar=%s/%s'
       % (path.rsplit('/', 1)[-1], back['Gate'], back['Parts'],
-         back['Materials'], back['Density']))
+         back['Materials'], back['Density'], back['Coplanar'],
+         back['CoplanarBudget']))

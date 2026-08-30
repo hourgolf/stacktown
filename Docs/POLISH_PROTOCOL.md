@@ -380,6 +380,15 @@ fix, never to FIND one. Therefore:
   to look); a failed look bake-bisects via checkpoint waves.
 - **The regression ledger populates as a side effect** of whatever wave
   comes next — never as a reason to bake.
+- **EVERY WAVE IS FOLLOWED BY AN S17 SWEEP before any frame is taken
+  anywhere** (added 2026-08-30, after the full wave nulled 225 of 228
+  placed references in Sandbox_Bench — essentially every placed actor in
+  the bench, caught only because the check ran before framing).
+  Rebaking nulls placed actor references; this is a POST-WAVE REQUIRED
+  STEP, not a thing to remember. The repair depends on a level
+  inventory (label -> mesh mapping), which is therefore LOAD-BEARING
+  INFRASTRUCTURE: regenerated as part of every wave, never maintained
+  by hand.
 - The treadmill's real cost is EDITOR-WINDOW SERIALIZATION AND ATTENTION
   (16 min per 156 models — compute is not the scarce resource; the one
   writer is).

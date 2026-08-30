@@ -1,0 +1,242 @@
+[
+ {
+  "actor": "STAGE_Street",
+  "comp": "CurbFace",
+  "mesh": "SM_Cw_2480p0_36p0_15p0",
+  "x": 540.0,
+  "y": -448.0,
+  "z": -7.5
+ },
+ {
+  "actor": "STAGE_Street",
+  "comp": "Road",
+  "mesh": "SM_Cw_2480p0_684p0_15p0",
+  "x": 540.0,
+  "y": -808.0,
+  "z": -22.5
+ },
+ {
+  "actor": "STAGE_Street",
+  "comp": "Sidewalk",
+  "mesh": "SM_Cw_2480p0_424p0_15p0",
+  "x": 540.0,
+  "y": -218.0,
+  "z": -7.5
+ },
+ {
+  "actor": "LAMP_Hero0",
+  "comp": null,
+  "x": 3500.0,
+  "y": -22130.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero1",
+  "comp": null,
+  "x": 4950.0,
+  "y": -23370.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero2",
+  "comp": null,
+  "x": 6400.0,
+  "y": -22130.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero3",
+  "comp": null,
+  "x": 7850.0,
+  "y": -23370.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero4",
+  "comp": null,
+  "x": 9300.0,
+  "y": -22130.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero5",
+  "comp": null,
+  "x": 10750.0,
+  "y": -23370.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero6",
+  "comp": null,
+  "x": 12200.0,
+  "y": -22130.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero7",
+  "comp": null,
+  "x": 13650.0,
+  "y": -23370.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero8",
+  "comp": null,
+  "x": 15100.0,
+  "y": -22130.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "LAMP_Hero9",
+  "comp": null,
+  "x": 16550.0,
+  "y": -23370.0,
+  "z": -102.0,
+  "yaw": 0.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Planter_Pot15",
+  "mesh": "SM_Flower_Pot",
+  "x": 15475.7,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Planter_Pot7",
+  "mesh": "SM_Flower_Pot",
+  "x": 9399.3,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Bike1",
+  "mesh": "SM_Bicycle_01",
+  "x": 4718.7,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Bike9",
+  "mesh": "SM_Bicycle_01",
+  "x": 10956.6,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Hydrant11",
+  "mesh": "SM_hydrant",
+  "x": 12522.4,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Hydrant3",
+  "mesh": "SM_hydrant",
+  "x": 6261.2,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Mailbox12",
+  "mesh": "SM_mailbox_1",
+  "x": 13181.9,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Mailbox4",
+  "mesh": "SM_mailbox_1",
+  "x": 7039.5,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Meter13",
+  "mesh": "SM_parking_meter",
+  "x": 13837.5,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Meter5",
+  "mesh": "SM_parking_meter",
+  "x": 7852.0,
+  "y": -22170.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Phone14",
+  "mesh": "SM_public_phone",
+  "x": 14771.4,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Phone6",
+  "mesh": "SM_public_phone",
+  "x": 8621.2,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Rack10",
+  "mesh": "SM_bike_rack",
+  "x": 11655.5,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Rail_Rack2",
+  "mesh": "SM_bike_rack",
+  "x": 5410.1,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Timber_Bench0",
+  "mesh": "SM_bench_02",
+  "x": 3900.0,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Timber_Bench16",
+  "mesh": "SM_bench_02",
+  "x": 16350.3,
+  "y": -23330.0,
+  "z": -102.0
+ },
+ {
+  "actor": "HERO_Props",
+  "comp": "Timber_Bench8",
+  "mesh": "SM_bench_02",
+  "x": 10254.2,
+  "y": -23330.0,
+  "z": -102.0
+ }
+]

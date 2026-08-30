@@ -1,0 +1,20 @@
+{
+ "frame": "board_check",
+ "mode": "judge",
+ "fov_deg": 28.84,
+ "optic": "70mm gate",
+ "transform": {
+  "x": 11200.0,
+  "y": -26250.0,
+  "z": 570.0,
+  "pitch": -4.0,
+  "yaw": 90.0,
+  "roll": 0.0
+ },
+ "subject": "contamination eyes-check, not a read frame",
+ "NOT_GATE_ADMISSIBLE": true,
+ "admissibility": "READ frame - dressed street, vehicles deliberate; never gate evidence",
+ "staleness_head": "31b03b5",
+ "room": "self-lit M_StudioWall (unlit, GI-inert), fills deleted",
+ "grain": "off"
+}

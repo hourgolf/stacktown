@@ -1909,6 +1909,7 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 # Same depth budget as every other style: 0..60, core front at 62.
 # ---------------------------------------------------------------------------
 DECO_PIL_W = 76.0        # pilaster width
+DECO_CORNER_WRAP = 4.0   # how far an END pilaster wraps its corner
 DECO_PROUD = 50.0        # how far it stands off the window plane
 DECO_GLAZE = 40.0
 DECO_FLUTE = 11.0
@@ -2030,6 +2031,11 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             for k in range(5):
                 t = (k + 1) / 5.0
                 ins = (rx1 - rx0) * 0.5 * (1.0 - (1.0 - t * t) ** 0.5)
+                # at t=1 the sqrt term is 0, the inset becomes the full half
+                # span and both edges land on the midpoint - a zero-width
+                # crown. Cap it so the top course stays a 12 uu keystone,
+                # same fix the market arch already carries.
+                ins = min(ins, (rx1 - rx0) * 0.5 - 6.0)
                 box(sh, 'Wall_Arch%d_%d' % (b, k), rx0 + ins, rx1 - ins,
                     -6, 54, ztop - 40 - ah + ah * t * 0.98,
                     ztop - 40 - ah + ah * (t + 0.22)); made += 1
@@ -2105,7 +2111,15 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         pilw = _pilw
         prd = DECO_PROUD * (0.34 if FLT else 1.0)
         px = DECO_PXS[b]
-        box(sh, 'Wall_Pilaster%d' % b, px, px + pilw,
+        # The END pilasters stand on the elevation's own corner, which is
+        # also where the stepped parapet's end boundary and the ParapetL/R
+        # return land - three members sharing one plane with nothing outboard
+        # to bury it. A corner pilaster carries more weight than an
+        # intermediate one, so let it wrap: 4 uu proud in x gives each member
+        # its own face and closes part of the corner seam.
+        box(sh, 'Wall_Pilaster%d' % b,
+            px - (DECO_CORNER_WRAP if b == 0 else 0.0),
+            px + pilw + (DECO_CORNER_WRAP if b == BAYS else 0.0),
             -prd, 60, GF - 12, ztop + PAR - 26); made += 1
         if FLT:
             continue
@@ -2261,14 +2275,29 @@ def build_deco(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # step is a per-tier parameter: a showroom gets a flat coping, a beacon
     # gets a ziggurat. That is the same lever the vernacular cornice pulls.
     cs = float(spec.get('crown_step', 1.9))
+    # The pilasters stand on the CLAMPED grid; taking the raw grid here put
+    # every parapet segment's face exactly on a pilaster's face - the same
+    # clamped-neighbour fault as the spandrels. Step at the pilaster CENTRE:
+    # no shared plane, and the change of height is hidden behind the member,
+    # which is where a modelmaker puts a joint. The ends stay on the corners.
+    _pw = DECO_PIL_W * (0.55 if FLT else 1.0)
+    _pxs = [min(x0 + k * bw, x0 + W - _pw) for k in range(BAYS + 1)]
+    bnd = [x0] + [_pxs[k] + _pw * 0.5 for k in range(1, BAYS)] + [x0 + W]
+    steps = []
     for b in range(BAYS):
-        px0, px1 = x0 + b * bw, x0 + (b + 1) * bw
         d = abs(b - mid)
-        f = 1.0 + (cs - 1.0) * (1.0 if d == 0 else (0.55 if d == 1 else
-                                                   (0.24 if d == 2 else 0.0)))
-        step = PAR * f
+        steps.append(PAR * (1.0 + (cs - 1.0)
+                            * (1.0 if d == 0 else (0.55 if d == 1 else
+                                                   (0.24 if d == 2 else 0.0)))))
+    for b in range(BAYS):
+        px0, px1 = bnd[b], bnd[b + 1]
+        step = steps[b]
         box(r, 'Wall_Parapet%d' % b, px0, px1, -18, 34, ztop, ztop + step); made += 1
-        box(r, 'Band_Cap%d' % b, px0 - 8, px1 + 8, -28, 42,
+        # a coping stone oversails a STEP; against a neighbour at the same
+        # height there is nothing to oversail and the two share 16 uu.
+        lo = px0 - 8 if (b == 0 or steps[b - 1] != step) else px0
+        hi = px1 + 8 if (b == BAYS - 1 or steps[b + 1] != step) else px1
+        box(r, 'Band_Cap%d' % b, lo, hi, -28, 42,
             ztop + step, ztop + step + 16); made += 1
     box(r, 'Wall_ParapetL', x0, x0 + 26, 30, D, ztop, ztop + PAR - 18); made += 1
     box(r, 'Wall_ParapetR', x0 + W - 26, x0 + W, 30, D, ztop, ztop + PAR - 18); made += 1

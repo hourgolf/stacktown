@@ -65,7 +65,7 @@ def shoot(label, centre, dist, out):
             break
     cap2.VIEWS['_pt'] = (loc, rot)
     for _ in range(12):
-        cap2.capture(out, '_pt', fov=False)
+        cap2.capture(out, '_pt')
     im = img.load(out)
     x0, x1 = int(im.w*0.35), int(im.w*0.65)
     y0, y1 = int(im.h*0.35), int(im.h*0.65)

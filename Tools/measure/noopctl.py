@@ -73,7 +73,7 @@ def shoot(tag, out, reps=14):
             break
     cap2.VIEWS['_n'] = (loc, rot)
     for _ in range(reps):
-        cap2.capture(out, '_n', fov=False)
+        cap2.capture(out, '_n')
     return img.load(out)
 
 

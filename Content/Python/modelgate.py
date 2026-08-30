@@ -770,7 +770,25 @@ def coplanar_pairs(cs, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP, cap=None):
     Sorted sweep with a break, not the O(n^2) pair loop: a building carries
     ~640 boxes and the gate runs over hundreds of models.
     """
-    boxes = [(str(c.get('name', '?')), c['aabb']) for c in cs if c.get('aabb')]
+    boxes = _cop_boxes(cs)
+    return [(boxes[a][0], boxes[b][0], 'xyz'[k])
+            for a, b, k in _coplanar_idx(boxes, tol, minov, cap)]
+
+
+def _cop_boxes(cs):
+    """(name, aabb) in a fixed order. The ONLY place this list is built.
+
+    Component names are not unique - a plinth ring is four boxes all called
+    Wall_Plinth - so anything that needs geometry back from a reported pair
+    must carry the index, never the name. A name-keyed lookup silently
+    returns whichever box came last.
+    """
+    return [(str(c.get('name', '?')), c['aabb']) for c in cs if c.get('aabb')]
+
+
+def _coplanar_idx(boxes, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP,
+                  cap=None):
+    """The sweep itself, reported as (index, index, axis)."""
     seen, out = set(), []
     for k in (0, 1, 2):
         o1, o2 = [a for a in (0, 1, 2) if a != k]
@@ -793,7 +811,7 @@ def coplanar_pairs(cs, tol=COPLANAR_TOL, minov=COPLANAR_MIN_OVERLAP, cap=None):
                     if key in seen:
                         continue            # a coincident pair fights on all
                     seen.add(key)           # three axes; report it once
-                    out.append((na, nb, 'xyz'[k]))
+                    out.append((order[ai], order[bi], k))
                     if cap and len(out) >= cap:
                         return out
     return out
@@ -953,16 +971,18 @@ def visible_coplanar_pairs(cs, ground=None, cap=None, **kw):
     on. The board is an opaque occluder that is not one of the building's own
     components, so it has to be supplied rather than discovered.
     """
-    boxes = [(str(c.get('name', '?')), c['aabb']) for c in cs if c.get('aabb')]
+    boxes = _cop_boxes(cs)
     if not boxes:
         return []
     if ground is None:
         ground = min(b[1][0][2] for b in boxes)
-    idx = {n: i for i, (n, _) in enumerate(boxes)}
     out = []
-    for na, nb, ax in coplanar_pairs(cs, cap=None, **kw):
-        A, B = boxes[idx[na]][1], boxes[idx[nb]][1]
-        skip = {idx[na], idx[nb]}
+    for ia, ib, k0 in _coplanar_idx(boxes, kw.get('tol', COPLANAR_TOL),
+                                    kw.get('minov', COPLANAR_MIN_OVERLAP)):
+        na, A = boxes[ia]
+        nb, B = boxes[ib]
+        ax = 'xyz'[k0]
+        skip = {ia, ib}
         # EVERY shared plane, not just the reported one. coplanar_pairs
         # dedupes a pair to the first axis it finds it on, so a pair that
         # fights on two planes arrives labelled with one; judging only that

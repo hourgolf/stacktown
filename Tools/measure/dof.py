@@ -89,8 +89,13 @@ HERO = dict(fstop=2.8, sensor=400.0, blades=8, shutter=240.0, iso=1568.0)
 
 def hero(focus):
     """The default hero look, focused at `focus` uu from the camera."""
+    # every key from HERO, ISO included. Dropping iso here left the shot at
+    # whatever ISO was current - 800 after a reset(), ~a stop under the 1568
+    # the hero look is specified at. Same fault lensrig carried with a
+    # literal 800; if a key is in HERO it gets passed, no exceptions.
     set_dof(HERO['fstop'], focus, blades=HERO['blades'],
-            sensor=HERO['sensor'], shutter=HERO['shutter'])
+            sensor=HERO['sensor'], shutter=HERO['shutter'],
+            iso=HERO['iso'])
 
 
 def reset(fstop=4.0, shutter=60.0, iso=800.0):

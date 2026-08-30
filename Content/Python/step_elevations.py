@@ -756,7 +756,10 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     for k in range(bays + 1):
         py = BPYS[k]
         b('Wall_BasePier%d' % k, -_g.DECO_PROUD - 8, 62, py - 8, py + PW + 8, 46, GF - 46)
-    b('Band_BaseCap', -_g.DECO_PROUD - 16, 62, Y0 - 16, Y1 + 16, GF - 46, GF - 12)
+    # the front and rear caps oversail the corner by 16 in x; the flank
+    # butts into them rather than running its own 16 through the same
+    # corner. Y0/Y1 are the front and rear caps' inner faces.
+    b('Band_BaseCap', -_g.DECO_PROUD - 16, 62, Y0, Y1, GF - 46, GF - 12)
     if corner:
         for k in range(bays):
             sy0, sy1 = BPYS[k] + PW, BPYS[k + 1]
@@ -779,7 +782,11 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # models, the largest mechanism left.
     pys = [min(Y0 + k * bw, Y1 - PW) for k in range(bays + 1)]
     for k, py in enumerate(pys):
-        b('Wall_Pilaster%d' % k, -_g.DECO_PROUD, 60, py, py + PW, GF - 12, ztop + PAR - 26)
+        # end pilasters wrap the corner - see the note on the front face
+        b('Wall_Pilaster%d' % k, -_g.DECO_PROUD, 60,
+          py - (_g.DECO_CORNER_WRAP if k == 0 else 0.0),
+          py + PW + (_g.DECO_CORNER_WRAP if k == bays else 0.0),
+          GF - 12, ztop + PAR - 26)
         for j in (1, 2):
             fy = py + PW * j / 3.0
             b('Band_Flute%d_%d' % (k, j), -_g.DECO_PROUD - 9, -_g.DECO_PROUD + 4,
@@ -807,11 +814,22 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     # ---- stepped parapet returns round the corner --------------------------
     mid = bays // 2
+    steps = [PAR * (1.9 if k == mid else (1.35 if abs(k - mid) == 1 else 1.0))
+             for k in range(bays)]
+    # same clamped-neighbour fault as the front: the pilasters stand on pys,
+    # so a segment taken off the raw grid starts on a pilaster's face. Step
+    # at the pilaster centre; ends stay on the corners.
+    bnd = [Y0] + [pys[k] + PW * 0.5 for k in range(1, bays)] + [Y1]
     for k in range(bays):
-        py0, py1 = Y0 + k * bw, Y0 + (k + 1) * bw
-        step = PAR * (1.9 if k == mid else (1.35 if abs(k - mid) == 1 else 1.0))
+        py0, py1 = bnd[k], bnd[k + 1]
+        step = steps[k]
         b('Wall_Parapet%d' % k, -18, 34, py0, py1, ztop, ztop + step)
-        b('Band_Cap%d' % k, -28, 42, py0 - 8, py1 + 8, ztop + step, ztop + step + 16)
+        # oversail only where the cap actually steps. Two caps at the SAME
+        # height each reaching 8 past the boundary share both y faces and
+        # fight over 16 uu; at a step there is no z overlap to fight over.
+        lo = py0 - 8 if (k == 0 or steps[k - 1] != step) else py0
+        hi = py1 + 8 if (k == bays - 1 or steps[k + 1] != step) else py1
+        b('Band_Cap%d' % k, -28, 42, lo, hi, ztop + step, ztop + step + 16)
     print('  ELEV_%s_%s [deco%s]: %d boxes'
           % (n, face, ', corner' if corner else '', made))
     return made

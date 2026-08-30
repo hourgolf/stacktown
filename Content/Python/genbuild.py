@@ -1531,10 +1531,10 @@ def build_vernacular(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             # 'StaticMesh1', which lands on WorldGridMaterial and trips
             # GATE-01/02/06 together. Invisible until piece() started actually
             # placing donors; the gate caught it on the first bake that could.
-            for _pi, (key, (dx, dy, dz), _dyaw) in enumerate(_av.downpipe(
+            for _pi, (key, (dx, dy, dz), _dyaw, _dsc) in enumerate(_av.downpipe(
                     36.0, ztop - 20.0, _sx, -18.0, rnd)):
                 piece(r, rolemap.donor_name(_av.mat(key), 'Pipe%d_%d_%d' % (int(_sx), int(dz), _pi)), _av.path(key),
-                      (dx, dy, dz), (0.0, 0.0, 0.0), mat=_av.mat(key))
+                      (dx, dy, dz), (0.0, 0.0, 0.0), scale=_dsc, mat=_av.mat(key))
                 made += 1
 
     # ---- canopy -------------------------------------------------------------

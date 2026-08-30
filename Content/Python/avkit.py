@@ -12,6 +12,8 @@ skill sets ("detail tier must match, at the FABRICATION tier").
 MATERIALS ARE OURS. Every piece is bound through `mat` at placement; the
 donor's own textures never ship.
 """
+import math
+
 MESH = '/Game/AssetsvilleTown/Meshes/'
 OFFICE = MESH + 'InteriorProps/Office/'
 NATURE = MESH + 'Nature/'
@@ -126,11 +128,42 @@ def downpipe(z_bottom, z_top, x, y, rnd):
     out = []
     shoe_h = size('drainpipe_end')[2]          # 60, measured
     z_shoe = z_bottom + shoe_h                 # pivot: bottom lands on z_bottom
-    out.append(('drainpipe_end', (x, y, z_shoe), 0.0))
+    out.append(('drainpipe_end', (x, y, z_shoe), 0.0, 1.0))
+    # THE LAST LENGTH IS CUT TO FIT, which is what you do with a rod.
+    #
+    # The run used to place round((z_top - z_shoe)/seg) whole segments, so the
+    # head landed wherever a whole number happened to reach - short on 140 of
+    # 204 runs across the catalogue by up to 144 uu, which is the owner's
+    # "the downspout doesn't always run all the way to the roof".
+    #
+    # BOTH OBVIOUS FIXES ARE WORSE, and both were tried and measured:
+    #   ceil          covers the target but overshoots by up to 284 uu, and
+    #                 the pipe is IN FRONT of the parapet, not behind it -
+    #                 174 of 204 heads ended up above the roofline.
+    #   anchor at top z_top - n*seg puts the foot up to a segment underground,
+    #                 ~80% of the time. avkit's own selftest caught it on the
+    #                 first run, which is the assertion that exists because
+    #                 this part was once placed 84 uu below the pavement.
+    #
+    # So: whole segments up to the last one, then a final segment scaled in Z
+    # ONLY to make up the remainder. piece() takes a non-uniform scale, so the
+    # pipe keeps its diameter and only its length is cut. Head lands exactly
+    # on z_top every time, foot never leaves the shoe.
+    #
+    # SM_drainPipe is local z 0..300, pivot at the BOTTOM; the shoe is
+    # z -59.8..0, pivot at the TOP. Measured from the assets - that mismatch
+    # is what put the shoe underground the first time.
     seg = size('drainpipe')[2]
-    n = max(1, int(round((z_top - z_shoe) / seg)))
+    span = max(0.0, z_top - z_shoe)
+    n = int(math.floor(span / seg + 1e-6))
     for i in range(n):
-        out.append(('drainpipe', (x, y, z_shoe + i * seg), 0.0))
+        out.append(('drainpipe', (x, y, z_shoe + i * seg), 0.0, 1.0))
+    rem = span - n * seg
+    if rem > 1.0:
+        out.append(('drainpipe', (x, y, z_shoe + n * seg), 0.0,
+                    (1.0, 1.0, rem / seg)))
+    elif n == 0:
+        out.append(('drainpipe', (x, y, z_shoe), 0.0, 1.0))
     return out
 
 
@@ -190,7 +223,15 @@ def _selftest():
         'a 300x180 planter got %d plants and a 300x50 trough got %d - '
         'bed_planting is still laying one row' % (len(deep), len(ps)))
     dp = downpipe(10.0, 900.0, 5.0, 5.0, r)
-    assert len(dp) == 4, dp          # the shoe plus three 300 uu runs
+    # shoe + whole segments + a cut last length: 10..900 is 830 of run,
+    # which is two whole 300s and a 230 remainder, so 4 entries.
+    assert len(dp) == 4, dp
+    _cut = [e for e in dp if e[0] == 'drainpipe' and e[3] != 1.0]
+    assert len(_cut) == 1, ('exactly one cut length', dp)
+    _head = max(e[1][2] + size('drainpipe')[2]
+                * (e[3][2] if isinstance(e[3], tuple) else 1.0)
+                for e in dp if e[0] == 'drainpipe')
+    assert abs(_head - 900.0) < 0.5, ('head lands at %.1f, asked 900' % _head)
     # NOTHING MAY GO BELOW THE FOOT. This is the whole point of the rewrite:
     # the shoe used to sit 84 uu underground and take the model's bounds
     # with it.
@@ -198,7 +239,7 @@ def _selftest():
     shoe = [e for e in dp if e[0] == 'drainpipe_end'][0]
     assert abs((shoe[1][2] + lo_pv) - 10.0) < 0.5, (
         'shoe bottom lands at %.1f, asked for 10.0' % (shoe[1][2] + lo_pv))
-    for k, loc, _y in dp:
+    for k, loc, _y, _sc in dp:
         assert loc[2] + (lo_pv if k == 'drainpipe_end' else 0.0) >= 9.5, (
             '%s reaches below the foot at z=%.1f' % (k, loc[2]))
     # a rejected mesh must never be reachable through the normal accessors

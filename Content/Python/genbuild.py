@@ -1727,8 +1727,21 @@ def build_modern(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         fins = max(2, BAYS)
         for k in range(1, fins):
             fx = gx0 + (gx1 - gx0) * k / float(fins)
+            # THE FIN DIES INTO THE SLAB ABOVE IT, including the roof one.
+            # gz1 is the floor's top, and on the LAST floor that is ztop -
+            # exactly the roof deck's top face - so the topmost fin of every
+            # modern block presented an upward face on the same plane as the
+            # roof surface it passes through. 555 pairs across 141 models, the
+            # largest single mechanism left in the catalogue.
+            #
+            # min() clamps only the top floor: every lower gz1 is already
+            # below the deck, so their fins are untouched and still meet their
+            # own slab exactly as before. The clamp is the deck's UNDERSIDE
+            # (ztop-8), which is where a facade fin stops on every floor below
+            # - the top one was the odd case, not the rule.
             box(a, 'Wall_Fin%d' % k, fx - FIN_W / 2, fx + FIN_W / 2,
-                fy - FIN_PROUD, fy + GLAZE_Y + 7, gz0, gz1); made += 1
+                fy - FIN_PROUD, fy + GLAZE_Y + 7,
+                gz0, min(gz1, GF + F * FH - 8)); made += 1
         mz = gz0 + (gz1 - gz0) * 0.58
         box(a, 'Mullion_RibbonH', gx0, gx1, fy + GLAZE_Y - 9, fy + GLAZE_Y - 3, mz - 3, mz + 3); made += 1
         # OPENING LIGHTS. A sealed ribbon is a curtain wall; a 60s office block

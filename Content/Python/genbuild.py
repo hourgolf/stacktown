@@ -2597,12 +2597,31 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 if ox1 - ox0 > 50:
                     # a punched opening with a DEEP timber reveal - the
                     # shadow a frame building gets instead of a mullion grid
+                    # THE REVEAL STANDS PROUD OF THE INFILL, and the head
+                    # runs BETWEEN the jambs. Both were coplanar faults and
+                    # together they are contemporary2's whole tail - the
+                    # recipe the owner put ahead of the general pair list
+                    # because excluding it the catalogue max falls 208 -> 115.
+                    #
+                    # PROUD: the lining sat at y 18, the same front plane as
+                    # Wall_B_Infill, so a strip of timber glued around an
+                    # opening was flush with the panel it is glued to. 4 uu
+                    # forward gives it the edge the comment above already
+                    # claims it has - the shadow a frame building gets - and
+                    # removes the shared plane.
+                    #
+                    # BETWEEN: the head ran ox0-14..ox1+14, which is exactly
+                    # the jambs' outer faces, so it double-covered both of
+                    # them. Same mechanism as the parapet ring and the coping
+                    # ring before it: four strips cut to length and butted,
+                    # not lapped at the corner. The jambs already span the
+                    # head's full height, so the union is unchanged.
                     box(sh, 'Timber_RevL%d_%d' % (f, b), ox0 - 14, ox0,
-                        18, 62, z0 + 34, z1 - 34); made += 1
+                        14, 62, z0 + 34, z1 - 34); made += 1
                     box(sh, 'Timber_RevR%d_%d' % (f, b), ox1, ox1 + 14,
-                        18, 62, z0 + 34, z1 - 34); made += 1
-                    box(sh, 'Timber_RevHead%d_%d' % (f, b), ox0 - 14, ox1 + 14,
-                        18, 62, z1 - 46, z1 - 34); made += 1
+                        14, 62, z0 + 34, z1 - 34); made += 1
+                    box(sh, 'Timber_RevHead%d_%d' % (f, b), ox0, ox1,
+                        14, 62, z1 - 46, z1 - 34); made += 1
                     box(sh, 'Glass_Punch%d_%d' % (f, b), ox0, ox1, 56, 59,
                         z0 + 34, z1 - 34); made += 1
                     box(sh, 'Interior_Punch%d_%d' % (f, b), ox0, ox1, 64, 70,

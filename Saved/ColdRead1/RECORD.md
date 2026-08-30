@@ -80,3 +80,20 @@ many paints" in fabrication.py's own words. The reader's sentence was an
 accurate description of the material graph. The card_heavy split
 (owner-blessed) is the response; hypothesis (b) remains parked with the
 octave work.
+
+## Informal reader data, 2026-08-28 — logged at its true evidence grade
+
+A side-by-side pick between known alternatives (NOT cold-read protocol:
+the reader knew the frames were alternatives; weaker instrument, real
+signal). Both lens modes of the block frame:
+  - the brick texture is MORE CONVINCING IN JUDGE - "you can actually
+    see it";
+  - the LENSWORK IS PREFERRED IN SHOW, against judge's "infinite focus".
+Reading of record (owner-corrected from a first misreading that nearly
+shipped as a doctrine claim): not a vote against the lens - a vote
+against THIS MUCH BLUR. The camera character is wanted; the current
+f/2-on-400mm depth of field is eating the surface work it exists to
+photograph. This closes read #1's logged gap ("the lens delta stays
+unmeasured"): the lens buys character and costs material, and the two
+are separable by an f-stop nobody has swept - a setting chosen on 25 Aug
+when every surface was one paper and there was nothing to lose to blur.

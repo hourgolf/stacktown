@@ -18,7 +18,8 @@ _lvl = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_worl
 # map lets the rig be sized for the street. streetroom.py additionally refuses
 # to run anywhere BUT that map - it is a purge, and pointed at the bench it
 # would destroy the shelf.
-_ALLOWED = ('Stage1_Building', 'Stage2_Block', 'Sandbox_Bench', 'Stage2_Street')
+_ALLOWED = ('Stage1_Building', 'Stage2_Block', 'Sandbox_Bench',
+            'Stage2_Street', 'TestCity')
 if not any(k in _lvl for k in _ALLOWED):
     raise SystemExit('WRONG LEVEL: %s (allowed: %s)' % (_lvl, ', '.join(_ALLOWED)))
 # Put the repository's own script and tool directories on sys.path. rung.sh

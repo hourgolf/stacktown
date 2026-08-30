@@ -20,6 +20,11 @@ SHARED = {
     # ground roles, for zones that are not buildings
     'Ground_': 'MI_concrete',
     'Grass_': 'MI_grass',
+    # GrassCard_ is the alpha-cut TUFT, Grass_ is the solid lawn box. Two
+    # roles because they are two fabrications: a flock surface and a cut card
+    # standing in it. They were one role until 29 Aug, which put a cutout mesh
+    # on an opaque material and rendered every tuft as a solid quad.
+    'GrassCard_': 'MI_grass_card',
     'Kerbing_': 'MI_paint_cream',
     # a yard is not a car park: the apron is laid concrete, the rest compacted
     # ground. NOT MI_precast_buff - measured, that is (0.745,0.700,0.612)
@@ -180,6 +185,7 @@ ROLE_FOR_MAT = {
     'MI_bloom_warm': 'Bloom_Warm',
     'MI_bloom_cool': 'Bloom_Cool',
     'MI_grass': 'Grass_',
+    'MI_grass_card': 'GrassCard_',
     'MI_gravel': 'Gravel_',
     'MI_wood': 'Timber_',
     'MI_dark_metal': 'Rail_',

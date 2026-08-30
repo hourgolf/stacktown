@@ -112,7 +112,7 @@ ROLES = (
     'Wall_', 'Band_', 'Glass_', 'Interior_', 'Frame_', 'Mullion_',
     'Accent_', 'Roof_', 'Tile_', 'Ground_', 'Gravel_', 'Grass_',
     'Kerbing_', 'Bloom_', 'Rail_', 'Timber_', 'Mural_',
-    'Leaf_', 'Planter_', 'Brick_',
+    'Leaf_', 'Planter_', 'Brick_', 'GrassCard_',
 )
 
 

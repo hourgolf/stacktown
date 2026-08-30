@@ -2541,8 +2541,18 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                     continue
                 box(sh, 'Glass_Blk%d_%d' % (f, c), ox0, ox1, off + 40,
                     off + 43, z0 + FH * 0.24, z1 - FH * 0.12); made += 1
+                # THE INTERIOR SITS INSIDE THE WALL, not flush with its back.
+                # Wall_Block spans off..off+56 and this ended at off+56 too,
+                # so the room lining shared the outer wall's back plane - 42
+                # pairs on contemporary4_t5_w2050, the only model GATE-11
+                # refuses that is not an artefact of scattered props.
+                #
+                # Visually free: the card is seen through glass from OUTSIDE,
+                # so only its front face at off+50 is ever in shot. Moving the
+                # back face 2 uu in changes nothing anyone can see and gives
+                # the wall its own plane back.
                 box(sh, 'Interior_Blk%d_%d' % (f, c), ox0, ox1, off + 50,
-                    off + 56, z0 + FH * 0.24, z1 - FH * 0.12); made += 1
+                    off + 54, z0 + FH * 0.24, z1 - FH * 0.12); made += 1
                 box(sh, 'Frame_BlkHead%d_%d' % (f, c), ox0 - 8, ox1 + 8,
                     off + 32, off + 45, z1 - FH * 0.12 - 8,
                     z1 - FH * 0.12 + 4); made += 1

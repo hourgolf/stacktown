@@ -144,3 +144,33 @@ def _selftest():
 
 
 _selftest()
+
+def producible_walls():
+    """Every wall material the palette can actually put on a building."""
+    return {SCHEMES[n][0] for n in SCHEMES}
+
+
+def undiscoverable_walls(recipe_walls):
+    """Recipe-declared walls no scheme can produce, as {material: [recipes]}.
+
+    THE SILENT-DISCARD CLASS. repaint() maps the slot NAMED after a recipe's
+    declared wall onto scheme['wall'], so a recipe can declare a material and
+    have it replaced by whatever the scheme says - and if NO scheme carries
+    that material, the declaration is discarded with nothing to show for it.
+    Five recipes declare precast walls; no scheme carries precast; those
+    declarations reached nothing on the street and nobody noticed, because a
+    discarded declaration leaves no artifact to look wrong.
+
+    Brick was the visible symptom of the same fault. This makes the invisible
+    case audible: a build warns rather than quietly substituting.
+
+    SCOPED HONESTLY: this concerns buildings placed THROUGH repaint. The block
+    builders in city.py do not call the palette at all and use their declared
+    wall directly, so a material unused here may still be a block's material.
+    """
+    can = producible_walls()
+    out = {}
+    for rid, wall in recipe_walls.items():
+        if wall and wall not in can:
+            out.setdefault(wall, []).append(rid)
+    return {k: sorted(v) for k, v in sorted(out.items())}

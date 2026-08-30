@@ -248,11 +248,11 @@ BLOCKS = [
        abuts_low=False, abuts_high=False, lots=[
      dict(kind='gen', style='works', name='Foundry', x0=0.0, width=1900.0,
           depth=BLOCK_H_DEPTH, floors=1, gf_h=560.0, fl_h=300.0, parapet=60.0,
-          bays=6, wall='MI_precast_grey', roofmat='MI_shingle_grey',
+          bays=6, wall='MI_dist_brick', roofmat='MI_shingle_grey',
           chimney=True, seed=211),
      dict(kind='gen', style='works', name='Depot', x0=1900.0, width=1600.0,
           depth=BLOCK_H_DEPTH, floors=0, gf_h=520.0, fl_h=300.0, parapet=54.0,
-          bays=5, wall='MI_precast_buff', roofmat='MI_shingle_grey',
+          bays=5, wall='MI_dist_brick', roofmat='MI_shingle_grey',
           chimney=False, seed=223),
      dict(kind='vacant', name='Yard', x0=3500.0, width=1500.0,
           depth=BLOCK_H_DEPTH, wall=None, seed=227),

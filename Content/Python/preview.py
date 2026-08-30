@@ -236,7 +236,9 @@ def main():
 
     # GATE FIRST, on data, before anything is written
     s20_selftest()                     # frame contract proves itself first
-    ok, findings, facts = modelgate.run(modelgate.model(spec, as_snapshot(rec, spec)['actors']))
+    _m = modelgate.model(spec, as_snapshot(rec, spec)['actors'])
+    _n_coplanar = len(modelgate.visible_coplanar_pairs(modelgate.building_comps(_m)))
+    ok, findings, facts = modelgate.run(_m)
     print('  gate %s  parts %d  materials %d  %.2f/m2  span %sx%s'
           % ('PASS' if ok else 'FAIL', facts.get('parts', 0),
              facts.get('materials', 0), facts.get('density', 0.0),
@@ -273,6 +275,14 @@ def main():
                # fastbake reads the recorded parts directly, so its donors
                # cannot silently fail the way the live path's did
                'bake_path': 'fastbake',
+               # GATE-11's per-model count and the budget it was judged
+               # against, stamped so nothing hides in an aggregate. A budget
+               # over a distribution you can no longer see per-model is how a
+               # smuggle would actually happen; this is the record that makes
+               # the regression arm possible at all, since "may not increase"
+               # needs a number from last time.
+               'coplanar_visible': _n_coplanar,
+               'coplanar_budget': modelgate.COPLANAR_BUDGET,
                'donors': sum(1 for e in rec if e['kind'] == 'mesh'),
                'donor_fails': 0},
               open(os.path.join(TMP, 'stacktown_stamp_job.json'), 'w'))

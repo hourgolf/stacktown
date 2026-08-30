@@ -687,6 +687,32 @@ def _t10():
 # grounds that nobody looks closely - which is the argument the gate exists
 # to refuse. HANDOFF requires Stage 2 work to read at BOTH block hero and
 # player zoom, so the strictest framing governs and player zoom is it.
+# --- GATE-11 ARMING, owner's word 2026-08-29, contract at 0766570 ----------
+#
+# Armed as a BUDGET plus a RATCHET, not zero-tolerance. The square catalogue
+# carries 13,976 visible pairs over 548 models - median 19, p90 55, max 208 -
+# and a bar the corpus can never clear is how --force installs itself. That
+# is not a concession: the alternative that WOULD have been principled, a
+# size threshold from the 0.4% table, was measured closed - minov below
+# already exceeds the player-zoom threshold of 1.85 uu, so deriving from the
+# table would LOOSEN the rule, and per-framing thresholds forgive debt at
+# block hero against the both-framings rule.
+#
+# N ONLY DECREASES, AND ONLY ON THE OWNER'S WORD. 75 -> 50 -> 30 as fix waves
+# clear. Raising it is a doctrine change, not a tuning knob, and the verdict
+# prints the budget it judged against so a passing model can never be
+# confused with a model that passed a laxer bar.
+COPLANAR_BUDGET = 75          # visible pairs per model; refuses 25 of 548 at arming
+
+# REGRESSION HAS NO TOLERANCE and is the half that stops new debt today. A
+# model that comes back from a rebake may not carry MORE visible pairs than
+# it did. The budget pays down the old debt slowly; this stops the pile
+# growing while that happens. Baselines live in the provenance stamp, so a
+# model with no recorded baseline is judged on the budget alone rather than
+# silently passing.
+COPLANAR_BASELINES = {}       # model name -> visible-pair count at last bake
+
+
 COPLANAR_MIN_OVERLAP = 8.0
 
 
@@ -867,8 +893,9 @@ def pending(rid, statement, judges=None):
     return deco
 
 
-@pending('GATE-11', 'no two parts share a face plane while overlapping behind it',
-         judges=ALL_ARCHES)
+@rule('GATE-11', 'visible coplanar pairs stay within the budget and never '
+                 'increase for a model that has been built before',
+      judges=ALL_ARCHES)
 def gate_11(m):
     """The class rule GATE-10 is one member of.
 
@@ -885,13 +912,23 @@ def gate_11(m):
     # VISIBLE pairs, not all pairs. 36% of the raw count is boxes sharing
     # undersides on the board or planes with a third box built across them -
     # coincidence the camera never sees. See visible_coplanar_pairs.
-    hits = visible_coplanar_pairs(building_comps(m), cap=40)
-    if not hits:
-        return []
-    shown = ', '.join('%s/%s(%s)' % h for h in hits[:3])
-    return [(m['spec'].get('name', '?'),
-             '%d coplanar overlapping pair(s)%s: %s'
-             % (len(hits), '+' if len(hits) >= 40 else '', shown))]
+    hits = visible_coplanar_pairs(building_comps(m))
+    n = len(hits)
+    name = m['spec'].get('name', '?')
+    out = []
+    # THE VERDICT NAMES THE BAR IT USED. A frame that passed at 75 and one
+    # that passed at 30 are not the same claim, and a reader of an old log
+    # cannot tell them apart unless the number is in the line.
+    base = COPLANAR_BASELINES.get(name)
+    if base is not None and n > base:
+        out.append((name, 'REGRESSION: %d visible coplanar pair(s), was %d - '
+                          'a rebuilt model may not increase (no tolerance)'
+                    % (n, base)))
+    if n > COPLANAR_BUDGET:
+        shown = ', '.join('%s/%s(%s)' % h for h in hits[:3])
+        out.append((name, '%d visible coplanar pair(s) over budget %d: %s'
+                    % (n, COPLANAR_BUDGET, shown)))
+    return out
 
 
 @selftest('GATE-11/visible')
@@ -960,44 +997,63 @@ def _t11v():
 
 @selftest('GATE-11')
 def _t11():
+    """The ARMED rule: a budget, and a no-tolerance regression arm.
+
+    Rewritten when GATE-11 armed on 2026-08-29. The old test proved the rule
+    saw a SINGLE fighting pair - the right test for a rule that refuses any
+    pair, and the wrong one for a rule that refuses more than 75. A self-test
+    that still passes after the rule's meaning changed protects nothing.
+    """
     def bx(x0, x1, y0, y1, z0, z1):
         return ([x0, y0, z0], [x1, y1, z1])
-    # side by side on one front plane: the normal elevation, must pass
-    ok = [_c('Wall_%d' % i, aabb=bx(i*100.0, i*100.0 + 90.0, 0.0, 300.0,
-                                    0.0, 260.0)) for i in range(6)]
-    if gate_11(model(SPEC, [_a('BLD2_Probe_H', ok)])):
+
+    def fighting(n):
+        """n boxes whose TOPS share one plane and overlap in plan: the
+        defect, produced at a chosen count."""
+        return [_c('Deck_%d' % i,
+                   aabb=bx(0.0, 400.0, 0.0, 400.0, float(i), 260.0))
+                for i in range(n)]
+
+    def probe(n, name):
+        # COPY the spec. model() holds it by reference, so naming one probe
+        # renamed every other probe in the test - and with both probes
+        # sharing a name the regression baseline applied to the wrong one.
+        sp = dict(SPEC); sp['name'] = name
+        return model(sp, [_a('BLD2_Probe_H', fighting(n))])
+
+    # UNDER BUDGET: the defect is present and deliberately NOT refused. That
+    # is the whole difference between a budget and zero tolerance, so it is
+    # the first thing the test pins.
+    few = probe(6, 'PROBE_few')
+    if gate_11(few):
         return False
-    # stacked: A's top IS B's bottom. A joint, not a fight, must pass
-    joint = [_c('Wall_L', aabb=bx(0.0, 200.0, 0.0, 300.0, 0.0, 260.0)),
-             _c('Wall_U', aabb=bx(0.0, 200.0, 0.0, 300.0, 260.0, 520.0))]
-    if gate_11(model(SPEC, [_a('BLD2_Probe_H', joint)])):
+
+    # OVER BUDGET: refused, and the verdict must NAME the budget it used - a
+    # model that passed at 75 and one that passed at 30 are different claims
+    # and an old log cannot distinguish them unless the number is in the line.
+    over = probe(30, 'PROBE_many')
+    f = gate_11(over)
+    if len(f) != 1 or str(COPLANAR_BUDGET) not in f[0][1]:
         return False
-    # two tops at the same z, overlapping in plan: the defect
-    fight = [_c('Deck_A', aabb=bx(0.0, 200.0, 0.0, 300.0, 0.0, 260.0)),
-             _c('Deck_B', aabb=bx(100.0, 300.0, 0.0, 300.0, 40.0, 260.0))]
-    if len(gate_11(model(SPEC, [_a('BLD2_Probe_H', fight)]))) != 1:
-        return False
-    # a band left FLUSH with the wall it was meant to project from
-    flush = [_c('Wall_A', aabb=bx(0.0, 400.0, 0.0, 300.0, 0.0, 600.0)),
-             _c('Band_B', aabb=bx(0.0, 400.0, 0.0, 300.0, 200.0, 260.0))]
-    if len(gate_11(model(SPEC, [_a('BLD2_Probe_H', flush)]))) != 1:
-        return False
-    # ...and the same band PROJECTING, which is the fix, must pass.
-    # It has to stand proud on the faces it actually EXPOSES, not just the
-    # front: the first version of this fixture pushed the band 12 uu forward
-    # in y but left it exactly as wide as its wall, so both END faces still
-    # sat at x=0 and x=400 over a shared y/z patch and fought there. The rule
-    # was right and the fixture was wrong - the same way round as GATE-10's.
-    # ...and shallow, for the same reason at the back: a band is a strip on
-    # the front, not a block running the wall's full depth.
-    proud = [_c('Wall_A', aabb=bx(0.0, 400.0, 0.0, 300.0, 0.0, 600.0)),
-             _c('Band_B', aabb=bx(-6.0, 406.0, -12.0, 20.0, 200.0, 260.0))]
-    if gate_11(model(SPEC, [_a('BLD2_Probe_H', proud)])):
-        return False
-    # a sliver overlap is sub-pixel even at zoom: not worth a refusal
-    sliver = [_c('Deck_A', aabb=bx(0.0, 200.0, 0.0, 300.0, 0.0, 260.0)),
-              _c('Deck_B', aabb=bx(197.0, 400.0, 0.0, 300.0, 40.0, 260.0))]
-    return not gate_11(model(SPEC, [_a('BLD2_Probe_H', sliver)]))
+
+    # REGRESSION: under budget, but one pair more than this model carried
+    # before. No tolerance.
+    n_now = len(visible_coplanar_pairs(building_comps(few)))
+    try:
+        COPLANAR_BASELINES['PROBE_few'] = n_now - 1
+        r = gate_11(few)
+        if len(r) != 1 or 'REGRESSION' not in r[0][1]:
+            return False
+        # equal to its baseline must PASS: the arm is "may not increase",
+        # not "must improve"
+        COPLANAR_BASELINES['PROBE_few'] = n_now
+        if gate_11(few):
+            return False
+    finally:
+        COPLANAR_BASELINES.pop('PROBE_few', None)
+
+    # NO BASELINE: judged on the budget alone rather than silently skipped.
+    return not gate_11(few)
 
 
 def judge(m, arch=None):

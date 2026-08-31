@@ -13,9 +13,21 @@ import recipes
 
 
 def candidates(width, depth, district=None):
-    """Every recipe that could physically stand on this parcel."""
+    """Every recipe the grammar may CHOOSE for this parcel.
+
+    Not the same set as "every recipe that could physically stand here".
+    CIVIC recipes are excluded outright (owner, 2026-08-31): a core gameplay
+    landmark is sited deliberately, by explicit request, and must never be
+    sprinkled onto a parcel because its dimensions happened to fit. The
+    office fits a 1640..2460 band and appears in none of these lists.
+
+    The filter reads `recipes.AUTO_PLACED` rather than testing for 'civic',
+    so the role vocabulary has exactly one authority.
+    """
     out = []
     for rid, r in sorted(recipes.RECIPES.items()):
+        if r['role'] not in recipes.AUTO_PLACED:
+            continue
         if district and district not in r['district']:
             continue
         if r['fits'](width, depth):
@@ -59,4 +71,23 @@ if __name__ == '__main__':
     rid_lo = pick(1230.0, 700.0, 'commercial', level=0.0, seed=7)[0]
     rid_hi = pick(1230.0, 700.0, 'commercial', level=1.0, seed=7)[0]
     assert rid_lo == rid_hi, 'growing a parcel must not change what stands on it'
+    # --- CIVIC IS NEVER AUTO-PICKED (owner, 2026-08-31) -------------------
+    #
+    # THE KNOWN-ANSWER PAIR, and the second half is the sharp one. Asserting
+    # that office is absent from a parcel it does not FIT would prove nothing
+    # - `fits` would be doing the work and the role filter could be deleted
+    # without this test noticing. So the width below sits INSIDE the office's
+    # own declared band (1640..2460) at a depth it accepts, which is exactly
+    # the case where the two rules disagree: it fits, and it must still never
+    # be offered.
+    assert recipes.RECIPES['office']['fits'](2050.0, 1600.0), \
+        'the sharp case has gone blunt: office no longer fits its own band, ' \
+        'so the assertion below would pass for the wrong reason'
+    assert 'office' not in candidates(2050.0, 1600.0), \
+        'a civic recipe was auto-picked'
+    assert 'office' not in candidates(2050.0, 1600.0, 'mixed'), \
+        'a civic recipe was auto-picked in its own district'
+    # and the positive half: an ordinary parcel still resolves normally
+    assert pick(2050.0, 1600.0) is not None, \
+        'excluding civic must not empty an ordinary parcel'
     print('grammar.py self-check: pass')

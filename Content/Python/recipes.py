@@ -25,6 +25,27 @@ building wearing a shopfront grammar is two buildings pretending to be one.
 know which recipes could stand on it. Pure functions, no Unreal import.
 """
 
+# THE ROLE VOCABULARY, DECLARED ONCE (owner, 2026-08-31).
+#
+#   filler      the street wall - what the grammar reaches for by default
+#   actionable  a building that carries height and intent, still auto-placed
+#   civic       a CORE GAMEPLAY LANDMARK. It is sited DELIBERATELY, by explicit
+#               request, and is NEVER auto-picked: a real estate office is not
+#               something a placer should sprinkle onto a parcel because the
+#               dimensions happened to fit.
+#
+# AUTO_PLACED is the authority `grammar.candidates` filters on. It lives here,
+# beside the roles it names, because the alternative is the string 'civic'
+# written in two files - the two-copies drift this project is bitten by roughly
+# once a session (see rolemap.py's docstring for the last one).
+#
+# Note the deliberate asymmetry: a civic recipe still declares `fits`, and its
+# self-test still holds it to it. FITTING and BEING PICKED are different
+# questions - the office fits a wide band of parcels and must be placeable on
+# any of them BY REQUEST, while never being chosen for one automatically.
+ROLES = ('filler', 'actionable', 'civic')
+AUTO_PLACED = ('filler', 'actionable')
+
 RECIPES = {
     # FILLER. Vernacular is the street-wall building: it fills a block around
     # the buildings that matter and stops at six storeys. CANON slot 5 is
@@ -52,6 +73,20 @@ RECIPES = {
         label='Real estate office', style='house', district=('mixed',),
         role='civic', max_storeys=2,
         widths=(2050.0,),          # one office-sized parcel, per the owner
+        # A FLEXIBLE BAND, NOT THE ONE BAKED WIDTH (owner, 2026-08-31). The
+        # office DECLARES what it could stand on; `widths` above says what is
+        # actually authored. Only w2050 t0 is baked today, so a resolution
+        # anywhere else in this band BLOCKS LOUDLY downstream rather than
+        # resolving a null mesh - econrules already asserts exactly that
+        # ("GROWTH BLOCKED: %s not baked"), so the two layers agree by design
+        # instead of this predicate having to pretend the catalogue is full.
+        #
+        # This recipe had NO `fits` at all until now, which was not a missing
+        # nicety: grammar.candidates() indexes r['fits'] for every recipe, so
+        # office raised KeyError on EVERY parcel, and recipes' own self-test -
+        # the drift check that exists precisely for this - had been red since
+        # the office landed at 751b630.
+        fits=lambda w, d: 1640.0 <= w <= 2460.0 and d >= 1600.0,
         bay_target=680.0,
         base=dict(kind='gen', style='house', use='office', depth=1600.0,
                   gf_h=372.0, fl_h=300.0,
@@ -1253,8 +1288,12 @@ def _selftest():
                 assert r['fits'](w, d), (
                     '%s declares width %.0f at depth %.0f but its own fits()'
                     ' rejects it' % (rid, w, d))
-        # a filler must not claim to be actionable, and vice versa
-        assert r.get('role') in ('filler', 'actionable'), rid
+        # a filler must not claim to be actionable, and vice versa. The tuple
+        # is ROLES above, not a second copy of it - adding a role forces a
+        # decision here rather than silently widening what this test permits.
+        assert r.get('role') in ROLES, (
+            '%s declares role %r, which is not in ROLES %r'
+            % (rid, r.get('role'), ROLES))
     return True
 
 

@@ -1,7 +1,7 @@
 # Lighting a street canyon — two mechanisms, measured
 
-**Date:** 2026-08-31 · **Map:** `Sandbox_Bench` · **Status:** bench fixed and saved;
-`citylight.py` fixed but NOT yet verified in `TestCity`
+**Date:** 2026-08-31 · **Maps:** `Sandbox_Bench`, `TestCity` · **Status:** bench fixed
+and saved; `citylight.py` fixed and verified in `TestCity`
 
 Cold read #2 called the street *flat* and named LIGHTING as a tell. This is what
 "flat" turned out to be. Neither cause was the one under investigation at the time
@@ -81,8 +81,7 @@ for 0.29x of falloff.
 - **The warm cast grew.** R−B went +17.90 → +31.88 against baseline. The owner called
   the warmth desirable, so it is left; but it is nearly double the baseline's cast and
   the key's 4,500 K is the knob if that is more than intended.
-- **`TestCity` is unverified.** `citylight.py` carries all three fixes and its
-  geometry checks out on paper, but nothing has been rendered in that map.
+- **The convergence protocol does not hold in `TestCity`.** See below.
 
 ## `citylight.py`, fixed on the same evidence
 
@@ -99,6 +98,49 @@ for 0.29x of falloff.
    inherited `SLS_CAPTURED_SCENE`, was spawned *before* `CITY_Atmosphere`, and was
    never recaptured. This also repairs the `OUTDOOR` ladder: `'sun_sky'` returns before
    the atmosphere exists, so that mode could never have differed from `'sun'`.
+
+## Verified in `TestCity`
+
+Arterial frame `(-6800, 0, 260)` pitch 2 — the existing `rig_street` framing, reused.
+Full numbers in `Saved/TestCity/rigfix/RESULTS.json`.
+
+| | mean | sd | crushed | blown | road |
+|---|---|---|---|---|---|
+| before (rig at 17f552e) | 68.32 | 41.90 | 0.14% | 0.00% | 1.15x (+0.20) |
+| after, sun on | 96.83 | 49.38 | 0.12% | 0.00% | **2.05x (+1.03)** |
+| after, sun off | 81.75 | 42.81 | 0.14% | 0.00% | **2.44x (+1.29)** |
+
+The roofline-clearance check earned its place: TestCity's **measured** p90 roofline is
+4,147, not the 3,480 estimated on paper, so `CITY_StreetKey_C` raised itself 45° →
+61.3° rather than sitting under the parapets it was meant to rake over.
+
+Two limits on this evidence, both stated rather than smoothed over:
+
+- **Nothing converged.** All three runs hit the 26-frame cap at final deltas
+  0.57–0.68 against a 0.5 criterion. The settle protocol proved on the bench does not
+  hold in `TestCity`, so these numbers are approximate and the map needs its own
+  settle criterion before anything is tuned against them.
+- **Not exposure-matched.** Two street lamps stacked on the transplanted sun add 28
+  levels. Nothing is blown, but the rig wants re-metering before this is a fair *look*
+  comparison rather than a falloff measurement.
+
+`TestCity` was **not saved** — `citylight.py` owns the rig and is idempotent, so the
+script is the source of truth and re-running it rebuilds the lighting exactly.
+
+## What the verification frame actually showed
+
+The arterial frame is dominated by a blank windowless wall: `TC_Bld_SW3_vernacular_t5`
+presenting **847 uu of bare party flank, 1,996 uu tall**, filling the frame from centre
+to right edge. Corners bake at `DEPTH_CORNER = 1500` (1,572–1,628 measured) against
+neighbours at 781–924, so **every corner stands proud of the building behind it** and
+shows that flank down the street.
+
+**This frame cannot judge lighting** — whatever the rig does, half the image is an
+untextured wall. The lighting result above is real and measured, but the visible drift
+in that frame is geometry. Recorded in `Docs/DEPTH_CORNER_DECISIONS.md`; the fix is an
+owner/coordinator call, not actioned.
+
+## Scale
 
 **One lamp per corridor is O(streets).** For a two-street test city that is two lamps
 and it mirrors how a diorama is lit. It is *not* proposed as the answer at full city

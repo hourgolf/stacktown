@@ -37,3 +37,43 @@ surfaces — trigger (a) governs when their bakes land. Until they exist,
 corners place standard buildings; known limitation, owner-seen.
 
 Implementation is the design session's from here.
+
+---
+
+## Measured consequence: the corner protrudes and shows a bare party flank
+
+**2026-08-31, `TestCity`, arterial street frame `(-6800, 0, 260)` pitch 2.**
+
+`DEPTH_CORNER = 1500` was chosen so a corner's return reads as a full elevation on
+the cross street rather than a stub. It does. But nothing reconciled that depth
+against the depth of the corner's NEIGHBOURS on its own street, and measured in a
+built city they are not close:
+
+| | depth (measured actor bounds) |
+|---|---|
+| `TC_Bld_SW3_vernacular_t5` (corner) | **1,628** |
+| `TC_Bld_SW2_contemporary8_t5` (neighbour) | 781 |
+| `TC_Bld_SE0_modern8_t2` (corner) | **1,572** |
+| `TC_Bld_SE1_vernacular6_t2` (neighbour) | 924 |
+
+So every corner stands **700–850 uu proud of the building behind it**, and that
+protruding strip is a blank party flank aimed straight down the street. In the
+TestCity arterial frame `SW3` presents 847 uu of bare wall, 1,996 uu tall, filling
+the frame from centre to right edge — enough that the frame cannot be used to judge
+anything else, lighting included.
+
+This is the "big green building with no windows" the owner reported on 2026-08-30,
+now with a cause rather than a sighting. It is also the exact subject — the exposed
+party flank — ranked first among the proposed on-demand bake references.
+
+**Not decided here.** Two candidate fixes, and they are different kinds of work:
+
+1. **Bake the flank.** A party flank is a real architectural surface (blind brick,
+   ghost signage, a few high windows, a downpipe). This is the reference-subject
+   route and it makes the protrusion legible rather than hiding it.
+2. **Reconcile the depths.** Either bring non-corner depths up toward `DEPTH_CORNER`,
+   or make the corner's depth a function of its neighbour so it never protrudes.
+   Cheaper to render, but it removes a massing variation the city currently gets
+   for free.
+
+Owner/coordinator call. Flagged, not actioned.

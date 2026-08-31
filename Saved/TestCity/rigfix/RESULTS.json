@@ -1,0 +1,79 @@
+{
+ "date": "2026-08-31",
+ "map": "/Game/Maps/TestCity",
+ "camera": {
+  "x": -6800.0,
+  "y": 0.0,
+  "z": 260.0,
+  "pitch": 2.0,
+  "yaw": 0.0,
+  "roll": 0.0,
+  "source": "Saved/TestCity/rig_street.lens.json framing, reused"
+ },
+ "lens_mode": "judge",
+ "instrument": "Tools/measure/falloff.py",
+ "convergence": {
+  "protocol": "dwell 10s, 1.5s spacing, keep when consecutive delta < 0.5 levels",
+  "result": "NONE of the three converged - all hit the 26-frame cap",
+  "final_deltas": {
+   "before": 0.683,
+   "after_sun": 0.658,
+   "after_nosun": 0.569
+  },
+  "note": "the bench settle protocol does not hold in TestCity; treat these numbers as approximate"
+ },
+ "exposure": "NOT matched - two street lamps stacked on the transplanted sun add 28 levels. Nothing blown; the rig wants re-metering before this is a fair look comparison.",
+ "runs": {
+  "before": {
+   "rig": "citylight.py as committed at 17f552e",
+   "sun_lux": 430.0,
+   "mean": 68.32,
+   "sd": 41.9,
+   "crushed_pct": 0.14,
+   "blown_pct": 0.0,
+   "road_near_over_far": 1.15,
+   "road_stops": 0.2,
+   "R_minus_B": 9.69
+  },
+  "after_sun": {
+   "rig": "citylight.py at 43b3f7c",
+   "sun_lux": 430.0,
+   "mean": 96.83,
+   "sd": 49.38,
+   "crushed_pct": 0.12,
+   "blown_pct": 0.0,
+   "road_near_over_far": 2.05,
+   "road_stops": 1.03,
+   "R_minus_B": 24.33
+  },
+  "after_nosun": {
+   "rig": "citylight.py at 43b3f7c",
+   "sun_lux": 0.0,
+   "mean": 81.75,
+   "sd": 42.81,
+   "crushed_pct": 0.14,
+   "blown_pct": 0.0,
+   "road_near_over_far": 2.44,
+   "road_stops": 1.29,
+   "R_minus_B": 24.79
+  }
+ },
+ "street_keys": {
+  "measured_p90_roofline": 4147.0,
+  "CITY_StreetKey_A": {
+   "lm": 8221555,
+   "standoff": 9580,
+   "elev_deg": 45.0,
+   "z": 6774
+  },
+  "CITY_StreetKey_C": {
+   "lm": 2513691,
+   "standoff": 5297,
+   "elev_deg": 61.3,
+   "z": 4647,
+   "note": "auto-raised from 45.0 - the roofline clearance check fired on measured geometry, not the paper estimate of 3480"
+  }
+ },
+ "blocking_defect": "TC_Bld_SW3_vernacular_t5 presents 847 uu of blank party flank, 1996 uu tall, filling the frame centre-to-right. Corners bake at DEPTH_CORNER=1500 (1572-1628 measured) against neighbours at 781-924, so every corner protrudes. See Docs/DEPTH_CORNER_DECISIONS.md. This frame cannot judge lighting.",
+ "frames_not_in_git": "Saved/**/*.png is gitignored by repo policy; the PNGs are on disk beside this file"
+}

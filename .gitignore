@@ -11,6 +11,15 @@ Build/
 .vs/
 *.pdb
 
+# ---- per-machine editor state -----------------------------------------------
+# Console history, crash-reporter sessions, editor prefs, world state. Tracked
+# by accident before Saved/ patterns were tightened; untracked 2026-08-25.
+Saved/Config/
+
+# ---- agent infrastructure ---------------------------------------------------
+# Git worktrees that background agents work in. Never content.
+.claude/worktrees/
+
 # ---- capture churn ----------------------------------------------------------
 # 2.5 GB of raw 20 MB HighResShot output. Curated evidence lives in Docs/evidence.
 Saved/Screenshots/
@@ -35,3 +44,42 @@ Saved/Stage2/data/*.json
 __pycache__/
 .mcp_sid
 _guarded_tmp.py
+
+# Deko Matrix City is a 5.7 GB donor pack, same class as Assetsville: source
+# material, not authored result. Anyone joining adds it from their own account.
+Content/Deko_MatrixDemo/
+
+# Lane 4 diagnostics. MATERIAL_RECORD.md is the reasoning and IS committed; the
+# captures beside it are automated A/B diagnostics by its own admission, and
+# curated evidence belongs in Docs/evidence.
+Saved/Lane4/*.jpg
+Saved/Lane4/*.png
+Saved/Lane4/*.html
+Saved/Lane4/backup/
+
+# Mega Street Props is a donor pack, same class as Assetsville and Deko:
+# source material, not authored result. It was swept into a commit by a
+# `git add -A` that I ran without checking what was untracked first - 2.7 GB of
+# LFS objects. The rule that should have caught it is the one already written
+# above: donor packs are never committed.
+Content/Mega_Street_Props_Pack/
+
+# OS metadata
+.DS_Store
+
+# Uniblocks is a donor pack, same class as Assetsville, Deko and Mega Street
+# Props: source material, not authored result. Swept into a commit by the
+# coordinator's own `git add -A` catch-all on 2026-08-27 - the third
+# occurrence of exactly this mistake, each time by a different hand. The rule
+# below now exists in tooling form too: NEVER commit with add -A; enumerate.
+Content/Uniblocks/
+
+# Lens rig session state: which mode the editor is currently in. Runtime
+# state like .mcp_sid, not source - a fresh checkout has no mode until
+# lensrig runs, and captures correctly stamp "unknown" until it does.
+Tools/measure/lens_mode.json
+
+# img.py caches a BMP beside every PNG it measures (sips conversion, reused
+# on mtime). Regenerable, ~17.6 MB each, and 32 of them reached 563 MB in one
+# session of sweeps. Never evidence, never committed.
+*.png.bmp

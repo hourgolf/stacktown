@@ -1,0 +1,10 @@
+{
+  "_": "SCAFFOLDING - every value is a placeholder awaiting the owner's economy notes. Read fresh per tick by design (bytecode-cache trap, HANDOFF).",
+  "money_start": 100,
+  "price_base": 50,
+  "price_per_100uu": 2,
+  "price_per_tier": 25,
+  "rent_per_tier": 10,
+  "growth_threshold": 40,
+  "demand_default": 1.0
+}

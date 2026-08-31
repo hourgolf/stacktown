@@ -1,0 +1,20 @@
+{
+ "frame": "b70_wide_judge",
+ "mode": "judge",
+ "fov_deg": 28.84,
+ "optic": "70mm gate",
+ "transform": {
+  "x": 939.395700229943,
+  "y": -50940.77862357725,
+  "z": 18220.50807568877,
+  "pitch": -29.999999999999996,
+  "yaw": 70.00000000000001,
+  "roll": 0.0
+ },
+ "subject": "the model as an object on its table",
+ "NOT_GATE_ADMISSIBLE": true,
+ "admissibility": "READ frame - dressed street, vehicles deliberate; never gate evidence",
+ "staleness_head": "31b03b5",
+ "room": "self-lit M_StudioWall (unlit, GI-inert), fills deleted",
+ "grain": "off"
+}

@@ -1,5 +1,7 @@
 import sys, time; sys.path.insert(0,'.')
 from genbuild import build
+import genbuild as _gb
+_gb.live()   # this script builds into the OPEN level; see genbuild._LIVE
 t=time.time()
 h=build(dict(name='Narrow', x0=1120.0, width=860.0, depth=700.0,
              floors=6, gf_h=380.0, fl_h=330.0, parapet=70.0, bays=2,

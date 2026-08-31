@@ -27,25 +27,86 @@ say so.
 
 ## 2. Current state
 
-A **two-block street**, built by script, in `/Game/Maps/Stage2_Block`.
+**MESHES CURRENT THROUGH d90957f** (staleness ledger, maintained per bake
+wave under the 2026-08-30 bake policy — POLISH_PROTOCOL "The bake
+policy". HARD RULE: no acceptance or reader frames while this line names
+a commit older than the fix being judged.)
 
-- **Block A** — 4 buildings: 2 generated, 1 Assetsville tileset volume, 1 reused Stage 1 building
-- **Block B** — 3 buildings, generated, rotated 180° across the road
-- Street, pavements both sides, trees, parked vehicles, pedestrians, rooftop clutter
-- Practicals behind glazing on both blocks
+**Updated 2026-08-25.** The authoritative current state is always the newest
+record under `Saved/Stage*/` and `Saved/Lane*/` plus `Docs/RECIPES_DRAFT.md`
+and `Docs/RUNTIME_SLICE.md` — this section is a summary and loses to the
+records wherever they disagree.
 
-Verified at the block hero: **blown 0.000%, crushed 0.000%**, geometry check
-passing, no hollow facades.
+**Nine built blocks** on a board grown north, in `/Game/Maps/Stage2_Block`:
+the original facing street (blocks A and B), a civic square with a fountain,
+a park with housing across from it, walk-ups, and block H — the works, with
+sawtooth roofs and a stack. All generated from `city.py`/`genbuild.py`;
+measured build rate **0.068 s per box**.
 
-### What is NOT done
+**The runtime slice is approved and partly wired** (`Docs/RUNTIME_SLICE.md`):
+a catalogue `PrimaryDataAsset`, `BP_Parcel` with a mesh component, an
+owner-wired `ResolveMesh` and CityTick graph, and a first measured tick
+against real assets. A runtime upgrade is a mesh pointer swap against
+pre-baked tier meshes in `/Game/Stacktown/Baked/`.
 
-- The far side of the street is underlit. The key/fill rig was derived for a
-  single row facing −Y and has never been re-derived for two facing rows.
-- The backdrop does not cover the view down the street; there is black void past
-  the board edge.
-- Props, trees and vehicles exist only on block A's pavement.
+**Recipe status** (`Docs/RECIPES_DRAFT.md`): four ladders drafted
+(vernacular, modern, deco, works). Pipeline expansion is deliberately
+stopped; `vernacular` is being brought up to standard first. Cottage and
+walkup are kept as **rough drafts** awaiting the same detailing pass (owner
+decision, 2026-08-25). The per-model gate (`modelgate.py`), stamp
+(`stamp.py`) and `catalogue_audit.py` are in place.
+
+### Session of 2026-08-27 — catalogue, street, block rig
+
+**The catalogue is 32 recipes across four eras**, eight each: vernacular, deco,
+modern, contemporary. `Content/Stacktown/Baked/` holds **284 baked meshes**.
+Contemporary was rebuilt against `CANON.md` slot 5 after the owner rejected the
+first attempt as not reading as modern.
+
+**A two-block street exists** in `Sandbox_Bench` (`street.py`) — sixteen
+buildings in two facing rows against a road and pavements, built to test the
+Stage 2 gate line that the work must read at BOTH block hero and player zoom.
+**Player zoom passes.** Block hero was weak and has been improved by varying
+the building line (setbacks 0–210 uu, gaps 40–300) and composing a crown-rich
+mix so no two neighbours share a crown type.
+
+**A block lighting rig exists** (`blockrig.py`), derived by inverse square from
+the measured board rig rather than reused: key 5,948,117 lm, fill 5,509,606 lm
+at a 14,000 uu rig. Canyon interior 13.4 → 35.8 mean, 0.000% clipped.
+
+**The flicker is fixed** and confirmed by the owner. It was two faults: core
+tops made coplanar with every roof deck by an `open_roof` change (now
+`ROOF_CLEAR = 17.5`, gated by GATE-10), and four Lumen cvars a diagnostic left
+at 0 (`lumen_defaults.py`).
+
+**New knowledge worth not re-deriving is in `Docs/CATALOGUE_PIPELINE.md`** —
+the recording sink, the two execution channels, the measured variation levers,
+and the traps. Read it before touching the generator.
+
+**First cold read, 2026-08-27** (Saved/ColdRead1/RECORD.md): PASS at
+block/hero range - the first in project history - FAIL at player zoom with
+named causes (rendering artifacts, clipping/planar geometry, and the
+uniform 'paper' texture itself reading as a render-tell - cause not yet
+isolated; see the record's open question). Owner called it a success; wave 1
+priorities come from the reader's own findings.
+
+### Open items
+
+- **The declared width ladder may not be honest.** `recipes.py` declares 548
+  (recipe × tier × width) combinations; 284 are baked. The first attempt to
+  fill a gap was REFUSED by the gate — `vernacular5` at w1230 oversails its
+  parcel by 1162 uu — so an unknown share of the other 264 are not "unbaked"
+  but "unbuildable at that width". Determine which before planning any
+  district placer, because the placement palette is the whole variation story.
+- Street and review bench share one map, so the block rig's attenuation had to
+  be tightened to avoid relighting the shelf, costing the street's far end
+  light. Needs a separate map — blocked because `load_level` crashes the editor
+  over remote execution, so the owner must create and open it.
+- The backdrop does not cover the view down the street.
 - Edge wear does not work on imported geometry (see §5).
-- There is **no gameplay of any kind**. Not a line. This is a visual proof.
+- The single-mesh bake fidelity gap (§9.1).
+- Gameplay: **nothing in-engine.** A Lane 2 agent started the headless
+  economy sim on 2026-08-25 — see `Docs/WORKSTREAMS.md` Lane 2.
 
 ---
 
@@ -132,6 +193,101 @@ Every item cost hours. They are ordered by how much.
 
 ### Editor and tooling
 
+- **Every transform bug in this project has been a FRAME applied in the
+  wrong place** - Rotator argument order, GATE-10 world-vs-local, the
+  sweep's unapplied actor rotation, and a loop variable shadowing a yaw
+  parameter (four instances by 2026-08-27). When geometry lies, check the
+  frame before the geometry.
+- **A build script must RELOAD the project modules it reads, or it is
+  reporting on session state rather than on the repository.** The editor
+  caches modules for the whole session; the quiet mode is the dangerous
+  one - two consecutive rebuilds ran a superseded palette and reported
+  success, and the before/after frames delivered from them showed
+  behaviour the owner had already rejected (retracted and replaced).
+  apply_stocks, street.py and shelf.py reload; anything that reads
+  project modules and writes to the level belongs on that list. The
+  warning was already written in apply_stocks' own comment by the person
+  who then walked past it - written down is not the same as remembered,
+  third instance.
+- **A restore file a re-run can clobber is not a restore file.** Restore
+  snapshots are WRITE-ONCE; the second run of apply_stocks overwrote the
+  only route back to the pre-split look.
+- **A clearance check that ignores ROOM walls is not a clearance check.**
+  A derived whole-building standoff placed the camera OUTSIDE the studio
+  room, photographing the scene through its wall. Clearance is checked
+  against everything that occludes, including the room itself.
+- **UV maths on WorldPosition goes AFTER the tiling scale, never before.**
+  World position is LWC; at -22,000 uu a decompose/re-append costs
+  precision the sampler sees (a proven-identity rotation failed its no-op
+  proof by 0.28 against a 0.25 floor). Downstream of the multiply the
+  values are ~132 and the maths is safe.
+- **A study row needs clear ground BEHIND it for the camera and IN FRONT
+  for the light.** The route-2 sweep's far camera stood 189 uu behind an
+  existing row, photographing another panel's back, while that row
+  shadowed the new one - producing a plausible, monotonic, garbage table.
+- **This machine has persistent MetalRHI (GPU) render-thread crashes**
+  (S19): MetalCommandList assertion failures killed the editor twice on
+  2026-08-27, before AND after the 5.8.2 update, unrelated to scripts or
+  memory. Long-running batch drivers must be RESUMABLE, stop clean against
+  a dead bridge, and stamp progress so the resume set is computable.
+  Set the viewport non-realtime for long batches - the fault is the render
+  thread and a fastbake needs no viewport. Trigger UNIDENTIFIED: the dummy
+  display is a plausible contributor, but capture activity is NOT
+  correlated on the timeline to date (neither crash followed a capture;
+  fastbake does no viewport work). If a third crash lands, record what ran
+  in the seconds before it, so the correlation is tested, not assumed.
+- **Re-baking an asset NULLS every placed actor that references it** (S17).
+  The actor keeps its label, renders nothing, and reports zero bounds - a
+  street silently empties and the frame reads as a lighting fault. After
+  ANY re-bake, re-run the placers (street.py, place_catalogue) BEFORE any
+  capture. Same species as the import-persist trap: a reference that dies
+  without an error.
+- **The live merge DROPS material slots — and NOT only masked ones.**
+  SceneTools.merge_actors cannot carry a masked blend mode (leaf cards
+  keep their triangles and lose their material, rendering as dark quads)
+  — but the 2026-08-29 slot diff on vernacular_t4_w820 showed it also
+  dropped MI_paint_cream, a plain BLEND_OPAQUE facade trim material
+  (expected 18 slots, baked 16, both leaf AND paint_cream missing). The
+  "masked" diagnosis was incomplete: a live-merged mesh may be missing
+  ARBITRARY materials, so no appearance judgment may be made on one.
+  Measured 2026-08-27: live 350s vs fastbake 2.6s, identical bounds.
+  FASTBAKE is the production path; the live merge is for nothing on the
+  judgment path at all.
+- **Python bytecode lives OUTSIDE the repo on this machine** (found
+  2026-08-31, cost an hour): `sys.pycache_prefix` is
+  `~/Library/Caches/com.apple.python`, so `rm -rf __pycache__` clears
+  NOTHING — and invalidation is mtime+SIZE, so a same-length edit landing
+  in the same second serves STALE BYTECODE against the restored file.
+  The tell: `import` and `exec(open(path).read())` disagree about the
+  same file. Size-preserving constant edits in a tight edit-rerun loop
+  (100 -> 200, 5 -> 9, 1.0 -> 2.0) are the exact trigger. Fix: clear
+  `~/Library/Caches/com.apple.python/<abs repo path>`. If a Python value
+  contradicts the source in front of you, it is this, not the source.
+- **NEVER purge `LOOK_`.** `LOOK_Post` is the unbound PostProcessVolume
+  holding the fixed grade (AEM_Manual, ISO 800, shutter 60). Deleting it
+  silently reverts the level to UE default AUTO exposure - the same camera
+  read 87.71 before and 245.95 after, every frame blown white - and it is
+  invisible to every natural hypothesis, because no geometry or light you
+  change is the cause. Cost hours on 2026-08-27. Any script that wipes
+  actors excludes `LOOK_` explicitly; and a wipe list is MEASURED from the
+  level inventory first, never asserted from memory - the coordinator's
+  remembered prefix list would have left 249 of 266 furniture actors
+  standing while reporting success.
+- **Every emitter needs a `_SINK` branch.** Seven ue.tool calls sat
+  directly in the builders (the hand-tolerance jitter) with no record-mode
+  guard: record-mode runs silently did one blocking HTTP round trip per
+  floor per building - a 548-combo sweep was 1635s of ~99.9% network wait
+  (1s once guarded), and with a busy editor each call sat on the 180s
+  timeout, presenting as a low-CPU hang. A builder-level editor call is a
+  live-only branch by construction; guard it or record it.
+- **An MCP call from inside a rung script DEADLOCKS.** `rung.sh` executes
+  on the editor's game thread over remote exec; `genbuild.build()` in live
+  mode calls `ue.tool`, and an MCP call issued from inside that script
+  waits on the very thread it is running on. Documented in
+  CATALOGUE_PIPELINE §2 and still walked into on 2026-08-27 - same species
+  as the LOOK_ trap: written down is not the same as remembered. Live
+  builds are driven from LOCAL python (which calls MCP from outside);
+  rung scripts must never import the live build path.
 - **`load_level` over remote execution crashes the editor.** SIGSEGV in
   `Map_Load` from inside the remote-exec ticker. Change levels from the Content
   Browser or set the startup map in config and restart. Do not retry it.
@@ -151,7 +307,15 @@ Every item cost hours. They are ordered by how much.
   must run immediately before every capture.
 - **`import_file` does not persist.** Save explicitly or the assets vanish on
   restart, silently nulling components.
-- **Delete `.mcp_sid` after an editor restart** or every MCP call 404s.
+- **FIRST ACTION after ANY editor restart: clear `.mcp_sid` — next to
+  WHICHEVER ue.py the script imports.** There are TWO: Tools/measure/ and a
+  scratchpad copy. The cached session id makes every MCP call return HTTP
+  404, which reads exactly like a dead server - mistaken for one twice.
+- **rung.sh forwards NO ARGUMENTS to scripts.** An argv branch inside a
+  rung script never fires - wave_throttle.py's `restore` silently
+  re-applied the throttle while PRINTING that it had restored. Caught by
+  reading output, not exit codes. State changes prove themselves by
+  READ-BACK (cvar.py), never by printing intent.
 
 ### Material and geometry
 

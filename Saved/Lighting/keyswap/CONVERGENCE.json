@@ -1,0 +1,23 @@
+{
+ "b70_mid_judge": {
+  "frames": 9,
+  "final_delta": 0.449,
+  "mean": 111.18,
+  "sd": 60.25,
+  "v4_mean": 107.83
+ },
+ "street_judge": {
+  "frames": 10,
+  "final_delta": 0.48,
+  "mean": 76.16,
+  "sd": 44.56,
+  "v4_mean": 62.31
+ },
+ "tell_judge": {
+  "frames": 3,
+  "final_delta": 0.432,
+  "mean": 103.38,
+  "sd": 57.96,
+  "v4_mean": 95.2
+ }
+}

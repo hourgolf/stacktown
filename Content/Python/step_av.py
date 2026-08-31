@@ -1,6 +1,6 @@
 """Assetsville lot, driven from lots.py rather than hardcoded."""
 import unreal, sys, os
-sys.path.insert(0,'/private/tmp/claude-501/-Users-ben-Documents-New-project/c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad')
+import _path  # repo tool paths; replaces a dead scratchpad path
 from lots import LOTS
 
 B='/Game/AssetsvilleTown/Meshes/BuildingTilset'

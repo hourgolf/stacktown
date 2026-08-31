@@ -1,0 +1,20 @@
+{
+ "frame": "b70_near_judge",
+ "mode": "judge",
+ "fov_deg": 28.84,
+ "optic": "70mm gate",
+ "transform": {
+  "x": 3170.2530269267163,
+  "y": -39969.84795369635,
+  "z": 10166.919182751368,
+  "pitch": -26.0,
+  "yaw": 65.00000000000001,
+  "roll": 0.0
+ },
+ "subject": "nearer object framing",
+ "NOT_GATE_ADMISSIBLE": true,
+ "admissibility": "READ frame - dressed street, vehicles deliberate; never gate evidence",
+ "staleness_head": "31b03b5",
+ "room": "self-lit M_StudioWall (unlit, GI-inert), fills deleted",
+ "grain": "off"
+}

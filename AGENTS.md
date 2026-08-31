@@ -54,8 +54,17 @@ avoid repeating:
 - **Python** owns narrow, repeatable editor audits and orchestration. Read-only by default.
   It must never silently save a map or asset.
 - **Blueprint** owns designer-facing interaction and small reusable authoring tools.
+  **Approved 2026-08-25 by the owner:** Blueprint authoring for the runtime slice, plus a
+  DataAsset holding the building catalogue. This is a narrow relaxation and it does **not**
+  extend to a C++ module, `AllToolsets`, PCG, or a parallel MCP server, all of which remain
+  approval-gated. C++ comes back for discussion when a MEASURED wall says so - not in
+  anticipation of one.
 - **C++** is for measured gaps that nothing above can safely solve. There is no C++ module in
-  this project and adding one requires approval.
+  this project and adding one still requires approval. A runtime system cannot be checked by
+  the invariant suite the way geometry can, so before one is built the numbers that define
+  "working" are agreed first: tick budget in ms, buildings on the board before frame time
+  moves, and how long an upgrade may take. Judging a runtime by eye is the failure the F1
+  finding just caught in the geometry.
 - **Blender** is an optional normalization station for pivots, UVs, dimensions, collision, and
   mesh repair. It is not where the building gets built.
 - **PCG is deferred.** It is not enabled in the `.uproject`. PCG multiplies approved art; there
@@ -70,10 +79,17 @@ into a procedural manual.
   lives in `Content/Stacktown`.
 - Normalized imports use `Content/Stacktown/Source/<provider>/<asset-id>` when provenance
   applies. Donor packs remain source material, never the authored result.
-- Actor prefixes: `CAM_`, `LIGHT_`, `LOOK_`, `STAGE_`, `ART_`, `PROP_`, `DIO_`, `BLD_`.
+- Actor label families are defined in `Content/Python/labels.py`, which is the single
+  authority; `Docs/INVARIANTS.md` explains why. Rule `NAME-01` fails the build when the
+  level contains a family the registry does not list. The eight prefixes this line used to
+  name were written when the project was one building; there are fifteen families now.
   Python files and functions use snake_case. Asset names stay PascalCase.
-- `/Game/Maps/OneBuildingTest` is the single authored map and is **protected**. Duplicate into
-  a clearly named sandbox before experimenting.
+- The authored maps are `/Game/Maps/BayRecessTest` (Stage 0), `/Game/Maps/Stage1_Building`
+  (Stage 1, the gate scene) and `/Game/Maps/Stage2_Block` (the city). All three are
+  **protected**; duplicate into a clearly named sandbox before experimenting.
+  `Content/Python/_guard.py` refuses to run against anything but the last two.
+  This line named `/Game/Maps/OneBuildingTest` until 2026-08-24. No such map has ever
+  existed in this repository, so the rule protected nothing.
 - Every user-authored map and asset is protected unless an explicitly named duplicate has been
   designated disposable.
 

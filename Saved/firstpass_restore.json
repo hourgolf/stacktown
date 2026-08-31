@@ -1,0 +1,30 @@
+{
+ "MI_concrete": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.006000000052154064
+ },
+ "MI_dist_bone": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.006000000052154064
+ },
+ "MI_dist_brick": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.006000000052154064
+ },
+ "MI_dist_forest": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.006000000052154064
+ },
+ "MI_model_board": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.004000000189989805
+ },
+ "MI_shingle_grey": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.009999999776482582
+ },
+ "MI_wood": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperTiling": 0.019999999552965164
+ }
+}

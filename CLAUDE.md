@@ -53,6 +53,8 @@ mode that ended both predecessors.
 
 ## Known gaps
 
-- No git remote and no off-machine backup. See `Docs/PROVENANCE.md`.
-- Git LFS is not installed. `.uasset`/`.umap` will commit as raw blobs until it is.
+- Git LFS is installed and tracking `*.uasset` / `*.umap`; `origin` is
+  `github.com/hourgolf/stacktown`. **History was not migrated** - the two commits made before
+  LFS still carry raw blobs, which is why `.git` is ~172 MB. Migrating is a history rewrite
+  and therefore a hard stop.
 - Viewport capture needs the live display (HDMI dummy adapter on the headless mini).

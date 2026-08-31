@@ -4,9 +4,14 @@ add_cube leaves a Cube scaled to the requested dimensions, so scale MUST be
 reset to 1 after the mesh swap or the chamfered profile is squashed.
 """
 import unreal, json
+# Data goes to Saved/data, never Content/ - UE's importer picks up a .json
+# there and opens a modal DataTable dialog that blocks the game thread.
+_SAVED = __import__('unreal').Paths.convert_relative_path_to_full(
+    __import__('unreal').Paths.project_saved_dir()) + 'data/'
+__import__('os').makedirs(_SAVED, exist_ok=True)
 
-TABLE = ('/private/tmp/claude-501/-Users-ben-Documents-New-project/'
-         'c7b8ef13-3903-46ab-bd2b-18279bb95fe6/scratchpad/marks_table.json')
+
+TABLE = (_SAVED + 'marks_table.json')
 marks = {m['name']: m for m in json.load(open(TABLE))}
 
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)

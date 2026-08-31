@@ -1,0 +1,30 @@
+{
+ "b70_mid_judge": {
+  "frames": 8,
+  "final_delta": 0.438,
+  "mean": 115.2,
+  "sd": 61.11,
+  "v4_mean": 107.83
+ },
+ "street_judge": {
+  "frames": 21,
+  "final_delta": 0.491,
+  "mean": 75.33,
+  "sd": 46.35,
+  "v4_mean": 62.31
+ },
+ "tell_judge": {
+  "frames": 4,
+  "final_delta": 0.333,
+  "mean": 96.49,
+  "sd": 57.05,
+  "v4_mean": 95.2
+ },
+ "tell_show": {
+  "frames": 22,
+  "final_delta": 4.033,
+  "mean": 100.87,
+  "sd": 56.62,
+  "v4_mean": 99.79
+ }
+}

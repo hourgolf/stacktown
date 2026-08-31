@@ -1,0 +1,52 @@
+{
+ "catalogue:contemporary6_t3_w2460": {
+  "actors": 7,
+  "boxes": 780,
+  "sha": "d2dd4d0be4d7b544"
+ },
+ "catalogue:deco4_t2_w1640": {
+  "actors": 9,
+  "boxes": 328,
+  "sha": "4adcfc7deeb8df06"
+ },
+ "catalogue:modern8_t2_w2050": {
+  "actors": 9,
+  "boxes": 372,
+  "sha": "3d62a22a354807fe"
+ },
+ "catalogue:office_t0_w2050": {
+  "actors": 2,
+  "boxes": 232,
+  "sha": "cc60e06cc779083a"
+ },
+ "catalogue:vernacular_t3_w1230": {
+  "actors": 11,
+  "boxes": 593,
+  "sha": "97199bd061fec773"
+ },
+ "house:Birch": {
+  "actors": 2,
+  "boxes": 175,
+  "sha": "91cc4df19c6f404f"
+ },
+ "house:Cedar": {
+  "actors": 2,
+  "boxes": 178,
+  "sha": "b60c5209469225c3"
+ },
+ "house:Elm": {
+  "actors": 2,
+  "boxes": 175,
+  "sha": "3bc53251249ca4b9"
+ },
+ "house:Maple": {
+  "actors": 2,
+  "boxes": 192,
+  "sha": "210f946431f65c88"
+ },
+ "house:Willow": {
+  "actors": 2,
+  "boxes": 167,
+  "sha": "343256ed1654dfa3"
+ }
+}

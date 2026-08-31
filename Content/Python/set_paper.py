@@ -1,20 +1,60 @@
-"""Working paper amplitude on every card role.
+"""Apply the fabrication stock to every card material. See fabrication.py.
 
-Measured response: amount 0.55 -> sd 0.48, amount 3.00 -> sd 2.07. It is the
-only lever that moves; PaperTiling is inert (0.05 -> 0.20 changed sd 0.48 ->
-0.45) even though T_PaperNormal and T_PaperDetail are bound on both master and
-instance, so the tiling parameter is not reaching those samplers' UVs.
+This used to set ONE tooth on all 37 materials at once. That was right about
+the tooth being far too fine to read - 0.050 is invisible at any working
+distance - and wrong about applying it everywhere: aluminium mullions, brass,
+glazing and flock all came out wearing the same cardstock grain, which reads
+as a whole model cut from one sheet.
 
-2.0 is a real improvement without being an extreme normal. Closing the gap
-properly is a graph job, not a parameter."""
+MASTER_MATERIAL_SPEC says what tooth is for - "the tooth of paint or print" -
+and says to keep the ROLE set small. So no new roles and no new masters: the
+same materials, parameterised to say what a maker would have cut them from.
+
+Direction of the tooth parameter, since it caught this project out once:
+a LARGER PaperTiling is MORE UV repeats, i.e. FINER. The earlier note that
+"PaperTiling is inert" came from a test that moved it upward, into a range
+already below a pixel.
+"""
 import unreal
-L=unreal.MaterialEditingLibrary
-F='/Game/Stacktown/Materials'
-for n in ('MI_card_ochre','MI_card_sage','MI_card_rose','MI_paint_cream','MI_concrete'):
-    p='%s/%s'%(F,n)
-    mi=unreal.EditorAssetLibrary.load_asset(p+'.'+n)
-    if not mi: continue
-    L.set_material_instance_scalar_parameter_value(mi,'PaperNormalAmount',2.0)
-    L.set_material_instance_scalar_parameter_value(mi,'PaperTiling',0.05)
-    unreal.EditorAssetLibrary.save_asset(p)
-    print('%-16s paperNormal -> 2.00'%n)
+import _path  # noqa: F401
+import fabrication
+
+L = unreal.MaterialEditingLibrary
+eal = unreal.EditorAssetLibrary
+F = '/Game/Stacktown/Materials'
+
+assert fabrication._selftest()
+rows, skipped = [], 0
+for p in sorted(eal.list_assets(F, recursive=False, include_folder=False)):
+    name = p.split('/')[-1].split('.')[0]
+    if not name.startswith('MI_'):
+        continue
+    if name.startswith('MI_st'):          # study panels are meant to differ
+        skipped += 1
+        continue
+    mi = eal.load_asset(p)
+    if not mi or not isinstance(mi, unreal.MaterialInstanceConstant):
+        continue
+    try:
+        L.get_material_instance_scalar_parameter_value(mi, 'PaperTiling')
+    except Exception:
+        continue
+    stock = fabrication.stock_for(name)
+    for k, v in fabrication.params_for(name).items():
+        L.set_material_instance_scalar_parameter_value(mi, k, v)
+    eal.save_asset(p.split('.')[0], only_if_is_dirty=False)
+    got = L.get_material_instance_scalar_parameter_value(mi, 'PaperTiling')
+    want = fabrication.params_for(name)['PaperTiling']
+    if abs(got - want) > 1e-6:
+        raise SystemExit('%s: tiling did not take (%.4f)' % (name, got))
+    rows.append((name, stock))
+
+by = {}
+for n, s in rows:
+    by.setdefault(s, []).append(n)
+for s in sorted(by):
+    t, a, lo, hi = fabrication.STOCK[s]
+    print('  %-12s tooth %.3f amount %.1f rough %.2f-%.2f  (%d) %s'
+          % (s, t, a, lo, hi, len(by[s]), ', '.join(sorted(by[s]))[:70]))
+print('%d materials cut from %d stocks; %d study panels skipped'
+      % (len(rows), len(by), skipped))

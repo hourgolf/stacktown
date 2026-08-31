@@ -1,0 +1,681 @@
+{
+ "MI_bloom_cool": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 3.0,
+  "PaperTiling": 0.003000000026077032,
+  "RoughMax": 0.9800000190734863,
+  "RoughMin": 0.8500000238418579
+ },
+ "MI_bloom_warm": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 3.0,
+  "PaperTiling": 0.003000000026077032,
+  "RoughMax": 0.9800000190734863,
+  "RoughMin": 0.8500000238418579
+ },
+ "MI_canopy_accent": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.2000000476837158,
+  "PaperTiling": 0.014000000432133675,
+  "RoughMax": 0.699999988079071,
+  "RoughMin": 0.550000011920929
+ },
+ "MI_card_lift": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_lift_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_ochre": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_ochre_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_rose": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_rose_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_sage": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_card_sage_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_concrete": {
+  "PaperNormal": "/Game/Uniblocks/Textures/T_UB_concrete_1_N.T_UB_concrete_1_N",
+  "PaperNormalAmount": 1.600000023841858,
+  "PaperTiling": 0.009999999776482582,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_dark_metal": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.41999998688697815,
+  "RoughMin": 0.2800000011920929
+ },
+ "MI_dist_bone": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_brick": {
+  "PaperNormal": "/Game/Uniblocks/Textures/T_UB_brickwork_N.T_UB_brickwork_N",
+  "PaperNormalAmount": 2.4000000953674316,
+  "PaperTiling": 0.013299999758601189,
+  "RoughMax": 0.8199999928474426,
+  "RoughMin": 0.6399999856948853
+ },
+ "MI_dist_buff": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_forest": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_ochre": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_olive": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_oxblood": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_slate": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_dist_teal": {
+  "PaperNormal": "/Game/Uniblocks/Textures/PolyHaven_CC0/T_UB_plaster_2_N.T_UB_plaster_2_N",
+  "PaperNormalAmount": 0.8999999761581421,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_frame_print": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.2000000476837158,
+  "PaperTiling": 0.014000000432133675,
+  "RoughMax": 0.699999988079071,
+  "RoughMin": 0.550000011920929
+ },
+ "MI_frame_print_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.2000000476837158,
+  "PaperTiling": 0.014000000432133675,
+  "RoughMax": 0.699999988079071,
+  "RoughMin": 0.550000011920929
+ },
+ "MI_glass": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_b": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_b_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_bronze": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_green": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_ink": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_pent": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_sky": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glass_teal": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.0,
+  "PaperTiling": 0.0,
+  "RoughMax": 0.11999999731779099,
+  "RoughMin": 0.03999999910593033
+ },
+ "MI_glue": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.800000011920929,
+  "PaperTiling": 0.024000000208616257,
+  "RoughMax": 0.46000000834465027,
+  "RoughMin": 0.30000001192092896
+ },
+ "MI_grass": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 3.0,
+  "PaperTiling": 0.003000000026077032,
+  "RoughMax": 0.9800000190734863,
+  "RoughMin": 0.8500000238418579
+ },
+ "MI_gravel": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.200000047683716,
+  "PaperTiling": 0.00800000037997961,
+  "RoughMax": 0.8999999761581421,
+  "RoughMin": 0.7200000286102295
+ },
+ "MI_interior": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.2000000476837158,
+  "PaperTiling": 0.014000000432133675,
+  "RoughMax": 0.699999988079071,
+  "RoughMin": 0.550000011920929
+ },
+ "MI_interior_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.2000000476837158,
+  "PaperTiling": 0.014000000432133675,
+  "RoughMax": 0.699999988079071,
+  "RoughMin": 0.550000011920929
+ },
+ "MI_interior_lit": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.2000000476837158,
+  "PaperTiling": 0.014000000432133675,
+  "RoughMax": 0.699999988079071,
+  "RoughMin": 0.550000011920929
+ },
+ "MI_leaf_card": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 3.0,
+  "PaperTiling": 0.003000000026077032,
+  "RoughMax": 0.9800000190734863,
+  "RoughMin": 0.8500000238418579
+ },
+ "MI_leaf_card_b": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 3.0,
+  "PaperTiling": 0.003000000026077032,
+  "RoughMax": 0.9800000190734863,
+  "RoughMin": 0.8500000238418579
+ },
+ "MI_model_board": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.5999999046325684,
+  "PaperTiling": 0.004000000189989805,
+  "RoughMax": 0.8799999952316284,
+  "RoughMin": 0.699999988079071
+ },
+ "MI_mural_a": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_mural_b": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_mural_c": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_paint_accent": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_paint_cream": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_paint_cream_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_planter": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.600000023841858,
+  "PaperTiling": 0.029999999329447746,
+  "RoughMax": 0.7400000095367432,
+  "RoughMin": 0.5799999833106995
+ },
+ "MI_precast_buff": {
+  "PaperNormal": "/Game/Uniblocks/Textures/T_UB_concrete_1_N.T_UB_concrete_1_N",
+  "PaperNormalAmount": 1.600000023841858,
+  "PaperTiling": 0.009999999776482582,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_precast_grey": {
+  "PaperNormal": "/Game/Uniblocks/Textures/T_UB_concrete_1_N.T_UB_concrete_1_N",
+  "PaperNormalAmount": 1.600000023841858,
+  "PaperTiling": 0.009999999776482582,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_a0_card": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_a1_resin": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_a2_diecast": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_a3_wire": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_a4_card025": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_c0_t006": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_c1_t012": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_c2_t025": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_c3_t050": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_k0_known": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_k1_f10": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_k2_f16": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_k3_t025f16": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_m0_known": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_m1_t015": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_m2_t025": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_m3_t035": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_o0_c100": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_o1_c050": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_o2_c025": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_o3_c010": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_pt_o4_combo": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_shingle_brown": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.399999976158142,
+  "PaperTiling": 0.009999999776482582,
+  "RoughMax": 0.7599999904632568,
+  "RoughMin": 0.6000000238418579
+ },
+ "MI_shingle_grey": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.399999976158142,
+  "PaperTiling": 0.009999999776482582,
+  "RoughMax": 0.7599999904632568,
+  "RoughMin": 0.6000000238418579
+ },
+ "MI_st0_base": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st0_t050": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st1_darker": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st1_t025": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st2_paper": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st2_t012": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st3_coarse": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st3_t006": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st4_seams": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st4_t003": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st5_combo": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_st5_wear": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_studio_grey": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_ubt_006": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_ubt_030": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_ubt_080": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 2.0,
+  "PaperTiling": 0.006000000052154064,
+  "RoughMax": 0.800000011920929,
+  "RoughMin": 0.6200000047683716
+ },
+ "MI_veh_cream_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.5,
+  "PaperTiling": 0.029999999329447746,
+  "RoughMax": 0.5199999809265137,
+  "RoughMin": 0.3799999952316284
+ },
+ "MI_veh_lift_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.5,
+  "PaperTiling": 0.029999999329447746,
+  "RoughMax": 0.5199999809265137,
+  "RoughMin": 0.3799999952316284
+ },
+ "MI_veh_ochre_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.5,
+  "PaperTiling": 0.029999999329447746,
+  "RoughMax": 0.5199999809265137,
+  "RoughMin": 0.3799999952316284
+ },
+ "MI_veh_rose_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.5,
+  "PaperTiling": 0.029999999329447746,
+  "RoughMax": 0.5199999809265137,
+  "RoughMin": 0.3799999952316284
+ },
+ "MI_veh_sage_2S": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 0.5,
+  "PaperTiling": 0.029999999329447746,
+  "RoughMax": 0.5199999809265137,
+  "RoughMin": 0.3799999952316284
+ },
+ "MI_wood": {
+  "PaperNormal": "/Game/Stacktown/Textures/T_PaperNormal.T_PaperNormal",
+  "PaperNormalAmount": 1.600000023841858,
+  "PaperTiling": 0.019999999552965164,
+  "RoughMax": 0.6399999856948853,
+  "RoughMin": 0.47999998927116394
+ }
+}

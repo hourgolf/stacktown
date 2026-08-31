@@ -1,0 +1,9 @@
+{
+ "street_judge": {
+  "frames": 2,
+  "final_delta": 0.275,
+  "mean": 68.61,
+  "sd": 53.41,
+  "v4_mean": 62.31
+ }
+}

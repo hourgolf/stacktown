@@ -79,10 +79,26 @@ class Bake:
             f.write('# %s  %d groups\n' % (name, len(out)))
             f.write('mtllib %s.mtl\n' % name)
             f.write('o %s\n' % name)
+            # NEGATE Y ON WRITE. Unreal's OBJ importer treats OBJ as
+            # right-handed and applies a handedness conversion, which MIRRORS
+            # the mesh in Y. Measured on Narrow: this file writes Y
+            # -27.3..700.0, matching the component build's -14.0..700.0, and
+            # the imported asset reads Y -700.0..14.0 - the exact negation.
+            #
+            # That is the Stage 2 fidelity gap. It was chased as a rendering
+            # problem - missing geometry, winding, chamfer, slot binding, floor
+            # pivot were each eliminated by measuring PIXELS - and it was a
+            # geometry problem the whole time. Comparing the two meshes'
+            # bounding boxes instead of their renders found it in one step.
+            #
+            # Pre-negating cancels the importer's flip. Winding needs no
+            # change: the importer reverses it as part of the same conversion,
+            # which is why the imported mesh's normals already agreed with
+            # Unreal's own on 200 of 200 sampled triangles.
             for v in vs:
-                f.write('v %.4f %.4f %.4f\n' % v)
+                f.write('v %.4f %.4f %.4f\n' % (v[0], -v[1], v[2]))
             for n in ns:
-                f.write('vn %.5f %.5f %.5f\n' % tuple(n))
+                f.write('vn %.5f %.5f %.5f\n' % (n[0], -n[1], n[2]))
             for role, a, b in out:
                 f.write('g %s\nusemtl %s\n' % (role, role))
                 for idx, ni in faces[a:b]:

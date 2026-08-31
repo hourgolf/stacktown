@@ -80,3 +80,88 @@ shader saves it.
 - Per-asset bespoke shaders
 - Using the master to disguise geometry that fails the reveal checks in the gate. The material
   unifies *fabrication*. It cannot manufacture depth, and the last project proved that.
+
+## The hero look (25 Aug 2026)
+
+`Tools/measure/dof.hero(focus)` — **f/2 on a 400 mm back, 8 blades, 1/240**.
+Chosen from the contact sheet of 25 Aug. Aperture alone does nothing at these
+subject distances; the size of the camera back is the knob, because it asks the
+question the art direction is about — how big is the film relative to the thing
+on the table. 36 mm photographs a city; 400 mm photographs a model of one.
+
+**The level's saved state stays DOF-off.** Building and grading need the
+geometry visible, and the gate amendment keeps every A–E line judged with depth
+of field off. `hero()` is turned on for a frame and `reset()` afterwards.
+
+## Role vocabulary extension — owner approved 2026-08-27
+
+Four roles added so DONOR components can carry real roles (the GATE-01
+unblock, option (a)): donor materials previously had no role that resolved
+to them, and a role that does not reproduce the donor's existing material
+would repaint the catalogue silently.
+
+    Leaf_       -> MI_leaf_card     per-slot resolution still refines
+                                    trunk vs leaf on multi-slot donors
+    Planter_    -> MI_planter       every ubkit flowerbed
+    Bloom_Cool  -> MI_bloom_cool    SUFFIX variant of Bloom_, following the
+                                    MURAL suffix precedent - not a second
+                                    top-level role
+    Brick_      -> MI_dist_brick    the chimney STAYS BRICK regardless of
+                                    wall colour - owner look decision, the
+                                    classic card-model read, consistent
+                                    with CANON slot 4's works-brick blessing
+
+Verification contract for the rename that uses these: the pre-change
+baseline (donor_mats_baseline.json, 548 combos / 3,831 records) must
+reproduce byte-identically on materials after the change. The gate going
+quiet is never the proof.
+
+## FAB textures in the fabrication system — owner approved 2026-08-28
+
+The texture analogue of the donor-mesh rule ("their shapes, our surface"):
+
+**Their MICRO-RELIEF, our color and sheen.** An installed FAB texture may
+lend a stock its geometric micro-structure — its NORMAL map, and
+ROUGHNESS DETAIL within the doctrine's narrow band — never its albedo,
+color, or weathering. Our MI instances keep the palette, the lamp, and
+the sheen discipline; photography supplies what the tooth actually looks
+like, because a surveyed photographic normal beat six generated attempts
+(the value-noise lattice was constructional and untunable).
+
+Admission is CLOSED-LIST, like the canon: survey -> shortlist -> the
+owner's eye. An admitted texture lands as a named property of a stock in
+fabrication.py with its source recorded. Acceptance happens on a
+BUILDING (never the flat study wall), judge mode, both standoffs, with
+amplitude swept. Ad-hoc per-material texture picks are prohibited.
+
+"A model is unified by fabrication" stands: the fabrication story (card,
+resin, brick) remains ours; the studio-director warning about photoreal
+donors beside flat-shaded work is answered by tier-matching at the STOCK
+level rather than banning photography outright.
+
+### Texture custody — owner approved 2026-08-28
+
+An admitted map whose CC0 provenance is INDIVIDUALLY VERIFIED (matched to
+its Poly Haven catalogue source — the UNIBLOCKS Fab listing states its
+texture set draws on polyhaven.com/textures, CC0) is COPIED into
+Content/Stacktown/Textures: versioned, import settings baked (green
+convention included), source and license recorded beside its stock in
+fabrication.py. It ceases to be donor content and becomes a project
+asset — the one carve-out to the donor-packs-never-committed rule, and
+it exists because an inverted green channel passed every number while
+rendering brick coursing backwards, and the fix lived outside version
+control. Non-verified admits stay pack-resident under check_textures.py,
+which runs after any fresh clone or pack re-download and fails loudly.
+
+Refinement, 2026-08-28: the pack's own `PolyHaven_CC0/` folder is the
+usable per-texture PROXY for CC0 verification — the author's own
+assertion, per file. A map OUTSIDE that folder is refused from tracked
+content regardless of what any admission note claims, until externally
+verified (an owner decision to check, never a quiet assumption).
+copy_admitted.py enforces this; the map that motivated the carve-out
+(the backwards brick) is itself outside the folder and stays
+pack-resident under check_textures — the guard, not the copy, is the
+floor. A source string is a CLAIM: the admission list marks unverified
+claims louder than absent ones, and its self-test enforces that a
+tracked map is never unverified and an unverified map never leaves the
+guarded pack.

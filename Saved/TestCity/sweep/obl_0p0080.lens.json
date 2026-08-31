@@ -1,0 +1,18 @@
+{
+ "focus": null,
+ "frame": "obl_0p0080.png",
+ "grain": false,
+ "lens_applied": "2026-08-30T16:56:05",
+ "lens_mode": "judge",
+ "readback": {
+  "bloom_intensity": 0.0,
+  "camera_iso": 800.0,
+  "camera_shutter_speed": 60.0,
+  "depth_of_field_focal_distance": 0.0,
+  "depth_of_field_fstop": 4.0,
+  "depth_of_field_sensor_width": 24.576000213623047,
+  "film_grain_intensity": 0.0,
+  "scene_fringe_intensity": 0.0,
+  "vignette_intensity": 0.41999998688697815
+ }
+}

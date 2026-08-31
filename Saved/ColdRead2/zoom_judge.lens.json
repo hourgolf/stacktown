@@ -1,0 +1,20 @@
+{
+ "frame": "zoom_judge",
+ "mode": "judge",
+ "fov_deg": 28.84,
+ "optic": "70mm gate",
+ "transform": {
+  "x": 14750.0,
+  "y": -23050.0,
+  "z": 4900.0,
+  "pitch": -40.0,
+  "yaw": 227.0,
+  "roll": 0.0
+ },
+ "subject": "NAMED SUBJECT: ST_S_5_deco5_t5 coping-cap run at the NE parapet corner, crown steps behind",
+ "NOT_GATE_ADMISSIBLE": true,
+ "admissibility": "READ frame - dressed street, vehicles deliberate; never gate evidence",
+ "staleness_head": "31b03b5",
+ "dressing": "DRESSING.json beside this file; read #1 made no dressing inventory - this manifest is the first of record, delta unknowable, logged honestly",
+ "grain": "off (judge path carries none; show adds DOF only)"
+}

@@ -80,8 +80,16 @@ SPECIAL = {
     # office's LISTING display, which is its own thing.
     # a listing card IS a printed card, so it takes a card colour
     'Frame_Listing': 'MI_card_lift',
-    'Glass_Listing': 'MI_glass_ink',
-    'Interior_Listing': 'MI_paint_navy',
+    'Glass_Listing': 'MI_glass_listing',
+    # LIT, not dark. A near-mirror pane (MI_glass_ink is roughness 0.04-0.12)
+    # reflects whatever is in front of it, and on a bench that is a dark room -
+    # so the display read as a flat matte field however the ambient was raised,
+    # measured up to sky 70. What makes glazing read is something BRIGHT
+    # behind it, and the office's own declaration already said so: "a lit
+    # interior (practicals) so it reads as OPEN". A lit estate-agent window
+    # with the listings on the glass is the reference, and it is the thing a
+    # player sees at dusk.
+    'Interior_Listing': 'MI_interior_lit',
     'Glass_Pent': 'MI_glass_pent',
     'Interior_Pent': 'MI_interior_lit',
 }

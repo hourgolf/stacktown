@@ -3030,21 +3030,34 @@ def office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves):
             hy0 - 8, hy0 - 5, SILL, HEAD + 18)
         box(a, 'Interior_Listing%s' % t, wx - HALF + 5, wx + HALF - 5,
             hy0 + 2, hy0 + 11, SILL, HEAD + 14)
+        # NO PAINTED SHEEN. A diagonal highlight streak was tried here - the
+        # classic miniature trick for making a pane read as glass without
+        # waiting for it to reflect anything - and it FAILED on inspection: at
+        # this scale, in an opaque material with the same value as the listing
+        # cards, it read as one more card stuck on the window rather than as
+        # light. Removed rather than tuned, and recorded so nobody re-tries it
+        # without knowing it has been tried. What is left is the widened
+        # roughness on MI_glass_listing, which is the principled half.
         made += 8
         # THE LISTING CARDS. Trade visible outside, surviving from the earlier
         # storefront soul into the house form - a grid of printed cards a
         # model-maker would cut and glue behind the glass.
+        # A 4x3 GRID OF 34x46 CARDS COVERED ABOUT SIXTY PERCENT OF THE PANE,
+        # and a window that is mostly paper reads as paper - which is exactly
+        # what the owner saw. The reference's cards sit in the lower middle
+        # with clear glass around and above them, so the pane still catches a
+        # highlight and still shows the dark interior. Fewer, smaller, lower.
         for r in range(3):
-            for c in range(4):
-                px = wx - 70.0 + c * 46.0
-                pz = SILL + 30.0 + r * 62.0
+            for c in range(3):
+                px = wx - 46.0 + c * 46.0
+                pz = SILL + 24.0 + r * 54.0
                 # ON the pane, not behind it. MI_glass_ink renders OPAQUE, so
                 # cards mounted inside the glazing were correct architecture
                 # and an invisible model - the second time this build has hit
                 # "correct but inside the mass". A maker glues the cards to
                 # the glass anyway, so this is the honest fabrication too.
                 box(a, 'Frame_Listing%s%d%d' % (t, r, c),
-                    px - 17, px + 17, hy0 - 11, hy0 - 8, pz, pz + 46)
+                    px - 15, px + 15, hy0 - 11, hy0 - 8, pz, pz + 40)
                 made += 1
         # ---- the apron: a RAISED panel moulding, not a recess ---------------
         # A recessed panel would be cut into Wall_Body, which is solid from
@@ -3111,6 +3124,17 @@ def office_yard(pl, spec, x0, W, garden, cx, rnd):
                                          % (bi, made)),
                   avkit.path(k), (px, py, pz), (0.0, yw, 0.0),
                   mat=avkit.mat(k))
+            made += 1
+            # THE DONORS ARE FOLIAGE. plant_s/m/l are green stalks and nothing
+            # else, so a bed of them reads as stalks with no flowers - which is
+            # what it is. A maker dabs colour on the heads; these are those
+            # dabs, sat at three-quarter height where a flower head sits, and
+            # alternating warm and cool so a bed is not one block of colour.
+            ph = avkit.size(k)[2]
+            hz = pz + ph * 0.72
+            role = 'Bloom_Warm' if (made % 2) else 'Bloom_Cool'
+            box(pl, '%sHead%d_%d' % (role, bi, made),
+                px - 11, px + 11, py - 11, py + 11, hz, hz + 15)
             made += 1
     return made
 
@@ -3524,7 +3548,12 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                  roll=-dang)
             made += 1
 
-    box(a, 'Wall_Chimney', hx1 - 120, hx1 - 62, hy0 + HD*0.62, hy0 + HD*0.62 + 58,
+    # A CHIMNEY IS BRICK. On Wall_ it takes the recipe's wall paint, so the
+    # office's stack came out weatherboard-white. Office only: the five
+    # city houses would all change appearance otherwise, and that is the
+    # owner's call rather than a bug fix.
+    box(a, ('Brick_Chimney' if office else 'Wall_Chimney'),
+        hx1 - 120, hx1 - 62, hy0 + HD*0.62, hy0 + HD*0.62 + 58,
         eaves, eaves + rise + 86); made += 1
 
     print('%s [house %s/%s%s%s%s]: %d boxes'

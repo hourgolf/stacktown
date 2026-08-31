@@ -39,6 +39,36 @@ COLS = {
     'MI_roof_blue':   (0.072, 0.105, 0.158),
 }
 
+# THE DISPLAY PANE. Measured, not guessed: the baked mesh's slot really does
+# carry MI_glass_ink, and raising the ambient to sky 70 changed the window by
+# nothing - because M_StacktownMaster is an OPAQUE master, so `Opacity` is
+# inert and no glass in this project shows what is behind it. A pane can
+# therefore only read as glass by CATCHING LIGHT, and MI_glass_ink sits at
+# roughness 0.04-0.12 - a near-mirror, whose lobe is far too tight to pick
+# anything up in a room with nothing bright in it.
+#
+# So this one widens the lobe into a soft sheen. It is a SEPARATE instance
+# because MI_glass_ink is handed to catalogue buildings by palette.py and
+# retuning it would move 548 models to fix one window.
+GLASS = {'MI_glass_listing': (0.048, 0.052, 0.062)}
+GLASS_OPTICS = dict(PAINT)
+GLASS_OPTICS.update({'RoughMin': 0.180, 'RoughMax': 0.300, 'Specular': 0.550,
+                     'PaperNormalAmount': 0.0, 'PaperTiling': 0.0,
+                     'SeamDarken': 1.0})
+for n, c in GLASS.items():
+    p = '%s/%s' % (F, n)
+    mi = (unreal.EditorAssetLibrary.load_asset(p + '.' + n)
+          if unreal.EditorAssetLibrary.does_asset_exist(p)
+          else at.create_asset(n, F, unreal.MaterialInstanceConstant,
+                               unreal.MaterialInstanceConstantFactoryNew()))
+    L.set_material_instance_parent(mi, master)
+    L.set_material_instance_vector_parameter_value(
+        mi, 'BaseColour', unreal.LinearColor(c[0], c[1], c[2], 1.0))
+    for k, v in GLASS_OPTICS.items():
+        L.set_material_instance_scalar_parameter_value(mi, k, v)
+    unreal.EditorAssetLibrary.save_asset(p)
+    print('%-16s %.3f %.3f %.3f  (pane sheen)' % (n, c[0], c[1], c[2]))
+
 for n, c in COLS.items():
     p = '%s/%s' % (F, n)
     mi = (unreal.EditorAssetLibrary.load_asset(p + '.' + n)

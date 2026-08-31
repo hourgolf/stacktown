@@ -74,6 +74,25 @@
    "note": "auto-raised from 45.0 - the roofline clearance check fired on measured geometry, not the paper estimate of 3480"
   }
  },
- "blocking_defect": "TC_Bld_SW3_vernacular_t5 presents 847 uu of blank party flank, 1996 uu tall, filling the frame centre-to-right. Corners bake at DEPTH_CORNER=1500 (1572-1628 measured) against neighbours at 781-924, so every corner protrudes. See Docs/DEPTH_CORNER_DECISIONS.md. This frame cannot judge lighting.",
- "frames_not_in_git": "Saved/**/*.png is gitignored by repo policy; the PNGs are on disk beside this file"
+ "blocking_defect": "CORRECTED. Not the corner party flank - that is fully treated by step_elevations.freestanding(). The wall was four stray ELEV_T actors at world origin (the junction), 1844 x 1638 x 1608, three of them exact duplicates. Destroyed. See Docs/DEPTH_CORNER_DECISIONS.md.",
+ "frames_not_in_git": "Saved/**/*.png is gitignored by repo policy; the PNGs are on disk beside this file",
+ "SUPERSEDES": "The 'runs' block from the first pass was UNCONTROLLED: 'before' was a stale rig left in the map rather than a fresh run of the old code, and all three frames contained four stray ELEV_T actors that were themselves contributing contrast. Use 'controlled_runs'.",
+ "controlled_runs": {
+  "method": "both fresh builds of their own code; stray ELEV_T destroyed; CITY_StreetKey explicitly destroyed before the old run because the old OWNED tuple does not list it and would have left both street lamps burning",
+  "before": {
+   "rig": "citylight.py at 43b3f7c^",
+   "mean": 87.18,
+   "sd": 43.42,
+   "road_near_over_far": 1.13,
+   "road_stops": 0.17
+  },
+  "after": {
+   "rig": "citylight.py at 43b3f7c",
+   "mean": 111.2,
+   "sd": 51.74,
+   "road_near_over_far": 2.35,
+   "road_stops": 1.23
+  }
+ },
+ "level_instability": "two nominally identical rebuilds of the fixed rig measured mean 95.48 and 111.20 - 16 levels apart - while the falloff ratio held at 2.41x and 2.35x. Do not tune against absolute level in this map."
 }

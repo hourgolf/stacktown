@@ -40,14 +40,19 @@ Implementation is the design session's from here.
 
 ---
 
-## Measured consequence: the corner protrudes and shows a bare party flank
+## The corner protrudes — but its flank is NOT bare
 
-**2026-08-31, `TestCity`, arterial street frame `(-6800, 0, 260)` pitch 2.**
+**2026-08-31, `TestCity`, arterial frame `(-6800, 0, 260)` pitch 2.**
 
-`DEPTH_CORNER = 1500` was chosen so a corner's return reads as a full elevation on
-the cross street rather than a stub. It does. But nothing reconciled that depth
-against the depth of the corner's NEIGHBOURS on its own street, and measured in a
-built city they are not close:
+**This section originally claimed the protruding corner presented a blank party flank
+that filled the street frame. That was wrong on the second half, and the correction
+matters more than the finding.**
+
+### What is true
+
+`DEPTH_CORNER = 1500` was chosen so a corner's return reads as a full elevation on the
+cross street. It does. Nothing reconciled that depth against the corner's NEIGHBOURS on
+its own street, and measured in a built city they are not close:
 
 | | depth (measured actor bounds) |
 |---|---|
@@ -56,24 +61,39 @@ built city they are not close:
 | `TC_Bld_SE0_modern8_t2` (corner) | **1,572** |
 | `TC_Bld_SE1_vernacular6_t2` (neighbour) | 924 |
 
-So every corner stands **700–850 uu proud of the building behind it**, and that
-protruding strip is a blank party flank aimed straight down the street. In the
-TestCity arterial frame `SW3` presents 847 uu of bare wall, 1,996 uu tall, filling
-the frame from centre to right edge — enough that the frame cannot be used to judge
-anything else, lighting included.
+So every corner stands **700–850 uu proud** of the building behind it, and that strip is
+visible from the street. That much is measured and stands.
 
-This is the "big green building with no windows" the owner reported on 2026-08-30,
-now with a cause rather than a sighting. It is also the exact subject — the exposed
-party flank — ranked first among the proposed on-demand bake references.
+### What was wrong
 
-**Not decided here.** Two candidate fixes, and they are different kinds of work:
+The protruding strip is **not** a blank wall. `step_elevations.freestanding()` already
+treats every face of a catalogue model, and its docstring gives the reason: *"a blind
+wall is a visible bug the moment a model lands on a corner."* A close capture of `SW3`'s
+west flank shows the full vocabulary — piers, band courses, recessed panels, mullions.
+The doctrine was already right and the geometry was already built.
 
-1. **Bake the flank.** A party flank is a real architectural surface (blind brick,
-   ghost signage, a few high windows, a downpipe). This is the reference-subject
-   route and it makes the protrusion legible rather than hiding it.
-2. **Reconcile the depths.** Either bring non-corner depths up toward `DEPTH_CORNER`,
-   or make the corner's depth a function of its neighbour so it never protrudes.
-   Cheaper to render, but it removes a massing variation the city currently gets
-   for free.
+**The wall that filled the street frame was four stray `ELEV_T` actors** — leftover
+elevation staging geometry standing at world origin, which in `TestCity` is the middle
+of the junction. 1,844 × 1,638 × 1,608, and **three of the four were exact duplicates**:
+the "standalone re-run stacked a second elevation on the first" duplication that
+`step_elevations.run()`'s wipe exists to prevent. That wipe only fires inside `run()`,
+so calling `flank()` directly leaves its output behind. Hiding them removed the wall;
+destroying them cleared the frame.
 
-Owner/coordinator call. Flagged, not actioned.
+**How the error was made, since it is the reusable part:** the row assignment was
+inverted. UE is left-handed — looking along +x, **+y is frame RIGHT** — so the wall on
+the right was a `+y` object, and the corner I blamed sits at `-y`. The angular arithmetic
+that should have caught it was run against the wrong sign and appeared to confirm the
+answer. Project a suspect actor's bounds into the frame and check the sign before naming
+it.
+
+### Still open
+
+Whether corner depth should be reconciled against neighbour depth at all is now a pure
+massing question, not a defect: the protrusion shows a real elevation, so it reads as a
+building that is deeper than its neighbour, which is what it is. **No action taken, and
+none is now obviously needed.**
+
+One thing worth a look that this did surface: `SW3`'s flank panels render magenta and
+teal, well outside the restrained palette the direction calls for. Not chased down —
+the material behind it is unconfirmed.

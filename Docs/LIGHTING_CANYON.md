@@ -104,41 +104,52 @@ for 0.29x of falloff.
 Arterial frame `(-6800, 0, 260)` pitch 2 — the existing `rig_street` framing, reused.
 Full numbers in `Saved/TestCity/rigfix/RESULTS.json`.
 
-| | mean | sd | crushed | blown | road |
-|---|---|---|---|---|---|
-| before (rig at 17f552e) | 68.32 | 41.90 | 0.14% | 0.00% | 1.15x (+0.20) |
-| after, sun on | 96.83 | 49.38 | 0.12% | 0.00% | **2.05x (+1.03)** |
-| after, sun off | 81.75 | 42.81 | 0.14% | 0.00% | **2.44x (+1.29)** |
+**These figures replace an earlier, uncontrolled pair.** The first run compared a *stale
+rig left in the map* against a fresh run of the fixed code, and both frames contained
+four stray actors that were themselves contributing contrast. Corrected: both runs
+below are fresh builds of their own code, with the strays removed and no leftover lamps.
+
+| | mean | sd | road |
+|---|---|---|---|
+| before (rig at `43b3f7c^`) | 87.18 | 43.42 | 1.13x (+0.17) |
+| after (rig at `43b3f7c`) | 111.20 | 51.74 | **2.35x (+1.23)** |
 
 The roofline-clearance check earned its place: TestCity's **measured** p90 roofline is
 4,147, not the 3,480 estimated on paper, so `CITY_StreetKey_C` raised itself 45° →
 61.3° rather than sitting under the parapets it was meant to rake over.
 
-Two limits on this evidence, both stated rather than smoothed over:
+### Limits on this evidence
 
-- **Nothing converged.** All three runs hit the 26-frame cap at final deltas
-  0.57–0.68 against a 0.5 criterion. The settle protocol proved on the bench does not
-  hold in `TestCity`, so these numbers are approximate and the map needs its own
-  settle criterion before anything is tuned against them.
-- **Not exposure-matched.** Two street lamps stacked on the transplanted sun add 28
-  levels. Nothing is blown, but the rig wants re-metering before this is a fair *look*
-  comparison rather than a falloff measurement.
+- **Nothing converges.** Every run hit the frame cap at final deltas 0.26–0.68 against a
+  0.5 criterion. The settle protocol proved on the bench does not hold in `TestCity`.
+- **Absolute levels are not trustworthy here.** Two nominally identical rebuilds of the
+  fixed rig measured mean 95.48 and 111.20 — **16 levels apart**. The falloff RATIO was
+  stable across the same pair (2.41x and 2.35x), which is an argument for the ratio as
+  the instrument and against tuning anything in this map against absolute level.
+- **Not exposure-matched.** Two street lamps stacked on the transplanted sun add light;
+  the rig wants re-metering before this is a fair *look* comparison.
 
 `TestCity` was **not saved** — `citylight.py` owns the rig and is idempotent, so the
 script is the source of truth and re-running it rebuilds the lighting exactly.
 
-## What the verification frame actually showed
+## The wall in the verification frame was not what I said it was
 
-The arterial frame is dominated by a blank windowless wall: `TC_Bld_SW3_vernacular_t5`
-presenting **847 uu of bare party flank, 1,996 uu tall**, filling the frame from centre
-to right edge. Corners bake at `DEPTH_CORNER = 1500` (1,572–1,628 measured) against
-neighbours at 781–924, so **every corner stands proud of the building behind it** and
-shows that flank down the street.
+The first pass at this frame blamed a blank party flank on the protruding corner. That
+was wrong. `step_elevations.freestanding()` already treats every face of a catalogue
+model — *"a blind wall is a visible bug the moment a model lands on a corner"* — and a
+close capture of `SW3`'s west flank shows piers, band courses, recessed panels and
+mullions, all present.
 
-**This frame cannot judge lighting** — whatever the rig does, half the image is an
-untextured wall. The lighting result above is real and measured, but the visible drift
-in that frame is geometry. Recorded in `Docs/DEPTH_CORNER_DECISIONS.md`; the fix is an
-owner/coordinator call, not actioned.
+The wall was **four stray `ELEV_T` actors** standing at world origin, which in `TestCity`
+is the middle of the junction: 1,844 × 1,638 × 1,608, three of them exact duplicates of
+each other. `step_elevations.run()` wipes the `ELEV` family before building precisely to
+stop this, but the wipe lives in `run()` and does not fire when `flank()` is called
+directly. Destroying them cleared the frame.
+
+The row assignment is what produced the wrong answer: UE is left-handed, so looking
+along +x, **+y is frame RIGHT**. The blamed corner sits at −y. Project a suspect actor's
+bounds into the frame and check the sign before naming it. Recorded in
+`Docs/DEPTH_CORNER_DECISIONS.md`.
 
 ## Scale
 

@@ -46,6 +46,40 @@ persuasive render as proof" (studio-director skill).
    The annotation lives here, next to the slot. An image without its
    annotation is not yet canon.
 
+6. **Specialty buildings get DESIGN REFERENCES, not slots.**
+   *Owner amendment, 2026-08-31.* The gameplay buildings — marketplace,
+   real estate office, and the several more still to come — do **not**
+   each take a canon slot. There are more specialty buildings than there
+   are slots, and spending the board one-per-building would empty it
+   before the catalogue is served.
+
+   So a second, lower tier exists, and the difference is what the image
+   is a claim ABOUT:
+
+   | | canon slot | design reference |
+   |---|---|---|
+   | claims | what the PROJECT should look like | what ONE building should look like |
+   | scope | the whole catalogue | that building's geometry only |
+   | enters by | owner blessing, dated, named slot | owner supplies it |
+   | lives in | `Docs/canon/`, annotated here | with that building's declaration |
+   | citable for | any look decision | that building's own geometry |
+
+   A design reference is **not canon**. It is not a claim about the look
+   target, it cannot be cited to justify a general look decision, and it
+   never enters the board or takes a slot. Where the two disagree, **canon
+   wins** — a design reference cannot override a blessed canon quality,
+   and a specialty building is still judged against the target like
+   everything else.
+
+   Rule 4 is unchanged and still binds: a look decision that can name
+   neither a canon slot NOR the design reference of the building it is
+   about is taste smuggling. What this amendment adds is a second thing an
+   agent is allowed to name — and it must say WHICH it is naming.
+
+   The slots therefore stay for coverage that serves everything: the
+   close-up SURFACE reference, the `portland-character` entry, and an
+   `own-capture`.
+
 ## The slots
 
 <!-- Template for each slot:
@@ -184,6 +218,9 @@ looks like" against outside references. Owner's pick.
 
 - 2026-08-26 — board created, empty. Awaiting the owner's first references.
 - 2026-08-26 — five references intaken and blessed; slots 1-5 assigned
+- 2026-08-31 — owner amendment: specialty gameplay buildings take DESIGN
+  REFERENCES, not slots (governance rule 6). Slots 6-8 stay open for the
+  surface, portland-character and own-capture coverage.
   (boardedge, nightlight, daylightflock, worksyard, highrise). The
   `render-goal` and industrial-character amendments recorded. Owner design
   signal: ladders must grow past t5.

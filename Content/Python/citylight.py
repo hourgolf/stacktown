@@ -86,6 +86,8 @@ DIST_PER_HALF_DIAG = REF_KEY_DIST / REF_BOARD_HALF_DIAG      # 2.973
 # larger the wall fills the street framing and blows it out. Swept on
 # that framing: 60 -> 35.0% blown, 20 -> 30.1%, 8 -> 0.0%, 3 -> 0.0%.
 # Wall brightness has to be derived per room the same way intensity is.
+SKY_CUBE = '/Engine/EngineResources/GrayLightTextureCube.GrayLightTextureCube'
+SKY_I = 12.0                # the bench knee: crush 1.38%, falloff held
 WALL = '/Game/Stacktown/Materials/MI_studio_wall_city.MI_studio_wall_city'
 # the FLOOR is LIT, not self-lit. The walls are self-lit so they can
 # never spill onto the board; the floor is the surface the model stands
@@ -94,7 +96,8 @@ WALL = '/Game/Stacktown/Materials/MI_studio_wall_city.MI_studio_wall_city'
 # Self-lit, it also blew out: 10% blown oblique, 25% street.
 FLOOR = '/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey'
 CUBE = '/Engine/BasicShapes/Cube.Cube'
-OWNED = ('CITY_Key', 'CITY_Fill', 'CITY_Room', 'CITY_Sun', 'CITY_Sky',
+OWNED = ('CITY_Key', 'CITY_Fill', 'CITY_StreetKey', 'CITY_Room', 'CITY_Sun',
+         'CITY_Sky',
          'CITY_Atmosphere', 'LOOK_Post', 'TC_PROVISIONAL')
 
 # ANGLES ARE MEASURED FROM THE BOARD RIG TOO, not invented. The first
@@ -106,7 +109,22 @@ OWNED = ('CITY_Key', 'CITY_Fill', 'CITY_Room', 'CITY_Sun', 'CITY_Sky',
 # 90 degrees apart, fill low and to the side. Measured warm cast of the
 # invented version against the sandbox board frame: R-B +28.8 vs +8.4.
 KEY_AZ, KEY_TILT = 45.0, -35.0
-FILL_AZ, FILL_TILT = 135.0, -5.4
+# THE FILL'S MEASURED TILT DOES NOT TRANSPLANT, and this is the one place the
+# board rig's numbers had to be overruled rather than copied. -5.4 degrees is
+# correct for a fill 4,301 uu from ONE building on a 2,900 x 2,400 board: at
+# that angle it rakes in under the eaves. Carried onto a 15,300 x 8,460 board
+# cut by 2,260 uu canyons it reaches NOTHING at ground level - the horizontal
+# shadow reach at 5.4 degrees is height x 10.58, so a 300 uu parapet alone
+# shadows 3,175 uu, more than the full corridor. The fill was lighting roofs
+# and upper facades only.
+# The replacement is derived from the same threshold the street keys use: to
+# clear a facade at the 1,130 building line and still reach the far kerb at
+# -700, a lamp on the 45-degree diagonal needs elevation E with
+#     height x (1/tan E) x sin 45 < 1,830
+# The catalogue's MEDIAN height across TestCity's lots is 1,232 uu, which
+# needs E > 25.4 degrees. 30 degrees clears the median with margin and stays
+# well below the key's 35 so the two still read as key and fill.
+FILL_AZ, FILL_TILT = 135.0, -30.0
 
 
 def _lamp(eas, label, az, tilt, dist, ref, aim):
@@ -144,6 +162,94 @@ def _lamp(eas, label, az, tilt, dist, ref, aim):
     return math.hypot(loc.x - aim[0], loc.y - aim[1])
 
 
+# THE STREET KEY, measured on Sandbox_Bench 2026-08-31 and transplanted by
+# the same rule as everything else in this file.
+#
+# WHY IT EXISTS. A single board-scale lamp cannot light a street canyon. The
+# derivation puts CITY_Key 25,988 uu out on the 45-degree diagonal at 35
+# degrees elevation; the corridors are 2,260 uu wide, so any facade over
+# 1,812 uu shadows the whole carriageway - 33% of the catalogue options that
+# fit TestCity's lots. The identical fault was MEASURED on the bench, where
+# the key stood 9,147 uu outside a 2,096 uu canyon: the road carried no cast
+# shadow anywhere and its brightness ran 0.71x near/far - DARKER toward the
+# camera, which is backwards for any light with falloff.
+# Moving that key above the canyon, behind the camera, raking along the
+# street's length gave 3.3-3.9x (+1.7 to +2.0 stops) and sd 53.6 against the
+# passing frame's 45.7, at matched exposure.
+#
+# THE REFERENCE, measured: 5,733,620 lm at 8,000 uu standoff, emitter
+# 3,751 x 2,453, 4,500 K, 45 degrees elevation, aimed along the corridor from
+# a point 9% into the run. Intensity by inverse square and emitter linearly,
+# exactly as REF is used above.
+STREET_REF = (5733620.0, 8000.0, 3751.0, 2453.0, 4500.0)
+STREET_ELEV = 45.0
+STREET_STANDOFF_PER_RUN = 8000.0 / 12777.0      # bench standoff / visible run
+STREET_AIM_ALONG = 0.09                          # fraction into the run
+STREET_AZ = (-0.99, -0.14)                       # back along, a touch to one side
+
+
+def _street_key(eas, label, axis, lo, hi, cross_c, roof_clear):
+    """One lamp ABOVE one corridor, raking along its length."""
+    base_i, base_d, base_w, base_h, temp = STREET_REF
+    run = hi - lo
+    dist = run * STREET_STANDOFF_PER_RUN
+    elev = STREET_ELEV
+    # the lamp must clear the rooflines it is raking over, or it is occluded
+    # by the near parapets exactly like the rig it replaces. Raise it until
+    # it does rather than trusting 45 degrees to be tall enough.
+    need = math.degrees(math.asin(min(0.985, roof_clear / dist))) if dist else elev
+    if need > elev:
+        print('   %s: 45 deg puts the lamp at %.0f uu, below the %.0f uu'
+              ' roofline - raised to %.1f deg'
+              % (label, dist * math.sin(math.radians(elev)), roof_clear, need))
+        elev = need
+    ce, se = math.cos(math.radians(elev)), math.sin(math.radians(elev))
+    aim_along = lo + run * STREET_AIM_ALONG
+    a_off, c_off, z = dist * ce * STREET_AZ[0], dist * ce * STREET_AZ[1], dist * se
+    if axis == 'x':
+        aim = (aim_along, cross_c, 0.0)
+        loc = (aim[0] + a_off, aim[1] + c_off, z)
+    else:
+        aim = (cross_c, aim_along, 0.0)
+        loc = (aim[0] + c_off, aim[1] + a_off, z)
+    ratio = dist / base_d
+    inten = base_i * ratio * ratio * SCALE
+    w, h = base_w * ratio, base_h * ratio
+    dx, dy, dz = aim[0] - loc[0], aim[1] - loc[1], aim[2] - loc[2]
+    rot = unreal.Rotator(0.0,
+                         math.degrees(math.atan2(dz, math.hypot(dx, dy))),
+                         math.degrees(math.atan2(dy, dx)))
+    act = eas.spawn_actor_from_class(unreal.RectLight,
+                                     unreal.Vector(*loc), rot)
+    act.set_actor_label(label)
+    for c in act.get_components_by_class(unreal.RectLightComponent):
+        c.set_mobility(unreal.ComponentMobility.MOVABLE)
+        c.set_editor_property('intensity_units', unreal.LightUnits.LUMENS)
+        c.set_editor_property('intensity', inten)
+        c.set_editor_property('source_width', w)
+        c.set_editor_property('source_height', h)
+        c.set_editor_property('attenuation_radius', (run + dist) * 1.4)
+        c.set_editor_property('use_temperature', True)
+        c.set_editor_property('temperature', temp)
+    print('%-16s %10.0f lm at %8.0f uu, %.1f deg over the %s corridor'
+          '  (z %.0f, emitter %.0f x %.0f)'
+          % (label, inten, dist, elev, axis, loc[2], w, h))
+
+
+def _rooflines(eas):
+    """p90 of the placed buildings - what a street lamp has to clear."""
+    tops = []
+    for a in eas.get_all_level_actors():
+        if not a.get_actor_label().startswith('TC_Bld'):
+            continue
+        o, e = a.get_actor_bounds(False)
+        tops.append(o.z + e.z)
+    if not tops:
+        return None
+    tops.sort()
+    return tops[int(len(tops) * 0.9)]
+
+
 def build():
     eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     cube = unreal.load_asset(CUBE)
@@ -172,6 +278,20 @@ def build():
     print('cleared %d actor(s), including the provisional sun and sky' % killed)
     _lamp(eas, 'CITY_Key', KEY_AZ, KEY_TILT, dist, REF['key'], aim)
     _lamp(eas, 'CITY_Fill', FILL_AZ, FILL_TILT, dist, REF['fill'], aim)
+
+    # A LAMP PER CORRIDOR. This is how a modelmaker lights a diorama - one
+    # lamp per sightline - and it is O(streets), which for a two-street test
+    # city is two lamps. It is NOT proposed as the answer at full city scale;
+    # that question is open and belongs to the coordinator.
+    roof = _rooflines(eas)
+    if roof is None:
+        print('no TC_Bld actors - street keys SKIPPED (run'
+              ' mk_testcity_builds.py first)')
+    else:
+        print('placed rooflines p90 %.0f uu - street keys must clear it' % roof)
+        clear = roof + 500.0
+        _street_key(eas, 'CITY_StreetKey_A', 'x', bx0, bx1, 0.0, clear)
+        _street_key(eas, 'CITY_StreetKey_C', 'y', by0, by1, 0.0, clear)
 
     # the room: walls only, self-lit M_StudioWall so they can never spill
     # light onto the board (the contamination class closed on 2026-08-30).
@@ -245,12 +365,44 @@ def build():
     if OUTDOOR == 'sun':
         print('outdoor layer: sun only (diagnostic)')
         return
+    # A SPECIFIED GREY CUBEMAP, NOT A CAPTURED SCENE. This spawned a bare
+    # SkyLight and set only mobility - no source type, no intensity, no
+    # recapture - which leaves UE's default SLS_CAPTURED_SCENE. Two ways that
+    # is wrong, both of them MEASURED on the bench on 2026-08-31:
+    #   1. A captured-scene skylight replays whatever was in the scene when it
+    #      was baked. The bench's was baked with the sun at 430, so zeroing
+    #      the sun did not remove the sun - it removed its DIRECTION and left
+    #      its energy pouring in omnidirectionally. Every "sun off" reading
+    #      was measuring a laundered sun. Sky 10 -> 0 moved that frame 15
+    #      levels while the bake was hot.
+    #   2. With nothing skylike to capture it is simply BLACK - sky 100 vs 0
+    #      moved the frame 0.13 levels once the bake had gone dark. This file
+    #      spawned CITY_Sky BEFORE CITY_Atmosphere and never recaptured, so
+    #      whatever it held was undefined, and OUTDOOR='sun_sky' returns
+    #      before the atmosphere exists - meaning that diagnostic mode could
+    #      never differ from 'sun'.
+    # light_rig.py already solved this for the night rig and the fix is
+    # verbatim: a grey cubemap tinted cool is even ambient from every
+    # direction with no sky dome drawn, it needs no atmosphere, and its
+    # intensity is an HONEST knob. Swept on the bench: crush fell 4.87% ->
+    # 1.38% from 0.5 to 12 while the road falloff held, so 12 is the knee.
     sky = eas.spawn_actor_from_class(unreal.SkyLight,
                                      unreal.Vector(0.0, 0.0, 14000.0),
                                      unreal.Rotator(0, 0, 0))
     sky.set_actor_label('CITY_Sky')
     for c in sky.get_components_by_class(unreal.SkyLightComponent):
         c.set_mobility(unreal.ComponentMobility.MOVABLE)
+        c.set_editor_property('source_type',
+                              unreal.SkyLightSourceType.SLS_SPECIFIED_CUBEMAP)
+        c.set_editor_property('cubemap', unreal.load_asset(SKY_CUBE))
+        c.set_editor_property('real_time_capture', False)
+        c.set_editor_property('intensity', SKY_I)
+        c.set_editor_property('light_color', unreal.Color(176, 196, 226, 255))
+        c.set_editor_property('cast_shadows', False)
+        c.set_editor_property('lower_hemisphere_is_black', False)
+        c.recapture_sky()
+    print('CITY_Sky: specified grey cubemap, intensity %.1f (not a capture)'
+          % SKY_I)
     if OUTDOOR == 'sun_sky':
         print('outdoor layer: sun + sky (diagnostic)')
         return

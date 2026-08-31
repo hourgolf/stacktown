@@ -32,6 +32,59 @@ RECIPES = {
     # commercial terrace is not what becomes one. Height belongs to the
     # ACTIONABLE recipes; filler gives them something to stand against.
     # Owner's direction, 2026-08-26.
+    # THE REAL ESTATE OFFICE. A gameplay building, declared before geometry in
+    # Docs/COREBUILDINGS_DECLARATIONS.md and read off the owner's design
+    # reference in Docs/OFFICE_RECIPE.md. It is a HOUSE, not a shopfront: a
+    # small gable-end-on cottage set back in a fenced yard.
+    #
+    # WHY fill IS 1.0 ON EVERY TIER. The LOT is fully claimed - as yard - from
+    # t0. What grows is `house_width`, so the ladder reads as a building
+    # growing INTO its garden rather than a parcel being progressively
+    # occupied. That is the owner's "it will grow into it".
+    #
+    # FOUR TIERS, AND THE STEPS ARE BIG ON PURPOSE. The catalogue's t0..t5 grow
+    # gradually by fill fraction, which is right for variety across a street
+    # and wrong for one parcel over time: four upgrades a player PAYS for have
+    # to read as investment they can see. So each step changes a state -
+    # footprint, then the roof breaks, then a storey, then a wing - rather
+    # than being a slightly larger version of the last.
+    'office': dict(
+        label='Real estate office', style='house', district=('mixed',),
+        role='civic', max_storeys=2,
+        widths=(2050.0,),          # one office-sized parcel, per the owner
+        bay_target=680.0,
+        base=dict(kind='gen', style='house', use='office', depth=1600.0,
+                  gf_h=372.0, fl_h=300.0,
+                  # BONE AND SLATE, NOT WHITE AND NAVY. The library has no
+                  # white paint and no blue of any kind; these are the nearest
+                  # in family. The owner's call was to build in them and judge
+                  # the colour on a rendered frame rather than author three
+                  # material instances against a guess.
+                  wall='MI_dist_bone', trim='MI_dist_slate',
+                  roofmat='MI_dist_slate', seed=97,
+                  # the gable IS the street elevation here, so it is
+                  # stepped finely enough to read as a boarded wall
+                  gable_steps=22),
+        tiers=[
+            # t0 - the reference: a one-room cottage, gable to the street,
+            # standing well back with the yard in front of it
+            dict(name='cottage', fill=1.0, floors=0, house_width=620.0,
+                 house_depth=780.0, garden=520.0, roof_rise=341.0),
+            # t1 - it takes more ground and the roof BREAKS: dormers are the
+            # cheapest legible change of state a gable can make
+            dict(name='dormered', fill=1.0, floors=0, house_width=820.0,
+                 house_depth=900.0, garden=470.0, roof_rise=372.0, dormers=2),
+            # t2 - a STOREY. The silhouette changes, which is the one thing
+            # that reads at block-hero range
+            dict(name='two storey', fill=1.0, floors=1, house_width=1020.0,
+                 house_depth=1010.0, garden=410.0, roof_rise=392.0, dormers=2),
+            # t3 - a WING: the bay breaks the flat elevation, and the yard is
+            # squeezed forward as the building finally fills its parcel
+            dict(name='established', fill=1.0, floors=1, house_width=1240.0,
+                 house_depth=1120.0, garden=350.0, roof_rise=420.0,
+                 dormers=2, bay=True),
+        ],
+    ),
     'vernacular': dict(
         label='Vernacular', style='vernacular', district=('commercial', 'mixed'),
         role='filler', max_storeys=6,

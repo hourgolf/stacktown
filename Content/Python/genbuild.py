@@ -2942,6 +2942,169 @@ def build_contemporary(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     return ztop + PAR
 
 
+# --- the estate office fit-out -------------------------------------------
+# Kept out of build_house's body because it is a different set of parts, not a
+# different set of numbers: a shopfront, a board sign and a display of printed
+# cards, hung on the same detached cottage the house generator already builds.
+#
+# Read off the owner's design reference (Docs/OFFICE_RECIPE.md): gable to the
+# street, two SEGMENTAL-ARCHED display windows either side of a central door,
+# listing cards behind the glass, panelled aprons below the sills, a board sign
+# high on the gable, a hooded plaque under it, and a raised deck with one step.
+# The arched heads are the detail that stops it reading as a shed.
+
+# Bold condensed sans, as strokes in a unit box. Model-scale lettering is
+# geometry here rather than a texture because the sign is a PAINTED BOARD on a
+# card model - a maker cuts and glues these, and at player zoom the stroke
+# thickness is the thing that reads.
+_GLYPH = {
+    'E': [(0.00, 0.28, 0.00, 1.00), (0.00, 1.00, 0.82, 1.00),
+          (0.00, 0.82, 0.41, 0.59), (0.00, 1.00, 0.00, 0.18)],
+    'L': [(0.00, 0.28, 0.00, 1.00), (0.00, 1.00, 0.00, 0.18)],
+    'O': [(0.00, 0.28, 0.00, 1.00), (0.72, 1.00, 0.00, 1.00),
+          (0.00, 1.00, 0.82, 1.00), (0.00, 1.00, 0.00, 0.18)],
+}
+
+
+def _sign_text(a, text, cx, z0, z1, y0, y1, lw=34.0, gap=11.0, mirror=True):
+    """Extruded letterforms, centred on cx.
+
+    MIRROR IS THE DEFAULT AND IT IS NOT A FUDGE. This sign hangs on the FRONT
+    elevation, whose outward normal is -y, so it is read by a camera looking
+    along +y - and in UE's left-handed frame that camera has +x on its LEFT.
+    Text laid out in increasing x therefore renders back-to-front. Measured the
+    obvious way: the first bake put ELLO on the gable and the render read OLLE.
+    Reflecting the whole sign about cx mirrors the GLYPHS too, which is
+    required - reversing the string alone would leave every E facing the wrong
+    way.
+    """
+    h = z1 - z0
+    total = len(text) * lw + (len(text) - 1) * gap
+    lx = cx - total / 2.0
+    made = 0
+    for ch in text:
+        for i, (u0, u1, v0, v1) in enumerate(_GLYPH.get(ch, [])):
+            gx0, gx1 = lx + u0 * lw, lx + u1 * lw
+            if mirror:
+                gx0, gx1 = 2.0 * cx - gx1, 2.0 * cx - gx0
+            box(a, 'Kerbing_Sign%s%d' % (ch, i), gx0, gx1, y0, y1,
+                z0 + v0 * h, z0 + v1 * h)
+            made += 1
+        lx += lw + gap
+    return made
+
+
+def office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves):
+    """The shopfront, the sign and the deck. Returns the part count."""
+    made = 0
+    text = str(spec.get('sign', 'ELLO'))
+
+    # ---- the deck: a platform the whole frontage stands on, one step down --
+    box(a, 'Timber_Deck', hx0 - 20, hx1 + 20, hy0 - 120, hy0 + 4, 20, 34)
+    box(a, 'Frame_DeckFascia', hx0 - 24, hx1 + 24, hy0 - 126, hy0 - 114, 10, 34)
+    box(a, 'Ground_DeckStep', cx - 92, cx + 92, hy0 - 152, hy0 - 120, 6, 20)
+    made += 3
+
+    # ---- two display windows, arched, either side of the door --------------
+    SILL, HEAD, HALF = 96.0, 300.0, 93.0
+    for sgn in (-1.0, 1.0):
+        wx = cx + sgn * 165.0
+        t = 'L' if sgn < 0 else 'R'
+        box(a, 'Frame_ShopSill%s' % t, wx - HALF - 9, wx + HALF + 9,
+            hy0 - 20, hy0 + 2, SILL - 14, SILL)
+        for js in (-1.0, 1.0):
+            box(a, 'Frame_ShopJamb%s%d' % (t, int(js) + 1),
+                wx + js * HALF, wx + js * (HALF + 9),
+                hy0 - 17, hy0 + 2, SILL, HEAD)
+        # the segmental head, stepped - box() is axis-aligned and a card model
+        # folds anyway, which is the same reason the roofs step
+        for i, hw in enumerate((HALF + 9, HALF + 2, 82.0, 62.0)):
+            box(a, 'Frame_ShopArch%s%d' % (t, i), wx - hw, wx + hw,
+                hy0 - 17, hy0 + 2, HEAD + i * 9, HEAD + (i + 1) * 9)
+        box(a, 'Glass_Shop%s' % t, wx - HALF, wx + HALF,
+            hy0 - 7, hy0 + 1, SILL, HEAD + 18)
+        box(a, 'Interior_Shop%s' % t, wx - HALF + 5, wx + HALF - 5,
+            hy0 + 2, hy0 + 11, SILL, HEAD + 14)
+        made += 8
+        # THE LISTING CARDS. Trade visible outside, surviving from the earlier
+        # storefront soul into the house form - a grid of printed cards a
+        # model-maker would cut and glue behind the glass.
+        for r in range(3):
+            for c in range(4):
+                px = wx - 70.0 + c * 46.0
+                pz = SILL + 30.0 + r * 62.0
+                box(a, 'Frame_Card%s%d%d' % (t, r, c),
+                    px - 17, px + 17, hy0 + 1, hy0 + 3, pz, pz + 46)
+                made += 1
+        # ---- the apron: a RAISED panel moulding, not a recess ---------------
+        # A recessed panel would be cut into Wall_Body, which is solid from
+        # this face backwards - it would be inside the mass and render
+        # nothing. That is the identical trap step_elevations records for the
+        # first flank elevation, so the panel stands proud instead.
+        a0, a1, b0, b1 = wx - 78.0, wx + 78.0, 40.0, 86.0
+        for nm, px0, px1, pz0, pz1 in (
+                ('T', a0, a1, b1 - 6, b1), ('B', a0, a1, b0, b0 + 6),
+                ('L', a0, a0 + 6, b0, b1), ('R', a1 - 6, a1, b0, b1)):
+            box(a, 'Frame_Apron%s%s' % (t, nm), px0, px1,
+                hy0 - 8, hy0 + 2, pz0, pz1)
+            made += 1
+
+    # ---- the board sign, high on the gable ---------------------------------
+    # Above the eaves, so it sits on the gable infill. Its half-width is
+    # checked against the gable's own taper rather than assumed: the triangle
+    # narrows to nothing at the apex and a sign wider than the wall would
+    # float either side of it.
+    sz0, sz1 = eaves + 98.0, eaves + 160.0
+    box(a, 'Rail_SignBoard', cx - 130, cx + 130, hy0 - 12, hy0 - 4, sz0, sz1)
+    for nm, px0, px1, pz0, pz1 in (
+            ('T', cx - 122, cx + 122, sz1 - 7, sz1 - 3),
+            ('B', cx - 122, cx + 122, sz0 + 3, sz0 + 7),
+            ('L', cx - 122, cx - 118, sz0 + 3, sz1 - 3),
+            ('R', cx + 118, cx + 122, sz0 + 3, sz1 - 3)):
+        box(a, 'Kerbing_SignKey%s' % nm, px0, px1, hy0 - 14, hy0 - 11, pz0, pz1)
+        made += 1
+    made += 1
+    made += _sign_text(a, text, cx, sz0 + 14, sz1 - 14, hy0 - 15, hy0 - 11)
+
+    # ---- the hooded plaque under the sign ----------------------------------
+    box(a, 'Rail_Plaque', cx - 46, cx + 46, hy0 - 8, hy0 - 3,
+        eaves + 28, eaves + 68)
+    box(a, 'Roof_PlaqueHood', cx - 58, cx + 58, hy0 - 24, hy0 - 2,
+        eaves + 68, eaves + 80)
+    made += 2
+    return made
+
+
+def office_yard(pl, spec, x0, W, garden, cx, rnd):
+    """A specimen tree and two planted beds, in the front garden."""
+    import avkit          # local, as every other donor caller in this file
+    made = 0
+    tk = spec.get('tree', 'tree_t')
+    tsc = float(spec.get('tree_scale', 0.60))
+    tx = x0 + float(spec.get('tree_x', 300.0))
+    ty = float(spec.get('tree_y', garden * 0.55))
+    piece(pl, rolemap.donor_name(avkit.mat(tk), 'YardTree'), avkit.path(tk),
+          (tx, ty, 10.0), (0.0, rnd.uniform(0, 360), 0.0),
+          scale=tsc, mat=avkit.mat(tk))
+    made += 1
+    for bi, (bx0, bx1) in enumerate(((x0 + 120.0, x0 + 700.0),
+                                     (x0 + W - 700.0, x0 + W - 120.0))):
+        by0, by1 = 62.0, 176.0
+        box(pl, 'Kerbing_YardBed%d' % bi, bx0, bx1, by0, by1, 10, 40)
+        box(pl, 'Bloom_YardBed%d' % bi, bx0 + 12, bx1 - 12,
+            by0 + 12, by1 - 12, 40, 56)
+        made += 2
+        for k, (px, py, pz), yw in avkit.bed_planting(bx0 + 14, by0 + 14,
+                                                      bx1 - 14, by1 - 14,
+                                                      40.0, rnd):
+            piece(pl, rolemap.donor_name(avkit.mat(k), 'YardPlant%d_%d'
+                                         % (bi, made)),
+                  avkit.path(k), (px, py, pz), (0.0, yw, 0.0),
+                  mat=avkit.mat(k))
+            made += 1
+    return made
+
+
 def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """A house, which is not a small office block.
 
@@ -2973,11 +3136,40 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     bay = spec.get('bay', rnd.random() < 0.45)
     garage = spec.get('garage', rnd.random() < 0.4)
 
-    GARDEN = 250.0 + rnd.uniform(-20, 20)  # street line to the front wall
+    # THE OFFICE FIT-OUT. `use` says what the house is FOR. It is opt-in and
+    # every default below is exactly what a home did before it existed, so
+    # city.py's five houses (Elm, Maple, Cedar, Birch, Willow) are unchanged -
+    # including their random streams, because the draws above still happen and
+    # are simply discarded when a spec names its own value.
+    #
+    # An estate office in this project is a HOUSE, by the owner's declaration:
+    # a small cottage set back in a fenced yard, not a shopfront in a terrace.
+    # So it reuses the whole detached machinery - setback, fence, garden, four
+    # real walls - and changes only the fit-out and what stands in the garden.
+    office = spec.get('use', 'home') == 'office'
+    if office:
+        roof_kind = spec.get('roof', 'crossgable')   # gable TO the street
+        entry = spec.get('entry', 'stoop')
+        dormers = spec.get('dormers', 0)
+        bay = spec.get('bay', False)
+        garage = spec.get('garage', False)
+
+    # These three were constants because every caller was a suburban house on
+    # its own 820 lot. An office sits on a wider parcel it GROWS INTO, so the
+    # building is centred at its own width rather than inset from the lot -
+    # and it is set further back, because the yard is the point. The default
+    # expressions are the originals and are still evaluated, so the random
+    # stream is identical for anything that does not name them.
+    GARDEN = float(spec.get('garden', 250.0 + rnd.uniform(-20, 20)))
     SIDE = 100.0                           # gap to the lot edge, each side
-    hx0, hx1 = x0 + SIDE, x0 + W - SIDE
+    _hw = spec.get('house_width')
+    if _hw:
+        hx0 = x0 + (W - float(_hw)) / 2.0
+        hx1 = hx0 + float(_hw)
+    else:
+        hx0, hx1 = x0 + SIDE, x0 + W - SIDE
     hy0 = GARDEN
-    hy1 = min(D - 60.0, GARDEN + 430.0)
+    hy1 = min(D - 60.0, GARDEN + float(spec.get('house_depth', 430.0)))
     HW, HD = hx1 - hx0, hy1 - hy0
     eaves = GF + F*FH
     made = 0
@@ -3032,7 +3224,10 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         box(pl, 'Bloom_Bed', bed_x0 + 14, bed_x1 - 14, by0 + 74, by1 - 314, 10, 58)
         made += 2
 
-        if grnd.random() < 0.62:
+        _play = grnd.random() < 0.62      # drawn either way: stream preserved
+        if office:
+            pass                          # no swing set or putting green
+        elif _play:
             # a swing set: two A-frames and a beam, not a pile of uprights
             sw = lcx
             legs = 172.0
@@ -3121,13 +3316,14 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # front elevation: door bay in the middle, windows either side
     for b in range(BAYS):
         bx = hx0 + 40 + (HW - 80)*(b + 0.5)/BAYS
-        if abs(bx - cx) > 70:
+        if abs(bx - cx) > 70 and not office:
             made += window(a, 'GF%d' % b, 'y', hy0, -1.0, bx - 62, bx + 62,
                            26 + 62, GF - 34, bars=(1, 1))
         # A SINGLE-STOREY COTTAGE had two street windows and nothing else,
         # because the upper-floor loop does not run when floors is 0. The gable
         # above the eaves is elevation too: it takes a window.
-        if F == 0 and abs(bx - cx) <= 70 and GF - 34 - (26 + 168) >= 44:
+        if (F == 0 and not office and abs(bx - cx) <= 70
+                and GF - 34 - (26 + 168) >= 44):
             # only when there is real wall between the door hood and the
             # eaves - on a low cabin (gf_h ~200) this range is INVERTED and
             # abs() in box() was emitting a 28 uu sliver over the door
@@ -3137,6 +3333,10 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             z0 = GF + f*FH + 44
             made += window(a, 'U%d_%d' % (f, b), 'y', hy0, -1.0,
                            bx - 56, bx + 56, z0, z0 + FH - 96, bars=(1, 1))
+    if office:
+        made += office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves)
+        made += office_yard(pl, spec, x0, W, GARDEN, cx, grnd)
+
     # flanks
     for sgn, side in ((-1.0, hx0), (1.0, hx1)):
         for k in range(2):
@@ -3228,7 +3428,14 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # a real difference a street reads: gable to the side, or gable to the
     # street.
     OV = 34.0
-    rise = 168.0 + rnd.uniform(-16, 16)
+    rise = float(spec.get('roof_rise', 168.0 + rnd.uniform(-16, 16)))
+    # HOW FINELY THE GABLE INFILL IS STEPPED. Seven is right for a side-gabled
+    # suburban house, where the triangle is seen obliquely and short. Turn the
+    # gable TO THE STREET and make it steep and it becomes the largest surface
+    # on the building - at which point seven steps read as a ziggurat rather
+    # than as a boarded wall. Measured by eye on the office's first frame.
+    # Default unchanged, so every existing house is identical.
+    GSTEP = max(1, int(spec.get('gable_steps', 7)))
     ey0, ey1 = hy0 - OV, hy1 + OV
     ex0, ex1 = hx0 - OV, hx1 + OV
     street_gable = (roof_kind == 'crossgable')
@@ -3246,8 +3453,8 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                  math.hypot(run, rise), ey1 - ey0, 18.0, pitch=-sgn*ang)
             made += 1
         for sgn, ey_ in ((-1.0, hy0), (1.0, hy1)):
-            for i in range(7):
-                t0, t1 = i/7.0, (i + 1)/7.0
+            for i in range(GSTEP):
+                t0, t1 = float(i)/GSTEP, float(i + 1)/GSTEP
                 box(a, 'Wall_Gable%d_%d' % (int(sgn) + 1, i),
                     ex0 + run*t1, ex1 - run*t1, ey_ - 10, ey_ + 10,
                     eaves + rise*t0, eaves + rise*t1)
@@ -3265,8 +3472,8 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                  math.hypot(run, rise), 18.0, roll=sgn*ang)
             made += 1
         for sgn, hx_ in ((-1.0, hx0), (1.0, hx1)):
-            for i in range(7):
-                t0, t1 = i/7.0, (i + 1)/7.0
+            for i in range(GSTEP):
+                t0, t1 = float(i)/GSTEP, float(i + 1)/GSTEP
                 # the step's top must land ON the slope, not above it: take
                 # the NEXT station's footprint, or each corner pokes through
                 # and the ridge shows as a dashed line

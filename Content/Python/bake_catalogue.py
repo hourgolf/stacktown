@@ -20,6 +20,8 @@ sys.path.insert(0, HERE)
 import _path  # noqa: F401
 import genbuild, recipes, step_elevations, cores
 
+genbuild.live()   # this script builds into the OPEN level; see genbuild._LIVE
+
 RUNG = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'Tools', 'rung.sh')
 OUT = '/Game/Stacktown/Baked'
 STAGE = (0.0, 60000.0, 0.0)          # well clear of the board

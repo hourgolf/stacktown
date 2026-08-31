@@ -18,6 +18,8 @@ for _f in ('.mcp_sid',):
     try: os.remove(os.path.join(HERE,_f))
     except OSError: pass
 from genbuild import build as genbuild
+import genbuild as _gb
+_gb.live()   # this script builds into the OPEN level; see genbuild._LIVE
 import zones
 
 def ue(script, label):

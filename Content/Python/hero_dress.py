@@ -105,6 +105,7 @@ def lamp(name, x, y, reach):
 
 
 def main():
+    import genbuild as _gb; _gb.live()   # spawns into the OPEN level; see genbuild._LIVE
     if '--clear' in sys.argv:
         clear(); return
     clear()

@@ -9,6 +9,8 @@ for f in ('.mcp_sid',):
     except OSError: pass
 from city import BLOCKS
 from genbuild import build as genbuild
+import genbuild as _gb
+_gb.live()   # this script builds into the OPEN level; see genbuild._LIVE
 def ue(script,label):
     t=time.time()
     r=subprocess.run([RUNG,script],capture_output=True,text=True,cwd=HERE)

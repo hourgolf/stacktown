@@ -97,3 +97,23 @@ none is now obviously needed.**
 One thing worth a look that this did surface: `SW3`'s flank panels render magenta and
 teal, well outside the restrained palette the direction calls for. Not chased down —
 the material behind it is unconfirmed.
+
+### The leak is closed at the source
+
+Traced from the session transcript: a probe of `flank_param`'s corner handedness,
+run 2026-08-31T03:24:16Z, called `SE.flank_param()` four times and **never armed
+`genbuild`'s sink with `record()`**. Without the sink, `mkactor` falls through to the
+live MCP path and spawns into whatever level is open. Three calls at sign −1 and one
+at sign +1 gave exactly the 3 × `ELEV_T_W` + 1 × `ELEV_T_E` found; `width=1640`,
+`depth=1500` and origin `(0,0,0)` all match the measured bounds. The same probe was
+rewritten *with* `record()` three minutes later, but the actors it had already spawned
+were never removed, and the map was saved with them in — doubling it from 147,788 to
+299,276 bytes. The probe had redirected stdout to silence the builder, so nothing
+printed.
+
+**`genbuild.mkactor` now refuses to spawn unless intent is declared** — `record()` for
+a data-only probe, `live()` for a script that really builds into the level. Neither is
+a refusal, not a default. The flag is process-global, so only entry points declare it;
+libraries reached from one need nothing. Eleven entry points were enumerated and
+updated, and `python3 Content/Python/genbuild.py` runs a three-case self-test that
+asserts the refusal rather than reading output — the original bug produced none.

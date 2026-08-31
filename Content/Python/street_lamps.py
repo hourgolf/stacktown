@@ -80,6 +80,7 @@ def clear_of(rects, x, y):
 
 
 def run():
+    import genbuild as _gb; _gb.live()   # spawns into the OPEN level; see genbuild._LIVE
     # The MCP wipe above silently no-ops when the enumeration call returns
     # something unparseable, and the failure is swallowed - it once left 96
     # lamps where 48 were wanted, and did it again here (42 + 46 = 88). Go

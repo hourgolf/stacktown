@@ -40,6 +40,35 @@ O = 'editor_toolset.toolsets.object.ObjectTools'
 _SINK = None
 _PIECE_FAILS = []   # donor placements the editor refused; see piece()
 
+# INTENT TO MUTATE THE OPEN LEVEL MUST BE DECLARED.
+#
+# mkactor has always had two paths chosen by whether the sink happens to be
+# armed: record to a list, or spawn a real actor into whatever level the
+# editor has open. A read-only probe that simply forgot record() therefore
+# became a silent map mutation, and on 2026-08-31 one did: a four-call probe
+# of flank_param's corner handedness left three ELEV_T_W and one ELEV_T_E
+# standing at world origin in TestCity - which is the middle of the junction.
+# They were saved into the map, doubled its size, and were later mistaken for
+# a blank party flank on a building. The probe had redirected stdout to
+# silence the builder, so nothing printed; only a hide-and-reshoot found it.
+#
+# So the live path is now OPT-IN. record() declares a data-only probe; live()
+# declares a script that really does mean to build into the level. Neither
+# declared is a refusal, not a default. The flag is PROCESS-GLOBAL, so only
+# ENTRY POINTS declare it - libraries reached from one (zones, cores,
+# step_elevations' builders) need nothing.
+_LIVE = False
+
+
+def live(on=True):
+    """Declare that this process intends to spawn into the OPEN level."""
+    global _LIVE
+    _LIVE = bool(on)
+
+
+def is_live():
+    return _LIVE
+
 
 def record():
     """Arm the sink. Returns nothing; call drain() for the result."""
@@ -77,6 +106,14 @@ def mkactor(name, loc=(0, 0, 0), rot=None):
         _SINK.append(dict(kind='actor', name=name, loc=list(loc),
                           rot=list(rot) if rot else [0.0, 0.0, 0.0]))
         return len(_SINK) - 1          # the ref is the record's index
+    if not _LIVE:
+        raise RuntimeError(
+            'genbuild.mkactor(%r) would spawn into the OPEN LEVEL, and nothing '
+            'has declared that intent.\n'
+            '  - a data-only probe wants genbuild.record() ... genbuild.drain()\n'
+            '  - a script that really builds into the level wants genbuild.live()\n'
+            'See the _LIVE note above: a probe that skipped record() once left '
+            'four stray actors standing in the middle of TestCity.' % name)
     x = {'location': {'x': loc[0], 'y': loc[1], 'z': loc[2]}}
     if rot:
         x['rotation'] = {'pitch': rot[0], 'yaw': rot[1], 'roll': rot[2]}
@@ -3551,3 +3588,46 @@ def build_works(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     print('%s [works %d teeth%s]: %d boxes'
           % (n, teeth, ' + stack' if spec.get('chimney') else '', made))
     return made
+
+
+# Known answer for the live-path guard. The bug it exists to stop was invisible
+# - the probe had redirected stdout - so the test does not look at output, it
+# asserts the REFUSAL. ue.tool is stubbed so the permitted case can be checked
+# without spawning anything into a real level.
+if __name__ == '__main__':
+    import json as _json
+
+    live(False)
+    try:
+        mkactor('SELFTEST_ShouldRefuse')
+        raise AssertionError('unsinked mkactor was ALLOWED to spawn')
+    except RuntimeError as _e:
+        assert 'has declared that intent' in str(_e), _e
+    print('genbuild guard: undeclared spawn refused           pass')
+
+    record()
+    _ref = mkactor('SELFTEST_Sunk')
+    _rec = drain()
+    assert _ref == 0 and len(_rec) == 1 and _rec[0]['name'] == 'SELFTEST_Sunk', _rec
+    assert not is_live(), 'record() must not arm the live path'
+    print('genbuild guard: record() collects, does not spawn  pass')
+
+    class _StubUE(object):
+        calls = []
+
+        @staticmethod
+        def tool(svc, name, args):
+            _StubUE.calls.append(name)
+            return _json.dumps({'returnValue': 7})
+
+    _real, ue = ue, _StubUE            # noqa: F811 - swapped back below
+    try:
+        live()
+        assert mkactor('SELFTEST_Live') == 7
+        assert 'add_to_scene_from_class' in _StubUE.calls, _StubUE.calls
+    finally:
+        ue = _real
+        live(False)
+    print('genbuild guard: live() permits the spawn path      pass')
+    assert not is_live()
+    print('genbuild guard: 3/3 pass')

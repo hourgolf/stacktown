@@ -18,6 +18,8 @@ sys.path.insert(0, HERE)
 import _path  # noqa: F401
 import genbuild
 
+genbuild.live()   # this script builds into the OPEN level; see genbuild._LIVE
+
 ROOT = os.path.dirname(os.path.dirname(HERE))
 RUNG = os.path.join(ROOT, 'Tools', 'rung.sh')
 TMP = tempfile.gettempdir()

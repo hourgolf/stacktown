@@ -16,6 +16,8 @@ for f in ('.mcp_sid',):
     except OSError: pass
 from city import BLOCKS
 from genbuild import build as genbuild
+import genbuild as _gb
+_gb.live()   # this script builds into the OPEN level; see genbuild._LIVE
 import step_elevations
 
 

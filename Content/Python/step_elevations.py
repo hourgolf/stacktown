@@ -428,6 +428,7 @@ def freestanding(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
 
 def run(only=None):
+    import genbuild as _gb; _gb.live()   # spawns into the OPEN level; see genbuild._LIVE
     # Idempotent: wipe our own actors first - THROUGH rung.sh, locally.
     #
     # This used to wipe over MCP with get_all_level_actors, which is the call

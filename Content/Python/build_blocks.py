@@ -18,6 +18,8 @@ from city import BLOCKS
 WANT = set(sys.argv[1:]) or {'C'}
 WANT = {n for b in BLOCKS for n in [b['name']] if any(n.startswith(w) for w in WANT)}
 from genbuild import build as genbuild
+import genbuild as _gb
+_gb.live()   # this script builds into the OPEN level; see genbuild._LIVE
 import zones
 import step_elevations
 

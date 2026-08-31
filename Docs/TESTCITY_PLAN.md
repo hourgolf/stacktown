@@ -18,12 +18,18 @@ debut, and the lighting front's fix — one build, three owner decisions:
    then recipes through genbuild, gated and stamped like everything.
    Function retrofits when the economy notes land; the owner accepts
    that rework risk knowingly.
-3. **LIGHTING: folded into the test-city rig.** The read #2 tell
-   ("render-like") gets its investigation during the new board's rig
-   derivation — shadow-edge character, studio-lamp falloff/warmth,
-   room-occlusion ambient, practicals' contribution (hypothesis list in
-   Saved/ColdRead2/RECORD.md). Fix it on the city every future reader
-   sees. Numbers gate the look; the owner's eyes decide it.
+3. **LIGHTING: re-scoped 2026-08-31 — the investigation runs ON THE
+   BENCH, not the test city** (coordinator amendment after the corner-
+   order review; the original binding to "the test-city rig" was the
+   plan's error). The render-like tell was observed in read #2's
+   frames, shot on the bench street: a STABLE, read-validated subject
+   with direct comparability to the exact frames the reader judged.
+   Chasing it on a city whose massing is actively changing (corners,
+   deeper footprints) risks attributing massing to lighting — the
+   tree-card between-subject lesson. Corrected rig values then flow
+   into citylight.py BY DERIVATION. Runs PARALLEL to the headless
+   corner work, in editor windows. Hypothesis grid in
+   Saved/ColdRead2/RECORD.md; the owner's eyes decide it.
 
 ## Sequence
 

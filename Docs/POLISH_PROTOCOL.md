@@ -278,6 +278,12 @@ also earned the rule that keeps it fixed.
   finds it except another accident - so the family needs a DETECTOR (a
   census query for runs whose extent equals a neighbour pair's outer
   span), owed by the design session, not another incident report.
+  DETECTOR BUILT, FAMILY CLOSED at 264 -> 0 (instances 4-5 found by
+  search). INSTANCE 6 appeared 2026-08-31 in NEW code — the corner
+  continuation's flank soffit starting inside the front's — and was
+  caught by GATING THE VARIANT BEFORE ORDERING THE BAKE (3 pairs vs the
+  base's 2, one query). A closed family stays closed only because the
+  gate runs before the bake; new code is where old families are reborn.
 - **THE CROWN-COLLAPSE FAMILY** (closed 2026-08-30): any course series
   driven by `(1.0 - t*t) ** 0.5` collapses to zero width at t = 1 — the
   ellipse inset equals the half-span and both edges land on the midpoint.
@@ -296,6 +302,31 @@ also earned the rule that keeps it fixed.
   "looked right"); with manual metering set, the derived values landed
   in family with the passing frames on the first try, no sweep. Any new
   volume gets metering set before anything is judged through it.
+- **A RENAME THAT RIDES AN && CHAIN IS NOT A RENAME** (2026-08-31): a
+  control sequence's frames were lost when the rename chained after a
+  toggle that failed - the rename never ran, the re-run silently
+  overwrote the evidence it was to be compared against. The numbers
+  survived in the transcript; the raw frames did not. Evidence moves
+  FIRST, in its own command, verified - then the next experiment runs.
+- **ONE CAPTURE IS ONE SAMPLE OF A DISTRIBUTION** (2026-08-31): the
+  bench street measured THREE distinct brightness states (~61/69/83)
+  across sixteen unchanged captures, far-canyon columns swinging 44
+  levels — and a single capture nearly got reported as a scene-change
+  finding. dof_matrix.py already captured twelve times per measurement
+  because settling is a KNOWN property of this renderer; every new
+  instrument re-learns it. Any frame that will be MEASURED (not only
+  looked at) is captured as a sequence with a stated settle criterion,
+  and a scene that does not reproduce blocks every measurement made on
+  it — reproducibility is item zero, not a nicety. RESOLVED 2026-08-31:
+  the tri-state was THE CAPTURE PATH, not the scene — every
+  captureTransform render is a transient camera sampling time-amortized
+  far-field GI mid-cycle. **THE CAPTURE PROTOCOL for every MEASURED
+  frame: park the viewport on the pose, dwell 10 s, capture with >=1.5 s
+  between frames, discard until consecutive delta < 0.5 levels, keep the
+  next.** Proven: deltas 3.8 -> 0.41 monotonic, converged-run
+  reproducibility 2.8 levels (the real noise floor) against 44 levels of
+  phase noise. dof_matrix's twelve captures were the folk version; this
+  is the criterion.
 - **Prefer a WITHIN-FRAME control, and state your settle criterion**
   (2026-08-30). FOUR measurements went wrong in one day and every one was
   a BETWEEN-SUBJECT comparison in a scene that drifts: the grass alpha
@@ -413,6 +444,21 @@ fix, never to FIND one. Therefore:
 6. District placer, sized to the real variety budget.
 
 ## Commit discipline
+
+- **The WIP bar: "green and coherent on its own", not "finished
+  feature"** (agreed between lanes, 2026-08-30). An increment commits
+  when it passes its own tests and leaves every existing contract
+  byte-intact (the depth-axis start: grammar declared, self-test
+  extended, zero bakes, all 548 names identical to the ledger keys) —
+  even though the feature it enables is not built. Whoever knows an
+  increment fails that bar says so BEFORE staging, not after.
+- **Measuring a PNG leaves a 17.6 MB sibling** (2026-08-30): img.load
+  deliberately caches a BMP beside every PNG it measures, unbounded, in
+  whatever directory the PNG lives in — a 30-frame sweep costs ~half a
+  gigabyte in Saved/. Now gitignored (*.png.bmp) with the reason; the
+  cache is regenerable by construction (0 orphans found at cleanup).
+  Disk item, not a bug — but Saved/ is the EVIDENCE directory, and
+  DISK_AUDIT exists because this shape has bitten before.
 
 Every design-session pause point ends with a commit request to the
 coordinator. The project has now three times accumulated days of

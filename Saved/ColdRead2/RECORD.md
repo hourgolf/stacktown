@@ -63,3 +63,36 @@ passes and were dropped on the way to v4.
    room") is the reference.
 4. Read #3, when it comes: same protocol, plus wide-framing show
    frames, and a verbatim transcript.
+
+## Addendum, 2026-08-31 — the bench does not render reproducibly
+
+Measured by the design session at the street frame's own recorded
+transform, sixteen consecutive captures, nothing changed: THREE distinct
+brightness states (~61 / ~69 / ~83 mean), frame deltas never below 4.6
+and repeatedly 25-26, the far-canyon centre columns swinging 44 levels
+while edges move ~10. The v4 street frame the reader saw measures 62.31
+— one sample of a three-state scene, plausibly the dimmest.
+
+CONSEQUENCE FOR THIS RECORD'S FINDINGS: the "render-like lighting" tell
+CANNOT currently be separated from "one phase of an unstable render."
+The finding stands as reported speech; its attribution is SUSPENDED
+until the scene reproduces (investigation item zero, design session).
+The findings that HELD — the miniature read surviving close inspection,
+zero recurrence of read #1's named tells — are unaffected: they are
+subject judgements, not luminance judgements.
+
+Also: one capture is one sample of a distribution — dof_matrix.py
+captures twelve times per measurement because settling is a known
+property of this renderer, and the read protocol inherits that rule for
+any future frame that will be measured rather than only looked at.
+
+RESOLUTION, same day: the tri-state was the CAPTURE PATH (transient-
+camera captures sampling time-amortized far-field GI mid-cycle), not
+the scene. With the dwell protocol the scene converges monotonically to
+mean 70.2-70.7, reproducible to 2.8 levels. THE JUDGED STREET FRAME WAS
+8.4 LEVELS DIMMER than the scene's converged state - a phase sample the
+scene does not produce when given time to settle. The "render-like"
+attribution therefore awaits a RE-SHOT, CONVERGED frame set before any
+rig hypothesis is tested: dimmer, flatter light is precisely the kind
+of thing that reads render-like, and the reader may have been judging
+the instrument.

@@ -253,6 +253,16 @@ Every item cost hours. They are ordered by how much.
   Measured 2026-08-27: live 350s vs fastbake 2.6s, identical bounds.
   FASTBAKE is the production path; the live merge is for nothing on the
   judgment path at all.
+- **Python bytecode lives OUTSIDE the repo on this machine** (found
+  2026-08-31, cost an hour): `sys.pycache_prefix` is
+  `~/Library/Caches/com.apple.python`, so `rm -rf __pycache__` clears
+  NOTHING — and invalidation is mtime+SIZE, so a same-length edit landing
+  in the same second serves STALE BYTECODE against the restored file.
+  The tell: `import` and `exec(open(path).read())` disagree about the
+  same file. Size-preserving constant edits in a tight edit-rerun loop
+  (100 -> 200, 5 -> 9, 1.0 -> 2.0) are the exact trigger. Fix: clear
+  `~/Library/Caches/com.apple.python/<abs repo path>`. If a Python value
+  contradicts the source in front of you, it is this, not the source.
 - **NEVER purge `LOOK_`.** `LOOK_Post` is the unbound PostProcessVolume
   holding the fixed grade (AEM_Manual, ISO 800, shutter 60). Deleting it
   silently reverts the level to UE default AUTO exposure - the same camera

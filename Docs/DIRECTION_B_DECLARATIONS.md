@@ -680,3 +680,542 @@ heart of item (2). It is deliberately not answered in this declaration: it
 requires reading genbuild's build path properly, and the flagship lane that
 certifies phase-F-class generator changes is on break. Sized first, built
 second.
+
+---
+
+## D5 — grain varies by SPECIES. Owner, 2026-08-31. Corrects D2/D3.
+
+**Owner, on being shown the grain shortlist: "grain should vary by
+species/building type/etc so it's hard to pick just one grain (and we need
+more than 3)."**
+
+### What this corrects
+
+D3 declared the wood family as "one per timber tone, all sharing the
+`basswood` stock, differing in base colour". **That is wrong, and it is wrong
+in a way D3 itself should have caught.** D3's own channel map says
+**hue = species** — and grain is as much a species trait as hue. A stock
+carries the normal map, so one stock for all timber means one grain for every
+building in the city: the same paper-tell fault D2 found, wearing a wooden
+name. Pale pine and dark walnut do not differ only in colour; they differ in
+figure, ring spacing and how coarsely the grain reads.
+
+**Corrected: SPECIES IS A STOCK, not a colour on a shared one.**
+
+### It needs no new machinery, and the precedent is exact
+
+`fabrication.stock_for()` resolves by LONGEST PREFIX. Verified:
+
+    today                          with species stocks added
+    MI_wood        -> basswood     MI_wood        -> basswood
+    MI_wood_pine   -> basswood     MI_wood_pine   -> pine
+    MI_wood_walnut -> basswood     MI_wood_walnut -> walnut
+
+This is the mechanism `MI_dist_brick` already uses to leave the `MI_dist`
+paint family: a longer key wins, no special case, no code change — a table
+entry per species. And it satisfies the stock admission rule as written:
+**"a stock exists iff a modelmaker would reach for a different material."**
+Pine, oak and walnut are different materials a modelmaker reaches for. Species
+-as-stock is the doctrinally correct reading, not a stretch of it.
+
+Each species stock therefore carries its own **normal (grain)**, its own
+**tooth/amount**, and its own **roughness band** — species genuinely differ in
+how they take a finish — while the MI carries the colour. Building type
+reaches grain the way it already reaches colour: recipe -> spec `wall` ->
+`MI_wood_<species>` -> stock -> grain.
+
+### The installed inventory cannot supply this — MEASURED, not assumed
+
+All twelve installed wood normals were opened in the texture editor, cropped
+and measured. Anisotropy is the discriminator: grain is directional, so a
+ratio near 1.0 is not depicting wood.
+
+    map                detail   ratio   verdict
+    T_Wood060           28.31    2.96   continuous grain      MASS
+    T_Wood039            6.28    1.96   continuous, fine      MASS
+    T_Wood027            3.31    2.34   continuous, very fine MASS
+    T_Wood_Particle      7.32    1.03   isotropic granular    BOARD - see below
+    T_PlywoodBoards      4.38    1.66   plywood boards        reject
+    T_Parquet            1.76    1.90   laid blocks, faint    reject
+    T_Wood057            4.13    1.05   isotropic - noise     reject
+    T_WoodenPallet_A     7.79    1.01   isotropic (knots)     reject
+    T_WoodenPallet_B     8.05    1.02   isotropic             reject
+    T_WoodenPallet_C     9.33    1.02   isotropic             reject
+    T_WoodFloor039       3.25    1.76   planked, CROSS-axis   reject + bad import
+    T_UB_wood_lacquered  0.68    1.73   no relief (lacquer)   reject
+
+**Three usable mass grains, from one pack, all ambientCG woods.** Three
+species is not a city. FAB-FIRST's bar — "prove nothing installed serves" — is
+therefore MET by measurement rather than by argument, and the next rung is
+open.
+
+**One real find outside the mass question:** `T_Wood_Particle_01_N` measures
+isotropic-granular (ratio 1.03, gradient 7.95), which is exactly what particle
+board IS. `chipboard` — the stock for the BOARD the city stands on — also
+wears `T_PaperNormal` today. It is a separate admission for a separate job,
+and it is the best-supported one in the inventory.
+
+### The convergence: more species and the fresh-clone cost have ONE answer
+
+D2 flagged that admitting a pack-resident map means direction B renders
+grainless on a fresh clone, guarded by `check_textures.py` rather than fixed.
+That looked like a cost to weigh against admitting from the packs.
+
+It is not a separate question any more. The inventory cannot supply enough
+species, so we must go outside it — and the correct outside source is **CC0
+with custody** (the Poly Haven route taken for brick, which closed the
+fresh-clone regression class outright instead of guarding it). Sourcing the
+species set and fixing the custody problem are **the same move**.
+
+### What the shortlist could NOT answer, named at the owner's prompting
+
+The owner asked whether the purple was expected. It is — a normal map encodes
+surface direction as RGB and a flat surface is (128,128,255) periwinkle — but
+the question exposes a limit in how the shortlist was presented: **a normal
+map viewed as RGB is a data visualisation, not an appearance.**
+
+It is a valid instrument for STRUCTURE (planked vs continuous survives the
+encoding, and that is what rejected nine of twelve). It is not a valid
+instrument for LOOK. No grain may be admitted on the strength of its map
+alone; the candidates go on lit geometry before any species is chosen — which
+is the acceptance rule this project already has ("acceptance happens on a
+BUILDING", never on a flat sample), arriving here one step earlier than usual.
+
+### Open, for the owner
+
+**How many species, and which?** B1's range is "pale pine to dark walnut". The
+district palette runs nine schemes for comparison. The number is a look call
+and it sizes the admission list, so it comes before sourcing rather than after.
+
+---
+
+## D6 — the six timbers. Owner, 2026-08-31.
+
+**Owner's word: "lets do 6 species to start, pale pine through walnut...
+wood grain should be species/tonally accurate."**
+
+Two decisions in one sentence. The count (six) sizes the admission list. The
+accuracy constraint decides *where the maps can come from*, and it rules out
+the answer D5 was drifting toward.
+
+### FIRST: the prohibition this must answer
+
+`MASTER_MATERIAL_SPEC.md:45`, in the role-vocabulary section:
+
+> Keep the set this small. The last project's palette grew a **`walnut`** and
+> a **`cedar`** and a `bronze` that did nothing a parameter could not have done.
+
+A future reader will grep `walnut`, find that line, and conclude this
+declaration violates the spec. It does not, and the distinction is precise:
+
+- The prohibited walnut was a **role** that differed from its neighbours only
+  in COLOUR — a parameter wearing a material's name.
+- These six are **stocks**, and each carries **its own normal map**. A grain
+  is not a parameter. Nothing in the master can turn oak's open pores and ray
+  fleck into walnut's wavy close figure.
+
+The spec's own test is the admission rule D5 already invoked — *a stock exists
+iff a modelmaker would reach for a different material* — and a modelmaker
+reaches for different timber, not for the same stick painted darker. **The
+line to watch is that these six never become six colours on one map.** If a
+species cannot be given its own grain, it is a colour and it must be dropped
+rather than admitted. That is the falsifiable form of this argument.
+
+### The six, pale to dark
+
+Tones are TARGETS for the species, not final values — they are verified on a
+building at the show camera like every other look number here.
+
+    stock       tone target   grain character (what makes a map ACCURATE)
+    ---------   -----------   ---------------------------------------------
+    basswood    #E8DCC0       the modelmaker's own timber: near-featureless,
+                pale cream    very fine even grain, almost no figure. The
+                              PALE END and the existing stock name - it keeps
+                              its meaning rather than being renamed.
+    pine        #E5C99A       fine straight grain with STRONG LATEWOOD
+                pale yellow   BANDING - the alternating soft/hard stripe is
+                              pine's tell, and knots are characteristic.
+    ash         #D9C4A0       COARSE OPEN PORES at a pale tone - the entry
+                light tan     that proves tone and coarseness are independent
+                              axes. Long, straight, prominent grain.
+    oak         #C19A6B       open grain plus RAY FLECK, the short cross-grain
+                honey         flashes nothing else here has. The honey middle
+                              of the ladder.
+    mahogany    #A0522D       medium INTERLOCKED grain, ribbon figure that
+                red-brown     alternates direction - reads as stripe under
+                              raking light.
+    walnut      #5C4033       medium-coarse with WAVY, irregular figure and
+                dark chocolate colour variation within the board. The DARK END.
+
+**The ladder is two axes, not one.** Tone runs pale to dark; coarseness does
+NOT run with it (basswood fine/pale, ash coarse/pale, walnut coarse/dark).
+That is deliberate and it is what stops the city reading as a single gradient
+- a pale building and a dark one can share a grain family, and two pale
+buildings can differ in it.
+
+### SECOND: the accuracy constraint forecloses the installed inventory
+
+D5 measured three usable mass grains and was heading toward assigning them by
+coarseness — Wood060 as the coarse one, Wood027 as the fine one. **The
+owner's accuracy constraint kills that plan, and correctly.**
+
+The three are ambientCG `Wood060`, `Wood039`, `Wood027`: generic, UNIDENTIFIED
+woods. Nothing names their species. Assigning Wood060 to "oak" because it
+measures coarse would be exactly the failure this project has a rule for — *a
+plausible mechanism plus a matching axis is not evidence the axis is the right
+one*. Coarse is not oak. Oak is oak, and its ray fleck is the thing that says
+so.
+
+**Therefore: species-accurate grain requires species-IDENTIFIED sources, and
+the installed packs contain none.** FAB-FIRST is satisfied twice over now —
+first by count (three cannot fill six), now by kind (unidentified cannot be
+accurate).
+
+### What this makes of the custody problem: it disappears
+
+D5 noted the two problems were converging. Under the accuracy constraint they
+have merged completely:
+
+- accurate maps must be species-identified -> they come from a catalogue that
+  names species -> **Poly Haven / ambientCG name their woods**;
+- those are **CC0**, so they arrive with custody and are COPIED into tracked
+  content under the texture-custody carve-out;
+- which closes the fresh-clone regression class **outright** rather than
+  guarding it — the brick precedent, and the reason brick was replaced rather
+  than guarded.
+
+There is no longer a trade-off to weigh. The accurate route and the
+custody-correct route are the same route, and the pack-resident option is
+dead on accuracy grounds before custody is even considered.
+
+### The admission list, and what still gates it
+
+Six maps to source, one per stock, each carrying:
+`source URL, licence, acquisition date, species identification` — the asset
+acceptance record `AGENTS.md` already requires, plus species, which is new
+here because accuracy is now a stated requirement rather than a preference.
+
+**Gates that do NOT relax for being CC0:**
+
+1. **Green convention.** `flip_green_channel` verified per map at import and
+   recorded in the stock's `needs`. An inverted green renders grain proud
+   where it should be recessed and MEASURES IDENTICALLY either way. This is
+   the fault that motivated the custody rule; six new maps is six new chances
+   to reinstate it.
+2. **`sRGB` off, `Normalmap` compression, `WorldNormalMap` group** — the exact
+   trio `T_WoodFloor039` gets wrong today (D5), proving the fault is live in
+   the packs and not hypothetical.
+3. **Their micro-relief, our colour.** A CC0 wood texture set ships albedo and
+   roughness. **Only the normal is admitted.** The six tone targets above are
+   OURS and stay ours; a photographed walnut's albedo is not the palette.
+4. **Acceptance on a building**, at the show camera, amplitude swept — never
+   on a flat sample, and never on the normal map viewed as RGB, which is a
+   chart of slopes and not a picture of wood (D5).
+
+### Still open
+
+**Sourcing itself is not started and needs the owner's word** — six downloads
+from an external source is an acquisition, and this project does not acquire
+assets on an agent's initiative. What is decided here is WHAT to look for and
+WHAT it must satisfy; the looking is a separate approval.
+
+### The tone ladder, MEASURED — and a collision worth the owner's call
+
+The six targets above were checked in CIE L* before anything is built on them.
+Even spacing across the range would be ~11.6 L* per step:
+
+    stock       hex        L*     step
+    basswood    #E8DCC0   88.0
+    pine        #E5C99A   82.3    -5.8
+    ash         #D9C4A0   80.0    -2.2   <-- collision
+    oak         #C19A6B   66.1   -13.9
+    mahogany    #A0522D   43.8   -22.3
+    walnut      #5C4033   29.9   -13.9
+
+**The pale end is bunched and the middle has a hole.** Three species occupy
+the top 8 L* while a 22-point gap yawns between oak and mahogany. Most
+sharply: **pine and ash are 2.2 L* apart** — at B2's board range they will
+read as the same timber, distinguished only by grain (pine's latewood banding
+against ash's open pores).
+
+This is not a fault in the targets; it is what *accurate* costs. Real pale
+timbers really are all pale. The instruction was species-accurate, so the
+tones are not being fudged to spread the ladder — that would be inventing a
+timber, and inventing a threshold and then judging against it is a named
+failure here.
+
+**Two honest resolutions, owner's call:**
+
+(a) **KEEP ALL SIX.** The pale end is separated by FIGURE, not tone — a row of
+    pale timbers differing in cut rather than stain, which is arguably the
+    more interesting read and is exactly what species-accuracy buys. Risk,
+    stated: if grain does not survive board range, three species collapse into
+    one look and two of the six are wasted.
+
+(b) **SWAP ASH FOR A MID TIMBER** — cherry sits naturally around L* 52 and
+    fills the oak-to-mahogany hole, giving roughly 88 / 82 / 66 / 52 / 44 / 30.
+    Cost: ash is the lane's only COARSE-AND-PALE entry, and losing it makes
+    coarseness correlate with darkness — the two-axis property this
+    declaration argued for stops being true.
+
+**Recommendation: (a), and treat it as the first thing the lit samples must
+answer.** The question "does grain separate two same-toned timbers at board
+range?" is answerable on a test surface before any species is sourced, and it
+decides (a) versus (b) with evidence instead of preference. If grain does not
+carry it, (b) is the fallback and nothing has been wasted.
+
+---
+
+## D7 — the six are sourced, and sourcing found a rule problem. 2026-08-31.
+
+Owner approved CC0 sourcing. Seven maps downloaded from Poly Haven (CC0
+verified at https://polyhaven.com/license: commercial use, redistribution, no
+attribution required), 2048x2048 16-bit PNG, into
+`Tools/textures/source/polyhaven/` beside the brick.
+
+**One improvement on the brick precedent, already anticipated by its own
+note.** Poly Haven publishes both green conventions. The brick took `nor_gl`
+and needed `flip_green_channel` at import — the fault class that motivated the
+whole custody rule. **These are `nor_dx`**, DirectX convention, which is what
+UE samples. The flip is not set, not needed, and cannot be forgotten on a
+fresh clone. `PROVENANCE.md`'s own line — "flip green (*or import as
+DirectX*)" — is now taken up.
+
+### The six, and one substitution the evidence forced
+
+    stock     asset                    L* target   why this species
+    maple     white_maple_veneer         88        the pale end
+    ash       ash_veneer                 80        coarse open pores, pale
+    oak       white_oak_veneer           66        ray fleck, the honey middle
+    cherry    cherry_veneer              52        fills the measured tone hole
+    sapele    sapele_veneer              44        a TRUE mahogany-family
+                                                   timber with the interlocked
+                                                   ribbon figure D6 described
+    walnut    american_walnut_veneer     30        the dark end
+
+**PINE IS OUT, on evidence.** D6 said "pale pine through walnut" and pine is a
+softwood, so it is essentially never veneered — the only Poly Haven pine is
+`coated_pine`, varnished. It was downloaded anyway rather than argued away,
+and its normal map is **completely blank**: a uniform blue field, zero
+relief, because the varnish fills the grain. Rejected by looking at it. Maple
+takes the pale end, and the substitution is now backed by a frame rather than
+by my preference.
+
+Cherry also resolves the 22-point L* hole D6 measured between oak and
+mahogany, so the ladder is 88 / 80 / 66 / 52 / 44 / 30 — still bunched at the
+pale end by the owner's accepted decision, but no longer holed in the middle.
+
+### THE RULE PROBLEM, measured
+
+**"Their micro-relief, our colour" (owner-approved 2026-08-28) does not
+survive contact with sanded timber.**
+
+A veneer is sanded flat. Its grain is COLOUR figure, not relief. Measured on
+the same asset through the same pipeline and the same window — a
+within-subject comparison, which is the standard this project holds
+between-subject comparisons to:
+
+    asset            map       detail    direction
+    ash_veneer       NORMAL      1.07      2.26
+    ash_veneer       DIFFUSE     4.78      5.22      <- 4.5x the grain
+    white_oak        NORMAL      2.33      1.39
+    white_oak        DIFFUSE     4.96      2.84      <- 2.1x the grain
+
+Confirmed by eye: oak's normal shows shallow pore streaks; ash's is nearly
+flat; coated pine's is blank. **Taking only the normal discards most of what
+makes each species look like that species** — and would land the wooden city
+in a new form of the exact fault D2 found: near-featureless surfaces, species
+separated only by flat tone, on a direction whose material lock is "grain as
+the surface".
+
+The rule is not wrong; it was written for BRICK, where the relief IS the
+feature (embossed brick sheet has real depth). Wood is the case it does not
+cover.
+
+### The decision this needs — OWNER'S, not the lane's
+
+**(a) Normal only, rule as written.** Species differ by flat tone plus very
+shallow relief. Honest to the rule; risks a city of featureless blocks and
+makes D6's whole species argument moot, since figure is what was meant to
+separate the bunched pale end.
+
+**(b) Their PATTERN, our PALETTE — the proposed extension.** Take the normal
+AND a **luminance-only grain mask** derived from the diffuse, used to modulate
+**our** species tone. Their colour is never imported: the mask says WHERE the
+grain is, our palette says WHAT COLOUR it is. This keeps the rule's actual
+purpose — donor albedo must not set our palette — while accepting that wood's
+figure is tonal. It is an extension of an owner-approved rule and therefore
+the owner's call, not mine.
+
+**(c) Source rough-sawn or weathered timber instead**, which has real relief.
+Rejected on look grounds before it is offered: a carved model block is
+SANDED. Rough-sawn grain would read as driftwood, not as a planning model.
+
+**Recommendation: (b).** It is the only option that delivers species-accurate
+grain, and the palette discipline the original rule protects is untouched by a
+luminance mask.
+
+**A possible existing home, flagged not assumed:** `MI_wood` carries a bound
+`PaperDetail` texture parameter, and HANDOFF open question 5 says PaperDetail
+is "bound but its contribution is untraced". That may be the channel a grain
+mask belongs in, or it may be a trap. It is traced before it is used.
+
+### Not yet done
+
+Nothing is imported. No `.uasset` exists, no stock references any of these,
+`fabrication.py` is untouched, and the seven sources are downloaded but
+uncommitted. **Repo cost to flag: ~135 MB of 16-bit PNG sources** (the brick
+pair is ~32 MB for comparison). Whether the sources are committed like the
+brick's, or recorded by SHA-256 in PROVENANCE.md and re-fetchable instead, is
+a repo decision worth taking deliberately rather than by precedent.
+
+---
+
+## D8 — THEIR PATTERN, OUR PALETTE. Owner, 2026-08-31.
+
+**Owner's word: "approve the grain mask, their pattern our palette."**
+
+The extension proposed in D7 is approved. Recorded with its scope, its
+mechanism, and the line it must not cross.
+
+### The rule, stated so it can be enforced
+
+MASTER_MATERIAL_SPEC's admitted scope was **"their MICRO-RELIEF, our colour
+and sheen"** — a donor lends its normal map and nothing else. For direction
+B's timber that is extended to:
+
+> **THEIR PATTERN, OUR PALETTE.** A donor wood map may lend, in addition to
+> its normal, a **LUMINANCE-ONLY GRAIN MASK** derived from its diffuse. The
+> mask carries *where the figure is*. The palette — hue, value, and the
+> species tone the figure modulates — remains entirely ours.
+
+**Why this does not gut the original rule.** The rule exists so that donor
+albedo cannot set our palette; that is its whole purpose, written after a
+photoreal donor beside flat-shaded work. A luminance mask imports no hue, no
+saturation and no absolute value — it is a black-and-white pattern. Our six
+tone targets are unchanged by it, and a donor's brown never reaches the frame.
+
+**The line, and it is testable:** the mask is **single-channel and
+mean-normalised**. If any pipeline step ever carries a donor's colour, hue or
+absolute brightness into the material, the extension has been violated,
+regardless of what it is called. That is checkable in one assertion and
+should become one.
+
+### SCOPE: direction B only, deliberately
+
+This extension is recorded **in the direction-B ledger, not in
+MASTER_MATERIAL_SPEC.** The owner approved it in the context of the wooden
+city's timber, and generalising a shared doctrine on that basis would be
+overreach twice over: the flagship lane owns that spec's consequences and is
+on break, and its materials are brick, plaster and paint — the cases where the
+original relief-only rule is exactly right.
+
+If the flagship wants it, that is a separate decision on that lane's return.
+What is owed meanwhile is a **cross-reference** in MASTER_MATERIAL_SPEC so a
+future reader of the shared spec learns the extension exists — proposed to the
+coordinator rather than written by this lane.
+
+### Mechanism
+
+Each species stock carries **two maps**, not one:
+
+    normal   the species' nor_dx map    - shallow relief, replaces the
+                                          master's default paper tooth
+    figure   the species' grain mask    - luminance from the diffuse,
+                                          mean-normalised, modulating
+                                          BaseColour
+
+`fabrication._st()` gains a `figure` key defaulting to `None`, exactly as
+`normal` does — additive, behaviour-preserving, and every existing stock keeps
+emitting what it emits today. `figure_for(name)` joins `normal_for(name)` as a
+sibling accessor rather than being folded into `params_for`, which emits
+scalars only and would break every caller if a texture were folded in — the
+reason that separation already exists.
+
+This composes with D3 without collision, and the channel map holds:
+
+    hue        species    BaseColour vector, ours
+    figure     species    grain mask, donor pattern modulating our tone
+    wear       time       EdgeWearLift, CPD channel 0
+    glow       state      B4's night system, CPD channels 1-3
+
+### Where the mask lives — TO BE TRACED, NOT ASSUMED
+
+`MI_wood` carries a bound `PaperDetail` texture parameter, and HANDOFF's open
+question 5 records that PaperDetail is **"bound but its contribution is
+untraced"**. It may be the channel a grain mask belongs in; it may be
+something else; it may be doing nothing.
+
+**It is traced before it is used.** An untraced parameter that happens to
+produce a plausible result is precisely how this project acquires faults that
+survive for weeks — and if PaperDetail turns out to be wrong for this, the
+alternative is a new parameter on `M_StacktownMaster`, which is a **shared
+master** and therefore a change this lane does not make alone.
+
+### Still not done
+
+Nothing imported. `fabrication.py` untouched. The seven sources sit
+uncommitted, and the ~135 MB repo question is still open.
+
+### PaperDetail TRACED — and it splits the grain mask in two
+
+D8 said PaperDetail is traced before it is used. Traced, from the code that
+wired it (`wire_paper.py:74-93`) rather than by inspection of a graph:
+
+    det = TextureSampleParameter2D('PaperDetail', T_PaperDetail,
+                                   SAMPLERTYPE_LinearGrayscale)
+    wire(mul, det, 'UVs')          # the same tiled UVs as the paper normal
+    wire(det, target, 'Alpha')     # -> the ROUGHNESS Lerp's Alpha
+
+**PaperDetail is the ROUGHNESS DETAIL channel**: a grayscale map interpolating
+each material between its `RoughMin` and `RoughMax` across the surface. It
+replaced an older world-scale Noise alpha.
+
+**This answers HANDOFF open question 5**, which has stood as "bound but its
+contribution is untraced" in HANDOFF, WORKSTREAMS and THREAD_PROMPTS. The
+answer is owed to those three docs; HANDOFF.md is currently DIRTY in the
+worktree with another lane's edits, so this lane does not touch it — the fact
+is reported to the coordinator to route instead.
+
+`PaperMottle` was checked in the same pass and is NOT a colour channel either:
+`rebind_mottle.py` binds it to the three COARSE normal samplers — it is the
+two-octave normal system, since parked.
+
+**So there is no existing base-colour texture channel on the master**, and the
+grain mask splits cleanly in two:
+
+**HALF A — roughness figure. FREE, no master change.** Point each species
+stock's `PaperDetail` at its own grain mask instead of the shared
+`T_PaperDetail`. Open earlywood pores are genuinely rougher than dense
+latewood, so a grain-shaped roughness variation is physically right, and it
+arrives through a parameter that already exists on every instance. This half
+can be built the moment the maps are imported.
+
+**HALF B — colour figure. NEEDS A MASTER CHANGE.** `fix_wear.py:40` records
+the chain: `MP_BaseColor -> Lerp(seam) -> Lerp(wear) -> BaseColour`. Making
+the figure VISIBLE means inserting a multiply between the `BaseColour`
+parameter and that chain — a change to **`M_StacktownMaster`, which every
+material in the project shares**.
+
+### Half B is not this lane's to make alone
+
+It is additive and behaviour-preserving in principle — a `GrainMask` texture
+parameter defaulting to white multiplies by 1.0, so every existing instance
+renders byte-identically. But "in principle" is the phrase this project has
+been burned by, and the master is the one asset the whole catalogue depends on.
+
+**The split-proof standard, named BEFORE the change starts, per the rule that
+requires it:**
+
+- **the no-op half** proves itself by RENDER: an existing flagship material
+  (not a wood one) captured before and after under the capture protocol, mean
+  absolute difference within the measured noise floor. The parameter defaults
+  to white; if anything moves, the default is not neutral and the change is
+  wrong.
+- **the look-change half** proves itself on a WOODEN building at the show
+  camera, with the owner's eye — never on the study wall, and never on the
+  numbers alone.
+
+Neither half starts without the owner's word, and the coordinator holds
+cross-lane verification for a shared-master change while the flagship lane is
+away.

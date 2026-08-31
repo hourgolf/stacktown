@@ -3010,20 +3010,25 @@ def office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves):
     for sgn in (-1.0, 1.0):
         wx = cx + sgn * 165.0
         t = 'L' if sgn < 0 else 'R'
-        box(a, 'Frame_ShopSill%s' % t, wx - HALF - 9, wx + HALF + 9,
+        box(a, 'Band_ShopSill%s' % t, wx - HALF - 9, wx + HALF + 9,
             hy0 - 20, hy0 + 2, SILL - 14, SILL)
         for js in (-1.0, 1.0):
-            box(a, 'Frame_ShopJamb%s%d' % (t, int(js) + 1),
+            box(a, 'Band_ShopJamb%s%d' % (t, int(js) + 1),
                 wx + js * HALF, wx + js * (HALF + 9),
                 hy0 - 17, hy0 + 2, SILL, HEAD)
         # the segmental head, stepped - box() is axis-aligned and a card model
         # folds anyway, which is the same reason the roofs step
         for i, hw in enumerate((HALF + 9, HALF + 2, 82.0, 62.0)):
-            box(a, 'Frame_ShopArch%s%d' % (t, i), wx - hw, wx + hw,
+            box(a, 'Band_ShopArch%s%d' % (t, i), wx - hw, wx + hw,
                 hy0 - 17, hy0 + 2, HEAD + i * 9, HEAD + (i + 1) * 9)
-        box(a, 'Glass_Shop%s' % t, wx - HALF, wx + HALF,
-            hy0 - 7, hy0 + 1, SILL, HEAD + 18)
-        box(a, 'Interior_Shop%s' % t, wx - HALF + 5, wx + HALF - 5,
+        # DEPTH ORDER, and the first bake had it wrong. Glass, then cards,
+        # then the dark interior BEHIND them - the cards were sitting inside
+        # the interior slab's own depth range and were simply buried. A
+        # display is legible because bright cards stand in front of a dark
+        # back, not because they exist.
+        box(a, 'Glass_Listing%s' % t, wx - HALF, wx + HALF,
+            hy0 - 8, hy0 - 5, SILL, HEAD + 18)
+        box(a, 'Interior_Listing%s' % t, wx - HALF + 5, wx + HALF - 5,
             hy0 + 2, hy0 + 11, SILL, HEAD + 14)
         made += 8
         # THE LISTING CARDS. Trade visible outside, surviving from the earlier
@@ -3033,8 +3038,13 @@ def office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves):
             for c in range(4):
                 px = wx - 70.0 + c * 46.0
                 pz = SILL + 30.0 + r * 62.0
-                box(a, 'Frame_Card%s%d%d' % (t, r, c),
-                    px - 17, px + 17, hy0 + 1, hy0 + 3, pz, pz + 46)
+                # ON the pane, not behind it. MI_glass_ink renders OPAQUE, so
+                # cards mounted inside the glazing were correct architecture
+                # and an invisible model - the second time this build has hit
+                # "correct but inside the mass". A maker glues the cards to
+                # the glass anyway, so this is the honest fabrication too.
+                box(a, 'Frame_Listing%s%d%d' % (t, r, c),
+                    px - 17, px + 17, hy0 - 11, hy0 - 8, pz, pz + 46)
                 made += 1
         # ---- the apron: a RAISED panel moulding, not a recess ---------------
         # A recessed panel would be cut into Wall_Body, which is solid from
@@ -3045,7 +3055,7 @@ def office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves):
         for nm, px0, px1, pz0, pz1 in (
                 ('T', a0, a1, b1 - 6, b1), ('B', a0, a1, b0, b0 + 6),
                 ('L', a0, a0 + 6, b0, b1), ('R', a1 - 6, a1, b0, b1)):
-            box(a, 'Frame_Apron%s%s' % (t, nm), px0, px1,
+            box(a, 'Band_Apron%s%s' % (t, nm), px0, px1,
                 hy0 - 8, hy0 + 2, pz0, pz1)
             made += 1
 
@@ -3055,7 +3065,7 @@ def office_front(a, spec, hx0, hx1, hy0, cx, GF, eaves):
     # narrows to nothing at the apex and a sign wider than the wall would
     # float either side of it.
     sz0, sz1 = eaves + 98.0, eaves + 160.0
-    box(a, 'Rail_SignBoard', cx - 130, cx + 130, hy0 - 12, hy0 - 4, sz0, sz1)
+    box(a, 'Band_SignBoard', cx - 130, cx + 130, hy0 - 12, hy0 - 4, sz0, sz1)
     for nm, px0, px1, pz0, pz1 in (
             ('T', cx - 122, cx + 122, sz1 - 7, sz1 - 3),
             ('B', cx - 122, cx + 122, sz0 + 3, sz0 + 7),
@@ -3147,6 +3157,12 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # So it reuses the whole detached machinery - setback, fence, garden, four
     # real walls - and changes only the fit-out and what stands in the garden.
     office = spec.get('use', 'home') == 'office'
+    # TRIM RIDES Band_, NOT Frame_. rolemap binds Band_ to the recipe's `trim`
+    # and Frame_ to MI_frame_print, so barge boards, gutter, corner boards and
+    # the door came out window-frame print however the recipe was painted -
+    # which is why the first office was monochrome. Only the office moves;
+    # renaming these for every house would repaint five committed city houses.
+    TRIM = 'Band_' if office else 'Frame_'
     if office:
         roof_kind = spec.get('roof', 'crossgable')   # gable TO the street
         entry = spec.get('entry', 'stoop')
@@ -3308,7 +3324,7 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
                 hy0 - 72 + i*22, hy0, 0, 10 + i*8); made += 1
         box(a, 'Roof_Hood', cx - 76, cx + 76, hy0 - 54, hy0 + 4,
             26 + 158, 26 + 178); made += 1
-    box(a, 'Frame_Door', cx - 44, cx + 44, hy0 - 4, hy0 + 5, 26, 26 + 150); made += 1
+    box(a, TRIM + 'Door', cx - 44, cx + 44, hy0 - 4, hy0 + 5, 26, 26 + 150); made += 1
     box(a, 'Interior_Hall', cx - 38, cx + 38, hy0 + 5, hy0 + 12, 30, 26 + 140); made += 1
 
     # ---- windows: front, and both flanks, because a house is seen from three
@@ -3372,16 +3388,16 @@ def build_house(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
             ('B', hx0 - 30, hy1 + 12, hx1 + 30, hy1 + 30),
             ('L', hx0 - 30, hy0 - 30, hx0 - 12, hy1 + 30),
             ('R', hx1 + 12, hy0 - 30, hx1 + 30, hy1 + 30)):
-        box(a, 'Frame_Fascia%s' % tag, fx0, fx1, fy0, fy1,
+        box(a, TRIM + 'Fascia%s' % tag, fx0, fx1, fy0, fy1,
             eaves - 16, eaves + 4); made += 1
-    box(a, 'Frame_Gutter', hx0 - 34, hx1 + 34, hy0 - 34, hy0 - 22,
+    box(a, TRIM + 'Gutter', hx0 - 34, hx1 + 34, hy0 - 34, hy0 - 22,
         eaves - 14, eaves - 2); made += 1
-    box(a, 'Frame_Downpipe', hx1 - 22, hx1 - 8, hy0 - 20, hy0 - 6,
+    box(a, TRIM + 'Downpipe', hx1 - 22, hx1 - 8, hy0 - 20, hy0 - 6,
         26, eaves - 12); made += 1
     for cxn, cx_ in (('L', hx0), ('R', hx1)):
-        box(a, 'Frame_Corner%sF' % cxn, cx_ - 9, cx_ + 9, hy0 - 6, hy0 + 4,
+        box(a, TRIM + 'Corner%sF' % cxn, cx_ - 9, cx_ + 9, hy0 - 6, hy0 + 4,
             26, eaves); made += 1
-        box(a, 'Frame_Corner%sB' % cxn, cx_ - 9, cx_ + 9, hy1 - 4, hy1 + 6,
+        box(a, TRIM + 'Corner%sB' % cxn, cx_ - 9, cx_ + 9, hy1 - 4, hy1 + 6,
             26, eaves); made += 1
     box(a, 'Frame_Threshold', cx - 52, cx + 52, hy0 - 16, hy0 + 4, 20, 30); made += 1
     box(a, 'Glass_Fanlight', cx - 36, cx + 36, hy0 + 2, hy0 + 6,

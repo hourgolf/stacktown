@@ -60,8 +60,14 @@ RECIPES = {
                   # in family. The owner's call was to build in them and judge
                   # the colour on a rendered frame rather than author three
                   # material instances against a guess.
-                  wall='MI_dist_bone', trim='MI_dist_slate',
-                  roofmat='MI_dist_slate', seed=97,
+                  wall='MI_paint_white', trim='MI_paint_navy',
+                  roofmat='MI_roof_blue', seed=97,
+                  # tree_s is the FULLER donor: 656 x 675 x 1379 against
+                  # tree_t's 438 x 413 x 1624, which at the scale a cottage
+                  # wants reads as a bare pole. 0.85 puts the crown at ~1172
+                  # against a 713 apex - a specimen tree the building sits
+                  # under, which is what "a big tree" meant.
+                  tree='tree_s', tree_scale=0.85, tree_x=420.0,
                   # the gable IS the street elevation here, so it is
                   # stepped finely enough to read as a boarded wall
                   gable_steps=22),

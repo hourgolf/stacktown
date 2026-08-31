@@ -67,6 +67,21 @@ MURAL = {'A': 'MI_mural_a', 'B': 'MI_mural_b', 'C': 'MI_mural_c'}
 # glass penthouse is a lit volume. Matched on prefix, checked BEFORE the role
 # table, so nothing else in the project moves.
 SPECIAL = {
+    # THE SHOP WINDOW. Ordinary Glass_ over an ordinary Interior_ gave a
+    # pale panel with the listing cards invisible against it - the cards
+    # were built and rendered, they simply had nothing to read against.
+    # The reference's display is dark glass over a dark interior with
+    # bright printed cards in front of it, which is what makes the
+    # display legible at all.
+    # NAMED Listing_, NOT Shop_. Interior_Shop is ALREADY a catalogue name -
+    # rolemap's own self-test asserts it binds MI_interior - so a SPECIAL on
+    # that prefix would have repainted every street-level shop interior in the
+    # 548. The self-test caught it on the first run. These are the estate
+    # office's LISTING display, which is its own thing.
+    # a listing card IS a printed card, so it takes a card colour
+    'Frame_Listing': 'MI_card_lift',
+    'Glass_Listing': 'MI_glass_ink',
+    'Interior_Listing': 'MI_paint_navy',
     'Glass_Pent': 'MI_glass_pent',
     'Interior_Pent': 'MI_interior_lit',
 }

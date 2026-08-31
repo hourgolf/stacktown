@@ -7,3 +7,17 @@
 Docs/canon/*.jpg filter=lfs diff=lfs merge=lfs -text
 Docs/canon/*.png filter=lfs diff=lfs merge=lfs -text
 Docs/canon/*.webp filter=lfs diff=lfs merge=lfs -text
+# Donor texture SOURCES under Tools/textures - CC0 maps kept for custody, and
+# the intermediates generated from them. These are large binaries and belong
+# in LFS for the same reason the packages do.
+#
+# ADDED 2026-08-31 AFTER FINDING THE HOLE: the brick sources committed on
+# 2026-08-28 matched NO pattern here and went into git proper as raw blobs -
+# `git cat-file` shows a PNG header, not an LFS pointer. That is the same
+# wound .git already carries from the two pre-LFS commits, made a second time
+# because the canon images got a rule and this directory never did. The
+# existing brick blobs stay where they are: removing them is a history
+# rewrite, which is a hard stop.
+Tools/textures/source/**/*.png filter=lfs diff=lfs merge=lfs -text
+Tools/textures/source/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+Tools/textures/source/**/*.exr filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""Derive the species GRAIN MASKS from their CC0 diffuse maps.
+
+    python3 Tools/textures/mk_grain_masks.py
+
+WHY THIS SCRIPT EXISTS AND IS COMMITTED. The fix-class ladder requires that a
+new asset ships with its generation script alongside - reproducible, never a
+hand-painted orphan. These masks are generated, so this is that script, and
+re-running it must reproduce them byte-for-byte from the sources in
+source/polyhaven/.
+
+WHAT A GRAIN MASK IS, AND THE RULE IT ENFORCES. Direction B's extension of the
+donor-texture rule is "THEIR PATTERN, OUR PALETTE" (owner, 2026-08-31, see
+Docs/DIRECTION_B_DECLARATIONS.md D8): a donor wood map may lend its normal AND
+a LUMINANCE-ONLY grain mask from its diffuse. No hue, no saturation, no
+absolute brightness may cross over.
+
+THE CONVERSION IS THE ENFORCEMENT. Importing the colour diffuse and taking
+luminance in the shader would put a donor's brown inside the project, one
+wiring mistake away from the frame. Converting to single-channel HERE means
+the donor's colour never enters Content/ at all - the rule becomes a property
+of the asset instead of a promise about the graph.
+
+REC.709 LUMA, not a colourspace convert. sips' grey profile does its own
+thing; this uses the same integer weights as Tools/measure/img.py so a mask
+and a measurement of it agree by construction.
+
+THE MEAN IS DATA, NOT A BAKED CORRECTION. A mask is emitted as plain
+luminance and its MEAN is printed for the stock table to record. Centring is
+done in the material against that scalar, so the asset stays a faithful
+greyscale of the source rather than a lossily re-levelled one - and a mask
+whose mean drifts on re-run is a signal the source changed, which a
+pre-levelled asset would hide.
+
+AND THE SD IS DATA TOO, FOR A REASON MEASURED RATHER THAN ASSUMED. Figure
+strength varies TENFOLD across these seven sources: sd/mean runs 0.176 for
+pine down to 0.018 for maple. Under one shared gain, pine would scream and
+maple would be invisible, and the species would stop reading as one family -
+which is the property the master material exists to protect. So the material
+normalises by sd, and a single gain then gives every species comparable
+amplitude, with any per-species trim being a deliberate override instead of
+an accident of how a photograph was exposed.
+
+This is the same fault the fabrication table already fixed once: card_heavy
+pushed brick, concrete and skimmed render at an identical amplitude of 2.0
+"regardless of what their relief actually is". Caught here before it shipped,
+because the numbers were looked at before the geometry.
+"""
+import os, struct, subprocess, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SRC = os.path.join(HERE, 'source', 'polyhaven')
+OUT = os.path.join(HERE, 'grain_masks')
+
+# species -> the CC0 diffuse it derives from. One entry per stock; a species
+# absent here has no mask and must not claim one.
+SPECIES = {
+    'pine':   'coated_pine',
+    'maple':  'white_maple_veneer',
+    'ash':    'ash_veneer',
+    'oak':    'white_oak_veneer',
+    'cherry': 'cherry_veneer',
+    'sapele': 'sapele_veneer',
+    'walnut': 'american_walnut_veneer',
+}
+
+KR, KG, KB = 218, 732, 74          # Rec.709 /1024, identical to img.py
+
+
+def read_bmp(path):
+    d = open(path, 'rb').read()
+    if d[:2] != b'BM':
+        raise ValueError('not a BMP: %s' % path)
+    off = struct.unpack('<I', d[10:14])[0]
+    w, h = struct.unpack('<ii', d[18:26])
+    bpp = struct.unpack('<H', d[28:30])[0]
+    if bpp not in (24, 32):
+        raise ValueError('expected 24/32bpp, got %d' % bpp)
+    n = bpp // 8
+    topdown = h < 0
+    h = abs(h)
+    stride = ((w * n + 3) // 4) * 4
+    px = bytearray(w * h)
+    for y in range(h):
+        s = off + (y if topdown else (h - 1 - y)) * stride
+        row = d[s:s + stride]
+        base = y * w
+        for x in range(w):
+            i = x * n
+            px[base + x] = (row[i + 2] * KR + row[i + 1] * KG + row[i] * KB) >> 10
+    return w, h, px
+
+
+def write_grey_bmp(path, w, h, px):
+    """24bpp BMP with R=G=B. Written as 24bpp rather than 8bpp+palette because
+    sips reads it without argument and the file is a build intermediate."""
+    stride = ((w * 3 + 3) // 4) * 4
+    pad = stride - w * 3
+    rows = []
+    for y in range(h - 1, -1, -1):
+        r = bytearray()
+        base = y * w
+        for x in range(w):
+            v = px[base + x]
+            r += bytes((v, v, v))
+        r += b'\0' * pad
+        rows.append(bytes(r))
+    data = b''.join(rows)
+    hdr = b'BM' + struct.pack('<IHHI', 14 + 40 + len(data), 0, 0, 14 + 40)
+    hdr += struct.pack('<IiiHHIIiiII', 40, w, h, 1, 24, 0, len(data),
+                       2835, 2835, 0, 0)
+    open(path, 'wb').write(hdr + data)
+
+
+def main():
+    if not os.path.isdir(SRC):
+        raise SystemExit('no source dir: %s' % SRC)
+    os.makedirs(OUT, exist_ok=True)
+    print('%-9s %-26s %11s %7s %6s %7s'
+          % ('stock', 'source diffuse', 'size', 'mean', 'sd', 'sd/mean'))
+    means = {}
+    for stock in sorted(SPECIES):
+        asset = SPECIES[stock]
+        jpg = os.path.join(SRC, '%s_diffuse_2k.jpg' % asset)
+        if not os.path.exists(jpg):
+            print('%-9s %-26s MISSING - run the download step first'
+                  % (stock, asset))
+            continue
+        tmp = os.path.join(OUT, '_%s.bmp' % stock)
+        subprocess.run(['sips', '-s', 'format', 'bmp', jpg, '--out', tmp],
+                       check=True, capture_output=True)
+        w, h, px = read_bmp(tmp)
+        os.remove(tmp)
+        grey = os.path.join(OUT, '_grey_%s.bmp' % stock)
+        write_grey_bmp(grey, w, h, px)
+        png = os.path.join(OUT, 'T_grain_%s.png' % stock)
+        subprocess.run(['sips', '-s', 'format', 'png', grey, '--out', png],
+                       check=True, capture_output=True)
+        os.remove(grey)
+        n = len(px)
+        m = sum(px) / float(n)
+        sd = (sum((v - m) * (v - m) for v in px) / float(n)) ** 0.5
+        means[stock] = (m, sd)
+        print('%-9s %-26s %5dx%-5d %7.1f %6.1f %7.3f'
+              % (stock, asset, w, h, m, sd, sd / m))
+    if means:
+        print('\nfor the stock table - the material centres on mean and '
+              'normalises by sd:')
+        for s in sorted(means):
+            m, sd = means[s]
+            print('    %-9s figure_mean=%.1f, figure_sd=%.1f' % (s, m, sd))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

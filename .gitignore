@@ -83,3 +83,10 @@ Tools/measure/lens_mode.json
 # on mtime). Regenerable, ~17.6 MB each, and 32 of them reached 563 MB in one
 # session of sweeps. Never evidence, never committed.
 *.png.bmp
+
+# Grain masks are DERIVED from the CC0 diffuse sources by
+# Tools/textures/mk_grain_masks.py, deterministically. The generator and its
+# sources are versioned; the intermediate is not, for the same reason the
+# img.load BMP cache above is not - it is regenerable by construction, and the
+# asset that actually ships is the imported .uasset.
+Tools/textures/grain_masks/

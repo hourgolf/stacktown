@@ -112,9 +112,23 @@ The catalogue's `t0..t5` are variety ACROSS a street: different massing on
 different parcels. Growth tiers are the SAME parcel over time. The meshes are
 identical in kind, so the bake is unchanged and the difference lives in the
 placer/runtime, which swaps the mesh as the building grows. Noted so nobody
-builds a second tier mechanism. **Four is shorter than the catalogue's six**,
-which is deliberate here and does not amend the standing "ladders must grow
-past t5" design signal for the catalogue proper.
+builds a second tier mechanism.
+
+**Four is this building's number, and the steps are bigger.** *Owner, 
+2026-08-31.* It does not amend the standing "ladders must grow past t5" signal
+for the catalogue, and it is not a new default for specialty buildings — it is
+the real estate office's ladder. The upgrades are to be **more substantial than
+a catalogue tier step**: the catalogue's `t0..t5` grow gradually into a parcel
+by fill fraction, which is right for variety across a street and wrong here.
+Four steps on one parcel over time have to read as **investment the player can
+see**, so each step wants a legible change of state — footprint, storey count,
+roof condition, the yard's own treatment — not a slightly larger version of the
+last one. Author the ladder for read-at-a-glance difference; a smooth fill ramp
+would waste the tier budget.
+
+Gameplay dynamics and mechanics factor in later. **Right now this is model
+work** — which is the look-first doctrine already governing both buildings, not
+an exception to it.
 
 **Archetype — OPEN, and it is not `street`.** A detached house standing in a
 landscaped yard is not an articulated street elevation, so letting it default

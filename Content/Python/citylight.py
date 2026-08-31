@@ -397,7 +397,15 @@ def build():
         c.set_editor_property('cubemap', unreal.load_asset(SKY_CUBE))
         c.set_editor_property('real_time_capture', False)
         c.set_editor_property('intensity', SKY_I)
-        c.set_editor_property('light_color', unreal.Color(176, 196, 226, 255))
+        # unreal.Color's POSITIONAL order is BGRA, not RGBA. This read
+        # Color(176, 196, 226) as a COOL sky and got a WARM one - proved in
+        # engine: positional (176,196,226) reads back r=226 g=196 b=176. The
+        # skylight was pushing the same direction as the 4500 K key instead of
+        # opposing it, which is why sweeping its intensity never moved the R-B
+        # cast off +31.9. Keywords cannot be misread; skylight.py already used
+        # them, so this file and light_rig.py were the two that drifted.
+        c.set_editor_property('light_color',
+                              unreal.Color(r=176, g=196, b=226, a=255))
         c.set_editor_property('cast_shadows', False)
         c.set_editor_property('lower_hemisphere_is_black', False)
         c.recapture_sky()

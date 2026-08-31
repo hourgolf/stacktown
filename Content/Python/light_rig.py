@@ -256,7 +256,12 @@ sc.set_editor_property('cubemap', unreal.load_asset(
     '/Engine/EngineResources/GrayLightTextureCube.GrayLightTextureCube'))
 sc.set_editor_property('real_time_capture', False)
 sc.set_editor_property('intensity', SKY_I)
-sc.set_editor_property('light_color', unreal.Color(176, 196, 226, 255))   # cool night sky
+# unreal.Color's POSITIONAL order is BGRA, not RGBA - proved in engine:
+# positional (176,196,226) reads back r=226 g=196 b=176, so this 'cool night
+# sky' was in fact a WARM one for the whole life of the night rig. Keywords
+# cannot be misread. skylight.py in this same tree already used them.
+sc.set_editor_property('light_color',
+                       unreal.Color(r=176, g=196, b=226, a=255))  # cool night sky
 sc.set_editor_property('cast_shadows', False)
 sc.set_editor_property('lower_hemisphere_is_black', False)
 sc.recapture_sky()

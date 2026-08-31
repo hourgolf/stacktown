@@ -36,12 +36,17 @@ reference, the `portland-character` entry, and an `own-capture`.
 ## A gap found while wiring this, and its resolution
 
 The previous draft said the office "RIDES STORES' ENTRY" and that the
-marketplace "inherits the stores-archetype soul". **There is no `stores`
-archetype.** `ARCHETYPES` holds exactly `street`, `industrial` and
-`agricultural-structure`; `modelgate.py` has no rule naming stores; and
-`ARCHETYPE_DECISIONS.md` mentions the word once, in passing, about signage
-scope. The 2026-08-30 ruling therefore resolved a question by pointing at an
-entry that does not exist.
+marketplace "inherits the stores-archetype soul". **No `stores` archetype is
+wired.** `ARCHETYPES` holds exactly `street`, `industrial` and
+`agricultural-structure`, and `modelgate.py` has no rule naming stores.
+
+*Corrected 2026-08-31:* it is not missing by accident. `ARCHETYPE_DECISIONS`
+**approved** a stores entry — "new registry entry declaring its definition of
+good, including the scoped signage amendment; declared BEFORE geometry, per
+contract" — and it was never built. So the 2026-08-30 ruling was ahead of the
+implementation rather than pointing at nothing. The entry is owed either way,
+and whoever wires it should settle the marketplace's relationship to it at the
+same time rather than letting two overlapping entries appear by accident.
 
 This matters because `archetypes.of_spec` defaults an undeclared spec to
 `street`, and `GATE-07` and `GATE-08` both carry `judges=('street',)`. A
@@ -138,7 +143,11 @@ are easiest to name once the recipe exists and the first bake shows which rules
 actually misfire — but it **must not reach a bake undeclared**, because the
 default is silent.
 
-**Design reference**: owner-supplied, before geometry.
+**Design reference**: **LANDED 2026-08-31.** A gable-end-on white
+weatherboard cottage with dark trim, arched display windows, a board sign and a
+raised deck. Read into a full tier-0 build spec in `Docs/OFFICE_RECIPE.md`;
+the image belongs at `Docs/refs/office/t0_reference.jpg`. The sign reads
+**ELLO** — the typology is taken, the real firm's identity is not.
 **Function**: TBD pending economy notes.
 **Yard**: landscaping is a zone, not building parts — `zones.py` already builds
 green/park/vacant and the flowerbed donors are surveyed. Whether the yard ships
@@ -147,7 +156,9 @@ with the mesh or is placed beside it is a placer question, flagged not answered.
 ## Sequence
 
     1. owner shapes/approves these declarations              DONE 2026-08-31
-    2. design references land (owner's hand, NOT canon slots)   <- BLOCKING
+    2. design references land (owner's hand, NOT canon slots)
+       - real estate office                                  DONE 2026-08-31
+       - marketplace                                            <- BLOCKING
     3. registry entries wired in archetypes.py
        - marketplace: own entry + GATE-03 override (decided)
        - office: entry still to be named (NOT street)

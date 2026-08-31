@@ -156,3 +156,42 @@ bounds into the frame and check the sign before naming it. Recorded in
 **One lamp per corridor is O(streets).** For a two-street test city that is two lamps
 and it mirrors how a diorama is lit. It is *not* proposed as the answer at full city
 scale — that question is open and belongs to the coordinator.
+
+## Postscript: the settle protocol was wrong, and the curve says how
+
+Clearing ten stale bake-staging actors from `Sandbox_Bench` required a level
+reload, and the reference frame came back 10 levels darker with **12.99% crushed
+against the committed 1.38%**. The rig was intact — sun 0, `BLOCK_Key` at
+(−600, −23544, 5657), the specified grey cubemap at 12, all verified by readback —
+so the difference was Lumen rebuilding from cold.
+
+Sampling one parked frame every 10s for four minutes:
+
+```
+t=15s   mean 64.91  sd 53.93  crushed 2.82%
+t=252s  mean 67.47  sd 53.55  crushed 1.44%   still climbing +0.07/sample
+```
+
+**Every consecutive delta across that entire run was 0.07–0.19 levels** — under
+any sane floor, from the first sample — while the frame still had 2.5 levels and
+1.4% of crushed pixels to go. The protocol this session established ("keep when
+consecutive delta < 0.5") declares victory at t=15s. *The frame stopped moving*
+and *the frame is moving too slowly to notice between two samples* are not the
+same statement.
+
+The committed bench numbers are the settled ones — the curve asymptotes toward
+68.68 / 1.38% — because they were taken after a long live session with GI fully
+accumulated. What was wrong was the criterion, not those figures.
+
+**This also explains the TestCity instability.** Two identical rebuilds measured
+mean 95.48 and 111.20, sixteen levels apart, while their falloff ratios agreed to
+0.06 (2.41x vs 2.35x). A uniform ramp cancels in a ratio and does not in a level.
+That is not "TestCity is unstable"; it is two captures taken at different points
+on the same ramp.
+
+**Fixed in `Tools/measure/settle.py`**: `drifting()` compares against a frame
+`BASELINE_S` (60s) old rather than the immediate predecessor, and `settled()`
+takes `drift_test=True` for cold starts. It defaults False so `ab.py`'s
+same-session A/Bs — where both sides ride the same ramp and it cancels — are
+unaffected. The self-test synthesises the measured ramp and asserts the old
+criterion cannot see it.

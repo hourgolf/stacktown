@@ -28,11 +28,23 @@ OUT = '/Game/Stacktown/Baked'
 STAGE = (0.0, 0.0, 0.0)          # local: the mesh is built about its own origin
 
 
-def collect(rid, tier, w):
-    """Every box of one model, as data. No editor involved."""
+def collect(rid, tier, w, depth=None, corner=None):
+    """Every box of one model, as data. No editor involved.
+
+    depth and corner are the ON-DEMAND variant axis: absent, this builds
+    exactly what it always did, so the 548 are unaffected. Applied, they land
+    on the spec where spec_for's own depth would, BEFORE the rear allowance is
+    taken off - otherwise the allowance would be subtracted from a depth the
+    recipe never saw.
+    """
     probe = recipes.spec_for(rid, tier, 'PRE', 0.0, w)
     al = step_elevations.flank_allowance(probe)
     spec = recipes.spec_for(rid, tier, 'PRE', al/2.0, w - al)
+    if depth is not None:
+        spec['depth'] = float(depth)
+    if corner is not None:
+        spec['corner'] = True
+        spec['corner_return'] = corner
     spec['parcel_width'] = w
     spec['parcel_x0'] = 0.0
     spec['parcel_depth'] = spec['depth']
@@ -229,8 +241,13 @@ def main():
     w = next((float(a.split('=')[1]) for a in sys.argv[1:]
               if a.startswith('--width=')), recipes.widths(rid)[len(recipes.widths(rid))//2])
 
+    depth = next((float(a.split('=')[1]) for a in sys.argv[1:]
+                  if a.startswith('--depth=')), None)
+    corner = next((a.split('=')[1] for a in sys.argv[1:]
+                   if a.startswith('--corner=')), None)
+
     t0 = time.time()
-    spec, rec = collect(rid, tier, w)
+    spec, rec = collect(rid, tier, w, depth, corner)
     nbox = sum(1 for e in rec if e['kind'] == 'box')
     t_gen = time.time() - t0
 
@@ -241,7 +258,7 @@ def main():
     # loaded one - COPLANAR_BASELINES was written only by the gate's own
     # self-test, so half the armed contract could not fire. stamp.py keeps
     # the ledger; this reads it.
-    _asset = recipes.asset_name(rid, tier, w)
+    _asset = recipes.asset_name(rid, tier, w, depth, corner)
     spec['baseline_key'] = _asset
     _led = os.path.join(os.path.dirname(os.path.dirname(HERE)),
                         'Saved', 'coplanar_baselines.json')
@@ -272,7 +289,7 @@ def main():
     if not ok and '--force' not in sys.argv:
         raise SystemExit('preview: gate failed - not baking (use --force to look anyway)')
 
-    asset = recipes.asset_name(rid, tier, w)
+    asset = recipes.asset_name(rid, tier, w, depth, corner)
     json.dump({'boxes': rec, 'out': '%s/%s' % (OUT, asset),
                'wall': spec.get('wall'), 'roofmat': spec.get('roofmat'),
                'trim': spec.get('trim'),

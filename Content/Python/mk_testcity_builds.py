@@ -111,12 +111,14 @@ def build():
     rnd = random.Random(SEED)
     made, missing = 0, []
     gaps_used, setbacks_used, prev_end = [], [], None
+    corners_placed = 0
     for bname in sorted(L.blocks()):
         b = L.blocks()[bname]
         _, y0, _, y1 = b['env']
         # blocks NORTH of the arterial face SOUTH (yaw 0, front toward -y);
         # blocks SOUTH of it face NORTH (yaw 180). 'faces' is carried by the
         # layout rather than re-derived from the sign here.
+        _end, turn_side = L.cross_street_end(bname)
         north = b['faces'] == 'south'
         yaw = 0.0 if north else 180.0
         face_y = y0 if north else y1
@@ -126,8 +128,30 @@ def build():
         for i, (key, lx0, lx1, corner) in enumerate(L.lots(bname)):
             w = round(lx1 - lx0)
             rid, t = rnd.choice(stock[w])
-            asset = recipes.asset_name(rid, t, w)
+            # A CORNER PARCEL ASKS FOR THE CORNER ASSET. Handed by which side
+            # of the block meets the crossing, and deep so the flank is a full
+            # elevation on the cross street rather than a stub two thirds of
+            # the way along it. Every draw is made from the SAME rnd sequence
+            # whether or not the lot is a corner, so adding corners does not
+            # reshuffle the rest of the city.
+            if corner:
+                asset = recipes.asset_name(rid, t, w,
+                                           depth=recipes.DEPTH_CORNER,
+                                           corner=turn_side)
+            else:
+                asset = recipes.asset_name(rid, t, w)
             sm = eal.load_asset('%s/%s' % (BAKED, asset))
+            # DRAW EVERYTHING BEFORE THE EXISTENCE CHECK. These two draws
+            # sat AFTER it, so a `continue` on a missing asset consumed
+            # fewer random numbers and shifted every later lot - meaning the
+            # city depended on WHICH ASSETS HAPPENED TO BE BAKED. Each
+            # on-demand bake changed the draws for everything after it, so
+            # the missing list moved every run and never converged. SEED
+            # promises the same city every time, not the same city per bake
+            # state.
+            gap_draw = rnd.uniform(*GAPS)
+            back = rnd.choice((0.0, 0.0, rnd.uniform(*SETBACK),
+                               rnd.uniform(*SETBACK)))
             if not sm:
                 missing.append(asset)
                 continue
@@ -145,9 +169,7 @@ def build():
             if cursor is None:
                 cursor = lx0
             else:
-                cursor = prev_end + rnd.uniform(*GAPS)
-            back = rnd.choice((0.0, 0.0, rnd.uniform(*SETBACK),
-                               rnd.uniform(*SETBACK)))
+                cursor = prev_end + gap_draw
             sign = 1.0 if yaw == 0.0 else -1.0
             if prev_end is not None:
                 gaps_used.append(cursor - prev_end)
@@ -164,11 +186,14 @@ def build():
             # different colours. Without this every mesh takes its bake
             # defaults and a street of 24 buildings comes out one flat brown -
             # which is exactly how the first placement looked.
+            if corner:
+                corners_placed += 1
             repaint(a, sm, rid, palette.scheme_for(key, rid))
             o, e = a.get_actor_bounds(False)
             prev_end = o.x + e.x
             made += 1
-    print('cleared %d placeholder(s); placed %d real buildings' % (killed, made))
+    print('cleared %d placeholder(s); placed %d real buildings (%d corner)'
+          % (killed, made, corners_placed))
     # VERIFY THE DISTRIBUTION LANDED - the known-answer discipline applied to
     # placement. A transplant that silently misses its ranges is not one.
     g = [v for v in gaps_used if v > 0]

@@ -164,6 +164,34 @@ def rear(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     return made
 
 
+
+def corner_here(spec, sign):
+    """Does THIS flank carry the corner return?
+
+    corner=True has always meant BOTH flanks arcade round, and city.py's six
+    corner lots rely on that; absent a return side it still does, so nothing
+    shipped changes.
+
+    A HANDED corner names its side and only that flank turns. The key is
+    corner_return, NOT corner_side: corner_side already means the side the
+    FRONT elevation chamfers, and two recipes set it in their base for exactly
+    that. Overloading one key with a second meaning is how an implicit grammar
+    starts, and this project spent 2026-08-30 paying for one of those.
+
+        corner_return absent   both flanks (unchanged, the old meaning)
+        corner_return 'left'   the W flank only (sign < 0)
+        corner_return 'right'  the E flank only (sign > 0)
+    """
+    if not spec.get('corner'):
+        return False
+    side = spec.get('corner_return')
+    if side is None:
+        return True
+    if side not in ('left', 'right'):
+        raise ValueError('corner_return must be left or right, got %r' % side)
+    return (side == 'left' and sign < 0) or (side == 'right' and sign > 0)
+
+
 def flank(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """Dispatch on style, exactly as genbuild does. A modern corner wearing a
     vernacular side elevation would be two buildings pretending to be one."""
@@ -556,6 +584,36 @@ def flank_param(spec, sign, origin, yaw, P):
                 b('Interior_Flank%d_%d' % (f, k), FACADE_T - prd - 11,
                   FACADE_T - prd - 5, w0, w1, z0 + FH * 0.24, z1 - FH * 0.14)
 
+    # CORNER CONTINUATION. flank_param's ground floor is Wall_FlankBase, a
+    # BLIND PLINTH - openings begin at the first upper floor. flank_modern's
+    # docstring names that plinth as the thing a corner has to replace: the
+    # ground floor carrying round is "what makes a corner building read as a
+    # corner instead of as two buildings meeting".
+    #
+    # DERIVED, NOT INVENTED, which is the boundary this work was given. The
+    # continuation is THIS FLANK'S OWN opening rhythm run down one floor -
+    # same count, same open fraction, same proud, same sill and head
+    # proportions, same three-box vocabulary. Copying deco/modern's arcade in
+    # here would put a shopfront grammar on a timber or coffered flank, which
+    # is the "two buildings pretending to be one" the flag dispatcher exists
+    # to prevent. Anything needing a NEW decision - chamfer radii, streamline
+    # curves, corner crowns - stops here and waits for the owner's references.
+    if corner_here(spec, sign) and P['open'] > 0.0 and (y1 - y0) > 120.0:
+        gz1 = GF - 14.0
+        gh = gz1
+        ngw = max(2, int(round((y1 - y0) / 300.0)))
+        for k in range(ngw):
+            w0 = y0 + (y1 - y0) * k / float(ngw)
+            w1 = w0 + (y1 - y0) / float(ngw) * float(P['open'])
+            if w1 - w0 < 42:
+                continue
+            b('Wall_FlankRevG%d' % k, FACADE_T - prd, FACADE_T + 4,
+              w0 - 10, w1 + 10, gh * 0.24 - 10, gz1 - gh * 0.14 + 10)
+            b('Glass_FlankG%d' % k, FACADE_T - prd - 3, FACADE_T - prd,
+              w0, w1, gh * 0.24, gz1 - gh * 0.14)
+            b('Interior_FlankG%d' % k, FACADE_T - prd - 11, FACADE_T - prd - 5,
+              w0, w1, gh * 0.24, gz1 - gh * 0.14)
+
     if P['vert'] > 0.0:
         nm = max(2, int(round((D - 40.0) / float(P['vert']))))
         for k in range(nm + 1):
@@ -648,7 +706,7 @@ def flank_modern(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
     XP = (x0 - OVER_X - FACADE_T) if sign < 0 else (x0 + W + OVER_X + FACADE_T)
     ztop = GF + F * FH
-    corner = bool(spec.get('corner'))
+    corner = corner_here(spec, sign)
     face = 'W' if sign < 0 else 'E'
     a = mkactor('ELEV_%s_%s' % (n, face), origin, (0.0, yaw, 0.0))
     made = 0
@@ -676,7 +734,14 @@ def flank_modern(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
             # fault fixed on the front elevation's arcade. A column that runs
             # to GF passes through the slab it holds up.
             b('Wall_Col%d' % k, 0, 62, py, py + col_w, 0, GF - 14)
-        b('Wall_Soffit', 0, _g.ARCADE, Y0 - 4, Y1 + 4, GF - 14, GF)
+        # BUTT THE FLANK SOFFIT INTO THE FRONT'S, do not run it through.
+        # The front arcade's soffit spans y 0..ARCADE (genbuild), and this one
+        # started at Y0-4 = 58 - twenty uu inside it - so the two soffits
+        # shared both z faces and overlapped at the corner. One coplanar pair
+        # per corner model, and corner bakes would have multiplied it across
+        # the catalogue. Same mitre family as the coping and base-cap rings.
+        b('Wall_Soffit', 0, _g.ARCADE, max(Y0 - 4, _g.ARCADE), Y1 + 4,
+          GF - 14, GF)
         b('Glass_Shop', _g.ARCADE, _g.ARCADE + 2, Y0 + col_w, Y1 - col_w, 26, GF - 20)
         b('Interior_Shop', _g.ARCADE + 16, _g.ARCADE + 22, Y0 + col_w - 6, Y1 - col_w + 6,
           22, GF - 16)
@@ -728,7 +793,7 @@ def flank_deco(spec, sign, origin=(0.0, 0.0, 0.0), yaw=0.0):
     F, GF, FH, PAR = spec['floors'], spec['gf_h'], spec['fl_h'], spec['parapet']
     XP = (x0 - OVER_X - FACADE_T) if sign < 0 else (x0 + W + OVER_X + FACADE_T)
     ztop = GF + F * FH
-    corner = bool(spec.get('corner'))
+    corner = corner_here(spec, sign)
     face = 'W' if sign < 0 else 'E'
     a = mkactor('ELEV_%s_%s' % (n, face), origin, (0.0, yaw, 0.0))
     made = 0

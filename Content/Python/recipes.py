@@ -1097,15 +1097,34 @@ def tier_name(rid, tier):
 DEPTH_DEFAULT = None      # absent suffix == the recipe's own base['depth']
 
 
+# THE ONE DEEP VALUE, and it is derived rather than chosen. A corner building
+# has to present a real elevation to the CROSS street, not a stub: the flank
+# is the corner's whole argument. The catalogue's own depths are 680-860,
+# which is roughly half the 1500 uu block depth the placer lays out - so a
+# corner built at its base depth leaves the back half of its parcel empty and
+# its flank stops two thirds of the way along the side street.
+#
+# So the deep value is the PARCEL DEPTH: a corner fills its lot front to back.
+# 1500 is citylayout's BLOCK_DEPTH, restated here rather than imported -
+# recipes is the lower layer and must not depend on the placer - and this
+# comment is the link between them. If the block depth changes, this changes.
+#
+# EVERY fits() ALREADY ACCEPTS IT. All 32 predicates lower-bound depth
+# (d >= 560..800) and none upper-bound it, so the deep variant needed no
+# fits() change at all - checked rather than assumed.
+DEPTH_CORNER = 1500.0
+
+
 def depths(rid):
     """Every depth a recipe can be baked at, shallowest first.
 
-    ONE VALUE TODAY - the recipe's own base['depth'] - because the axis is
-    declared before it is populated and the deep/corner variant is baked ON
-    DEMAND where the placer sites it. This function is the seam that keeps
-    the self-test honest when the second value arrives.
+    Two values: the recipe's own base depth, and the corner depth. The second
+    is DECLARED here and BAKED ON DEMAND - only where the placer actually
+    sites a corner - so declaring it costs nothing and no catalogue-wide
+    corner bake is implied.
     """
-    return (RECIPES[rid]['base'].get('depth', 700.0),)
+    base = RECIPES[rid]['base'].get('depth', 700.0)
+    return (base, DEPTH_CORNER) if DEPTH_CORNER > base else (base,)
 
 
 def asset_name(rid, tier, width, depth=None, corner=None):

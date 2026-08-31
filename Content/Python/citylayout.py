@@ -52,10 +52,19 @@ BLOCK_DEPTH = 1500.0                    # back from the arterial
 # city measured R-B +23.6 against the sandbox board frame's +8.4. "Very
 # brown" was a width decision, not a lighting one.
 # Every partition below sums to BLOCK_LEN and uses only catalogue widths.
-PARTITIONS = {'NE': (2460.0, 1640.0, 820.0),
+# 820 NEVER SITS AT A CORNER. A corner lot needs a corner-capable recipe, and
+# the only recipes baked at w820 are vernacular and vernacular8 - neither of
+# which has a corner return, because the arcade lives in flank_modern and
+# flank_deco. NE ended on 820 and SW opened on it, so two of the eight corner
+# parcels could not be served at any bake. Moving 820 inboard deletes that
+# constraint without a single bake, which beats baking to serve it.
+# Done NOW rather than later on the lead's argument: re-placing lots retires
+# parcel ids and mints new ones under the contract, and no consumer has bound
+# to TestCity's ids yet. This is the last moment it is free.
+PARTITIONS = {'NE': (2460.0, 820.0, 1640.0),
               'NW': (1230.0, 1230.0, 1230.0, 1230.0),
               'SE': (2050.0, 1640.0, 1230.0),
-              'SW': (820.0, 1230.0, 1230.0, 1640.0)}
+              'SW': (1230.0, 820.0, 1230.0, 1640.0)}
 
 SELFTESTS = {}
 
@@ -89,6 +98,21 @@ def blocks():
     return out
 
 
+def cross_street_end(block_name):
+    """Which end of this block abuts the CROSS street, and which flank turns.
+
+    The layout has ONE crossing, so exactly ONE end of each block is a real
+    corner - the end nearest the origin. The other end abuts open board.
+    lots() used to mark BOTH ends, which would have doubled the corner bakes
+    and put an arcade return on an elevation facing nothing at all.
+
+    The turning flank follows from the side: a block east of the crossing
+    turns on its WEST flank (left), one west of it turns on its EAST (right).
+    """
+    x0, _, _x1, _ = blocks()[block_name]['env']
+    return ('first', 'left') if x0 > 0 else ('last', 'right')
+
+
 def lots(block_name):
     """Lay the block's partition along its arterial frontage, west to east.
 
@@ -99,9 +123,10 @@ def lots(block_name):
     b = blocks()[block_name]
     x0, _, x1, _ = b['env']
     part = PARTITIONS[block_name]
+    end, _side = cross_street_end(block_name)
     out, lx = [], x0
     for i, w in enumerate(part):
-        corner = (i == 0) or (i == len(part) - 1)
+        corner = (i == 0) if end == 'first' else (i == len(part) - 1)
         out.append(('%s%d' % (block_name, i), lx, lx + w, corner))
         lx += w
     return out
@@ -164,14 +189,15 @@ def _blocks_clear_roads():
 
 @selftest('LOT-DIVISION')
 def _lot_division():
-    # NE is 2460 + 1640 + 820 from x 1130: 1130..3590..5230..6050
+    # NE is 2460 + 820 + 1640 from x 1130: 1130..3590..4410..6050
     ls = lots('NE')
     first, last = ls[0], ls[-1]
     return (len(ls) == 3
             and abs(first[1] - 1130.0) < 1e-9 and abs(first[2] - 3590.0) < 1e-9
-            and abs(ls[1][2] - 5230.0) < 1e-9
+            and abs(ls[1][2] - 4410.0) < 1e-9
             and abs(last[2] - 6050.0) < 1e-9
-            and first[3] and last[3] and not ls[1][3])
+            # only the WEST end of NE abuts the cross street
+            and first[3] and not last[3] and not ls[1][3])
 
 
 @selftest('LOTS-TILE-THE-FRONT')
@@ -236,6 +262,44 @@ def _partitions_tile_and_vary():
             return False
         seen.update(part)
     return len(seen) >= 4
+
+
+@selftest('ONE-CORNER-PER-BLOCK')
+def _one_corner_per_block():
+    """Exactly one corner per block, and it is the end at the crossing."""
+    for b in blocks():
+        ls = lots(b)
+        cs = [i for i, l in enumerate(ls) if l[3]]
+        if len(cs) != 1:
+            return False
+        end, _ = cross_street_end(b)
+        if cs[0] != (0 if end == 'first' else len(ls) - 1):
+            return False
+    return True
+
+
+@selftest('CORNERS-ARE-SERVABLE')
+def _corners_are_servable():
+    """Every corner lot must have at least one recipe that can turn a corner.
+
+    The arcade return is implemented in flank_modern and flank_deco only, so a
+    corner lot at a width those styles are not baked at cannot be a corner at
+    all - no bake fixes it. This test is why 820 moved inboard.
+    """
+    import recipes
+    import step_elevations as SE
+    capable = [r for r in recipes.RECIPES
+               if not SE.flank_kind(recipes.RECIPES[r]['base'])
+               and recipes.RECIPES[r]['base'].get('style') in ('modern', 'deco')]
+    for b in blocks():
+        for _k, x0, x1, is_corner in lots(b):
+            if not is_corner:
+                continue
+            w = round(x1 - x0)
+            if not any(w in [round(x) for x in recipes.widths(r)]
+                       for r in capable):
+                return False
+    return True
 
 
 def selftests(verbose=True):

@@ -78,3 +78,8 @@ Content/Uniblocks/
 # state like .mcp_sid, not source - a fresh checkout has no mode until
 # lensrig runs, and captures correctly stamp "unknown" until it does.
 Tools/measure/lens_mode.json
+
+# img.py caches a BMP beside every PNG it measures (sips conversion, reused
+# on mtime). Regenerable, ~17.6 MB each, and 32 of them reached 563 MB in one
+# session of sweeps. Never evidence, never committed.
+*.png.bmp

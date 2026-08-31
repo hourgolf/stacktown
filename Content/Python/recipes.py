@@ -1094,11 +1094,67 @@ def tier_name(rid, tier):
     return RECIPES[rid]['tiers'][tier]['name']
 
 
-def asset_name(rid, tier, width):
+DEPTH_DEFAULT = None      # absent suffix == the recipe's own base['depth']
+
+
+def depths(rid):
+    """Every depth a recipe can be baked at, shallowest first.
+
+    ONE VALUE TODAY - the recipe's own base['depth'] - because the axis is
+    declared before it is populated and the deep/corner variant is baked ON
+    DEMAND where the placer sites it. This function is the seam that keeps
+    the self-test honest when the second value arrives.
+    """
+    return (RECIPES[rid]['base'].get('depth', 700.0),)
+
+
+def asset_name(rid, tier, width, depth=None, corner=None):
     """One baked mesh per recipe, tier and PARCEL width. Width is part of the
     identity because the generator lays bays out across it, and because `fill`
-    means the same tier occupies a different share of a different parcel."""
-    return 'SM_Bld_%s_t%d_w%d' % (rid, tier, int(round(width)))
+    means the same tier occupies a different share of a different parcel.
+
+    THE SAME ARGUMENT CARRIES TO DEPTH, on the other axis: the generator lays
+    the FLANK out across the depth, and a corner parcel gives the same tier a
+    different share of a different depth. So depth joins the identity - but
+    as an axis that is DECLARED now and SHIPS ONE VALUE, baked on demand where
+    the placer sites it. No ladder until placement demand proves one.
+
+    CORNER joins it too, and it is HANDED: corner_side left and right are two
+    real buildings, not one mirrored, so a corner parcel needs the hand it
+    actually uses and no more.
+
+    THE GRAMMAR, in one place, because an implicit default is exactly the kind
+    of thing that dies in a parser:
+
+        SM_Bld_<rid>_t<tier>_w<width>                  default depth, no corner
+        SM_Bld_<rid>_t<tier>_w<width>_d<depth>         explicit depth
+        SM_Bld_<rid>_t<tier>_w<width>_d<depth>_cL      handed corner, left
+        SM_Bld_<rid>_t<tier>_w<width>_d<depth>_cR      handed corner, right
+
+    ABSENT SUFFIX MEANS THE RECIPE'S OWN base['depth']. The existing 548 keep
+    their names, stay valid, and are not re-baked: adding the axis is not a
+    staleness event.
+
+    WHO PARSES THIS GRAMMAR - enumerated rather than discovered, because on
+    2026-08-30 a name-keyed lookup over non-unique names silently returned the
+    wrong geometry for an unknown period. Checked across Content/Python and
+    Tools/measure: NOTHING decomposes a baked name back into its parts. This
+    function is the sole constructor (23 call sites) and every consumer treats
+    the result as opaque. The one name-KEYED store is
+    Saved/coplanar_baselines.json, whose keys are whole asset names and which
+    therefore gains keys for new variants without disturbing existing ones.
+    If that ever stops being true, the parser goes here, beside the grammar.
+    """
+    n = 'SM_Bld_%s_t%d_w%d' % (rid, tier, int(round(width)))
+    if depth is not None:
+        n += '_d%d' % int(round(depth))
+    if corner is not None:
+        if corner not in ('left', 'right'):
+            raise ValueError('corner must be left or right, got %r' % corner)
+        if depth is None:
+            raise ValueError('a corner variant must state its depth')
+        n += '_c%s' % ('L' if corner == 'left' else 'R')
+    return n
 
 
 def _selftest():
@@ -1109,11 +1165,16 @@ def _selftest():
     the grammar silently refused to place one on an assembled parcel.
     """
     for rid, r in RECIPES.items():
+        # ITERATE (width, depth) PAIRS FROM DAY ONE OF THE AXIS. With depth in
+        # the identity, checking only the recipe's own depth would leave the
+        # new axis silently uncovered - the identical drift this test was
+        # written to catch, when the tower declared XL and XXL while its fits
+        # stopped at 1800.
         for w in widths(rid):
-            d = r['base'].get('depth', 700.0)
-            assert r['fits'](w, d), (
-                '%s declares width %.0f but its own fits() rejects it'
-                % (rid, w))
+            for d in depths(rid):
+                assert r['fits'](w, d), (
+                    '%s declares width %.0f at depth %.0f but its own fits()'
+                    ' rejects it' % (rid, w, d))
         # a filler must not claim to be actionable, and vice versa
         assert r.get('role') in ('filler', 'actionable'), rid
     return True

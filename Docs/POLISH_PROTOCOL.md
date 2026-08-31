@@ -288,6 +288,14 @@ also earned the rule that keeps it fixed.
   guarded — closed by search, not by waiting for a third accident. When
   a fault family has a syntactic signature, grep IS the detector; a
   sweep is for families that only geometry can reveal.
+- **A fresh PostProcessVolume meters AUTO by default** (2026-08-30):
+  lensrig's shutter/ISO/aperture drive exposure only under MANUAL
+  metering, so a light sweep against a default volume measures the
+  METER CHASING THE LIGHTS, not the lights. This made a correct rig
+  derivation look wrong by 250x (key fell to 1/250 of derived before it
+  "looked right"); with manual metering set, the derived values landed
+  in family with the passing frames on the first try, no sweep. Any new
+  volume gets metering set before anything is judged through it.
 - **Prefer a WITHIN-FRAME control, and state your settle criterion**
   (2026-08-30). FOUR measurements went wrong in one day and every one was
   a BETWEEN-SUBJECT comparison in a scene that drifts: the grass alpha

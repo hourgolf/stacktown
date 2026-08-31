@@ -8,23 +8,31 @@ coordinate. If a number in this file disagrees with the layout module, the
 layout module is right and this file is the bug - the same relationship
 genbuild has with recipes.
 
-THE LIGHTING HERE IS PROVISIONAL AND LABELLED SO. Read #2 found that the
-lighting reads "somewhat render-like", and the plan folds that investigation
-into deriving this board's rig. A rig inherited by accident from a placement
-script would smuggle the thing under investigation in as a default, so these
-two actors exist ONLY so the layout can be looked at, carry PROVISIONAL in
-their names, and are expected to be deleted by the rig work.
+THIS FILE PLACES NO LIGHTS. It once carried a provisional sun and sky so the
+bare layout could be looked at; citylight.py owns the rig now, and leaving
+them here meant a second DirectionalLight every time placement re-ran.
 """
 import unreal
 import citylayout as L
 
 CUBE = '/Engine/BasicShapes/Cube.Cube'
-M_BOARD = '/Game/Stacktown/Materials/MI_model_board.MI_model_board'
-M_ROAD = '/Game/Stacktown/Materials/MI_gravel.MI_gravel'
+# MI_model_board is tan card. It is a defensible look for a model board,
+# but it is NOT what the sandbox street stands on - that is STAGE_Ground
+# in MI_studio_grey - and it drove the oblique's warm cast to R-B +26.1
+# against the sandbox board frame's +8.4. Neutral ground, measured.
+M_BOARD = '/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey'
+# step_stage2.py built the hero block's streets and is the precedent:
+#   carriageway MI_studio_grey, footway MI_concrete, kerb MI_paint_cream.
+# This file used MI_gravel for the carriageway - avkit's SM_rock_01
+# material, a scatter prop. The owner saw it as 'gravel roads instead of
+# asphalt' and was right; it was never a road surface.
+M_ROAD = '/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey'
+M_KERB = '/Game/Stacktown/Materials/MI_paint_cream.MI_paint_cream'
 M_WALK = '/Game/Stacktown/Materials/MI_concrete.MI_concrete'
 M_MASS = '/Game/Stacktown/Materials/MI_precast_grey.MI_precast_grey'
 
-OWNED = ('TC_Board', 'TC_Road', 'TC_Walk', 'TC_Mass', 'TC_PROVISIONAL')
+OWNED = ('TC_Board', 'TC_Road', 'TC_Walk', 'TC_Kerb', 'TC_Mass',
+         'TC_PROVISIONAL')
 
 # board margin beyond the outermost facade line
 MARGIN = 1600.0
@@ -55,7 +63,7 @@ def build():
     eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     cube = unreal.load_asset(CUBE)
     mats = {k: unreal.load_asset(v) for k, v in
-            (('board', M_BOARD), ('road', M_ROAD),
+            (('board', M_BOARD), ('road', M_ROAD), ('kerb', M_KERB),
              ('walk', M_WALK), ('mass', M_MASS))}
     for a in list(eas.get_all_level_actors()):
         if a.get_actor_label().startswith(OWNED):
@@ -89,6 +97,21 @@ def build():
                  sx * CW, y0, 0.0, sx * H, y1, KERB_Z)
             n += 1
 
+    # KERBS. step_stage2 places a 14 uu kerb between footway and carriageway
+    # and this file had none at all - the footway just fell to the road.
+    KERB_W = 14.0
+    k = 0
+    for sy in (-1, 1):
+        for x0, x1 in ((BX0, -H), (H, BX1)):
+            _box(eas, cube, mats['kerb'], 'TC_Kerb_A%d' % k,
+                 x0, sy * CW, 0.0, x1, sy * (CW + KERB_W), KERB_Z)
+            k += 1
+    for sx in (-1, 1):
+        for y0, y1 in ((BY0, -H), (H, BY1)):
+            _box(eas, cube, mats['kerb'], 'TC_Kerb_C%d' % k,
+                 sx * CW, y0, 0.0, sx * (CW + KERB_W), y1, KERB_Z)
+            k += 1
+
     made = 0
     for bname in sorted(blocks):
         _, y0, _, y1 = blocks[bname]['env']
@@ -99,23 +122,16 @@ def build():
                  lx0 + 6.0, y0 + 6.0, 0.0, lx1 - 6.0, y1 - 6.0, h)
             made += 1
 
-    # PROVISIONAL - see the module note. Deleted by the rig derivation.
-    # unreal.Rotator is (ROLL, PITCH, YAW). Passing (-52, 45, 0) as if it
-    # were (pitch, yaw, roll) aimed the only light 45 degrees UP and the
-    # first capture came back pure black.
-    sun = eas.spawn_actor_from_class(unreal.DirectionalLight,
-                                     unreal.Vector(0, 0, 9000),
-                                     unreal.Rotator(0.0, -52.0, 45.0))
-    sun.set_actor_label('TC_PROVISIONAL_Sun')
-    sky = eas.spawn_actor_from_class(unreal.SkyLight,
-                                     unreal.Vector(0, 0, 9000),
-                                     unreal.Rotator(0, 0, 0))
-    sky.set_actor_label('TC_PROVISIONAL_Sky')
+    # NO LIGHTS HERE. This file used to spawn a provisional sun and sky so
+    # the bare layout could be looked at. citylight.py now owns the rig, and
+    # re-running placement after it put a SECOND DirectionalLight in the
+    # level - the editor said so on screen, burned into a capture:
+    # "Multiple directional lights are competing to be the single one used
+    # for forward shading". One file owns lighting.
 
     print('BOARD x %.0f..%.0f y %.0f..%.0f' % (BX0, BX1, BY0, BY1))
-    print('ROADS arterial + cross, carriageway half %.0f, kerb %.0f' % (CW, KERB_Z))
+    print('ROADS arterial + cross, carriageway half %.0f, %d kerbs' % (CW, k))
     print('MASSES %d placed across %d blocks' % (made, len(blocks)))
-    print('LIGHTING PROVISIONAL - 2 actors, TC_PROVISIONAL_*, to be replaced')
     return made
 
 

@@ -33,9 +33,29 @@ import parcelmeta
 CORRIDOR = _c.CORRIDOR                  # 1400 carriageway + 2 * 430 footway
 HALF = CORRIDOR / 2.0                   # facade line offset from a centreline
 
-BLOCK_LEN = 4800.0                      # along the arterial
+# THE CATALOGUE'S WIDTH LADDER IS THE INPUT, not a number that divided
+# nicely. recipes offers 820 / 1230 / 1640 / 2050 / 2460, which is
+# 410 x {2,3,4,5,6} - so a block length that is NOT a multiple of 410 cannot
+# be tiled by catalogue buildings at all. BLOCK_LEN was 4800, chosen because
+# it divided by six; lots came out 800 wide and NOTHING IN THE CATALOGUE FITS
+# THEM, which is why the first placement could only be placeholder boxes.
+# 4920 = 410 x 12 = 6 lots of 820, the narrowest real width.
+WIDTH_QUANTUM = 410.0
+BLOCK_LEN = 4920.0                      # along the arterial, 12 quanta
 BLOCK_DEPTH = 1500.0                    # back from the arterial
-LOTS_PER_FRONT = 6                      # 4800 / 6 = 800 each, hand-divisible
+
+# EACH BLOCK GETS A DIFFERENT PARTITION, and that is not decoration.
+# Six equal lots of 820 is a valid tiling, and it was the first one - but
+# ONLY vernacular and vernacular8 are baked at w820, so a city of 820 lots
+# is a city of ONE ERA. Worse, vernacular is the era palette.scheme_for
+# promotes to brick, so half the parcels drew MI_dist_brick and the whole
+# city measured R-B +23.6 against the sandbox board frame's +8.4. "Very
+# brown" was a width decision, not a lighting one.
+# Every partition below sums to BLOCK_LEN and uses only catalogue widths.
+PARTITIONS = {'NE': (2460.0, 1640.0, 820.0),
+              'NW': (1230.0, 1230.0, 1230.0, 1230.0),
+              'SE': (2050.0, 1640.0, 1230.0),
+              'SW': (820.0, 1230.0, 1230.0, 1640.0)}
 
 SELFTESTS = {}
 
@@ -69,8 +89,8 @@ def blocks():
     return out
 
 
-def lots(block_name, n=LOTS_PER_FRONT):
-    """Divide a block's arterial frontage into n lots, west to east.
+def lots(block_name):
+    """Lay the block's partition along its arterial frontage, west to east.
 
     Returns (lot_key, x0, x1, is_corner). Corners are the lots at either end -
     they carry a second frontage onto the cross street and the placer must
@@ -78,12 +98,12 @@ def lots(block_name, n=LOTS_PER_FRONT):
     """
     b = blocks()[block_name]
     x0, _, x1, _ = b['env']
-    w = (x1 - x0) / float(n)
-    out = []
-    for i in range(n):
-        lx0 = x0 + i * w
-        corner = (i == 0) or (i == n - 1)
-        out.append(('%s%d' % (block_name, i), lx0, lx0 + w, corner))
+    part = PARTITIONS[block_name]
+    out, lx = [], x0
+    for i, w in enumerate(part):
+        corner = (i == 0) or (i == len(part) - 1)
+        out.append(('%s%d' % (block_name, i), lx, lx + w, corner))
+        lx += w
     return out
 
 
@@ -124,10 +144,10 @@ def _corridor_derived():
 @selftest('BLOCK-CORNERS')
 def _block_corners():
     b = blocks()
-    return (b['NE']['env'] == (1130.0, 1130.0, 5930.0, 2630.0)
-            and b['NW']['env'] == (-5930.0, 1130.0, -1130.0, 2630.0)
-            and b['SE']['env'] == (1130.0, -2630.0, 5930.0, -1130.0)
-            and b['SW']['env'] == (-5930.0, -2630.0, -1130.0, -1130.0))
+    return (b['NE']['env'] == (1130.0, 1130.0, 6050.0, 2630.0)
+            and b['NW']['env'] == (-6050.0, 1130.0, -1130.0, 2630.0)
+            and b['SE']['env'] == (1130.0, -2630.0, 6050.0, -1130.0)
+            and b['SW']['env'] == (-6050.0, -2630.0, -1130.0, -1130.0))
 
 
 @selftest('BLOCKS-CLEAR-THE-ROADS')
@@ -144,20 +164,21 @@ def _blocks_clear_roads():
 
 @selftest('LOT-DIVISION')
 def _lot_division():
+    # NE is 2460 + 1640 + 820 from x 1130: 1130..3590..5230..6050
     ls = lots('NE')
     first, last = ls[0], ls[-1]
-    return (len(ls) == 6
-            and abs(first[1] - 1130.0) < 1e-9 and abs(first[2] - 1930.0) < 1e-9
-            and abs(last[2] - 5930.0) < 1e-9
-            and first[3] and last[3]
-            and not any(l[3] for l in ls[1:-1]))
+    return (len(ls) == 3
+            and abs(first[1] - 1130.0) < 1e-9 and abs(first[2] - 3590.0) < 1e-9
+            and abs(ls[1][2] - 5230.0) < 1e-9
+            and abs(last[2] - 6050.0) < 1e-9
+            and first[3] and last[3] and not ls[1][3])
 
 
 @selftest('LOTS-TILE-THE-FRONT')
 def _lots_tile():
     """Contiguous, no gap and no overlap - the frontage is fully consumed."""
     ls = lots('SW')
-    if abs(ls[0][1] - (-5930.0)) > 1e-9 or abs(ls[-1][2] - (-1130.0)) > 1e-9:
+    if abs(ls[0][1] - (-6050.0)) > 1e-9 or abs(ls[-1][2] - (-1130.0)) > 1e-9:
         return False
     return all(abs(ls[i][2] - ls[i + 1][1]) < 1e-9 for i in range(len(ls) - 1))
 
@@ -167,14 +188,14 @@ def _emission_end_to_end():
     """The layout feeds parcelmeta and survives its gate."""
     r = parcelmeta.ParcelRegistry()
     es = emit_block('NE', r, 'd90957f')
-    if len(es) != 6:
+    if len(es) != 3:
         return False
     ok, _ = parcelmeta.accept(es[0], geometry_head='d90957f')
     f = es[0]['frontage']
-    # lot NE0 spans x 1130..1930 -> centre 1530, width 800
-    return (ok and abs(f['centre'] - 1530.0) < 1e-9
-            and abs(f['width'] - 800.0) < 1e-9
-            and len({e['parcel_id'] for e in es}) == 6)
+    # lot NE0 spans x 1130..3590 -> centre 2360, width 2460
+    return (ok and abs(f['centre'] - 2360.0) < 1e-9
+            and abs(f['width'] - 2460.0) < 1e-9
+            and len({e['parcel_id'] for e in es}) == len(es))
 
 
 @selftest('IDS-SURVIVE-REPLACEMENT')
@@ -184,6 +205,37 @@ def _ids_survive():
     emit_block('NW', r, 'd90957f')                 # another block placed
     b = [e['parcel_id'] for e in emit_block('NE', r, 'd90957f')]
     return a == b
+
+
+@selftest('LOTS-ARE-CATALOGUE-WIDTHS')
+def _lots_are_catalogue_widths():
+    """Every lot must be a width the catalogue can actually build.
+
+    This is the test the first layout did not have, which is why it produced
+    800 uu lots that no recipe fits and a city of placeholder boxes.
+    """
+    import recipes
+    have = {round(w) for r in recipes.RECIPES for w in recipes.widths(r)}
+    for b in blocks():
+        for _k, x0, x1, _c in lots(b):
+            if round(x1 - x0) not in have:
+                return False
+    return abs(BLOCK_LEN % WIDTH_QUANTUM) < 1e-9
+
+
+@selftest('PARTITIONS-TILE-AND-VARY')
+def _partitions_tile_and_vary():
+    """Each partition sums to the block, and the city spans widths.
+
+    The second half is the point: a single-width city can only reach the
+    recipes baked at that width, and at 820 that is vernacular alone.
+    """
+    seen = set()
+    for name, part in PARTITIONS.items():
+        if abs(sum(part) - BLOCK_LEN) > 1e-9:
+            return False
+        seen.update(part)
+    return len(seen) >= 4
 
 
 def selftests(verbose=True):
@@ -205,6 +257,7 @@ if __name__ == '__main__':
               ' +/-%.0f' % (CORRIDOR, _c.ROAD_W, _c.WALK_W, HALF))
         for n, b in sorted(blocks().items()):
             x0, y0, x1, y1 = b['env']
-            print('  block %-3s x %8.0f..%-8.0f y %8.0f..%-8.0f  %d lots,'
-                  ' 2 corners' % (n, x0, x1, y0, y1, LOTS_PER_FRONT))
+            print('  block %-3s x %8.0f..%-8.0f y %8.0f..%-8.0f  %s'
+                  % (n, x0, x1, y0, y1,
+                     ' + '.join('%.0f' % w for w in PARTITIONS[n])))
     sys.exit(0 if ok else 1)

@@ -16,7 +16,7 @@ a siren. Street LAMPS do not exist either, which is why street_lamps.py
 generates them from four boxes; that recipe (pole 26, height 780, arm 210) is
 reused here rather than re-derived.
 """
-import sys, os, math, random
+import sys, os, math, random, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _path  # noqa: F401
 import ue, json
@@ -27,10 +27,29 @@ import stagegeo
 S = 'editor_toolset.toolsets.scene.SceneTools'
 A = 'editor_toolset.toolsets.actor.ActorTools'
 
-# the street, as street.py built it
+# the street, as street.py built it - the DEFAULT, unchanged, so a run
+# against Sandbox_Bench behaves exactly as it always has.
 X0, RUN = 3000.0, 14483.0
 Y_NORTH, STREET_W, PAVE = -22000.0, 1500.0, 260.0
+
+# ...and an OVERRIDE, so the same proven dressing can be transplanted onto
+# another street instead of a second copy being written for it. TestCity's
+# arterial is a different geometry, not a different kind of thing.
+_ovr = os.path.join(tempfile.gettempdir(), 'stacktown_dress.json')
+if os.path.exists(_ovr):
+    _o = json.load(open(_ovr))
+    X0 = float(_o.get('x0', X0))
+    RUN = float(_o.get('run', RUN))
+    Y_NORTH = float(_o.get('y_north', Y_NORTH))
+    STREET_W = float(_o.get('street_w', STREET_W))
+    PAVE = float(_o.get('pave', PAVE))
+    print('hero_dress: street override x0 %.0f run %.0f y_north %.0f'
+          ' width %.0f pave %.0f' % (X0, RUN, Y_NORTH, STREET_W, PAVE))
 Z = stagegeo.FLOOR_Z
+if os.path.exists(_ovr):
+    # the road surface differs per board; Sandbox's floor is not TestCity's
+    # road top, and dressing placed at the wrong Z sinks into the carriageway.
+    Z = float(json.load(open(_ovr)).get('z', Z))
 PAVE_TOP = Z + 26.0
 YB = Y_NORTH - PAVE / 2.0                 # north pavement centre line
 YA = Y_NORTH - STREET_W + PAVE / 2.0      # south pavement centre line

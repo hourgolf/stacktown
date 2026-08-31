@@ -1,0 +1,24 @@
+{
+ "frame": "b70_mid_judge",
+ "mode": "judge",
+ "fov_deg": 28.84,
+ "optic": "70mm gate",
+ "transform": {
+  "x": 2991.5165601839544,
+  "y": -45302.6228988618,
+  "z": 13661.02635987549,
+  "pitch": -28.0,
+  "yaw": 70.00000000000001,
+  "roll": 0.0
+ },
+ "subject": "the object frame - city on the board, board edge, studio wall",
+ "NOT_GATE_ADMISSIBLE": true,
+ "admissibility": "READ frame - dressed street, vehicles deliberate; never gate evidence",
+ "staleness_head": "31b03b5",
+ "room": "self-lit M_StudioWall (unlit, GI-inert), fills deleted",
+ "grain": "off",
+ "capture_protocol": "dwell 10s, 1.5s spacing, kept when consecutive delta < 0.5 levels",
+ "converged_in_frames": 8,
+ "final_delta_levels": 0.438,
+ "supersedes": "v4 (single capture, a phase sample)"
+}

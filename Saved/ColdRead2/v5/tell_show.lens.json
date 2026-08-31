@@ -1,0 +1,33 @@
+{
+ "frame": "tell_show",
+ "mode": "show",
+ "fov_deg": 28.84,
+ "optic": "70mm gate",
+ "transform": {
+  "x": 14750.0,
+  "y": -23050.0,
+  "z": 4900.0,
+  "pitch": -40.0,
+  "yaw": 227.0,
+  "roll": 0.0
+ },
+ "subject": "ST_S_5_deco5_t5 coping run + water tower",
+ "NOT_GATE_ADMISSIBLE": true,
+ "admissibility": "READ frame - dressed street, vehicles deliberate; never gate evidence",
+ "staleness_head": "31b03b5",
+ "room": "self-lit M_StudioWall (unlit, GI-inert), fills deleted",
+ "grain": "off",
+ "lens": {
+  "fstop": 2.8,
+  "sensor": 400.0,
+  "blades": 8,
+  "shutter": 240.0,
+  "iso": 1568.0
+ },
+ "focus_subject_distance_uu": 860.0,
+ "focus_setting_applied": 1250.0,
+ "capture_protocol": "dwell 10s, 1.5s spacing, kept when consecutive delta < 0.5 levels",
+ "converged_in_frames": 22,
+ "final_delta_levels": 4.033,
+ "supersedes": "v4 (single capture, a phase sample)"
+}

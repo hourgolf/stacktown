@@ -48,3 +48,15 @@ design lane's precedents (identity manifest, byte-identical proof) are
 your contracts when you touch shared generation. Announce before you
 mutate. Start by proposing the wooden catalogue's first archetype
 declarations for the owner's word."
+
+## Open question for the lane's first session (flagged by the flagship
+## design lane at handover, 2026-08-31)
+
+**Is patina-as-time GENERATOR-level or MATERIAL-level?** This is the
+one place the byte-identical contract could get quietly stretched —
+"patina" could mean a new spec key or a whole second surface family.
+Coordinator's lean, to be argued not assumed: MATERIAL-level — a
+per-instance age scalar on the wooden shader, no geometry change,
+which keeps the byte-identical proof trivially clean and makes aging
+a runtime parameter the tick can drive. Decide it declaration-first,
+before any wooden mesh exists.

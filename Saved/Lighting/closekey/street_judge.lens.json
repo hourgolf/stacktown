@@ -17,8 +17,8 @@
  "staleness_head": "31b03b5",
  "room": "self-lit M_StudioWall (unlit, GI-inert), fills deleted",
  "grain": "off",
- "capture_protocol": "dwell 10s, 1.5s spacing, kept when consecutive delta < 0.5 levels",
- "converged_in_frames": 5,
- "final_delta_levels": 0.419,
+ "capture_protocol": "dwell 150s, 5.0s spacing, kept when consecutive delta < 0.5 levels",
+ "converged_in_frames": 2,
+ "final_delta_levels": 0.275,
  "supersedes": "v4 (single capture, a phase sample)"
 }

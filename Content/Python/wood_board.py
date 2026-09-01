@@ -76,12 +76,51 @@ TOOTH = 0.0025          # the trim; see TOOTH above
 ANGLES = (0.0, 90.0, 22.0, 68.0)   # four cuts from the stock
 SPECIES = ('maple', 'pine', 'ash', 'oak', 'cherry', 'sapele', 'walnut')
 
-# THE BOARD. Street grid in board-local uu: 5 columns x 4 rows of lots with
-# roads between, downtown tall in the middle so the skyline has a centre the
-# way the reference does rather than being a flat field of equal blocks.
-LOT = 1150.0
-ROAD = 420.0
-COLS, ROWS = 5, 4
+# THE BOARD. CITY BLOCKS, not isolated lots (owner, 2026-09-01: "fix the
+# plinths and party walls").
+#
+# The first boards gave every building its own lot with road on all four
+# sides, so nothing ever touched anything and 35 individual plinths tiled the
+# board like trays. A real city block is a GROUP of buildings that SHARE PARTY
+# WALLS, sitting on one plot, with street only at the group's edge - which is
+# also why the reference's gaps read as slots rather than margins.
+#
+# So: parcels butt inside a block, streets run only between blocks, and the
+# plinth belongs to the BLOCK rather than to each building. That is one change
+# fixing both notes, because they were the same fault seen twice.
+PARCEL = 640.0          # one building footprint
+BLK_W, BLK_D = 3, 2     # parcels per city block
+ROAD = 260.0            # street, only between blocks
+COLS, ROWS = 3, 3       # city blocks across the board
+PLINTH_OVER = 26.0      # the block's shared plot, proud of its buildings
+
+
+def _cap(h, rnd):
+    """A rooftop cap, VARIED. Owner, 2026-09-01: "the tops are getting
+    repetitive, the details matter here since the materials are simpler."
+
+    Exactly right, and it is a property of this direction rather than an
+    oversight: when a surface carries no windows, bands or reveals, the
+    SILHOUETTE is doing all the work, and a repeated cap is therefore far more
+    visible here than the same repetition would be on a flagship facade. At 20
+    blocks one centred cap read as variety; at 35 it read as a stamp.
+
+    Five outcomes rather than one, weighted so bare tops are common - a flat
+    top IS the commonest thing on a carved block, and making every building
+    wear a hat is its own kind of repetition.
+    """
+    if h < 900:
+        return 0.0                      # low blocks stay bare
+    r = rnd.random()
+    if r < 0.34:
+        return 0.0                      # bare, and deliberately the plurality
+    if r < 0.62:
+        return 70.0 + 60.0 * rnd.random()          # the small centred cap
+    if r < 0.80:
+        return 150.0 + 90.0 * rnd.random()         # a taller lift housing
+    if r < 0.92:
+        return 44.0 + 26.0 * rnd.random()          # a low broad plinth-cap
+    return 240.0 + 140.0 * rnd.random()            # a rare slender mast block
 
 
 def assert_level():
@@ -120,33 +159,37 @@ def mi_for(species, angle_idx, cache):
 def main():
     print('level:', assert_level())
     rnd = random.Random(20260831)
-    board_w = COLS * LOT + (COLS + 1) * ROAD
-    board_d = ROWS * LOT + (ROWS + 1) * ROAD
-    plan = []
-    for r in range(ROWS):
-        for c in range(COLS):
-            x = ROAD + c * (LOT + ROAD)
-            y = ROAD + r * (LOT + ROAD)
-            # downtown: distance from centre drives height
-            dc = abs(c - (COLS - 1) / 2.0) / ((COLS - 1) / 2.0)
-            dr = abs(r - (ROWS - 1) / 2.0) / ((ROWS - 1) / 2.0)
-            central = 1.0 - min(1.0, (dc * dc + dr * dr) ** 0.5)
-            h = 260.0 + (central ** 2.2) * 5200.0 * (0.55 + 0.9 * rnd.random())
-            w = LOT * (0.62 + 0.3 * rnd.random())
-            d = LOT * (0.62 + 0.3 * rnd.random())
-            if h > 2600:
-                stages = [(0.58, 0.0), (0.42, w * 0.12)]
-            elif h > 1200:
-                stages = [(0.72, 0.0), (0.28, w * 0.10)]
-            else:
-                stages = [(1.0, 0.0)]
-            plan.append(dict(
-                x=x + (LOT - w) / 2.0, y=y + (LOT - d) / 2.0,
-                w=w, d=d, h=h, stages=stages,
-                cap=(70.0 + 60.0 * rnd.random()) if h > 900 else 0.0,
-                sp=SPECIES[rnd.randrange(len(SPECIES))],
-                ang=rnd.randrange(len(ANGLES))))
-
+    blk_w = BLK_W * PARCEL
+    blk_d = BLK_D * PARCEL
+    board_w = COLS * blk_w + (COLS + 1) * ROAD
+    board_d = ROWS * blk_d + (ROWS + 1) * ROAD
+    plan, plots = [], []
+    for br in range(ROWS):
+        for bc in range(COLS):
+            bx = ROAD + bc * (blk_w + ROAD)
+            by = ROAD + br * (blk_d + ROAD)
+            plots.append((bx, by, blk_w, blk_d))
+            dc = abs(bc - (COLS - 1) / 2.0) / max(1e-6, (COLS - 1) / 2.0)
+            dr = abs(br - (ROWS - 1) / 2.0) / max(1e-6, (ROWS - 1) / 2.0)
+            core = (1.0 - max(dc, dr)) ** 1.15
+            for pr in range(BLK_D):
+                for pc in range(BLK_W):
+                    # PARCELS BUTT. No gap inside a block - adjacent buildings
+                    # share a party wall, which is what makes a block read as
+                    # a block instead of six objects near each other.
+                    x = bx + pc * PARCEL
+                    y = by + pr * PARCEL
+                    lot = rnd.random()
+                    spike = 1.0 if lot > 0.90 else (0.55 if lot > 0.72 else 0.0)
+                    f = max(core, spike * (0.35 + 0.65 * core))
+                    h = 260.0 + f * 6400.0 * (0.62 + 0.55 * rnd.random())
+                    stages = ([(0.58, 0.0), (0.42, PARCEL * 0.11)] if h > 2600
+                              else [(0.72, 0.0), (0.28, PARCEL * 0.09)]
+                              if h > 1200 else [(1.0, 0.0)])
+                    plan.append(dict(
+                        x=x, y=y, w=PARCEL, d=PARCEL, h=h, stages=stages,
+                        cap=_cap(h, rnd), sp=SPECIES[rnd.randrange(len(SPECIES))],
+                        ang=rnd.randrange(len(ANGLES))))
     made = []
     genbuild.live()
     t0 = time.time()
@@ -158,21 +201,33 @@ def main():
                      -240.0, board_d + 240.0, -60.0, 0.0)
         made.append('ZONE_BoardPlate')
         rd = genbuild.mkactor('ZONE_BoardRoads', (BASE_X, BASE_Y, 0.0), (0, 0, 0))
+        # roads run on the BLOCK grid now, not the parcel grid - streets
+        # exist between city blocks and nowhere inside them, which is what
+        # party walls mean
         for c in range(COLS + 1):
-            rx = c * (LOT + ROAD)
+            rx = c * (blk_w + ROAD)
             genbuild.box(rd, 'Kerbing_RoadV%d' % c, rx, rx + ROAD,
                          0.0, board_d, 0.0, 3.0)
         for r in range(ROWS + 1):
-            ry = r * (LOT + ROAD)
+            ry = r * (blk_d + ROAD)
             genbuild.box(rd, 'Kerbing_RoadH%d' % r, 0.0, board_w,
                          ry, ry + ROAD, 0.0, 3.0)
         made.append('ZONE_BoardRoads')
+        pl = genbuild.mkactor('ZONE_BoardPlots', (BASE_X, BASE_Y, 0.0), (0, 0, 0))
+        for i, (px, py, pw, pd) in enumerate(plots):
+            genbuild.box(pl, 'Ground_Plot%d' % i, px - PLINTH_OVER,
+                         px + pw + PLINTH_OVER, py - PLINTH_OVER,
+                         py + pd + PLINTH_OVER, 0.0, 24.0)
+        made.append('ZONE_BoardPlots')
         print('board laid: %.0f x %.0f uu' % (board_w, board_d))
 
         for i, p in enumerate(plan):
             spec = dict(style='mass', name='B%02d' % i, x0=p['x'],
                         width=p['w'], depth=p['d'], height=p['h'],
-                        stages=p['stages'], cap=p['cap'], seed=i, plinth=22.0)
+                        stages=p['stages'], cap=p['cap'], seed=i,
+                        plinth=0.0,
+                        # D12: direction B is hand-laid; the flagship is not
+                        hand_tolerance=True)
             with contextlib.redirect_stdout(io.StringIO()):
                 genbuild.build(spec, origin=(BASE_X, BASE_Y + p['y'], 0.0), yaw=0.0)
             made.append('BLD2_B%02d_M' % i)
@@ -197,7 +252,10 @@ def main():
         return n
 
     bind('ZONE_BoardPlate', {'refPath': '%s/MI_model_board.MI_model_board' % MATD})
-    bind('ZONE_BoardRoads', {'refPath': '%s/MI_dist_slate.MI_dist_slate' % MATD})
+    bind('ZONE_BoardPlots', {'refPath': '%s/MI_board_road.MI_board_road' % MATD})
+    # D11: the board's own stock. MI_dist_slate was DISTRICT PAINT borrowed
+    # for being nearby, and it read as blue-grey plastic in frame.
+    bind('ZONE_BoardRoads', {'refPath': '%s/MI_board_road.MI_board_road' % MATD})
     tb = time.time()
     for i, p in enumerate(plan):
         bind('BLD2_B%02d_M' % i, mi_for(p['sp'], p['ang'], cache))
@@ -214,7 +272,7 @@ def main():
           'rotation': {'pitch': -26.0, 'yaw': 52.0, 'roll': 0.0},
           'scale': {'x': 1.0, 'y': 1.0, 'z': 1.0}}),
         ('BOARD_street',
-         {'location': {'x': cx - LOT * 1.2, 'y': cy - board_d * 0.52,
+         {'location': {'x': cx - PARCEL * 1.6, 'y': cy - board_d * 0.52,
                        'z': 620.0},
           'rotation': {'pitch': -6.0, 'yaw': 74.0, 'roll': 0.0},
           'scale': {'x': 1.0, 'y': 1.0, 'z': 1.0}})):

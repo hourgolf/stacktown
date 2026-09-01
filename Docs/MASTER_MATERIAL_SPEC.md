@@ -134,6 +134,16 @@ fabrication.py with its source recorded. Acceptance happens on a
 BUILDING (never the flat study wall), judge mode, both standoffs, with
 amplitude swept. Ad-hoc per-material texture picks are prohibited.
 
+DIRECTION-B EXTENSION EXISTS (owner approved 2026-08-31, recorded as
+D8 in `Docs/DIRECTION_B_DECLARATIONS.md`, governs the WOODEN CITY's
+timber stocks only — this shared spec's own rule is unchanged): a donor
+wood map may additionally lend a LUMINANCE-ONLY, MEAN-NORMALISED grain
+mask from its diffuse — "their pattern, our palette." No hue, no
+saturation, no absolute brightness crosses over; any pipeline step that
+carries a donor's colour into a material violates the extension
+regardless of naming. Flagship materials (brick, plaster, paint) remain
+relief-only under the rule above.
+
 "A model is unified by fabrication" stands: the fabrication story (card,
 resin, brick) remains ours; the studio-director warning about photoreal
 donors beside flat-shaded work is answered by tier-matching at the STOCK

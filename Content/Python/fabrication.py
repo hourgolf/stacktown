@@ -57,7 +57,7 @@ the four keys it always did.
 #   rough:      the narrow fabricated band
 def _st(tooth, amount, rlo, rhi, normal=None, tooth_fine=None, source=None,
         needs=None, figure=None, figure_mean=None, figure_sd=None,
-        seam=None):
+        seam=None, roughmap=None):
     """`needs` records the IMPORT SETTINGS an admitted map must carry.
 
     WHY THIS EXISTS. Content/Uniblocks/ is gitignored - every admitted FAB
@@ -73,7 +73,8 @@ def _st(tooth, amount, rlo, rhi, normal=None, tooth_fine=None, source=None,
     return dict(normal=normal, tooth=tooth, tooth_fine=tooth_fine,
                 amount=amount, rough=(rlo, rhi), source=source,
                 needs=needs or {}, figure=figure,
-                figure_mean=figure_mean, figure_sd=figure_sd, seam=seam)
+                figure_mean=figure_mean, figure_sd=figure_sd, seam=seam,
+                roughmap=roughmap)
 
 
 STOCK = {
@@ -230,25 +231,58 @@ def _timber(rlo, rhi, species, mean, sd, amount=1.8, tooth=0.0005):
     return _st(tooth, amount, rlo, rhi,
                normal='%s/T_%s_N' % (_TX, species),
                figure='%s/T_grain_%s' % (_TX, species),
+               roughmap='%s/T_rough_%s' % (_TX, species),
                figure_mean=mean, figure_sd=sd, seam=False,
                source=_PH, needs={'srgb': False})
 
 
 STOCK.update({
-    # pale to dark. Rough bands sit in basswood's sanded-timber neighbourhood
-    # (0.48-0.64), open-grained species a touch rougher than close-grained
-    # ones because open pores scatter - a small, physical difference, not a
-    # spread invented to make the table look varied.
-    'maple':  _timber(0.46, 0.62, 'maple',  212.9, 3.8),
-    'pine':   _timber(0.50, 0.66, 'pine',    63.1, 11.1),
-    'ash':    _timber(0.50, 0.66, 'ash',    151.2, 9.4),
-    'oak':    _timber(0.50, 0.66, 'oak',    123.9, 8.3),
-    'cherry': _timber(0.46, 0.62, 'cherry', 182.5, 4.2),
-    'sapele': _timber(0.48, 0.64, 'sapele', 139.9, 9.0),
-    'walnut': _timber(0.48, 0.64, 'walnut', 110.3, 6.8),
+    # pale to dark. ROUGH BANDS WIDENED AND RAISED after the first boards read
+    # as VENEER: the old 0.46-0.66 was inherited from basswood, which tiles
+    # decking, and a whole carved city wants more spread and less sheen. Open
+    # -grained species (oak, ash, sapele, pine) get the widest bands because
+    # open pores scatter and dense latewood does not - the spread IS the
+    # difference between those two tissues, not decoration.
+    #
+    # The band is only as useful as the map that drives it: the raw figure
+    # mask reached 9-26% of it, which is why `roughmap` is a separate
+    # contrast-stretched twin rather than the figure map reused.
+    'maple':  _timber(0.50, 0.74, 'maple',  212.9, 3.8),
+    'pine':   _timber(0.52, 0.82, 'pine',    63.1, 11.1),
+    'ash':    _timber(0.54, 0.88, 'ash',    151.2, 9.4),
+    'oak':    _timber(0.54, 0.88, 'oak',    123.9, 8.3),
+    'cherry': _timber(0.50, 0.74, 'cherry', 182.5, 4.2),
+    'sapele': _timber(0.53, 0.84, 'sapele', 139.9, 9.0),
+    'walnut': _timber(0.52, 0.80, 'walnut', 110.3, 6.8),
 })
 
 TIMBERS = ('maple', 'pine', 'ash', 'oak', 'cherry', 'sapele', 'walnut')
+
+# THE BOARD'S OWN STOCK (D10, settled by the owner in D11). Roads are STAINED
+# TIMBER bedded into the plate, not district paint borrowed for being nearby -
+# the first boards used MI_dist_slate and it read as blue-grey plastic, the one
+# element in a wooden picture that said "engine".
+#
+# It KEEPS ITS GRAIN. A stained board still shows figure; what the stain
+# changes is colour, not material. So road_inlay is a timber stock like the
+# seven, and takes maple's fine, quiet mask - a road wants the least assertive
+# figure in the set, since it is what the buildings stand on and must never
+# out-read them (D10's "nothing on the board out-saturates the timber").
+#
+# KERBS AND CROSSINGS ARE TONES OF THIS STOCK, not stocks of their own. D10
+# proposed a separate kerb_card and flagged it as the one it was least sure
+# of; the owner's answer confirms the doubt. Two stocks differing only in tone
+# is precisely the walnut-and-cedar prohibition, and this lane already
+# committed to that standard in D6.
+STOCK['road_inlay'] = _st(
+    0.0016, 1.4, 0.62, 0.90,          # matter than any building timber: a
+                                      # laid, worn surface, not a sanded face
+    normal='%s/T_maple_N' % _TX,
+    figure='%s/T_grain_maple' % _TX,
+    roughmap='%s/T_rough_maple' % _TX,
+    figure_mean=212.9, figure_sd=3.8, seam=False,
+    source=_PH, needs={'srgb': False})
+MATERIAL_STOCK_BOARD = ('MI_board_road', 'road_inlay')
 
 # the three that must stay identical to card_heavy until Phase 1 tunes them
 SPLIT_OF_CARD_HEAVY = ('brick_sheet', 'plaster_cast', 'render_smooth')
@@ -286,6 +320,7 @@ MATERIAL_STOCK = {
     'MI_wood_cherry': 'cherry',
     'MI_wood_sapele': 'sapele',
     'MI_wood_walnut': 'walnut',
+    'MI_board_road': 'road_inlay',   # the board's inlaid streets, D11
     'MI_planter': 'card_prop',    # kit beds and pots - prop scale, fine tooth
     # VEHICLES ARE CAST, NOT CUT. Cold read #1 said the paper texture was
     # most visible on the vehicles, and it was: they borrowed the buildings'
@@ -377,6 +412,18 @@ def figure_for(name):
     return STOCK[stock_for(name)].get('figure')
 
 
+def roughmap_for(name):
+    """The stock's contrast-stretched ROUGHNESS map, or None.
+
+    Separate from figure_for because the two maps do different jobs: the
+    figure is faithful luminance and modulates colour by a few percent, while
+    this one is stretched to fill 0..1 so it actually reaches the roughness
+    band. Feeding the figure map into the roughness Lerp reached 9-26% of the
+    band and produced the uniform, veneer-like surface the first boards had.
+    """
+    return STOCK[stock_for(name)].get('roughmap')
+
+
 def figure_levels(name):
     """(mean, sd) of the stock's grain mask, or (None, None).
 
@@ -416,6 +463,14 @@ def _selftest():
     # Timber_ decking, planters, pergolas - must be untouched by seven new
     # stocks arriving, and longest-prefix is what guarantees it.
     assert stock_for('MI_wood') == 'basswood'
+    # the board's road is its own stock, and it is a TIMBER one - stained
+    # wood keeps its grain, so a road with no figure would be the fault the
+    # stock replaced, wearing a different name
+    assert stock_for('MI_board_road') == 'road_inlay'
+    assert STOCK['road_inlay']['figure'], 'a stained board still shows figure'
+    assert STOCK['road_inlay']['rough'][0] > STOCK['oak']['rough'][0], (
+        'the road must be MATTER than the buildings it carries - it is laid '
+        'and walked on, they are sanded faces')
     assert stock_for('MI_wood_oak') == 'oak', 'longest prefix did not win'
     assert stock_for('MI_wood_walnut') == 'walnut'
     for _t in TIMBERS:
@@ -440,6 +495,13 @@ def _selftest():
         # drew one down every face of the first timber capture; wood turns it
         # off. Asserted so it cannot come back by someone copying a card
         # stock's shape into a new species.
+        assert st['roughmap'], (
+            '%s has no roughness map - the figure mask reaches only a fifth '
+            'of the band and the surface reads as veneer' % _t)
+        assert st['rough'][1] - st['rough'][0] >= 0.20, (
+            '%s roughness band is %.2f wide; a carved timber wants spread '
+            'between open pore and dense latewood' % (
+                _t, st['rough'][1] - st['rough'][0]))
         assert st['seam'] is False, (
             '%s must turn the panel seam off - it is card fabrication '
             'grammar and a carved block has no joints' % _t)
@@ -494,6 +556,14 @@ def _selftest():
     assert stock_for('MI_glass_b') == 'acetate'
     assert stock_for('MI_glass_pent') == 'acetate'
     assert stock_for('MI_wood') == 'basswood'
+    # the board's road is its own stock, and it is a TIMBER one - stained
+    # wood keeps its grain, so a road with no figure would be the fault the
+    # stock replaced, wearing a different name
+    assert stock_for('MI_board_road') == 'road_inlay'
+    assert STOCK['road_inlay']['figure'], 'a stained board still shows figure'
+    assert STOCK['road_inlay']['rough'][0] > STOCK['oak']['rough'][0], (
+        'the road must be MATTER than the buildings it carries - it is laid '
+        'and walked on, they are sanded faces')
     # a car is not cut from the same sheet as the wall behind it
     assert stock_for('MI_veh_rose_2S') == 'resin'
     assert stock_for('MI_veh_cream_2S') == 'resin'

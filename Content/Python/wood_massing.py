@@ -15,7 +15,7 @@ the masses can be seen without a bake and without the bake policy's triggers.
 Driven from LOCAL python calling MCP from OUTSIDE the editor - the only safe
 direction; an MCP call from inside a rung script waits on its own thread.
 
-STAGED AT y=60000 and removed afterwards, removal VERIFIED by search. The
+STAGED INSIDE CITY_Room and removed afterwards, removal VERIFIED by search. The
 level is asserted before every mutating step and TestCity is never saved.
 """
 import json
@@ -51,7 +51,13 @@ SUBJECTS = [
     ('cherry', 'modern3',     3, 1230.0),
     ('walnut', 'tower',       6, 1230.0),
 ]
-BASE_Y = 60000.0
+# INSIDE CITY_Room. This staged at y=60000, which is OUTSIDE the room
+# entirely (x +/-37536, y +/-34116), so these subjects were photographed
+# against a black void - AGENTS.md founding failure 5, and measurably:
+# the frames this produced ran 42-58%% of pixels crushed to black. That
+# is what the owner was looking at when they said "I can't see anything".
+# 20000 puts the row on the lit floor where the board already stands.
+BASE_Y = 20000.0
 SPACING = 3200.0
 
 

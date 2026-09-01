@@ -184,6 +184,18 @@ def mkactor(name, loc=(0, 0, 0), rot=None):
 # AGAINST THE SQUARE NUMBER - 13,897 is the real baseline, not 11,166.
 HAND_TOLERANCE = False
 
+# PER-BUILD OVERRIDE (D12, owner 2026-09-01). The constant above is the
+# FLAGSHIP's answer and it stands. Direction B is a hand-laid wooden model,
+# where the maker's tolerance IS the read, so it needs the opposite - and
+# flipping the module constant would apply the flagship's REJECTED look to
+# every flagship build.
+#
+# None = use HAND_TOLERANCE. build() sets this from spec['hand_tolerance'] and
+# restores it in a finally, so an absent key leaves every existing caller
+# byte-identical and an exception cannot leave jitter switched on for the next
+# model.
+_HAND = None
+
 DEGENERATE = []   # (name, dx, dy, dz) for boxes skipped as zero-sized
 JITTER_APPLIED = []   # actors the hand tolerance actually moved
 
@@ -403,8 +415,8 @@ def _setprops(args):
     purer. They disagreed for the whole life of the feature and nobody could
     see it.
     """
-    if not HAND_TOLERANCE:
-        return None            # owner's call, see HAND_TOLERANCE
+    if not (HAND_TOLERANCE if _HAND is None else _HAND):
+        return None            # owner's call, see HAND_TOLERANCE / _HAND
     if _SINK is not None:
         # RECORD IT, don't discard it. Jitter used to be applied to the LEVEL
         # only, so a live-baked mesh carried hand tolerance and a fastbaked one
@@ -615,15 +627,17 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # always did. The flag is restored in a finally so an exception mid-build
     # cannot leave the generator in massing mode for the next caller - a
     # sticky global here would silently strip glazing from flagship models.
-    global _MASSING
-    was = _MASSING
+    global _MASSING, _HAND
+    was, was_h = _MASSING, _HAND
     _MASSING = bool(spec.get('massing_only'))
+    _HAND = spec.get('hand_tolerance')
     if _MASSING:
         del MASSING_SKIPPED[:]
     try:
         return _dispatch(spec, origin, yaw)
     finally:
         _MASSING = was
+        _HAND = was_h
 
 
 def _dispatch(spec, origin, yaw):
@@ -3828,6 +3842,20 @@ def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     a = mkactor('BLD2_%s_M' % n, origin, (0.0, yaw, 0.0))
 
+    # HAND TOLERANCE (D12). A hand-laid model's blocks are not axially
+    # perfect, and on a WINDOWLESS mass that slight misalignment is one of the
+    # very few things in frame saying a person set this down - there is no
+    # glazing rhythm or trim to carry that instead. Same machinery, same
+    # budget and same clamp the flagship builders use; whether it applies at
+    # all is the SPEC's call, not this builder's, so the flagship's own
+    # square-not-jittered decision is untouched.
+    jx = rnd.uniform(-2.0, 2.0) * (W / 100.0)
+    jy = rnd.uniform(-1.4, 1.4)
+    jr = jit_yaw(rnd, W, 0.8)
+    _setprops({'instance': a, 'values': json.dumps({
+        'RelativeLocation': {'x': jx, 'y': jy, 'z': 0.0},
+        'RelativeRotation': {'pitch': 0.0, 'yaw': jr, 'roll': 0.0}})})
+
     # PLINTH. Every block in the reference sits on a slightly larger base -
     # it is what makes a carved piece read as PLACED on a board rather than
     # growing out of it, and it is the cheapest single part in the vocabulary.
@@ -3870,10 +3898,15 @@ def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     # stops a prism reading as a cut-off extrusion. Optional and small.
     cap = spec.get('cap')
     if cap:
-        cw = (ix1 - ix0) * 0.28
-        cd = (iy1 - iy0) * 0.28
-        cx = ix0 + ((ix1 - ix0) - cw) * (0.3 + 0.4 * rnd.random())
-        cy = iy0 + ((iy1 - iy0) - cd) * (0.3 + 0.4 * rnd.random())
+        # WIDTH AND PLACEMENT VARY TOO, not just height. A cap that is always
+        # 28% of the block and always near the middle is a stamp however much
+        # its height changes - and on a windowless mass the silhouette is the
+        # only thing carrying detail, so the repetition shows more here than
+        # it would on an articulated facade.
+        cw = (ix1 - ix0) * (0.20 + 0.34 * rnd.random())
+        cd = (iy1 - iy0) * (0.20 + 0.34 * rnd.random())
+        cx = ix0 + ((ix1 - ix0) - cw) * (0.08 + 0.84 * rnd.random())
+        cy = iy0 + ((iy1 - iy0) - cd) * (0.08 + 0.84 * rnd.random())
         box(a, 'Wall_Cap', cx, cx + cw, cy, cy + cd, z, z + float(cap))
         made += 1
 

@@ -21,6 +21,22 @@ wiring mistake away from the frame. Converting to single-channel HERE means
 the donor's colour never enters Content/ at all - the rule becomes a property
 of the asset instead of a promise about the graph.
 
+A SECOND MAP IS EMITTED FOR ROUGHNESS, and it is not a duplicate.
+
+The grain mask is FAITHFUL luminance - values cluster tightly around their
+mean, which is right for a figure that modulates colour by a few percent. Fed
+raw into the master's roughness Lerp as its alpha it is nearly useless:
+measured, the seven masks reach only 9-26% of their own roughness band, and
+maple moves roughness from 0.586 to 0.601. That is a uniform surface, and a
+uniform surface is why the first boards read as VENEER rather than sawn
+timber.
+
+So T_rough_<species> is the same luminance CONTRAST-STRETCHED to fill 0..1:
+mean +/- 3 sd mapped across the whole range and clamped. Same pattern, same
+provenance, different job - the figure map stays honest for colour while the
+roughness map actually reaches the band it drives. Two maps rather than one
+stretched compromise, because the two uses want opposite things.
+
 GRAIN DIRECTION IS NORMALISED, and this is the fix for the first thing an
 eye caught on the board: "the grain of the wood is not consistent like a block
 of carved wood would be... vertically and then it goes horizontally on other
@@ -194,6 +210,23 @@ def main():
         n = len(px)
         m = sum(px) / float(n)
         sd = (sum((v - m) * (v - m) for v in px) / float(n)) ** 0.5
+        # the ROUGHNESS twin: same pattern, stretched to fill 0..1 so it
+        # actually reaches the band it drives
+        span = 3.0 * sd if sd > 0.01 else 1.0
+        rpx = bytearray(n)
+        for i, v in enumerate(px):
+            t = (v - m) / span * 0.5 + 0.5
+            rpx[i] = 0 if t < 0 else (255 if t > 1 else int(t * 255))
+        rgrey = os.path.join(OUT, '_rough_%s.bmp' % stock)
+        write_grey_bmp(rgrey, w, h, rpx)
+        subprocess.run(['sips', '-s', 'format', 'png', rgrey, '--out',
+                        os.path.join(OUT, 'T_rough_%s.png' % stock)],
+                       check=True, capture_output=True)
+        os.remove(rgrey)
+        rsd = (sum((v - 127.5) ** 2 for v in rpx) / float(n)) ** 0.5
+        assert rsd > 40.0, (
+            '%s roughness map did not stretch (sd %.1f) - it will drive the '
+            'band as feebly as the raw figure did' % (stock, rsd))
         means[stock] = (m, sd)
         print('%-9s %-26s %5dx%-5d %7.1f %6.1f %7.3f%s'
               % (stock, asset, w, h, m, sd, sd / m, turned))

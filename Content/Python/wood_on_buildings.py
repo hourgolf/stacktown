@@ -20,7 +20,7 @@ whether the ladder separates on real geometry. The massing question stays
 open until the massing-only spec key lands. Frames are labelled so the two
 can never be conflated.
 
-STAGED FAR OFF THE BOARD at y=60000, the pattern bake_catalogue uses, and
+STAGED INSIDE CITY_Room on the lit floor (was y=60000, a black void), and
 removed afterwards with the removal VERIFIED by search rather than by
 trusting return values. The level is asserted before every mutating step.
 TestCity is never saved.
@@ -75,7 +75,13 @@ SUBJECTS = [
     ('sapele', 'SM_Bld_contemporary4_t4_w1230', 3286),
     ('walnut', 'SM_Bld_tower_t6_w1230',        7490),
 ]
-BASE_Y = 60000.0
+# INSIDE CITY_Room. This staged at y=60000, which is OUTSIDE the room
+# entirely (x +/-37536, y +/-34116), so these subjects were photographed
+# against a black void - AGENTS.md founding failure 5, and measurably:
+# the frames this produced ran 42-58%% of pixels crushed to black. That
+# is what the owner was looking at when they said "I can't see anything".
+# 20000 puts the row on the lit floor where the board already stands.
+BASE_Y = 20000.0
 SPACING = 2600.0
 
 

@@ -1219,3 +1219,211 @@ requires it:**
 Neither half starts without the owner's word, and the coordinator holds
 cross-lane verification for a shared-master change while the flagship lane is
 away.
+
+---
+
+## D9 — THE HALF-REPOINTED FAMILY. Named 2026-08-31, on the second instance.
+
+**"Repoint one consumer, miss the other."** Two instances in one session, same
+shape, so it is a family and not two accidents — the treatment POLISH_PROTOCOL
+gives the lapped-span and crown-collapse families.
+
+**Instance 1 — the BaseColour multiply (CAUGHT).** `BaseColour` fed TWO nodes:
+the wear Lerp's A and the `EdgeWearLift` Multiply's A. Inserting the grain
+term meant repointing both; repointing one would have left half the material
+reading the ungrained colour. It was caught because the graph was WALKED
+first — the walk printed both consumers before a node was added.
+
+**Instance 2 — the pith offset (SHIPPED, then caught on review).** The polar
+centre feeds the radius (`DotProduct`) AND the angle (`Arctangent2Fast`). The
+offset was wired into the DotProduct only, so rings were measured from the
+shifted centre and their sweep from the original one — which shows as a swirl
+seam across the end face. It was NOT caught by a walk, because no walk was
+done: the shape was assumed from having built it an hour earlier.
+
+**THE DETECTOR: walk the graph's consumers before any repoint.** Not "check
+afterwards" — enumerate what reads a node BEFORE inserting anything between it
+and them, and repoint the full set. Assumption is how instance 2 happened, and
+knowing the graph is exactly the state in which one stops walking it.
+
+The MCP tool reports INPUTS, never outputs, so a consumer list must be built
+by scanning — and a full scan of the master is 141 round trips and times out.
+The affordable version is what instance 1 used: walk DOWN from the material
+property to the node, which reveals its consumers on the way past.
+
+---
+
+## D10 — the board's own stocks. Declared 2026-09-01, before any geometry.
+
+Owner's order puts roads, sidewalks and board detail next. Declare before
+geometry, as every stock before these.
+
+**THE FAULT BEING FIXED, stated plainly:** the first boards' roads are
+`MI_dist_slate` — a DISTRICT PAINT borrowed because it existed, not because
+it was right. In frame they read as pale blue-grey plastic, the one element in
+an otherwise wooden picture that says "engine". That is the exact error
+`fabrication.py` was written to end: a surface wearing whatever material was
+nearest rather than what a modelmaker would reach for.
+
+**THE PRINCIPLE:** *a model is unified by FABRICATION.* The board is not a
+painted texture of a city; it is a made object, and the question for every
+part of it is the same one the stock table always asks — **what would a
+modelmaker reach for?**
+
+### The proposed vocabulary — three stocks, and why not more
+
+    board_plate   the base the city stands on. CHIPBOARD ALREADY EXISTS for
+                  exactly this and already has its admitted map waiting:
+                  T_Wood_Particle measured isotropic-granular (ratio 1.03),
+                  which is what particle board IS (D5). No new stock - the
+                  one in the table gets the map D5 already shortlisted for it.
+
+    road_inlay    NEW. The reference's roads are a stained inlay set INTO the
+                  board, not paint on top of it: matte, muted green-grey,
+                  darker than the timber and with no figure of its own. A
+                  modelmaker cuts these from a different sheet and beds them
+                  in - which is precisely the admission rule, so this earns
+                  its place as a stock rather than a colour.
+
+    kerb_card     NEW, and the one I am least sure of. Sidewalks in the
+                  reference read as a THIN pale edge standing slightly proud
+                  of the road - cut card, not stained wood. If it turns out
+                  a modelmaker would cut kerb and road from the SAME sheet at
+                  different colours, this must be dropped: two stocks that
+                  differ only in tone is the walnut-and-cedar prohibition
+                  MASTER_MATERIAL_SPEC names, and D6 already committed this
+                  lane to dropping any species that cannot earn its own grain.
+
+**Three, not seven.** The temptation is a stock per element - kerb, gutter,
+crossing, plaza, verge. The table's own rule refuses it: those are the same
+few materials cut to different shapes, and shape is geometry's job.
+
+### What "good" means for the board
+
+1. **The board reads as MADE, not as ground.** It has a visible edge and a
+   thickness; the current plate reads as a sheet and the reference's does not.
+2. **Roads sit IN the board, not on it.** Inlay, not paint — the joint where
+   they meet is a feature.
+3. **Nothing on the board out-saturates the timber.** The buildings are the
+   subject; the board is what they stand on. The current slate roads fail
+   this and are the loudest thing in frame.
+4. **It survives the night frame** (B4), when the board is the unlit context
+   the glow reads against.
+
+### Open, and NOT decided here
+
+**The road colour is the owner's eye, not a hex I pick.** My D6 tone targets
+were derived from real timber and one was still wrong enough to need
+compressing after a frame. A stained inlay has no natural referent to derive
+from, so it goes to the owner as candidates on the board rather than as a
+declared value — the same route the timbers took, and for the same reason.
+
+---
+
+## D11 — four owner answers, 2026-09-01. Two of them are LOCKS.
+
+### 1. ROADS ARE STAINED WOOD INLAY
+
+The board is **one material family**. Roads are cut from the same timber and
+stained green-grey, bedded flush into the plate. "A model is unified by
+fabrication" holds for the board as it does for the buildings — everything is
+wood, differing by stain and by cut.
+
+**This kills `kerb_card`, and D10 predicted it would.** D10 flagged that stock
+as the one it was least sure of, on the rule that two stocks differing only in
+tone is the walnut-and-cedar prohibition. Kerbs are the same sheet at a paler
+stain — a COLOUR on one stock, which is exactly what the rule says a colour
+should be. **The board vocabulary is TWO stocks, not three.**
+
+    board_plate   chipboard, already in the table; T_Wood_Particle is the
+                  map D5's survey already shortlisted for it
+    road_inlay    NEW. Stained timber - it keeps GRAIN, because a stained
+                  board still shows its figure; what changes is the stain,
+                  not the material. Kerbs and crossings are tones of this.
+
+### 2. DENSITY: TIGHTER, BUT STREETS STAY LEGIBLE
+
+Not reference-tight. Buildings fill their lots and streets halve, while each
+parcel stays distinguishable from the boom — because this is a board people
+click on, and the buy/select verb needs a parcel to be pickable. The
+photograph is the target for the LOOK, not for the geometry, and the owner
+drew that line rather than letting it blur.
+
+### 3. CARVING SCOPE — **LOCKED** at massing plus shallow reveals
+
+**No recessed openings. No carved window bays.** Setbacks, a plinth, and a
+scored line where a stage steps; all information from silhouette and tone;
+windows exist only as light at night per B4.
+
+**This makes `build_mass` feature-complete**, and that is the point of writing
+it down. "A bit more carving" is the shape scope creep takes on a direction
+whose whole economy is fewer parts per m2, and a future session reading this
+should treat added facade articulation as a change requiring the owner's word,
+not as polish.
+
+### 4. THE BOARD IS A TEST RIG — **LOCKED** as disposable
+
+It exists to judge materials and forms. It stays built LIVE and UNSAVED; it is
+not baked, not pinned, and nothing on it needs to survive. The real board
+comes later through the pin table and a proper bake.
+
+**So `testcity_pins` and the tower bake do NOT gate this work**, and neither
+should be pulled forward to serve it. The rig is allowed to be cheap, and
+being told so explicitly is what stops it quietly accreting into an asset
+nobody meant to own.
+
+---
+
+## D12 — hand tolerance ON for direction B. Owner, 2026-09-01.
+
+**The flagship's 2026-08-29 decision stands untouched. This reverses it for
+direction B only.**
+
+### What is being reversed, and why that is not a contradiction
+
+The owner was shown a square building and a jittered one, same seed, same
+spec, same light, and preferred the SQUARE one. `HAND_TOLERANCE = False` in
+genbuild records that as a decision rather than a workaround, and the machinery
+was left correct and switched off.
+
+That call was made about the FLAGSHIP: a photographed architectural model
+whose subject is fabricated precision — cut card, sprayed paint, mitred trim.
+Jitter there reads as sloppiness.
+
+Direction B is a different object. It is a **hand-laid wooden planning
+model**: blocks sawn from stock and set down on a board by a person. The
+maker's tolerance is not an error in that fiction, it IS the fiction — and a
+grid of blocks in perfect axial alignment is the single loudest statement a
+frame can make that no hand was involved. The owner's verdict on the current
+board was "it looks like a render still", and machine alignment is one of the
+reasons why.
+
+**So the same machinery is right in one direction and wrong in the other,
+which is exactly what a two-product repository should expect.** The flagship's
+answer is not a general truth about jitter; it is an answer about card.
+
+### The cost, stated because it was measured before
+
+Turning jitter on costs COPLANAR DEBT — measured over the 548-model catalogue
+at 11,166 pairs with jitter against 13,897 without. Nudging a floor off square
+is the cheapest way to stop two planes being exactly coincident, so jitter
+REDUCES the count. For direction B that cost is a benefit, and it is recorded
+here so nobody re-derives it in surprise.
+
+### Scoping: a spec key, not a global flip
+
+`HAND_TOLERANCE` is a module constant read by both products. Flipping it
+globally would apply the owner's rejected look to every flagship build.
+
+So it becomes **overridable per build**, defaulting to the module constant —
+absent, every existing caller behaves exactly as before, and
+genbuild_identity proves it. Direction B's masses pass the key; nothing else
+does.
+
+### What it must NOT become
+
+Jitter is placement tolerance, not damage. A block set down a degree off
+square is a hand at work; a block visibly broken is wear, which is a separate
+question the owner has PARKED until edges, light and tolerance have been
+judged. One change-set per verdict, or the next "render" verdict cannot be
+attributed to anything.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Persistent client for the native Unreal MCP bridge (UE 5.8, streamable HTTP)."""
-import json, sys, os, urllib.request
+import json, math, sys, os, urllib.request
 
 URL = "http://127.0.0.1:8000/mcp"
 SIDF = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".mcp_sid")
@@ -72,6 +72,8 @@ def tool(toolset, name, args=None, raw=False):
     raw=True to get the old behaviour when a caller wants to inspect the
     refusal itself.
     """
+    if name == 'CaptureViewport' and _lens_depth == 0:
+        _assert_lens()
     a = {"tool_name": name, "arguments": args or {}}
     if toolset: a["toolset_name"] = toolset
     r = call("call_tool", a)
@@ -79,6 +81,91 @@ def tool(toolset, name, args=None, raw=False):
         raise ToolError('%s.%s: %s' % (toolset or '?', name,
                                        r.lstrip()[len('TOOL-ERROR'):].lstrip(': ')))
     return r
+
+
+# --- LENS STATE IS EXPOSURE STATE ---------------------------------------
+#
+# POLISH_PROTOCOL's capture protocol: assert the lens before every measured
+# frame. This is the enforcement, and it lives here rather than in cap2
+# because cap2 is not the choke point - wood_set.py, wood_board.py, p0_reel.py
+# and others call tool(APP, 'CaptureViewport') directly. tool() is the one
+# door every capture in the project goes through.
+#
+# THE INCIDENT THIS IS THE RECEIPT FOR (31 Aug). LOOK_Post runs AEM_Manual
+# with autoExposureApplyPhysicalCameraExposure true, so depthOfFieldFstop sets
+# BRIGHTNESS as well as focus. A DOF study left the volume at f/22 and nothing
+# restored it. Every capture afterwards came out ~6 stops under: a baked set
+# measured image mean 8.0 where its own reference framing measured 102.4. It
+# looked exactly like a lighting bug and cost a full diagnosis chasing lights.
+# dof.py had warned about this coupling in its comments the whole time -
+# "a brightness ladder wearing a depth-of-field label" - but a comment cannot
+# fail a run, and a session-state restore does not survive a reload.
+#
+# A DECLARED STATE IS ALLOWED, an accidental one is not. dof.hero() legitimately
+# shoots at f/2.8 / ISO 1568 / 1-240th; that is fine PROVIDED the script says so
+# with declare_lens(). What this refuses is drift nobody declared.
+GATE_LENS = (4.0, 800.0, 60.0)      # fstop, iso, shutter - dof.reset()
+_expect_lens = GATE_LENS
+_lens_depth = 0
+_lens_warned = False
+
+
+class LensStateError(Exception):
+    pass
+
+
+def declare_lens(fstop=None, iso=None, shutter=None):
+    """Declare the lens this script intends to shoot at. No args = the gate."""
+    global _expect_lens
+    _expect_lens = (GATE_LENS if fstop is None
+                    else (float(fstop), float(iso), float(shutter)))
+    return _expect_lens
+
+
+def lens_state():
+    """(fstop, iso, shutter) off LOOK_Post, or None if there is no such volume."""
+    import json as _json
+    global _lens_depth
+    _lens_depth += 1
+    try:
+        found = _json.loads(tool('editor_toolset.toolsets.scene.SceneTools',
+                                 'find_actors', {'name': 'LOOK_Post', 'tag': '',
+                                 'collision_channels': []}))['returnValue']
+        if not found:
+            return None
+        raw = _json.loads(tool('editor_toolset.toolsets.object.ObjectTools',
+                               'get_properties', {'instance': found[0],
+                               'properties': ['settings']}))['returnValue']
+        st = _json.loads(raw)['settings']
+        return (float(st['depthOfFieldFstop']), float(st['cameraISO']),
+                float(st['cameraShutterSpeed']))
+    finally:
+        _lens_depth -= 1
+
+
+def _assert_lens():
+    global _lens_warned
+    got = lens_state()
+    if got is None:
+        if not _lens_warned:
+            _lens_warned = True
+            sys.stderr.write('ue: no LOOK_Post in this level - lens state '
+                             'unchecked\n')
+        return
+    want = _expect_lens
+    if max(abs(a - b) for a, b in zip(got, want)) < 1e-6:
+        return
+    raise LensStateError(
+        'LENS STATE IS EXPOSURE STATE: LOOK_Post is at f/%g ISO %g 1/%g but '
+        'this capture expects f/%g ISO %g 1/%g. The f-stop drives exposure as '
+        'well as defocus, so shooting now yields a frame that is %.1f stops '
+        'off and looks like a lighting fault. Either restore the gate '
+        'condition (Tools/measure/dof.py: reset()) or, if this lens is '
+        'intended, say so with ue.declare_lens(fstop, iso, shutter).'
+        % (got[0], got[1], got[2], want[0], want[1], want[2],
+           2 * math.log(got[0] / want[0], 2) - math.log(got[1] / want[1], 2)
+           - math.log(want[2] / got[2], 2)))
+
 
 if __name__ == "__main__":
     print(call(sys.argv[1], json.loads(sys.argv[2]) if len(sys.argv)>2 else {}))

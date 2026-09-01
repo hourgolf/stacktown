@@ -67,6 +67,22 @@ _FORMS = [
     (3, (5000, 6600), 'tower'),
 ]
 
+# WHICH GESTURE EACH TIER GETS. The owner's note was that the blocks read as
+# "blocks/monoliths instead of distinctly styled buildings" - about variety of
+# SHAPE, and explicitly not about height. So heights are untouched and the
+# gesture varies instead.
+#
+# Low buildings take the horizontal moves (bar, ell) because that is what the
+# reference's low blocks are and this generator had none - every block was
+# upright. Tall ones take podium and stepped, and a couple stay plain prisms:
+# if every building has a gesture, the gesture stops being one.
+_GESTURE = {
+    'flat':     ('bar', 'ell', 'bar', None, 'ell', 'bar', 'ell'),
+    'setback1': ('podium', 'ell', 'stepped', 'podium', None, 'bar'),
+    'setback2': ('podium', 'stepped', 'podium', 'ell'),
+    'tower':    ('podium', 'stepped', None),
+}
+
 
 def _cap_for(h, rnd):
     """Rooftop cap. FIVE OUTCOMES AND A BARE PLURALITY - a flat top is the
@@ -104,9 +120,12 @@ def _build_set():
                           (0.18, 90.0 + _R.randrange(5) * 16.0)]
             else:
                 stages = [(0.68, 0.0), (0.32, 55.0 + _R.randrange(4) * 12.0)]
+            gst = _GESTURE[plan]
             out.append(('b%02d' % i, _SPECIES[i % len(_SPECIES)],
                         dict(width=w, depth=d, height=h, stages=stages,
-                             cap=_cap_for(h, _R))))
+                             cap=_cap_for(h, _R),
+                             form=gst[len([o for o in out
+                                           if o[0]]) % len(gst)])))
             i += 1
     return out
 

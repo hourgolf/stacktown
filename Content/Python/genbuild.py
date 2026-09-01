@@ -3816,6 +3816,83 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 # a texture. That is also why each treatment costs parts, and the part count
 # is the argument against it: B1's whole economy is fewer parts per m2, so
 # the cost is quoted next to each frame rather than buried.
+# THE FORM VOCABULARY --------------------------------------------------------
+#
+# build_mass knew exactly ONE gesture: concentric setbacks, every stage
+# shrinking evenly on all four sides. Twenty blocks built that way are the
+# same move at twenty heights, which is why the owner read them as
+# "blocks/monoliths instead of distinctly styled buildings" - the note was
+# about VARIETY OF SHAPE, explicitly not about height.
+#
+# Read off B1, the reference's blocks are built from a handful of different
+# gestures, and the commonest one - a wide low base with a narrower shaft
+# rising off-centre - the concentric builder cannot express at all, because
+# its setbacks are always centred and always on four sides.
+#
+# THESE ARE FORMS, NOT DETAIL. Each still emits plain masses in the locked
+# vocabulary; none adds an opening, a bay or an applied fitting. Carving is
+# applied per mass exactly as before, so form and carve compose.
+#
+# `form` defaults to None, which runs the original concentric loop untouched.
+def _form_masses(a, spec, x0, W, D, z, body, rnd):
+    """Emit the body as a named form. Returns (parts, top_z, ix0,ix1,iy0,iy1).
+
+    The returned rect is what a cap sits on, so the cap lands on whatever the
+    form actually left at the top rather than on an assumed centre.
+    """
+    form = spec.get('form')
+    carve = spec.get('carve')
+    n = 0
+    if form == 'podium':
+        # THE REFERENCE'S COMMONEST BLOCK. A wide low base carrying a narrower
+        # shaft set OFF-CENTRE - the off-centre is the whole point, because a
+        # centred shaft is just a concentric setback by another name.
+        bh = body * (0.22 + 0.14 * rnd.random())
+        n += _carve_stage(a, 0, x0, x0 + W, 0.0, D, z, bh, carve, rnd)
+        sw = W * (0.40 + 0.22 * rnd.random())
+        sd = D * (0.40 + 0.22 * rnd.random())
+        sx = x0 + (W - sw) * (0.10 + 0.80 * rnd.random())
+        sy = (D - sd) * (0.10 + 0.80 * rnd.random())
+        n += _carve_stage(a, 1, sx, sx + sw, sy, sy + sd, z + bh, body - bh,
+                          carve, rnd)
+        return n, z + body, sx, sx + sw, sy, sy + sd
+    if form == 'ell':
+        # AN L, so the block has a corner and an inner yard. Two arms meeting,
+        # one lower, which also gives the roof two levels to furnish.
+        d1 = D * (0.45 + 0.15 * rnd.random())
+        w2 = W * (0.38 + 0.18 * rnd.random())
+        h2 = body * (0.62 + 0.28 * rnd.random())
+        n += _carve_stage(a, 0, x0, x0 + W, 0.0, d1, z, body, carve, rnd)
+        n += _carve_stage(a, 1, x0, x0 + w2, d1, D, z, h2, carve, rnd)
+        return n, z + body, x0, x0 + W, 0.0, d1
+    if form == 'stepped':
+        # SETBACKS ON TWO SIDES ONLY, so the building has a front and a back
+        # instead of being the same from every direction.
+        k = 3
+        ix0, ix1, iy0, iy1 = x0, x0 + W, 0.0, D
+        zz = z
+        for i in range(k):
+            h = body * (0.5 if i == 0 else (0.3 if i == 1 else 0.2))
+            n += _carve_stage(a, i, ix0, ix1, iy0, iy1, zz, h, carve, rnd)
+            zz += h
+            ix1 -= W * (0.10 + 0.06 * rnd.random())
+            iy1 -= D * (0.10 + 0.06 * rnd.random())
+            if ix1 - ix0 < W * 0.25 or iy1 - iy0 < D * 0.25:
+                break
+        return n, zz, ix0, ix1, iy0, iy1
+    if form == 'bar':
+        # A LONG LOW SLAB WITH AN ANNEX. The reference is full of these and
+        # this generator had none: every block was upright.
+        aw = W * (0.28 + 0.16 * rnd.random())
+        ah = body * (0.55 + 0.25 * rnd.random())
+        n += _carve_stage(a, 0, x0, x0 + W, 0.0, D, z, body, carve, rnd)
+        ax = x0 + (W - aw) * rnd.random()
+        n += _carve_stage(a, 1, ax, ax + aw, D * 0.08, D * 0.92,
+                          z + body, ah, carve, rnd)
+        return n, z + body + ah, ax, ax + aw, D * 0.08, D * 0.92
+    raise ValueError('unknown form: %r' % form)
+
+
 def _carve_stage(a, i, ix0, ix1, iy0, iy1, z, h, mode, rnd):
     """Emit one stage. `mode` None is the locked single box."""
     if not mode:
@@ -3954,6 +4031,13 @@ def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     stages = spec.get('stages') or [(1.0, 0.0)]
     ix0, ix1, iy0, iy1 = x0, x0 + W, 0.0, D
     body = H - plinth
+    if spec.get('form'):
+        # a NAMED FORM replaces the concentric stage loop entirely, and hands
+        # back the rect it left on top so the cap sits on real geometry
+        _n, z, ix0, ix1, iy0, iy1 = _form_masses(
+            a, spec, x0, W, D, z, body, rnd)
+        made += _n
+        stages = []
     for i, (share, inset) in enumerate(stages):
         h = body * float(share)
         if h <= 0.0:

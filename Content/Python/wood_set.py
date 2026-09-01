@@ -59,7 +59,7 @@ import genbuild  # noqa: E402
 import ue  # noqa: E402
 import wood_board as wb  # noqa: E402   mi_for, ANGLES, TOOTH, constants
 
-S, A, OBJ = wb.S, wb.A, wb.OBJ
+S, A, OBJ, MIT = wb.S, wb.A, wb.OBJ, wb.MIT
 APP, MATD, LEVEL = wb.APP, wb.MATD, wb.LEVEL
 OUT = wb.OUT
 BAKED = '/Game/Stacktown/BakedWood'
@@ -73,8 +73,13 @@ import mk_woodbake as MW  # noqa: E402
 # STREETS WIDE ENOUGH TO BE STREETS. 460 was chosen against a six-block huddle;
 # at twenty, with towers, it is a slot again. 720 keeps the density the owner
 # asked for - "tighter, but streets legible" - and lets the key reach a road.
-STREET = 720.0
-PLOT_OVER = 26.0
+# 720 -> 560, AND THE APRON WIDENED. Separating plot from street changed
+# almost nothing visible, and the reason was the geometry, not the tones: the
+# plot was proud by 26 uu, so nearly all of it sits under a building and the
+# pale expanse in frame was STREET. B1's blocks nearly touch and its roads are
+# narrow ribbons; 720 against a ~1600 block is a third of the board.
+STREET = 560.0
+PLOT_OVER = 90.0
 COLS, ROWS = 3, 2          # six city blocks; 20 buildings share them out
 
 # WHERE THE KEY ACTUALLY POINTS. board_light puts the rect light at
@@ -91,6 +96,42 @@ AIM = (KX + _run * math.cos(math.radians(58.0)),
 
 # four cuts from the stock, so no two neighbours show the same face of the log
 ANGLE_OF = (0, 2, 1, 3)
+
+
+# THE BOARD'S OWN STOCKS, DECLARED HERE so they are not orphans. D10 named
+# the board stocks; their TONES were set live over MCP and lived only as
+# editor state on the assets - the same fault as GrainGain, which fabrication
+# now derives. Declared values, applied every run, are the fix.
+#
+# THE LADDER IS READ OFF B1. Roads are the BRIGHTEST thing in the reference,
+# well above lit timber, which is what lets pale streets carry the eye across
+# a board of warm blocks. The PLOT is not the street: block interiors in the
+# reference sit under buildings and what shows between blocks is road. With
+# one material for both, this board rendered as a single white apron with the
+# blocks marooned in it. A plot a step darker and warmer than the street puts
+# the ribbons back and gives each block a paved edge to sit on.
+BOARD_STOCKS = {
+    'MI_board_road':  (0.72, 0.75, 0.73),   # pale cool inlay, brightest
+    'MI_board_plot':  (0.53, 0.50, 0.43),   # warm paved apron, a step down
+    'MI_model_board': (0.40, 0.36, 0.28),   # the board itself, under both
+}
+
+
+def ensure_board_mis():
+    """Create-or-reuse each board stock and force its declared tone."""
+    for name, (r, g, b) in BOARD_STOCKS.items():
+        ref = {'refPath': '%s/%s.%s' % (MATD, name, name)}
+        try:
+            ue.tool(MIT, 'create', {'folder_path': MATD, 'asset_name': name,
+                                    'parent': {'refPath': '%s/M_StacktownMaster'
+                                               '.M_StacktownMaster' % MATD}})
+        except Exception as e:
+            if 'already exists' not in str(e):
+                raise
+        ue.tool(MIT, 'set_vector_parameter',
+                {'instance': ref, 'name': 'BaseColour',
+                 'value': {'r': r, 'g': g, 'b': b, 'a': 1.0}})
+    return len(BOARD_STOCKS)
 
 
 def _blocks():
@@ -283,9 +324,10 @@ def main():
     # knowledge was there and did not travel. The assertion is the real fix -
     # a binding loop that can match zero components must say so.
     ground = 0
+    ensure_board_mis()
     for nm, ref in (('ZONE_SetBGround', 'MI_model_board'),
                     ('ZONE_SetBRoad', 'MI_board_road'),
-                    ('ZONE_SetBPlots', 'MI_board_road')):
+                    ('ZONE_SetBPlots', 'MI_board_plot')):
         hit = 0
         for a in json.loads(ue.tool(S, 'find_actors', {
                 'name': nm, 'tag': '', 'collision_channels': []}))['returnValue']:

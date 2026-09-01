@@ -21,6 +21,24 @@ wiring mistake away from the frame. Converting to single-channel HERE means
 the donor's colour never enters Content/ at all - the rule becomes a property
 of the asset instead of a promise about the graph.
 
+GRAIN DIRECTION IS NORMALISED, and this is the fix for the first thing an
+eye caught on the board: "the grain of the wood is not consistent like a block
+of carved wood would be... vertically and then it goes horizontally on other
+building faces."
+
+The master's triplanar samples V=z on BOTH side planes, so the direction grain
+runs on a wall is decided entirely by which way it runs IN THE SOURCE IMAGE.
+Measured across the seven admitted maps, FIVE run horizontally and TWO run
+vertically - so two species showed vertical grain on a wall and five showed
+horizontal, on identical geometry. Mixed stock, not one workshop.
+
+Each mask is therefore measured and rotated to a canonical direction: grain
+along the image's V axis, which lands as VERTICAL grain on a standing wall -
+the common way to cut a tall block. The measurement is anisotropy on the
+mask itself, so the check and the asset agree by construction, and the
+assertion at the end means a future map that arrives the wrong way round
+cannot ship quietly.
+
 REC.709 LUMA, not a colourspace convert. sips' grey profile does its own
 thing; this uses the same integer weights as Tools/measure/img.py so a mask
 and a measurement of it agree by construction.
@@ -112,6 +130,30 @@ def write_grey_bmp(path, w, h, px):
     open(path, 'wb').write(hdr + data)
 
 
+def _direction(px, w, h):
+    """(|dx|, |dy|) of the high-pass residual. |dy| larger means variation
+    runs ACROSS rows, i.e. the features lie HORIZONTALLY."""
+    dx = dy = 0.0
+    n = 0
+    for y in range(2, h - 2, 3):
+        b = y * w
+        for x in range(2, w - 2, 3):
+            dx += abs(px[b + x + 1] - px[b + x - 1])
+            dy += abs(px[b + w + x] - px[b - w + x])
+            n += 1
+    return (dx / n, dy / n) if n else (0.0, 0.0)
+
+
+def _rot90(px, w, h):
+    """Rotate the luminance plane 90 degrees. Returns (px, w, h)."""
+    out = bytearray(w * h)
+    for y in range(h):
+        b = y * w
+        for x in range(w):
+            out[x * h + (h - 1 - y)] = px[b + x]
+    return out, h, w
+
+
 def main():
     if not os.path.isdir(SRC):
         raise SystemExit('no source dir: %s' % SRC)
@@ -131,6 +173,18 @@ def main():
                        check=True, capture_output=True)
         w, h, px = read_bmp(tmp)
         os.remove(tmp)
+        # NORMALISE THE GRAIN DIRECTION. Canonical is grain along V, which
+        # the master's triplanar puts VERTICALLY on a standing wall.
+        ddx, ddy = _direction(px, w, h)
+        turned = ''
+        if ddy > ddx:                      # runs horizontally -> turn it
+            px, w, h = _rot90(px, w, h)
+            ddx, ddy = _direction(px, w, h)
+            turned = ' rotated 90'
+        assert ddx >= ddy, (
+            '%s grain still runs horizontally after rotation (%.2f vs %.2f) - '
+            'it is not directional enough to normalise, and a map with no '
+            'direction is not depicting wood' % (stock, ddx, ddy))
         grey = os.path.join(OUT, '_grey_%s.bmp' % stock)
         write_grey_bmp(grey, w, h, px)
         png = os.path.join(OUT, 'T_grain_%s.png' % stock)
@@ -141,8 +195,8 @@ def main():
         m = sum(px) / float(n)
         sd = (sum((v - m) * (v - m) for v in px) / float(n)) ** 0.5
         means[stock] = (m, sd)
-        print('%-9s %-26s %5dx%-5d %7.1f %6.1f %7.3f'
-              % (stock, asset, w, h, m, sd, sd / m))
+        print('%-9s %-26s %5dx%-5d %7.1f %6.1f %7.3f%s'
+              % (stock, asset, w, h, m, sd, sd / m, turned))
     if means:
         print('\nfor the stock table - the material centres on mean and '
               'normalises by sd:')

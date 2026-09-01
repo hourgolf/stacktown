@@ -56,7 +56,8 @@ the four keys it always did.
 #   amount:     normal strength - relief honesty, half the point of the split
 #   rough:      the narrow fabricated band
 def _st(tooth, amount, rlo, rhi, normal=None, tooth_fine=None, source=None,
-        needs=None):
+        needs=None, figure=None, figure_mean=None, figure_sd=None,
+        seam=None):
     """`needs` records the IMPORT SETTINGS an admitted map must carry.
 
     WHY THIS EXISTS. Content/Uniblocks/ is gitignored - every admitted FAB
@@ -71,7 +72,8 @@ def _st(tooth, amount, rlo, rhi, normal=None, tooth_fine=None, source=None,
     """
     return dict(normal=normal, tooth=tooth, tooth_fine=tooth_fine,
                 amount=amount, rough=(rlo, rhi), source=source,
-                needs=needs or {})
+                needs=needs or {}, figure=figure,
+                figure_mean=figure_mean, figure_sd=figure_sd, seam=seam)
 
 
 STOCK = {
@@ -173,6 +175,81 @@ STOCK = {
                          needs={'srgb': False}),
 }
 
+# --- DIRECTION B: THE SEVEN TIMBERS -------------------------------------
+#
+# SPECIES IS A STOCK, not a colour on a shared one (D5). Grain is as much a
+# species trait as hue, and a stock is what carries a map - so one stock per
+# timber, resolved by the same longest-prefix rule that lets MI_dist_brick
+# leave the MI_dist paint family. `basswood` above is untouched and keeps its
+# flagship users (Timber_ decking, planters, pergolas).
+#
+# EACH CARRIES TWO MAPS. `normal` is the species' nor_dx map - DirectX
+# convention, so flip_green_channel is not needed and cannot be forgotten,
+# which closes the inverted-brick class by construction rather than guarding
+# it. `figure` is the luminance-only grain mask derived from the same
+# species' CC0 diffuse by Tools/textures/mk_grain_masks.py, under D8's
+# "their pattern, our palette" - no donor hue reaches Content/ at all.
+#
+# TOOTH IS DERIVED, and the arithmetic is written down because this table's
+# own rule is that tiling comes from what the map depicts. tooth = 1/tile_uu
+# (card_heavy's 0.006 puts one tile across 167 uu). The fiction is a building
+# CARVED FROM ONE BLOCK: at model scale a block is ~10 cm showing perhaps 30
+# to 100 growth lines, and the engine world is 1:1 with a building ~1000 uu,
+# so a grain line wants to land every 10-30 uu. These maps depict 1 m of real
+# timber carrying on the order of 100-300 lines, which puts one tile across
+# roughly 1,000-9,000 uu. 0.0005 (one tile per 2,000 uu) is the middle of
+# that band and is a STARTING POINT to be trimmed on a building, never a
+# value that looked right on a panel.
+#
+# AMPLITUDE starts at 1.8 because a sanded veneer's relief is genuinely
+# shallow (D7 measured it); the figure carries the read, not the normal.
+#
+# figure_mean / figure_sd are MEASURED, emitted by the generator. The sd is
+# load-bearing: figure strength varies TENFOLD across these sources
+# (sd/mean 0.176 pine to 0.018 maple) because they are photographs exposed by
+# different people. The material normalises by sd so one gain gives every
+# species comparable amplitude - the card_heavy amplitude fault, caught
+# before it shipped this time.
+_TX = '/Game/Stacktown/Textures'
+_PH = 'Poly Haven, CC0 (https://polyhaven.com/license) - normal (DirectX) ' \
+      'and a luminance-only grain mask; no donor colour shipped'
+
+
+def _timber(rlo, rhi, species, mean, sd, amount=1.8, tooth=0.0005):
+    # seam=False: A CARVED SOLID HAS NO PANEL JOINTS. The master draws
+    # vertical panel seams every 380 uu because that is CARD-MODEL fabrication
+    # grammar, and it is right for card. On a 700 uu timber block it put one
+    # joint down every face in the first capture - fabrication grammar from
+    # one story leaking into another. The one-block fiction is declared
+    # direction-B doctrine (this table's own tooth arithmetic is built on it),
+    # so timber turns the seam off. Flagship card stocks are untouched.
+    #
+    # Off is SeamDarken 1.0 - a darken factor of 1 darkens nothing - which is
+    # the idiom mark_mats.py and paint_roles.py already use ("Seams off - glue
+    # is not a sheet"), not a second way of saying the same thing.
+    return _st(tooth, amount, rlo, rhi,
+               normal='%s/T_%s_N' % (_TX, species),
+               figure='%s/T_grain_%s' % (_TX, species),
+               figure_mean=mean, figure_sd=sd, seam=False,
+               source=_PH, needs={'srgb': False})
+
+
+STOCK.update({
+    # pale to dark. Rough bands sit in basswood's sanded-timber neighbourhood
+    # (0.48-0.64), open-grained species a touch rougher than close-grained
+    # ones because open pores scatter - a small, physical difference, not a
+    # spread invented to make the table look varied.
+    'maple':  _timber(0.46, 0.62, 'maple',  212.9, 3.8),
+    'pine':   _timber(0.50, 0.66, 'pine',    63.1, 11.1),
+    'ash':    _timber(0.50, 0.66, 'ash',    151.2, 9.4),
+    'oak':    _timber(0.50, 0.66, 'oak',    123.9, 8.3),
+    'cherry': _timber(0.46, 0.62, 'cherry', 182.5, 4.2),
+    'sapele': _timber(0.48, 0.64, 'sapele', 139.9, 9.0),
+    'walnut': _timber(0.48, 0.64, 'walnut', 110.3, 6.8),
+})
+
+TIMBERS = ('maple', 'pine', 'ash', 'oak', 'cherry', 'sapele', 'walnut')
+
 # the three that must stay identical to card_heavy until Phase 1 tunes them
 SPLIT_OF_CARD_HEAVY = ('brick_sheet', 'plaster_cast', 'render_smooth')
 
@@ -199,6 +276,16 @@ MATERIAL_STOCK = {
     'MI_shingle': 'print',
     'MI_model_board': 'chipboard',
     'MI_wood': 'basswood',
+    # DIRECTION B's timbers. Longest prefix wins, so MI_wood_oak leaves the
+    # basswood family the same way MI_dist_brick leaves MI_dist - and plain
+    # MI_wood keeps resolving to basswood for every flagship user of it.
+    'MI_wood_maple': 'maple',
+    'MI_wood_pine': 'pine',
+    'MI_wood_ash': 'ash',
+    'MI_wood_oak': 'oak',
+    'MI_wood_cherry': 'cherry',
+    'MI_wood_sapele': 'sapele',
+    'MI_wood_walnut': 'walnut',
     'MI_planter': 'card_prop',    # kit beds and pots - prop scale, fine tooth
     # VEHICLES ARE CAST, NOT CUT. Cold read #1 said the paper texture was
     # most visible on the vehicles, and it was: they borrowed the buildings'
@@ -233,16 +320,25 @@ def stock_for(name):
 
 
 def params_for(name):
-    """Scalars only - the four keys this has always emitted.
+    """Scalars only - the four keys this has always emitted, plus SeamDarken
+    for the stocks that explicitly ask for it.
 
     The normal map is deliberately NOT in here. Callers write scalars with
     set_material_instance_scalar_parameter_value and a texture needs a
     different setter, so folding it in would silently break every existing
     caller. normal_for() is the separate accessor; apply_stocks.py uses both.
+
+    SeamDarken is emitted ONLY when a stock declares `seam`. A stock that
+    says nothing about seams gets exactly the four keys it always got, so
+    every existing material's parameter set is byte-identical - the emission
+    grows for the stocks that need it and for nobody else.
     """
     st = STOCK[stock_for(name)]
-    return dict(PaperTiling=st['tooth'], PaperNormalAmount=st['amount'],
-                RoughMin=st['rough'][0], RoughMax=st['rough'][1])
+    out = dict(PaperTiling=st['tooth'], PaperNormalAmount=st['amount'],
+               RoughMin=st['rough'][0], RoughMax=st['rough'][1])
+    if st.get('seam') is not None:
+        out['SeamDarken'] = 1.0 if st['seam'] is False else float(st['seam'])
+    return out
 
 
 def texture_requirements():
@@ -264,6 +360,32 @@ def normal_for(name):
     only - never albedo, colour or weathering - so this is the whole of what a
     FAB texture contributes."""
     return STOCK[stock_for(name)].get('normal')
+
+
+def figure_for(name):
+    """The GRAIN MASK for this material's stock, or None.
+
+    A sibling of normal_for rather than a key in params_for, for the same
+    reason normal_for is: params_for emits SCALARS and its callers write them
+    with set_material_instance_scalar_parameter_value. A texture folded in
+    there breaks every one of them silently.
+
+    Under D8 the mask is LUMINANCE ONLY and carries no donor colour - the
+    greyscale conversion happens in Tools/textures/mk_grain_masks.py, so this
+    accessor cannot hand back a coloured map even by mistake.
+    """
+    return STOCK[stock_for(name)].get('figure')
+
+
+def figure_levels(name):
+    """(mean, sd) of the stock's grain mask, or (None, None).
+
+    The material centres on mean and normalises by sd. Both are MEASURED and
+    emitted by the generator - see the TIMBERS comment for why the sd is not
+    optional.
+    """
+    st = STOCK[stock_for(name)]
+    return st.get('figure_mean'), st.get('figure_sd')
 
 
 def _selftest():
@@ -288,6 +410,51 @@ def _selftest():
     assert STOCK['brick_sheet']['amount'] > STOCK['render_smooth']['amount']
     # and card keeps the paper: it is the one stock that really is card
     assert STOCK['card_heavy']['normal'] is None
+
+    # --- DIRECTION B's timbers ------------------------------------------
+    # PLAIN MI_wood STILL RESOLVES TO BASSWOOD. Every flagship user of it -
+    # Timber_ decking, planters, pergolas - must be untouched by seven new
+    # stocks arriving, and longest-prefix is what guarantees it.
+    assert stock_for('MI_wood') == 'basswood'
+    assert stock_for('MI_wood_oak') == 'oak', 'longest prefix did not win'
+    assert stock_for('MI_wood_walnut') == 'walnut'
+    for _t in TIMBERS:
+        st = STOCK[_t]
+        # THE D8 LINE, ENFORCED RATHER THAN PROMISED. A species stock exists
+        # because it has its own GRAIN. If it cannot be given one it is a
+        # colour, and D6 says a colour must be dropped rather than admitted -
+        # this is that rule in executable form.
+        assert st['figure'], (
+            '%s is a species stock with no grain mask - under D6 that makes '
+            'it a colour, not a species, and it must be dropped rather than '
+            'admitted' % _t)
+        assert st['normal'], '%s has no normal map' % _t
+        assert st['figure_mean'] and st['figure_sd'], (
+            '%s carries a grain mask with no measured levels; the material '
+            'normalises by sd and cannot without it' % _t)
+        # a mask whose sd is zero is a flat grey and carries no figure at all
+        assert st['figure_sd'] > 0.5, '%s grain mask is effectively flat' % _t
+        assert st['needs'].get('srgb') is False, (
+            '%s must import linear, not sRGB' % _t)
+        # A CARVED SOLID HAS NO PANEL JOINTS. The master's card-model seam
+        # drew one down every face of the first timber capture; wood turns it
+        # off. Asserted so it cannot come back by someone copying a card
+        # stock's shape into a new species.
+        assert st['seam'] is False, (
+            '%s must turn the panel seam off - it is card fabrication '
+            'grammar and a carved block has no joints' % _t)
+    # and the flagship's card stocks keep their seams, which is the other
+    # half of the same claim
+    assert STOCK['card_heavy'].get('seam') is None
+    assert 'SeamDarken' not in params_for('MI_paint_cream')
+    assert params_for('MI_wood_oak')['SeamDarken'] == 1.0
+    # the tenfold spread is the REASON sd is recorded; assert it is really
+    # there, so a future table that quietly equalises them fails here and has
+    # to say why rather than dropping the normalisation as unnecessary.
+    _r = [STOCK[t]['figure_sd'] / STOCK[t]['figure_mean'] for t in TIMBERS]
+    assert max(_r) / min(_r) > 5.0, (
+        'figure strength no longer varies across the timbers - if that is '
+        'deliberate, the sd normalisation needs revisiting, not deleting')
     assert normal_for('MI_dist_brick') != normal_for('MI_concrete')
     assert normal_for('MI_paint_cream') is None
     # an admitted map that lives outside version control must state what it

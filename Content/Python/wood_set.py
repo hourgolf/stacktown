@@ -380,8 +380,12 @@ def main():
         print('captured', tag)
 
     if '--keep' in sys.argv:
-        print('\n--keep: THE SET IS STANDING at (%.0f, %.0f). TestCity is NOT '
-              'saved and it vanishes on reload.' % (ox, oy))
+        print('\n--keep: THE SET IS STANDING at (%.0f, %.0f).' % (ox, oy))
+        print('CLEAR IT BEFORE THE EDITOR SHUTS DOWN. TestCity is not saved '
+              'by this script, but UE PROMPTS TO SAVE ON QUIT and on '
+              '2026-09-01 that prompt persisted 23 rig actors into the map '
+              'every lane loads. "Unsaved" is not a property of the rig, it '
+              'is a property of nobody having clicked Save yet.')
         return 0
     for nm in made:
         for a in json.loads(ue.tool(S, 'find_actors', {

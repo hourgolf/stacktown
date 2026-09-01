@@ -163,6 +163,12 @@ def main():
                     # THE POINT OF BAKING: chamfer needs geometry, and the
                     # hand tolerance is direction B's per D12
                     hand_tolerance=True,
+                    # ROOF FURNITURE. B1 spends its detail budget on roofs,
+                    # not walls - two to five elements on nearly every block -
+                    # and this generator allowed one optional cap, which the
+                    # owner called repetitive at twenty. Costs +75% parts
+                    # across this set (55 -> 96), quoted before it was spent.
+                    roof='furniture',
                     wall='MI_wood_%s' % sp, roofmat='MI_wood_%s' % sp,
                     trim='MI_wood_%s' % sp)
         genbuild.record()

@@ -3834,6 +3834,60 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 # applied per mass exactly as before, so form and carve compose.
 #
 # `form` defaults to None, which runs the original concentric loop untouched.
+# ROOF FURNITURE ------------------------------------------------------------
+#
+# WHERE B1 ACTUALLY SPENDS ITS DETAIL. Reading the reference again after the
+# carving comparison: its WALLS are almost entirely plain, and nearly every
+# block carries two to five small elements on its ROOF - housings, tanks,
+# stepped copings, blocks set at the edges. The carving study was aimed at
+# facades, which is not where that model's distinctiveness lives.
+#
+# build_mass had ONE optional cap: a single box, size and position jittered.
+# At six blocks that read as variety; at twenty the owner called the tops
+# repetitive, and on a windowless mass the silhouette carries everything, so
+# repetition shows here far more than it would on an articulated facade.
+#
+# PARTS ARE QUOTED, NOT ASSUMED. Roof furniture is cheap per element and
+# multiplies across every building, which is exactly how a parts budget drifts
+# without anyone deciding to spend it. mk_woodbake prints the before/after.
+#
+# `roof` defaults to None, which emits the single legacy cap unchanged.
+def _roof_furniture(a, spec, ix0, ix1, iy0, iy1, z, rnd):
+    """Two to five elements on the roof plane. Returns parts made."""
+    w, d = ix1 - ix0, iy1 - iy0
+    if w <= 0 or d <= 0:
+        return 0
+    n = 0
+    # A COPING LIP, on most but not all. A thin slab slightly PROUD of the
+    # roof reads as the capping course a parapet ends in - one part, and it
+    # gives the silhouette a crisp line the chamfer can catch.
+    if rnd.random() < 0.62:
+        over = 10.0 + 8.0 * rnd.random()
+        lip = 26.0 + 20.0 * rnd.random()
+        box(a, 'Band_Coping', ix0 - over, ix1 + over, iy0 - over, iy1 + over,
+            z, z + lip)
+        n += 1
+        z += lip
+    # HOUSINGS. Count varies, and so do footprint, height and placement -
+    # a fixed count at a jittered size is still a stamp.
+    k = 1 + int(rnd.random() * 3.99)
+    for i in range(k):
+        hw = w * (0.14 + 0.26 * rnd.random())
+        hd = d * (0.14 + 0.26 * rnd.random())
+        hx = ix0 + (w - hw) * rnd.random()
+        hy = iy0 + (d - hd) * rnd.random()
+        # one element in three is a TANK or stair head - tall and narrow
+        # rather than a low box, which is what breaks a flat skyline
+        tall = rnd.random() < 0.34
+        hh = (120.0 + 220.0 * rnd.random()) if tall else (44.0 + 90.0 * rnd.random())
+        if tall:
+            hw *= 0.55
+            hd *= 0.55
+        box(a, 'Wall_Roof%d' % i, hx, hx + hw, hy, hy + hd, z, z + hh)
+        n += 1
+    return n
+
+
 def _form_masses(a, spec, x0, W, D, z, body, rnd):
     """Emit the body as a named form. Returns (parts, top_z, ix0,ix1,iy0,iy1).
 
@@ -4060,6 +4114,9 @@ def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
     # CAP. A small block on top - a lift housing, a water tank, the thing that
     # stops a prism reading as a cut-off extrusion. Optional and small.
+    if spec.get('roof') == 'furniture':
+        made += _roof_furniture(a, spec, ix0, ix1, iy0, iy1, z, rnd)
+        return made
     cap = spec.get('cap')
     if cap:
         # WIDTH AND PLACEMENT VARY TOO, not just height. A cap that is always

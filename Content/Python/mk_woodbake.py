@@ -79,8 +79,12 @@ _FORMS = [
 _GESTURE = {
     'flat':     ('bar', 'ell', 'bar', None, 'ell', 'bar', 'ell'),
     'setback1': ('podium', 'ell', 'stepped', 'podium', None, 'bar'),
-    'setback2': ('podium', 'stepped', 'podium', 'ell'),
-    'tower':    ('podium', 'stepped', None),
+    # CROWN goes on the tall tiers only. A terminating top is what makes a
+    # LANDMARK, and a landmark that every building has is not one - so the
+    # low and mid tiers keep their horizontal gestures and the eye is drawn
+    # up by the three or four blocks that actually resolve at the top.
+    'setback2': ('podium', 'crown', 'podium', 'ell'),
+    'tower':    ('crown', 'stepped', 'crown'),
 }
 
 

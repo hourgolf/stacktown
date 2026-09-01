@@ -3934,6 +3934,38 @@ def _form_masses(a, spec, x0, W, D, z, body, rnd):
             if ix1 - ix0 < W * 0.25 or iy1 - iy0 < D * 0.25:
                 break
         return n, zz, ix0, ix1, iy0, iy1
+    if form == 'crown':
+        # A TOWER THAT TERMINATES INSTEAD OF STOPPING. Direction B's tall
+        # blocks were taller versions of the same gestures - a shaft that just
+        # ends at its cap - and the owner's recurring note across three boards
+        # has been that the TOPS are the weak part. On a windowless mass the
+        # silhouette carries everything, so the top is not a detail, it is the
+        # last thing the eye reads.
+        #
+        # B1's tallest blocks step in two or three times near the top, quickly,
+        # so the mass gathers to a point rather than being cut off. That is a
+        # CROWN, and it is the cheapest thing that reads at distance because it
+        # is pure silhouette - no surface, no fitting, nothing to sample.
+        #
+        # The steps are FAST and SHRINKING: each stage is shorter than the one
+        # below and insets more, which is what makes a termination read as
+        # deliberate rather than as another setback.
+        sh = body * (0.74 + 0.06 * rnd.random())
+        n += _carve_stage(a, 0, x0, x0 + W, 0.0, D, z, sh, carve, rnd)
+        zz = z + sh
+        ix0, ix1, iy0, iy1 = x0, x0 + W, 0.0, D
+        left = body - sh
+        steps = 3
+        for i in range(steps):
+            ins_x = W * (0.09 + 0.03 * i)
+            ins_y = D * (0.09 + 0.03 * i)
+            ix0 += ins_x; ix1 -= ins_x; iy0 += ins_y; iy1 -= ins_y
+            if ix1 - ix0 < W * 0.18 or iy1 - iy0 < D * 0.18:
+                break
+            h = left * (0.5 / (i + 1))
+            n += _carve_stage(a, i + 1, ix0, ix1, iy0, iy1, zz, h, carve, rnd)
+            zz += h
+        return n, zz, ix0, ix1, iy0, iy1
     if form == 'bar':
         # A LONG LOW SLAB WITH AN ANNEX. The reference is full of these and
         # this generator had none: every block was upright.

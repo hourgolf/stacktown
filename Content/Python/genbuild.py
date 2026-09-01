@@ -40,6 +40,45 @@ O = 'editor_toolset.toolsets.object.ObjectTools'
 _SINK = None
 _PIECE_FAILS = []   # donor placements the editor refused; see piece()
 
+# MASSING-ONLY: DIRECTION B'S CARVED MASSES, cut at the ROLE, not per builder.
+#
+# DIRECTION_B.md B1: "Buildings are windowless masses BY DAY; windows exist
+# only as light at night (B4)." That is a statement about WHICH ROLES a
+# building emits, not about any one builder - Glass_ is emitted from twenty-odd
+# call sites across build_modern, build_deco, build_vernacular, the shopfronts,
+# the penthouse and the market arch. Guarding all twenty is how one gets
+# missed, and a single stray pane in a carved block is exactly the kind of
+# defect that survives to a reader.
+#
+# So it is cut HERE, at the emission primitives, on the property this codebase
+# already uses to carry material identity: the component NAME. HANDOFF 4.2
+# calls role-in-the-name the most important scaling property in the codebase;
+# this is that property being used for the thing it is good at.
+#
+# WHAT IS SUPPRESSED, and what deliberately is NOT. B1 also says "Small drawn
+# details survive as discoveries for the player - never flagship-granular,
+# never absent", so this is not a strip-to-a-cube switch. Bands, parapets,
+# copings and roof steps STAY: on a carved timber block they read as carved
+# relief, which the 31 Aug capture demonstrated on flagship geometry before
+# any of this existed. Only the GLAZING FAMILY goes.
+MASSING_SUPPRESS = ('Glass_', 'Interior_', 'Mullion_', 'Frame_')
+_MASSING = False
+MASSING_SKIPPED = []   # (name,) per suppressed part - counted, never silent
+
+
+def _suppressed(name):
+    """True if massing mode is on and this part is glazing.
+
+    Suppression is RECORDED. A silent skip is how a mode that quietly stops
+    working goes unnoticed - the caller prints the count, so 'massing on'
+    and 'massing did nothing' can never look the same."""
+    if not _MASSING:
+        return False
+    if str(name).startswith(MASSING_SUPPRESS):
+        MASSING_SKIPPED.append(name)
+        return True
+    return False
+
 # INTENT TO MUTATE THE OPEN LEVEL MUST BE DECLARED.
 #
 # mkactor has always had two paths chosen by whether the sink happens to be
@@ -150,6 +189,8 @@ JITTER_APPLIED = []   # actors the hand tolerance actually moved
 
 
 def box(actor, name, x0, x1, y0, y1, z0, z1):
+    if _suppressed(name):
+        return
     if _SINK is not None:
         _SINK.append(dict(kind='box', actor=actor, name=name,
                           c=[(x0 + x1)/2.0, (y0 + y1)/2.0, (z0 + z1)/2.0],
@@ -233,6 +274,8 @@ def slab(actor, name, cx, cy, cz, sx, sy, sz, pitch=0.0, roll=0.0, yaw=0.0):
     transform - measured, the component reads back what it was given - which
     box() never passed, so every roof in this project was a stack of treads.
     Eleven risers over a 168 uu rise reads as terracing from the pavement."""
+    if _suppressed(name):
+        return
     if _SINK is not None:
         _SINK.append(dict(kind='box', actor=actor, name=name,
                           c=[cx, cy, cz], d=[sx, sy, sz],
@@ -263,6 +306,8 @@ def piece(actor, name, asset, loc, rot=(0.0, 0.0, 0.0), scale=1.0, mat=None):
     whole part. Without this every donor had to already be our dimensions,
     which is most of why so few of them were usable.
     """
+    if _suppressed(name):
+        return
     sc = ([float(scale)] * 3 if isinstance(scale, (int, float))
           else [float(v) for v in scale])
     if _SINK is not None:
@@ -565,7 +610,26 @@ def build(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     generator - "buildings are parameter sets" is the property HANDOFF.md 4.2
     calls the most important scaling behaviour in this codebase, and a
     genbuild2.py is how you lose it."""
+    # MASSING-ONLY is a SPEC KEY with a behaviour-preserving default: absent,
+    # _MASSING stays False and every existing model emits exactly what it
+    # always did. The flag is restored in a finally so an exception mid-build
+    # cannot leave the generator in massing mode for the next caller - a
+    # sticky global here would silently strip glazing from flagship models.
+    global _MASSING
+    was = _MASSING
+    _MASSING = bool(spec.get('massing_only'))
+    if _MASSING:
+        del MASSING_SKIPPED[:]
+    try:
+        return _dispatch(spec, origin, yaw)
+    finally:
+        _MASSING = was
+
+
+def _dispatch(spec, origin, yaw):
     st = spec.get('style')
+    if st == 'mass':
+        return build_mass(spec, origin, yaw)
     if st == 'modern':
         return build_modern(spec, origin, yaw)
     if st == 'deco':
@@ -3720,6 +3784,100 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     print('%s [walkup %dst]: %d boxes' % (n, F + 1, made))
     return made
 
+
+
+def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
+    """DIRECTION B's carved timber block. A NEW FORM, not a subtracted one.
+
+    Owner, 2026-08-31: "these are new carved building forms not subtracting or
+    'lifting' at all from our flagship forms."
+
+    WHY THIS IS A BUILDER AND NOT A FLAG. The first attempt suppressed the
+    glazing family on a flagship model and produced a BOOKSHELF - a wall built
+    as piers and spandrels AROUND openings keeps the openings when the glass
+    is taken away, and the captures showed sky through every building. No
+    amount of subtraction reaches a solid block, because the block was never
+    in there: a carved mass and an articulated street elevation are different
+    objects, not the same object at two detail levels.
+
+    So this emits its own geometry. It is a new STYLE on the existing
+    dispatch, exactly as build_works is - not a second generator. genbuild's
+    own docstring warns that a genbuild2.py is how the parameter-set property
+    is lost, and this does not do that: one generator, one more style, and no
+    existing build_* body touched (BETA_TWIN_PLAN seam 2).
+
+    THE FORM VOCABULARY, read off DIRECTION_B.md's B1 reference rather than
+    invented: a plinth, a prism, zero to three setback stages, and a cap. That
+    is what the photographed blocks are. Everything a flagship facade has -
+    bays, glazing, mullions, reveals, canopies, shopfronts - is ABSENT by
+    construction rather than removed, which is the whole point.
+
+    PARTS ARE THE BUDGET. B1 says "windowless masses BY DAY" and BETA_TWIN
+    seam 3 says fewer parts per m2 IS the direction. A block here is 4-10
+    parts against a flagship model's 130-800. The drawn details B1 asks to
+    "surprise the player" are SHALLOW REVEALS - a scored line where a stage
+    steps - never applied fittings.
+    """
+    n = spec['name']
+    x0 = spec.get('x0', 0.0)
+    W = spec['width']
+    D = spec['depth']
+    H = spec['height']
+    rnd = random.Random(spec.get('seed', 0))
+    made = 0
+
+    a = mkactor('BLD2_%s_M' % n, origin, (0.0, yaw, 0.0))
+
+    # PLINTH. Every block in the reference sits on a slightly larger base -
+    # it is what makes a carved piece read as PLACED on a board rather than
+    # growing out of it, and it is the cheapest single part in the vocabulary.
+    plinth = spec.get('plinth', 26.0)
+    if plinth:
+        over = spec.get('plinth_over', 18.0)
+        box(a, 'Wall_Plinth', x0 - over, x0 + W + over, -over, D + over,
+            0.0, plinth)
+        made += 1
+    z = plinth
+
+    # STAGES. The body plus its setbacks, as a list of (share of remaining
+    # height, inset per side). Declared rather than random so a recipe can say
+    # what shape it wants; the default is a plain prism, which is the most
+    # common block in the reference.
+    stages = spec.get('stages') or [(1.0, 0.0)]
+    ix0, ix1, iy0, iy1 = x0, x0 + W, 0.0, D
+    body = H - plinth
+    for i, (share, inset) in enumerate(stages):
+        h = body * float(share)
+        if h <= 0.0:
+            continue
+        ix0 += inset; ix1 -= inset; iy0 += inset; iy1 -= inset
+        if ix1 - ix0 <= 0 or iy1 - iy0 <= 0:
+            break
+        box(a, 'Wall_Stage%d' % i, ix0, ix1, iy0, iy1, z, z + h)
+        made += 1
+        # THE DRAWN DETAIL. A shallow scored band where one stage meets the
+        # next - the "little details they find without going overboard" of B1,
+        # and the only ornament this builder owns. It is a REVEAL, cut into
+        # the block, not a moulding stuck onto it.
+        if i < len(stages) - 1 and spec.get('reveal', True):
+            r = spec.get('reveal_h', 10.0)
+            box(a, 'Band_Reveal%d' % i, ix0 - 6, ix1 + 6, iy0 - 6, iy1 + 6,
+                z + h - r, z + h)
+            made += 1
+        z += h
+
+    # CAP. A small block on top - a lift housing, a water tank, the thing that
+    # stops a prism reading as a cut-off extrusion. Optional and small.
+    cap = spec.get('cap')
+    if cap:
+        cw = (ix1 - ix0) * 0.28
+        cd = (iy1 - iy0) * 0.28
+        cx = ix0 + ((ix1 - ix0) - cw) * (0.3 + 0.4 * rnd.random())
+        cy = iy0 + ((iy1 - iy0) - cd) * (0.3 + 0.4 * rnd.random())
+        box(a, 'Wall_Cap', cx, cx + cw, cy, cy + cd, z, z + float(cap))
+        made += 1
+
+    return made
 
 def build_works(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """A works: long, low, and lit from the roof rather than the wall.

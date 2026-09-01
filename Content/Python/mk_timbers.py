@@ -65,14 +65,29 @@ OBJ = 'editor_toolset.toolsets.object.ObjectTools'
 # The reference photograph's blocks sit in a narrow warm band. Now 43 L*
 # (37..80), saturation ceiling 0.51, every hue warm brown. Cherry and sapele
 # lose the terracotta that made them read as brick.
+# TONES DROPPED AND WIDENED, owner 2026-09-01, amending D6.
+#
+# MEASURED AGAINST B1. The reference's timber runs 47 to 110 in rendered value
+# with its roads at 165 - every block sits well BELOW the road, which is what
+# lets pale streets carry the eye and the wood read as warm objects on a light
+# field. This palette rendered 101 to 165 against roads at 178: the pale end
+# was crowding the road and the whole frame was bunched in the top of the
+# range, which measured as frame contrast 47 against the reference's 66.5.
+#
+# So each tone is scaled in LINEAR albedo - uniform per channel, so hue and
+# saturation are untouched and only value moves - by a factor interpolated
+# from 0.496 at the pale end to 0.263 at the dark end. Scaling the dark end
+# harder is what WIDENS: the light/dark ratio goes 2.31 to 3.35 while every
+# tone drops. The two end factors are solved from the measurement, not picked:
+# pale 165 -> 120 and dark 101 -> 55, converted through the same transfer.
 TIMBERS = {
-    'maple':  ('white_maple_veneer',     '#DCC49F'),
-    'pine':   ('coated_pine',            '#CDB088'),
-    'ash':    ('ash_veneer',             '#C2A278'),
-    'oak':    ('white_oak_veneer',       '#B18E62'),
-    'cherry': ('cherry_veneer',          '#9C7A54'),
-    'sapele': ('sapele_veneer',          '#8A6844'),
-    'walnut': ('american_walnut_veneer', '#6E5236'),
+    'maple':  ('white_maple_veneer',      '#A18F73'),   # was #DCC49F
+    'pine':   ('coated_pine',             '#907B5E'),   # was #CDB088
+    'ash':    ('ash_veneer',              '#836C4F'),   # was #C2A278
+    'oak':    ('white_oak_veneer',        '#725A3D'),   # was #B18E62
+    'cherry': ('cherry_veneer',           '#5F4931'),   # was #9C7A54
+    'sapele': ('sapele_veneer',           '#4E3A24'),   # was #8A6844
+    'walnut': ('american_walnut_veneer',  '#392919'),   # was #6E5236
 }
 
 
@@ -101,9 +116,22 @@ def import_texture(asset_name, source_file, normal_map):
     """Import and force the settings, then READ THEM BACK."""
     if not os.path.exists(source_file):
         return None, 'source missing: %s' % source_file
-    call(TT, 'import_file', {'folder_path': TEX_DIR,
-                             'asset_name': asset_name,
-                             'source_file': source_file})
+    # IDEMPOTENT FOR REAL. The module docstring has always claimed
+    # "re-running re-imports and re-applies rather than duplicating", but
+    # TextureTools.import_file refuses an existing asset outright, so a second
+    # run died on the first texture it had already made. An existing asset is
+    # skipped here and still has its settings forced and read back below,
+    # which is what the claim meant. To REPLACE a texture's pixels, delete the
+    # asset first - there is no overwrite - and repoint its referencers after.
+    reused = False
+    try:
+        call(TT, 'import_file', {'folder_path': TEX_DIR,
+                                 'asset_name': asset_name,
+                                 'source_file': source_file})
+    except Exception as e:
+        if 'already exists' not in str(e):
+            raise
+        reused = True
     ref = {'refPath': '%s/%s.%s' % (TEX_DIR, asset_name, asset_name)}
     want = {'sRGB': False,
             'compressionSettings': ('TC_Normalmap' if normal_map
@@ -119,7 +147,9 @@ def import_texture(asset_name, source_file, normal_map):
         pass
     bad = [k for k in want
            if str(got.get(k, '')).lower() != str(want[k]).lower()]
-    return ref, ('settings did not take: %s (got %s)' % (bad, got)) if bad else None
+    if bad:
+        return ref, 'settings did not take: %s (got %s)' % (bad, got)
+    return ref, ('reused existing asset; settings verified' if reused else None)
 
 
 def main():
@@ -162,8 +192,16 @@ def main():
     print()
     for sp in F.TIMBERS:
         name = 'MI_wood_%s' % sp
-        call(MI, 'create', {'folder_path': MAT_DIR, 'asset_name': name,
-                            'parent': {'refPath': MASTER}})
+        # same idempotence fault as the texture stage: create() refuses an
+        # existing asset, so every re-run died here. Reuse it and re-apply -
+        # re-applying IS the point of a re-run, and it is how a repointed
+        # texture reaches the instances that reference it.
+        try:
+            call(MI, 'create', {'folder_path': MAT_DIR, 'asset_name': name,
+                                'parent': {'refPath': MASTER}})
+        except Exception as e:
+            if 'already exists' not in str(e):
+                raise
         ref = {'refPath': '%s/%s.%s' % (MAT_DIR, name, name)}
         p = F.params_for(name)
         for k, v in p.items():

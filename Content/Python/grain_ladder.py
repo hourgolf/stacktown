@@ -51,6 +51,15 @@ LADDER = [0.0025, 0.0010, 0.0005, 0.00025]
 # triple amplitude" and read as green felt. This measures whether timber is
 # the second instance.
 NORMAL_LADDER = [1.8, 0.9, 0.3, 0.0]
+
+# THIRD LADDER: how hard the figure drives colour. GrainGain is live (2.7-3.1,
+# normalised per species by sd) but the B1 reference carries far stronger
+# dark/light banding than anything this rig has produced - a lit timber face
+# there measures sd 67 across its own width. This asks how far the gain has to
+# go. Absolute highpass_sd is not comparable across frames at different
+# scales, so the ladder is read RELATIVELY: same block, same camera, only the
+# gain moves, and the eye picks from the frames.
+GAIN_LADDER = [1.0, 2.0, 3.0, 5.0, 8.0]
 BLOCK, SPECIES = 'low', 'ash'      # ash is open-grained: the figure is legible
 
 
@@ -68,6 +77,30 @@ def main():
     assert json.loads(ue.tool(S, 'find_actors', {
         'name': 'LIGHT_BoardKey', 'tag': '',
         'collision_channels': []}))['returnValue'], 'run board_light.py first'
+
+    # NOTHING ELSE MAY BE STANDING ON THE STAGE. Every rig in this lane
+    # stages at the same point near the key's aim, and several take --keep, so
+    # a leftover town or carving row sits exactly where this block goes. That
+    # is not cosmetic: the measurement patch is a fixed rectangle in frame, so
+    # a stale actor is silently measured INSTEAD of the subject, and the
+    # ladder reports numbers for the wrong object. It did - a gain ladder was
+    # read off a carving comparison left over from the previous run, and the
+    # parameter looked inert because the frame never contained it.
+    #
+    # Refusing is right rather than auto-clearing: another lane's actors are
+    # not mine to delete, and a rig that quietly tidies the level is how you
+    # lose someone else's work.
+    intruders = []
+    for pat in ('SETB_', 'ZONE_SetB', 'CARVE_', 'BLD2_', 'ZONE_Board'):
+        intruders += [a for a in json.loads(ue.tool(S, 'find_actors', {
+            'name': pat, 'tag': '',
+            'collision_channels': []}))['returnValue']]
+    assert not intruders, (
+        '%d rig actors are standing on the stage (%s...). This ladder '
+        'measures a fixed rectangle in frame and would measure them instead '
+        'of the subject. Clear them and re-run.'
+        % (len(intruders),
+           ', '.join(a['refPath'].rsplit('.', 1)[-1] for a in intruders[:4])))
 
     for stale in ('GRAIN_',):
         for a in json.loads(ue.tool(S, 'find_actors', {
@@ -120,27 +153,32 @@ def main():
     ue.tool(APP, 'SetCameraTransform', {'transform': cam})
     time.sleep(8)
     normals = '--normal' in sys.argv
+    gains = '--gain' in sys.argv
     if normals:
         # hold tiling at the value the first ladder chose, vary only amplitude
         ue.tool(MIT, 'set_scalar_parameter',
                 {'instance': ref, 'name': 'PaperTiling', 'value': 0.0005})
         time.sleep(2)
-    for t in (NORMAL_LADDER if normals else LADDER):
+    if gains:
         ue.tool(MIT, 'set_scalar_parameter',
-                {'instance': ref,
-                 'name': 'PaperNormalAmount' if normals else 'PaperTiling',
-                 'value': float(t)})
+                {'instance': ref, 'name': 'PaperTiling', 'value': 0.0005})
+        time.sleep(2)
+    ladder = GAIN_LADDER if gains else (NORMAL_LADDER if normals else LADDER)
+    pname = ('GrainGain' if gains else
+             ('PaperNormalAmount' if normals else 'PaperTiling'))
+    for t in ladder:
+        ue.tool(MIT, 'set_scalar_parameter',
+                {'instance': ref, 'name': pname, 'value': float(t)})
         time.sleep(4)
         got = json.loads(ue.tool(APP, 'CaptureViewport', {
             'captureTransform': cam, 'annotations': ann,
             'bShowUI': False}))['returnValue']
-        tag = '%s%s_%s' % ('NRM' if normals else 'GRAIN',
+        tag = '%s%s_%s' % ('GAIN' if gains else ('NRM' if normals else 'GRAIN'),
                            '' if sp == SPECIES else '_' + sp,
                            ('%g' % t).replace('.', 'p'))
         open(os.path.join(OUT, '%s.png' % tag), 'wb').write(
             base64.b64decode(got['image']['data']))
-        print('captured %-14s %s %g'
-              % (tag, 'PaperNormalAmount' if normals else 'PaperTiling', t))
+        print('captured %-14s %s %g' % (tag, pname, t))
 
     for a in json.loads(ue.tool(S, 'find_actors', {
             'name': 'GRAIN_', 'tag': '',

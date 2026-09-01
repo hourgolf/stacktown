@@ -72,7 +72,13 @@ OUT = os.path.join(PROJECT, 'Saved', 'DirectionB')
 # committed and rerunnable since 2026-08-30 and I staged past it for safety.
 BASE_X = 21000.0
 BASE_Y = 20000.0
-TOOTH = 0.0025          # the trim; see TOOTH above
+# 0.0005: fabrication's SHIPPED timber value, restored. The 0.0025 override
+# was made on a comment whose direction was backwards - the table's own
+# measurements read 0.006 as sacking and 0.080 as nearly smooth, so a LOWER
+# PaperTiling makes features BIGGER. 0.0025 was therefore five times FINER
+# than shipped, not coarser, and measured on the ladder it carried a third of
+# the surface detail. Owner's call, 2026-08-31.
+TOOTH = 0.0005
 ANGLES = (0.0, 90.0, 22.0, 68.0)   # four cuts from the stock
 SPECIES = ('maple', 'pine', 'ash', 'oak', 'cherry', 'sapele', 'walnut')
 

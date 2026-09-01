@@ -3800,6 +3800,86 @@ def build_walkup(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
 
 
 
+
+# CARVING TREATMENTS FOR D11 SECTION 3 --------------------------------------
+#
+# D11 section 3 LOCKS the carving scope: "No recessed openings. No carved
+# window bays. Setbacks, a plinth, and a scored line where a stage steps."
+# The owner has allowed "a little lifting" of that lock ON CONDITION OF SEEING
+# what it looks like first, so these exist to be PHOTOGRAPHED AND COMPARED.
+# None of them is in effect: `carve` defaults to None, which emits exactly the
+# single box the locked vocabulary allows, byte for byte.
+#
+# EVERYTHING HERE IS ADDITIVE. There is no boolean subtraction in this
+# pipeline - box() adds. A recess is therefore made by emitting a NARROWER
+# slab between two full ones, so the shadow line is real geometry rather than
+# a texture. That is also why each treatment costs parts, and the part count
+# is the argument against it: B1's whole economy is fewer parts per m2, so
+# the cost is quoted next to each frame rather than buried.
+def _carve_stage(a, i, ix0, ix1, iy0, iy1, z, h, mode, rnd):
+    """Emit one stage. `mode` None is the locked single box."""
+    if not mode:
+        box(a, 'Wall_Stage%d' % i, ix0, ix1, iy0, iy1, z, z + h)
+        return 1
+    w, d = ix1 - ix0, iy1 - iy0
+    n = 0
+    if mode == 'courses':
+        # FLOOR LINES. A scored band at each storey - the commonest mark on a
+        # carved block, and the one that reads at the greatest distance
+        # because it is horizontal and repeats.
+        k = max(2, min(8, int(h / 420.0)))
+        g, inset = 26.0, 22.0
+        ch = (h - g * (k - 1)) / k
+        zz = z
+        for c in range(k):
+            box(a, 'Wall_Stage%d_%d' % (i, c), ix0, ix1, iy0, iy1,
+                zz, zz + ch)
+            n += 1
+            zz += ch
+            if c < k - 1:
+                box(a, 'Band_Course%d_%d' % (i, c), ix0 + inset, ix1 - inset,
+                    iy0 + inset, iy1 - inset, zz, zz + g)
+                n += 1
+                zz += g
+    elif mode == 'flutes':
+        # VERTICAL CHANNELS. The block reads as tall rather than heavy, and
+        # the grain already runs this way, so the flute and the figure agree.
+        inset = 24.0
+        box(a, 'Wall_Stage%d' % i, ix0 + inset, ix1 - inset,
+            iy0 + inset, iy1 - inset, z, z + h)
+        n += 1
+        cols = max(3, min(7, int(w / 240.0)))
+        pw = w / (cols * 2.0 - 1.0)
+        for c in range(cols):
+            px = ix0 + c * pw * 2.0
+            box(a, 'Wall_Flute%d_%d' % (i, c), px, px + pw, iy0, iy1,
+                z, z + h)
+            n += 1
+    elif mode == 'band':
+        # ONE RECESSED COURSE at the height a window band would sit. The
+        # nearest thing to a window this vocabulary can hold without becoming
+        # a bay - it is a shadow, not an opening.
+        bh = min(h * 0.30, 520.0)
+        z0 = z + h * 0.42
+        box(a, 'Wall_Stage%da' % i, ix0, ix1, iy0, iy1, z, z0)
+        box(a, 'Band_Window%d' % i, ix0, ix1, iy0 + 30.0, iy1 - 30.0,
+            z0, z0 + bh)
+        box(a, 'Wall_Stage%db' % i, ix0, ix1, iy0, iy1, z0 + bh, z + h)
+        n += 3
+    elif mode == 'base':
+        # A SHADOW AT THE PAVEMENT. The ground course steps back, so the block
+        # meets the street with a dark line instead of a hard edge. Cheapest
+        # of the four and the only one that changes how the STREET reads.
+        gh = min(h * 0.22, 300.0)
+        box(a, 'Wall_Base%d' % i, ix0 + 26.0, ix1 - 26.0,
+            iy0 + 26.0, iy1 - 26.0, z, z + gh)
+        box(a, 'Wall_Stage%d' % i, ix0, ix1, iy0, iy1, z + gh, z + h)
+        n += 2
+    else:
+        raise ValueError('unknown carve mode: %r' % mode)
+    return n
+
+
 def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
     """DIRECTION B's carved timber block. A NEW FORM, not a subtracted one.
 
@@ -3881,8 +3961,8 @@ def build_mass(spec, origin=(0.0, 0.0, 0.0), yaw=0.0):
         ix0 += inset; ix1 -= inset; iy0 += inset; iy1 -= inset
         if ix1 - ix0 <= 0 or iy1 - iy0 <= 0:
             break
-        box(a, 'Wall_Stage%d' % i, ix0, ix1, iy0, iy1, z, z + h)
-        made += 1
+        made += _carve_stage(a, i, ix0, ix1, iy0, iy1, z, h,
+                             spec.get('carve'), rnd)
         # THE DRAWN DETAIL. A shallow scored band where one stage meets the
         # next - the "little details they find without going overboard" of B1,
         # and the only ornament this builder owns. It is a REVEAL, cut into

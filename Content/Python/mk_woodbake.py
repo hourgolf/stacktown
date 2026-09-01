@@ -29,6 +29,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import random
 import zlib
 import contextlib
 import io
@@ -43,24 +44,81 @@ RUNG = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'Tools', 'rung.sh')
 OUT = '/Game/Stacktown/BakedWood'
 TMP = tempfile.gettempdir()
 
-# six blocks spanning the form vocabulary AND the tone ladder, so one frame
-# can answer edges, wear and species together
-SET = [
-    ('shed',    'maple',  dict(width=640, depth=620, height=340,
-                               stages=[(1.0, 0.0)], cap=0.0)),
-    ('low',     'ash',    dict(width=900, depth=760, height=760,
-                               stages=[(1.0, 0.0)], cap=0.0)),
-    ('midrise', 'oak',    dict(width=820, depth=800, height=1740,
-                               stages=[(0.72, 0.0), (0.28, 74)], cap=110.0)),
-    ('setback', 'cherry', dict(width=880, depth=840, height=2900,
-                               stages=[(0.58, 0.0), (0.42, 96)], cap=0.0)),
-    ('ziggurat', 'sapele', dict(width=980, depth=940, height=4100,
-                                stages=[(0.46, 0.0), (0.30, 104),
-                                        (0.24, 118)], cap=180.0)),
-    ('tower',   'walnut', dict(width=720, depth=700, height=6400,
-                               stages=[(0.70, 0.0), (0.30, 66)], cap=260.0)),
+# TWENTY BLOCKS. Six read as a cluster; a woodblock town needs population,
+# and the owner asked for the count to rise at the quality bar the six held.
+#
+# PROPORTIONS ARE DELIBERATELY UNCHANGED. The 9:1 tower is a needle and I said
+# so; the owner's call was to leave it and judge again once there is a skyline
+# rather than a huddle. So this widens the POPULATION, not the ratios - if the
+# proportions still read wrong at twenty, that is a cleaner verdict than one
+# taken at six.
+#
+# Generated from a seeded table rather than hand-listed, so the set is
+# reproducible from this file and a future change is a change to the RULE.
+_R = random.Random(20260901)
+_SPECIES = ('maple', 'pine', 'ash', 'oak', 'cherry', 'sapele', 'walnut')
+
+# (count, height range, stage plan) - the form vocabulary, weighted so low
+# buildings dominate, which is what a town actually looks like
+_FORMS = [
+    (7, (300, 900), 'flat'),
+    (6, (1200, 2600), 'setback1'),
+    (4, (2800, 4600), 'setback2'),
+    (3, (5000, 6600), 'tower'),
 ]
 
+
+def _cap_for(h, rnd):
+    """Rooftop cap. FIVE OUTCOMES AND A BARE PLURALITY - a flat top is the
+    commonest thing on a carved block, and giving every building a hat is its
+    own repetition. At six blocks one centred cap read as variety; the owner
+    flagged it as a stamp, and simple surfaces make silhouette carry more."""
+    if h < 900:
+        return 0.0
+    r = rnd.random()
+    if r < 0.34:
+        return 0.0
+    if r < 0.62:
+        return 70.0 + 60.0 * rnd.random()
+    if r < 0.80:
+        return 150.0 + 90.0 * rnd.random()
+    if r < 0.92:
+        return 44.0 + 26.0 * rnd.random()
+    return 240.0 + 140.0 * rnd.random()
+
+
+def _build_set():
+    out = []
+    i = 0
+    for count, (hlo, hhi), plan in _FORMS:
+        for _ in range(count):
+            w = 600.0 + _R.randrange(9) * 50.0
+            d = w - 60.0 + _R.randrange(5) * 30.0
+            h = hlo + _R.random() * (hhi - hlo)
+            if plan == 'flat':
+                stages = [(1.0, 0.0)]
+            elif plan == 'setback1':
+                stages = [(0.72, 0.0), (0.28, 60.0 + _R.randrange(5) * 12.0)]
+            elif plan == 'setback2':
+                stages = [(0.55, 0.0), (0.27, 70.0 + _R.randrange(5) * 14.0),
+                          (0.18, 90.0 + _R.randrange(5) * 16.0)]
+            else:
+                stages = [(0.68, 0.0), (0.32, 55.0 + _R.randrange(4) * 12.0)]
+            out.append(('b%02d' % i, _SPECIES[i % len(_SPECIES)],
+                        dict(width=w, depth=d, height=h, stages=stages,
+                             cap=_cap_for(h, _R))))
+            i += 1
+    return out
+
+
+SET = _build_set()
+
+# A CARVED ARRIS, NOT A CARD EDGE. fastbake defaults to 4 uu, which is the
+# flagship's card value and subtends 0.6% of a 640 uu wooden face - present in
+# the mesh, invisible in the frame. 14 uu is what a chisel leaves on a block
+# this size. fastbake clamps it to 0.35 x the thinnest dimension, so a small
+# part cannot be collapsed by it.
+CHAMFER = 14.0
 
 def main():
     only = [a for a in sys.argv[1:] if not a.startswith('-')]
@@ -95,7 +153,8 @@ def main():
         asset = 'SM_Mass_%s' % name
         json.dump({'boxes': rec, 'out': '%s/%s' % (OUT, asset),
                    'wall': spec['wall'], 'roofmat': spec['roofmat'],
-                   'trim': spec['trim'], 'panel_overrides': {}},
+                   'trim': spec['trim'], 'panel_overrides': {},
+                   'chamfer': CHAMFER},
                   open(os.path.join(TMP, 'stacktown_fastbake_job.json'), 'w'))
         # RETRY ON THE AMBIGUITY, NOT ON EVERYTHING. Two editors are running
         # on this machine and rung's discovery resolves intermittently - four

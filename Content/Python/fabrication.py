@@ -354,6 +354,27 @@ def stock_for(name):
     return MATERIAL_STOCK.get(best, DEFAULT)
 
 
+# HOW HARD THE FIGURE DRIVES COLOUR, as a fraction of base colour per one
+# standard deviation of the grain mask. The master computes
+# BaseColour * (1 + GrainGain * (GrainMask - GrainMean)), and a mask's sd is
+# tiny - 1.8% to 17.6% of its own mean across the seven species - so the gain
+# must be NORMALISED by sd or pine screams while maple is invisible.
+#
+# THE NUMBERS WERE ORPHANS. GrainGain and GrainMean were live on the material
+# instances (2.71 for ash, 3.07 for oak - exactly 0.10*255/figure_sd) and set
+# by NO COMMITTED SCRIPT. They survived only as editor state on assets nobody
+# could regenerate, which is the one thing the fix-class ladder forbids. They
+# are derived here now, so the strength is one number in one place.
+#
+# 0.10 -> 0.26 ON MEASURED EVIDENCE, and on the B1 reference. A gain ladder
+# on oak (clean stage, only this term moving) ran patch sd 4.13 / 4.74 / 5.61
+# / 7.63 / 10.78 for gains 1/2/3/5/8; at the old 0.10 oak sat at 3.07 and read
+# as flat tan, and at 0.26 it shows the cathedral figure the reference has.
+# The reference's lit timber faces carry sd 67 across their own width - far
+# more banding than this rig had ever produced.
+FIGURE_MODULATION = 0.26
+
+
 def params_for(name):
     """Scalars only - the four keys this has always emitted, plus SeamDarken
     for the stocks that explicitly ask for it.
@@ -373,6 +394,12 @@ def params_for(name):
                RoughMin=st['rough'][0], RoughMax=st['rough'][1])
     if st.get('seam') is not None:
         out['SeamDarken'] = 1.0 if st['seam'] is False else float(st['seam'])
+    # FIGURE, for the stocks that have one. Same growth rule as SeamDarken:
+    # a stock that declares no figure gets exactly the keys it always got, so
+    # every flagship card material's parameter set is unchanged.
+    if st.get('figure_mean') and st.get('figure_sd'):
+        out['GrainMean'] = st['figure_mean'] / 255.0
+        out['GrainGain'] = FIGURE_MODULATION * 255.0 / st['figure_sd']
     return out
 
 

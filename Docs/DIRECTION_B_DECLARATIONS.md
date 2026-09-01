@@ -1599,3 +1599,255 @@ compose: roof furniture sits on whatever rect the FORM left at the top, so a
 podium's off-centre shaft is furnished at its own footprint rather than at an
 assumed centre. Carving composes with both, since every mass is emitted
 through `_carve_stage`.
+
+---
+
+## D16 — wood ages, wears, rots and is refinished. Owner, 2026-09-01.
+
+Wear was parked so edges, light and hand tolerance could be judged without a
+third variable. All three were judged, the owner re-opened it, and then
+corrected the first draft of this declaration — which is the useful part and
+is recorded before the design it produced.
+
+### The error worth keeping: three clocks, not one
+
+The first draft said a wooden model does not get dirty, it gets HANDLED, and
+built everything on that. The owner's correction: *"wood naturally wears and
+naturally rots, ages, gets refinished. It is also being handled by the model
+maker."*
+
+Handling is one clock of three, and the draft collapsed all three into it:
+
+1. **Game time** — the DEPICTED building ages. New, mature, neglected,
+   renovated. This is the clock the player drives.
+2. **Model time** — the BOARD is maintained over years. B3's reference shows
+   exactly this: "visibly fresher blocks where the model was updated over
+   years."
+3. **Material time** — what TIMBER does unattended. Fresh-cut is pale and
+   ambers with light and oxygen; it checks along the grain; neglected outdoor
+   timber greys; sanding returns it to pale.
+
+"Not dirt" is a correct CONSTRAINT and it is not a DESIGN. This is the design.
+
+### The unifying idea: the model maker IS the ageing system
+
+Every verb the player has, the maker performs on the board.
+
+    build     ->  carve a new block: pale, crisp arrises
+    upgrade   ->  pull the block, sand it back, refit it: pale again
+    maintain  ->  handle it: arrises burnish, dust does not settle
+    neglect   ->  leave it: it ambers, dust gathers, then it greys
+    fail      ->  it chars through, and only replacement helps
+
+This explains B3's locked patina rather than merely restating it. "New and
+upgraded buildings start pale and age toward the board's honey tone" is not a
+metaphor for newness: **sanding wood back genuinely returns it to pale
+timber.** The mechanic and the material agree, which is the same kind of
+agreement the roads study found between chord-lots and fitted inlay.
+
+### The ladder — six states, all in wood's own vocabulary
+
+| state | what the timber does | what it means |
+|---|---|---|
+| refinished | pale, crisp arrises, fresh cut | just built or upgraded |
+| maintained | burnished arrises, settled amber, dust-free | attended to |
+| settled | ambered along ITS OWN species curve | the default field |
+| neglected | dust in the horizontals, arrises sharp and unpolished | nobody is touching it |
+| rotting | grain lifts and frays, checks open, colour **greys** | neglect, or a failing strategy |
+| burnt | blackened, surface alligatored, grain lost | failed |
+
+**Polish means ATTENTION, not newness.** A long-loved block is old AND
+burnished; a neglected one keeps sharp arrises because no hand has worn them.
+That inversion is what stops the ladder reading as a simple age gradient.
+
+### The find: failure goes COLD while health stays WARM
+
+Neglected untreated timber weathers **silver-grey**. That is what real wood
+does, and it means the whole health axis is one legible run of hue:
+
+    pale  ->  honey  ->  dark amber  ->  silver-grey  ->  black
+    new       settled      old            rotting        burnt
+    <------------ WARM ------------>      <---- COLD ---->
+
+A struggling district reads as **cold patches in a warm field, at board
+range, with no UI at all.** Nothing needs a label, an icon or a tint that is
+not timber.
+
+### THE SPECIES PERSISTS. Owner's correction, 2026-09-01.
+
+An earlier draft of this section said failure ERASES species identity — "by
+the time it is charred you cannot tell walnut from maple". **That is wrong
+and the owner corrected it:** the species stays the same and "ages/changes
+states accordingly and accurately to that species".
+
+Recorded because the correction makes the design better, not merely different.
+A walnut block is walnut for its whole life. It ages as walnut ages, rots as
+walnut rots, chars as walnut chars.
+
+**Species do not age the same way, and one of them runs backwards.** This is
+material fact, not styling:
+
+| species | what light and time do to it |
+|---|---|
+| pine | yellows and oranges strongly, and FAST — the most visible ager here |
+| cherry | darkens and reddens dramatically; the classic UV-darkening timber |
+| sapele | darkens and reddens, more slowly than cherry |
+| maple | ambers slowly toward gold from a near-white start |
+| ash | mild amber; open grain frays first when neglected |
+| oak | moderate amber, and the most characteristic SILVER-GREY when weathered |
+| **walnut** | **LIGHTENS.** Walnut fades toward honey-brown under UV — the opposite of every other species in this palette |
+
+Walnut running backwards is the reason this correction matters. A single
+shared "age toward the board's honey tone" curve would have been WRONG for
+one of the seven and slightly wrong for the rest, and nobody would have known
+why the dark buildings looked stale.
+
+**B3's locked patina survives, re-read once more.** "New and upgraded
+buildings start pale" is not a hue reset toward white: sanding removes the
+oxidised surface layer and returns a block to ITS OWN fresh state. Fresh-cut
+walnut is light chocolate; fresh-cut maple is near-white. Both are pale
+*relative to their own settled state*, which is all B3 ever required.
+
+**Failure is per-species too.** Weathering does converge — UV and water break
+down lignin in every timber, so all seven grey eventually — but the ROUTE and
+the RATE differ, and open-grained species (oak, ash, sapele, pine) fray and
+check visibly earlier than dense ones (maple, cherry). Char is black in every
+species, but the alligatoring is coarser on open grain. **The species is
+legible right to the end**, which is what the owner asked for and is also
+what actually happens to burnt wood.
+
+### How this settles D3 — more completely than the draft did
+
+D3 gave tone to timber as IDENTITY. The correction strengthens that rather
+than straining it:
+
+> **The species owns its tone AND owns how that tone changes.**
+
+There is no point in the ladder where a block stops being its species. D3
+stands exactly as written, and ageing becomes a property OF the identity
+rather than something that competes with it.
+
+### Which forces the parameter split
+
+Two different things vary, and they belong in two different places:
+
+    per-INSTANCE (Custom Primitive Data)   HOW FAR ALONG this block is
+        Age, Attention, Failure, Scorch
+
+    per-SPECIES (the existing MI_wood_* )  WHICH WAY this timber goes
+        oxidation direction (cherry darkens, walnut lightens),
+        fray/check character, grey target, char coarseness
+
+This is the same split the figure system already uses and proves: `GrainGain`
+and `GrainMean` are per-species, derived from each mask's measured mean and
+sd, while the per-instance state rides CPD. One number per building, one
+character per timber, and no new material count — the seven MIs already
+exist.
+
+### Fire: a state AND an event, told apart by SHAPE
+
+Owner, 2026-09-01: burning is a state reached by sustained failure, and also
+a random event "to keep the game interesting" — but **a random fire must not
+affect the trading that happens in that building.**
+
+That constraint does real design work. If both roads to black looked
+identical the player could not tell a misplay from bad luck, and the second
+would feel like the first. The material tells them apart for free:
+
+- **SCORCH — the event.** Fire burns **top-down**: roofs and upper faces
+  blacken, the lower block is sound. Surface char, so sanding reaches good
+  timber. **Repairable by refinishing. No economic effect.**
+- **CHAR — the state.** Sustained failure blackens the **whole piece,
+  uniformly**, through the timber. **Not repairable. The block is replaced** —
+  the maker lifts out a charred piece and fits a fresh pale one, which gives
+  demolish-and-rebuild a native language for free.
+
+**Partial and top-down reads as accident; total and uniform reads as
+failure.** Same colour, different shape, legible at board distance.
+
+**No spread** (owner): fire does not pass to adjacent blocks, not even across
+a party wall. Spreading fire with no economic effect would be drama without
+stakes.
+
+**It costs to fix** (owner). The refinish is not free. The amount is the
+economy's business, not this lane's — named here because it is the SEAM where
+wear touches the beta lane's work, and seams are cheaper named than
+discovered.
+
+### Recovery, and why the asymmetry is the mechanic
+
+| damage | how deep | fix |
+|---|---|---|
+| dust / neglect | surface | attention |
+| rot / grey | surface, deepening | refinish |
+| scorch / fire | surface, top-down | refinish |
+| char / failure | through the piece | **replace the block** |
+
+**Neglect is reversible until it is not.** Everything above the line is
+sanded back; char alone requires a new block. That is the whole risk curve of
+letting a district slide, expressed in what timber physically permits.
+
+### Where it lives — unchanged from the first draft, and not negotiable
+
+**Per-instance Custom Primitive Data.** Four scalars:
+
+    Age         oxidises along THIS SPECIES' curve (cherry darkens, walnut
+                lightens). Irreversible except by refinish.
+    Attention   edge burnish vs settled dust. Fully recoverable.
+    Failure     0 -> 0.6 weathers toward THIS SPECIES' grey, 0.6 -> 1 chars.
+                Follows the species' own route and rate; open grain
+                (oak, ash, sapele, pine) frays and checks earlier than
+                dense (maple, cherry). Never overrides the species.
+    Scorch      blackens TOP-DOWN. Surface only, repairable.
+
+D1 fixed patina at MATERIAL level and the structural argument still holds:
+`genbuild_identity` hashes SINK RECORDS, boxes carry no material, so
+per-instance scalars **cannot** move the manifest — impossible to dirty by
+construction. A generator-level patina would touch box names or spec `wall`
+values and land inside a contract that cannot be certified while the flagship
+lane is dark.
+
+The burnish half already exists: `EdgeWearWidth` / `EdgeWearLift` is a
+curvature proxy that LIFTS value at the arris. It scored 0.00 on every board
+this lane ever made, because `add_cube` leaves `max|n|` at 1 on every face.
+The 14 uu chamfer on the baked masses gives it a surface for the first time.
+**Attention is not a new system; it is an existing one, newly reachable.**
+
+### The A/B plan — one variable at a time
+
+Pairs at the show camera, on buildings, never on a study wall.
+
+1. `Attention` 0 vs 1 on one block. Polish, or dirt?
+2. `Age` ladder: does pale settle into the field, and is a refinished block
+   conspicuous WITHOUT being loud (D3 criterion 3)?
+3. `Failure` ladder: where does grey stop reading as weathering and start
+   reading as damage? The failure state has a threshold; measure it.
+4. `Scorch` vs `Failure` at equal blackness. **Can a reader tell accident
+   from failure without being told?** If not, the shape distinction has not
+   landed and the design is wrong, not merely under-tuned.
+
+**Measurable companion:** sample a recess patch and an arris patch in the
+same frame. Attention must RAISE the arris and leave the recess alone. If a
+recess darkens, the mechanism is grime and the mechanism is wrong.
+
+### PARKED NOTE — what an empty plot looks like on a wooden board
+
+Not to be built now; recorded because the question is coming and this lane's
+answer should exist before it is asked.
+
+The beta lane is designing the "empty lot" state — an unowned parcel before
+the player buys — for the test city in flagship language. B2 parked the same
+question in ours: the white "proposed building" block.
+
+A planning model already has a convention: an unbuilt plot is **bare board**.
+Not a placeholder mesh, not a white block — the plot's own surface with
+nothing on it, which is exactly what an undeveloped parcel looks like on a
+real model. B2's white block reads as PROPOSED, which is a third state:
+proposed is a design the maker has mocked up; unowned is a lot nobody has
+touched.
+
+So direction B may want THREE plot states where the flagship needs two:
+**bare** (unowned), **white block** (proposed / bought but unbuilt), **timber**
+(built). The middle is already parked and owner-open per B2. For the owner
+when the beta session's empty-lot work surfaces, so both products answer in
+their own language rather than one borrowing the other's.

@@ -1361,6 +1361,33 @@ whose whole economy is fewer parts per m2, and a future session reading this
 should treat added facade articulation as a change requiring the owner's word,
 not as polish.
 
+#### The receipt for why `build_mass` exists at all — filed 2026-08-31
+
+`build_mass` was written because its predecessor, `massing_only`, was wrong in
+a way that is easy to state and was, until now, impossible to show:
+`massing_only` suppressed the glazing family at the emission primitives, which
+removes the FILL and leaves the VOID. A wall in this generator is piers and
+spandrels around an opening, so deleting the glass does not close the hole - it
+opens it. The buildings come out as open lattices you can see straight through.
+Bookshelves, not carved masses.
+
+That was argued from reading the generator, and the frames that should have
+shown it could not: `DIRECTIONB_massing_blockhero` and `_playerzoom` were staged
+at y=60000, outside `CITY_Room`, and ran **50-58% of their pixels crushed to
+black**. The artifact was in the frame and invisible in it.
+
+Re-shot 2026-08-31 from inside the lit room, the same framings measure 104-110
+mean at 0.4% crushed and the lattices are unmistakable. So the decision to
+write `build_mass` now has evidence rather than testimony, and a future session
+minded to revive `massing_only` as the cheaper path can look at the picture
+instead of taking this document's word for it.
+
+The four dark originals are kept as `Saved/DirectionB/SUSPECT_*` with
+`SUSPECT.md`; the replacements carry the original names. See also
+[[look-post-fstop-drives-exposure]] for the separate exposure fault found in
+the same audit, and `Tools/measure/ue.py` for the guard that now refuses an
+undeclared lens state at capture time.
+
 ### 4. THE BOARD IS A TEST RIG — **LOCKED** as disposable
 
 It exists to judge materials and forms. It stays built LIVE and UNSAVED; it is

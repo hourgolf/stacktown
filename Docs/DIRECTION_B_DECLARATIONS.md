@@ -1454,3 +1454,148 @@ square is a hand at work; a block visibly broken is wear, which is a separate
 question the owner has PARKED until edges, light and tolerance have been
 judged. One change-set per verdict, or the next "render" verdict cannot be
 attributed to anything.
+
+---
+
+## D13 — the value ladder, read off B1. Owner, 2026-09-01. Amends D6.
+
+The owner asked how the lane compares to the B1 reference on detail, form and
+cinematic quality. Measuring both frames with the same instrument turned the
+answer into numbers rather than opinion, and the numbers said something none
+of us expected: **the timber was already right, and everything around it was
+wrong.**
+
+### The ladder B1 actually uses
+
+| element | value | vs lit timber |
+|---|---|---|
+| road inlay | 165 | **+50%** |
+| lit timber face | 110 | — |
+| pale ground | 89 | −19% |
+| dark timber | 47 | −58% |
+
+**The roads are the brightest thing in the reference.** That is the whole
+trick: warm blocks read as objects on a light field, and the street grid
+carries the eye through the city. This lane had roads at −15%, *darker* than
+its buildings, so the town sat in a grey pool and the streets disappeared.
+
+Building-face value matched to within a point (110.0 vs 110.7) before any of
+this changed. The tone work of D2/D3/D5/D6 was sound; the board was not.
+
+### The palette drops and widens — D6 amended
+
+D6 locked seven timbers and their tones. The owner amended it on the
+measurement: every tone scaled in **linear albedo, uniformly per channel**, so
+hue and saturation are untouched and only value moves. The wood is exactly as
+warm; it sits lower.
+
+The scale runs **0.496 at the pale end to 0.263 at the dark end**, both solved
+from measured frames (pale 165 → 120, dark 101 → 55) rather than picked.
+Scaling the dark end harder is what WIDENS: the light/dark ratio opens 2.31 →
+3.35 while every tone drops.
+
+    maple  #DCC49F -> #A18F73      oak     #B18E62 -> #725A3D
+    pine   #CDB088 -> #907B5E      cherry  #9C7A54 -> #5F4931
+    ash    #C2A278 -> #836C4F      sapele  #8A6844 -> #4E3A24
+                                   walnut  #6E5236 -> #392919
+
+Result: roads +45% (B1 +50%), darks −55% (B1 −58%).
+
+### What is NOT chased
+
+Frame contrast sits at 46 against B1's 66.5 and should be left there. That gap
+is COMPOSITION — B1 fills its frame edge to edge, and more than half of ours
+is empty studio floor. Widening the palette further to close that number would
+over-darken the wood to fix a framing problem. It closes with density.
+
+---
+
+## D14 — D11 §3 lifted, but only three ways. Owner, 2026-09-01.
+
+D11 §3 locked the carving scope: no recessed openings, no carved window bays.
+The owner allowed "a little lifting" **on condition of seeing it first**, so
+five treatments were built on one geometry, one species and one light, with
+the part cost quoted beside each — parts being this direction's currency.
+
+| treatment | parts | cost | verdict |
+|---|---|---|---|
+| locked | 2 | — | the baseline |
+| base | 3 | +50% | **admitted** |
+| band | 4 | +100% | **admitted** |
+| courses | 10 | +400% | **admitted** |
+| flutes | 5 | +150% | **rejected** |
+
+`base` is the only one that changes how the STREET reads rather than the
+object: the ground course steps back, so a block meets the pavement with a
+shadow line instead of a hard edge.
+
+`band` gives a windowless mass one horizontal division, so height becomes
+readable without an opening. It is a shadow, not a window — which keeps faith
+with B1's windowless-by-day rule.
+
+**`flutes` is rejected on a reason, not a preference.** Its channels run
+vertically and so does the grain, so the treatment and the material say the
+same thing and neither wins. It is the most expensive per unit of legibility
+in the set. Recorded so a future session does not re-propose it as an
+oversight.
+
+Still forbidden, unchanged: recessed openings and carved window bays.
+Everything admitted is a shallow recess made by emitting a narrower slab —
+there is no boolean subtraction in this pipeline, so a shadow line is real
+geometry or it is nothing.
+
+---
+
+## D15 — the form vocabulary and roof furniture. Owner, 2026-09-01.
+
+### Form: four gestures, because one gesture is a monolith
+
+Shown twenty blocks, the owner's note was explicitly **not** about height:
+"the variety of shape and geometry and how the blocks still read as distinctly
+styled buildings instead of blocks/monoliths". Heights are therefore untouched.
+
+`build_mass` knew ONE move — concentric setbacks, every stage shrinking evenly
+on four sides. Twenty blocks built that way are the same gesture at twenty
+heights. Worse, B1's commonest block was not expressible at all.
+
+  podium   wide low base, narrower shaft OFF-CENTRE. B1's commonest block; a
+           centred shaft is a concentric setback renamed.
+  bar      long low slab with an annex. B1 is full of them; this generator
+           made none — every block it produced stood upright.
+  ell      two arms meeting, one lower: a corner, an inner yard, two roof
+           levels.
+  stepped  setbacks on TWO sides only, so a building has a front and a back.
+
+Distributed 5/5/4/3 with **three left plain on purpose**: if every building
+has a gesture, the gesture stops being one. Cost 3–4 parts against the locked
+prism's 2 — cheaper than a single `courses` treatment.
+
+### Roofs: where B1 actually spends its detail
+
+The carving study was aimed at facades. Re-reading the reference afterwards:
+its WALLS are almost entirely plain and nearly every block carries two to five
+elements on its ROOF. That is the correction, and it matters structurally — on
+a windowless mass the silhouette carries everything, so a repeated top shows
+far more than the same repetition would on an articulated facade.
+
+Replaces the single jittered cap with a coping lip (two roofs in three), one
+to four housings varying in count, footprint, height AND placement, and one
+element in three tall and narrow rather than low.
+
+**Cost quoted before it was spent, on the real set: 55 → 96 parts, +75%,
+4.8 a building.** For scale, one flagship model is 130–800.
+
+### Held, not forgotten
+
+The tall elements bristle slightly against B1, which uses them sparingly. Fix
+is one number — tall-element probability 1/3 → 1/6 — and one bake. The owner
+accepted the pass as-is with this recorded.
+
+### Composition rule
+
+`form` and `roof` both default to None and emit the locked vocabulary
+unchanged — `genbuild_identity` confirms 10 models unchanged after both. They
+compose: roof furniture sits on whatever rect the FORM left at the top, so a
+podium's off-centre shaft is furnished at its own footprint rather than at an
+assumed centre. Carving composes with both, since every mass is emitted
+through `_carve_stage`.

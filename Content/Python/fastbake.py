@@ -39,10 +39,17 @@ GSM = unreal.GeometryScript_MeshModeling
 #   it is CHAMFERED. 4 uu is the card-edge value from MINIATURE_RECIPE and it
 #   is what catches light along every arris. A sharp box is not a cheaper
 #   version of this look, it is a different look.
-CHAMFER = 4.0
+#   PER-JOB, and defaulting to the flagship value. 4 uu is a CARD edge. A
+#   block of carved timber has a far more generous arris than a sheet of card,
+#   and on a 640 uu wooden mass a 4 uu bevel subtends 0.6% of the face - it is
+#   there, but it catches almost nothing. Direction B therefore asks for a
+#   bigger one through the job file. fastbake is shared with the flagship, so
+#   the constant stays 4.0 and the override travels with the job that wants it.
+CHAMFER_DEFAULT = 4.0
 ORIGIN = unreal.GeometryScriptPrimitiveOriginMode.CENTER
 
 job = json.load(open(JOB))
+CHAMFER = float(job.get('chamfer', CHAMFER_DEFAULT))
 boxes = job['boxes']
 out_path = job['out']
 wall, roofmat, trim = job.get('wall'), job.get('roofmat'), job.get('trim')
@@ -233,8 +240,8 @@ per = tri / float(made)
 json.dump(dict(parts=made, tris=tri, slots=slots, chamfered=chamfered,
                tris_per_part=round(per, 1),
                unbound=sorted(set(unbound))[:8]), open(OUT, 'w'))
-print('  FASTBAKED %s  parts %d (%d donor)  tris %d (%.1f/part)  chamfered %d  slots %d%s'
-      % (name, made, donors, tri, per, chamfered, slots,
+print('  FASTBAKED %s  parts %d (%d donor)  tris %d (%.1f/part)  chamfered %d @%.0fuu  slots %d%s'
+      % (name, made, donors, tri, per, chamfered, CHAMFER, slots,
          '' if not unbound else '  UNBOUND %s' % sorted(set(unbound))[:4]))
 if chamfered and not donors and per < 20.0:
     raise SystemExit('fastbake: %d parts bevelled but only %.1f tris/part - '

@@ -160,6 +160,84 @@ def _direction(px, w, h):
     return (dx / n, dy / n) if n else (0.0, 0.0)
 
 
+def read_bmp_rgb(path):
+    """Full-colour read. The mask path takes luma; a NORMAL map cannot."""
+    d = open(path, 'rb').read()
+    if d[:2] != b'BM':
+        raise ValueError('not a BMP: %s' % path)
+    off = struct.unpack('<I', d[10:14])[0]
+    w, h = struct.unpack('<ii', d[18:26])
+    bpp = struct.unpack('<H', d[28:30])[0]
+    n = bpp // 8
+    topdown = h < 0
+    h = abs(h)
+    stride = ((w * n + 3) // 4) * 4
+    px = bytearray(w * h * 3)
+    for y in range(h):
+        s = off + (y if topdown else (h - 1 - y)) * stride
+        row = d[s:s + stride]
+        base = y * w * 3
+        for x in range(w):
+            i = x * n
+            px[base + x * 3] = row[i + 2]        # R
+            px[base + x * 3 + 1] = row[i + 1]    # G
+            px[base + x * 3 + 2] = row[i]        # B
+    return w, h, px
+
+
+def write_rgb_bmp(path, w, h, px):
+    stride = ((w * 3 + 3) // 4) * 4
+    pad = stride - w * 3
+    rows = []
+    for y in range(h - 1, -1, -1):
+        r = bytearray()
+        base = y * w * 3
+        for x in range(w):
+            i = base + x * 3
+            r += bytes((px[i + 2], px[i + 1], px[i]))     # BGR
+        r += b'\0' * pad
+        rows.append(bytes(r))
+    data = b''.join(rows)
+    hdr = b'BM' + struct.pack('<IHHI', 14 + 40 + len(data), 0, 0, 14 + 40)
+    hdr += struct.pack('<IiiHHIIiiII', 40, w, h, 1, 24, 0, len(data),
+                       2835, 2835, 0, 0)
+    open(path, 'wb').write(hdr + data)
+
+
+def _rot90_normal(px, w, h):
+    """Rotate an RGB normal map 90 degrees AND rotate the vectors it stores.
+
+    THIS IS THE HALF-FIX THE D9 FAMILY IS NAMED FOR, caught in this very file.
+    The grain direction normalisation below rotates the FIGURE and ROUGHNESS
+    maps so every species' grain runs the same way. The NORMAL map was left
+    alone, because it is imported by mk_timbers straight from the donor pack.
+    Five of the seven species were therefore shipping a figure running one way
+    and a normal running the other, crossed at 90 degrees - two directional
+    patterns at right angles, which is a WEAVE. Measured on the block: ash
+    (crossed) rendered at anisotropy 1.359 where oak (never rotated, so never
+    crossed) rendered at 1.819, and with the normal switched off the gap
+    collapsed from 34% to 10%. That is the timber reading as woven linen
+    rather than sawn stock, across three boards of look notes.
+
+    A PIXEL ROTATION ALONE WOULD BE THE SAME BUG AGAIN. R and G encode the
+    tangent-space x and y derivatives, so turning the image without turning
+    the vectors lines the pattern up while lighting it from the wrong side -
+    a fix that looks right in a thumbnail and is wrong under a raking key.
+    Rotating (x, y) by +90 gives (-y, x), which in 0..255 encoding is
+    R' = 255 - G, G' = R. B (z) is unchanged by a rotation about z.
+    """
+    out = bytearray(w * h * 3)
+    for y in range(h):
+        b = y * w * 3
+        for x in range(w):
+            i = b + x * 3
+            o = ((x * h) + (h - 1 - y)) * 3
+            out[o] = 255 - px[i + 1]      # R' = -G
+            out[o + 1] = px[i]            # G' =  R
+            out[o + 2] = px[i + 2]        # B unchanged
+    return out, h, w
+
+
 def _rot90(px, w, h):
     """Rotate the luminance plane 90 degrees. Returns (px, w, h)."""
     out = bytearray(w * h)
@@ -201,6 +279,26 @@ def main():
             '%s grain still runs horizontally after rotation (%.2f vs %.2f) - '
             'it is not directional enough to normalise, and a map with no '
             'direction is not depicting wood' % (stock, ddx, ddy))
+        # THE NORMAL TURNS WITH THE FIGURE, or it crosses it. Emitted only
+        # when this species rotated; the other two import the donor unchanged
+        # and mk_timbers prefers this file when it exists.
+        if turned:
+            nsrc = os.path.join(SRC, '%s_nor_dx_2k.png' % asset)
+            if os.path.exists(nsrc):
+                ntmp = os.path.join(OUT, '_n%s.bmp' % stock)
+                subprocess.run(['sips', '-s', 'format', 'bmp', nsrc,
+                                '--out', ntmp], check=True, capture_output=True)
+                nw, nh, npx = read_bmp_rgb(ntmp)
+                os.remove(ntmp)
+                npx, nw, nh = _rot90_normal(npx, nw, nh)
+                nbmp = os.path.join(OUT, '_nrot_%s.bmp' % stock)
+                write_rgb_bmp(nbmp, nw, nh, npx)
+                subprocess.run(['sips', '-s', 'format', 'png', nbmp, '--out',
+                                os.path.join(OUT, 'T_%s_N.png' % stock)],
+                               check=True, capture_output=True)
+                os.remove(nbmp)
+            else:
+                print('   %s: no nor_dx source; normal NOT normalised' % stock)
         grey = os.path.join(OUT, '_grey_%s.bmp' % stock)
         write_grey_bmp(grey, w, h, px)
         png = os.path.join(OUT, 'T_grain_%s.png' % stock)

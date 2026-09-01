@@ -128,13 +128,26 @@ def main():
     problems = []
     for sp in F.TIMBERS:
         asset, tone = TIMBERS[sp]
-        nor = os.path.join(SRC, '%s_nor_dx_2k.png' % asset)
+        # PREFER THE DIRECTION-NORMALISED NORMAL. mk_grain_masks rotates a
+        # species whose grain runs the wrong way and, since the crossing was
+        # measured, emits the matching normal too - rotated AND with its R/G
+        # channels turned, because those encode tangent-space x and y. Five
+        # species were shipping a figure running one way and a donor normal
+        # running the other: two directional patterns at 90 degrees, which
+        # renders as a weave. Falls back to the donor for the species that
+        # never needed turning, so the two paths cannot disagree.
+        rot = os.path.join(MASKS, 'T_%s_N.png' % sp)
+        nor = rot if os.path.exists(rot) else os.path.join(
+            SRC, '%s_nor_dx_2k.png' % asset)
         msk = os.path.join(MASKS, 'T_grain_%s.png' % sp)
         plan = [('T_%s_N' % sp, nor, True), ('T_grain_%s' % sp, msk, False)]
         if dry:
             for n, src, isnor in plan:
-                print('%-9s %-34s %s %s' % (sp, n, 'normal' if isnor else 'mask',
-                      'OK' if os.path.exists(src) else 'SOURCE MISSING'))
+                print('%-9s %-34s %s %s%s' % (sp, n,
+                      'normal' if isnor else 'mask',
+                      'OK' if os.path.exists(src) else 'SOURCE MISSING',
+                      '  [direction-normalised]'
+                      if isnor and src == rot else ''))
             continue
         for n, src, isnor in plan:
             ref, err = import_texture(n, src, isnor)

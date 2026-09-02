@@ -1851,3 +1851,97 @@ So direction B may want THREE plot states where the flagship needs two:
 (built). The middle is already parked and owner-open per B2. For the owner
 when the beta session's empty-lot work surfaces, so both products answer in
 their own language rather than one borrowing the other's.
+
+---
+
+## D17 — the wooden catalogue mapping. Phase F, 2026-09-01.
+
+Phase F was pulled forward when the owner's first successful in-game buy
+produced a FLAGSHIP building. The game must wear the wooden city. The beta
+lane wires `DA_Catalogue_Wood` and the pointer swap; this lane owns the
+MAPPING — which wooden mass each catalogue key resolves to.
+
+`Content/Python/woodmap.py` is that mapping and `mk_woodcat.py` bakes what it
+resolves to. They build asset names from the same function, so the baker and
+the resolver cannot drift, and the bake ASSERTS its table equals
+`woodmap.catalogue()` before it finishes. A pointer resolving to an asset that
+does not exist is the failure the owner just hit from the other direction.
+
+### The width gap, which blocked the obvious approach
+
+Flagship lots run **820–2460 uu**. The 20 masses baked for the look study run
+**600–1000**, because they were sized for a demo board and nobody ever asked
+them to fit a parcel. A mass from that set covers as little as **41% of a wide
+lot's frontage** — it would sit marooned in the middle of its plot.
+
+So the wooden catalogue is re-parameterised onto the flagship width ladder.
+That costs nothing: the same vocabulary, the same generator, the same three
+minutes, and every key now resolves to a mass that fits its parcel exactly.
+
+### The corner correction — and how the error was made
+
+An earlier draft of this mapping argued that corner variants were a
+flagship-only problem: a flagship corner needs a handed variant because its
+facade is articulated, and a wooden mass has no blank flank. It cited
+`DEPTH_CORNER_DECISIONS.md` — **and cited the sentence that document
+retracts.** Its own words:
+
+> "This section originally claimed the protruding corner presented a blank
+> party flank... That was wrong on the second half, and the correction matters
+> more than the finding."
+
+**A withdrawn claim inside a real document is more dangerous than a wrong
+guess, because it arrives wearing a citation.** A guess sounds like a guess.
+A retracted line is in the repo, on topic, quotable, and grep finds it — and
+this project's docs are *written to record corrections*, so they are full of
+superseded statements sitting next to the truth. The rule that follows: when a
+document supplies the decisive quote for an argument, read the section to its
+end before using it, and look for "originally claimed", "that was wrong",
+"superseded". If a quote is doing a lot of work, that is when to check it
+hardest.
+
+### What the document actually says, and what carries over
+
+The real reason for `DEPTH_CORNER = 1500` is **occupancy, not facade**: "the
+deep value is the PARCEL DEPTH: a corner fills its lot front to back", and a
+corner at base depth "leaves the back half of its parcel empty".
+
+**That reason is fabrication-independent.** A 700-deep wooden mass on a
+1500-deep corner lot leaves half its plot bare, and bare plot is exactly as
+visible in timber as in card. So corners DO apply here.
+
+**Handedness does not.** `_cL`/`_cR` exist so an articulated facade turns the
+right way; a solid block is the same block whichever way the street runs.
+
+> **Depth survives. Handedness dies.** Corner is a DEPTH PARAMETER in wood,
+> not a variant axis — which is the twin rule working properly: the two
+> fabrications share the constraint they both have and diverge on the one
+> only card has.
+
+### The mapping
+
+    tier     flagship 0..6 -> four bands: 0-1 flat, 2-3 setback1,
+             4-5 setback2, 6 tower
+    width    must be ON the ladder. Off-ladder RAISES rather than rounding -
+             a wooden mass must fit its parcel exactly, and a silent round is
+             how the city stops being the one that was pinned
+    corner   -> depth 1500 instead of 700. Never handed. Corner lots are
+             1230/1640/2050/2460 and never 820, so no deep mass exists at the
+             narrowest width and asking for one RAISES
+    species  per RECIPE ID, stable across every tier and width — D3's "a
+             building does not repaint itself when it gains a storey". crc32
+             rather than hash(), so it does not repaint on restart either
+
+**36 assets**: 5 widths x 4 bands, plus 4 corner widths x 4 bands deep.
+Species is NOT baked in — the material is bound per instance, which is why 36
+masses serve a catalogue of hundreds of keys.
+
+### The caveat, flagged rather than buried
+
+These masses were designed to be LOOKED AT on a demo board, not lived in
+across 11 buyable lots and 7 tiers of growth. Four tier bands is coarse on
+purpose — v0 ships fast because the owner is waiting on a wooden game.
+
+**Whether four bands READ as growth when a player watches a building climb is
+a look question nobody has asked yet.** It will need frames, not argument, and
+the owner seeing it live is the test.

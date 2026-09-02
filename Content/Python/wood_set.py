@@ -69,6 +69,7 @@ BAKED = '/Game/Stacktown/BakedWood'
 # places to change one fact - and the footprints ARE the bake's, so they are
 # imported from it. mk_woodbake is the single authority on what exists.
 import mk_woodbake as MW  # noqa: E402
+import woodlayout as WL  # noqa: E402
 
 # STREETS WIDE ENOUGH TO BE STREETS. 460 was chosen against a six-block huddle;
 # at twenty, with towers, it is a slot again. 720 keeps the density the owner
@@ -78,9 +79,19 @@ import mk_woodbake as MW  # noqa: E402
 # plot was proud by 26 uu, so nearly all of it sits under a building and the
 # pale expanse in frame was STREET. B1's blocks nearly touch and its roads are
 # narrow ribbons; 720 against a ~1600 block is a third of the board.
-STREET = 560.0
-PLOT_OVER = 90.0
-COLS, ROWS = 3, 2          # six city blocks; 20 buildings share them out
+# STREET / PLOT_OVER / the angle set now live in woodlayout, which owns the
+# arithmetic. They were duplicated here while the layout was local; a second
+# copy of a number is how the two silently disagree, so the copies are gone
+# and this file reads WL.STREET, WL.PLOT_OVER and WL.ANGLES.
+# THE GRID IS AN ARGUMENT NOW, not a constant. Density was the last open
+# point of the owner's reference comparison and it was gated on the editor,
+# because the only way to see a denser board was to BUILD one. woodlayout
+# makes the arithmetic headless and self-tested; this file only spawns what
+# it is handed. Owner chose 12x9 - 108 blocks, 432 buildings - to see scale.
+COLS, ROWS = 12, 9
+PER_BLOCK = None        # None = varied block sizes from woodlayout
+JAG = 0.35              # breaks the dome; 0 is a pure distance field
+BEND = 0.6              # 0 = the straight grid; >0 curves the streets
 
 # WHERE THE KEY ACTUALLY POINTS. board_light puts the rect light at
 # (BX+BW/2-2600, BY+BD/2-3400, 5200) with pitch -52 / yaw 58. Rather than
@@ -94,8 +105,6 @@ _run = KZ / math.tan(math.radians(52.0))
 AIM = (KX + _run * math.cos(math.radians(58.0)),
        KY + _run * math.sin(math.radians(58.0)))
 
-# four cuts from the stock, so no two neighbours show the same face of the log
-ANGLE_OF = (0, 2, 1, 3)
 
 
 # THE BOARD'S OWN STOCKS, DECLARED HERE so they are not orphans. D10 named
@@ -134,35 +143,20 @@ def ensure_board_mis():
     return len(BOARD_STOCKS)
 
 
-def _blocks():
-    """Share the baked masses out into city blocks.
+def catalogue():
+    """What mk_woodbake actually baked, as woodlayout wants it.
 
-    A BLOCK IS A GROUP THAT SHARES PARTY WALLS, sitting on one plot, with
-    street only at the group's edge. Six blocks of three or four buildings
-    reads as a town; two butted rows of three read as one object, which is
-    what the owner saw in the first set.
+    The TIER comes from mk_woodbake._FORMS rather than being re-declared, so
+    the bake table stays the single authority on what exists and a change to
+    what is baked changes the town with no edit here.
     """
-    items = [(n, sp, g['width'], g['depth']) for n, sp, g in MW.SET]
-    # CONTIGUOUS SLICES, AND THIS IS A REVERSAL WITH A REASON. The bake table
-    # is ordered by form, so slicing it gives the first blocks every low
-    # building and the last blocks every tower. That looked like a bug, so it
-    # was changed to deal round-robin like cards - and the frame got WORSE.
-    # Every block then held a tower, the spires clustered into one central
-    # mound, and the town read as a pyramid instead of a settlement.
-    #
-    # Sliced, the same table gives a quarter of low buildings at one end and a
-    # dense tall quarter at the other, which is what a city actually looks
-    # like: a downtown and an edge. The ordering was doing useful work by
-    # accident, and it is kept on purpose now. Judged by looking at both
-    # frames, not by reasoning about the table.
-    per = [len(items) // (COLS * ROWS)] * (COLS * ROWS)
-    for i in range(len(items) - sum(per)):
-        per[i] += 1
-    out, k = [], 0
-    for n in per:
-        out.append(items[k:k + n])
-        k += n
-    return out
+    tier_of, i = {}, 0
+    for count, _rng, plan in MW._FORMS:
+        for _ in range(count):
+            tier_of['b%02d' % i] = plan
+            i += 1
+    return [('SM_Mass_%s' % n, sp, g['width'], g['depth'], tier_of[n])
+            for n, sp, g in MW.SET]
 
 
 def look_at(tx, ty, tz, dist, pitch, yaw):
@@ -182,43 +176,18 @@ def look_at(tx, ty, tz, dist, pitch, yaw):
             'scale': {'x': 1.0, 'y': 1.0, 'z': 1.0}}
 
 
-def _rows(blk):
-    """Split a block into a FRONT and BACK row, backs together.
-
-    A block laid as one row is a strip: its width is the sum of three or four
-    buildings and its depth is one, so six of them tile a town 3:1 and the
-    thing reads as a shelf rather than a settlement. Real blocks are built on
-    both sides with the backs meeting in the middle, which is also what makes
-    the street a street rather than a gap between two shelves.
-    """
-    half = (len(blk) + 1) // 2
-    return blk[:half], blk[half:]
-
-
-def _spans(blocks):
-    """Per-block footprint, then the town's own extent."""
-    bw = [max(sum(b[2] for b in f), sum(b[2] for b in k)) or 1.0
-          for f, k in map(_rows, blocks)]
-    bd = [(max([b[3] for b in f] or [0]) + max([b[3] for b in k] or [0]))
-          for f, k in map(_rows, blocks)]
-    cw = [max(bw[c::COLS]) for c in range(COLS)]      # column widths
-    rd = [max(bd[r * COLS:(r + 1) * COLS]) for r in range(ROWS)]
-    town_w = sum(cw) + STREET * (COLS + 1)
-    town_d = sum(rd) + STREET * (ROWS + 1)
-    return bw, bd, cw, rd, town_w, town_d
-
-
 def main():
     lvl = json.loads(ue.tool(S, 'get_current_level', {}))['returnValue']
     assert lvl == LEVEL, 'level is %s - refusing' % lvl
-    blocks = _blocks()
-    bw, bd, cw, rd, town_w, town_d = _spans(blocks)
+    cat = catalogue()
+    L = WL.lay(cat, COLS, ROWS, PER_BLOCK, jag=JAG, bend=BEND)
+    cw, rd = L['cw'], L['rd']
+    town_w, town_d = L['town_w'], L['town_d']
     ox = AIM[0] - town_w / 2.0
     oy = AIM[1] - town_d / 2.0
     print('town %.0f x %.0f uu: %d blocks, %d buildings, %.0f uu streets'
-          % (town_w, town_d, len(blocks), sum(len(b) for b in blocks), STREET))
+          % (town_w, town_d, COLS * ROWS, len(L['placements']), WL.STREET))
 
-    # a light must be here or the whole point is lost - check, do not assume
     keys = json.loads(ue.tool(S, 'find_actors', {
         'name': 'LIGHT_BoardKey', 'tag': '',
         'collision_channels': []}))['returnValue']
@@ -233,98 +202,114 @@ def main():
                 'collision_channels': []}))['returnValue']:
             ue.tool(S, 'remove_from_scene', {'actor': a})
 
-    # block origins on the grid, streets between and around
-    org = []
-    for r in range(ROWS):
-        by = STREET + sum(rd[:r]) + r * STREET
-        for c in range(COLS):
-            bx = STREET + sum(cw[:c]) + c * STREET
-            org.append((bx, by))
-
     genbuild.live()
     try:
         g = genbuild.mkactor('ZONE_SetBGround', (ox, oy, 0.0), (0, 0, 0))
-        genbuild.box(g, 'Ground_Plate', -300.0, town_w + 300.0,
-                     -300.0, town_d + 300.0, -60.0, 0.0)
+        # THE PLATE MUST COVER THE BENT CITY, not the straight one it was
+        # sized for. The arc pushes whole columns thousands of uu in +y, and a
+        # plate sized to town_d leaves the curve hanging over the edge - the
+        # board equivalent of the black-void staging fault: correct geometry,
+        # photographed off its own surface.
+        _dys = [L['bend_at'](c)[0] for c in range(COLS)]
+        _lo, _hi = min(_dys + [0.0]), max(_dys + [0.0])
+        genbuild.box(g, 'Ground_Plate', -WL.PLATE_MARGIN, town_w + WL.PLATE_MARGIN,
+                     _lo - WL.PLATE_MARGIN, town_d + _hi + WL.PLATE_MARGIN,
+                     -60.0, 0.0)
         made.append('ZONE_SetBGround')
-        # ROADS ON THE BLOCK GRID. Streets exist between blocks and nowhere
-        # inside them - that is what a party wall means, and it is why the
-        # gaps read as streets rather than as margins around objects.
         rdz = genbuild.mkactor('ZONE_SetBRoad', (ox, oy, 0.0), (0, 0, 0))
+        bend_at = L['bend_at']
+        # NORTH-SOUTH STREETS run at a fixed column, so the bend displaces
+        # them but does not curve them: one straight ribbon each, offset.
         for c in range(COLS + 1):
-            x0 = sum(cw[:c]) + c * STREET
-            genbuild.box(rdz, 'Kerbing_RoadV%d' % c, x0, x0 + STREET,
-                         0.0, town_d, 0.0, 3.0)
+            x0 = sum(cw[:c]) + c * WL.STREET
+            dy, _th = bend_at(min(c, COLS - 1))
+            genbuild.box(rdz, 'Kerbing_RoadV%d' % c, x0, x0 + WL.STREET,
+                         dy, town_d + dy, 0.0, 3.0)
+        # EAST-WEST STREETS cross every column, so their centreline follows
+        # the curve - and this is the roads study's prediction made real:
+        # a curved street CANNOT be one ribbon, because the catalogue is five
+        # fixed widths and frontage must stay quantized. So it is emitted as
+        # STRAIGHT CHORDS, one per column, each square to its own stretch.
+        # The gaps that open between chords on the outside of the curve are
+        # the WEDGES the owner ruled are the look (D14 / roads section 3).
         for r in range(ROWS + 1):
-            y0 = sum(rd[:r]) + r * STREET
-            genbuild.box(rdz, 'Kerbing_RoadH%d' % r, 0.0, town_w,
-                         y0, y0 + STREET, 0.0, 3.0)
+            y0 = sum(rd[:r]) + r * WL.STREET
+            for c in range(COLS):
+                x0 = sum(cw[:c]) + c * WL.STREET
+                x1 = sum(cw[:c + 1]) + (c + 1) * WL.STREET
+                dy0, _ = bend_at(c)
+                dy1, _ = bend_at(min(c + 1, COLS - 1))
+                # each chord is square to itself; the curve lives in the STEP
+                # between one chord and the next
+                genbuild.box(rdz, 'Kerbing_RoadH%d_%d' % (r, c),
+                             x0, x1, y0 + dy0, y0 + dy0 + WL.STREET, 0.0, 3.0)
         made.append('ZONE_SetBRoad')
-        pl = genbuild.mkactor('ZONE_SetBPlots', (ox, oy, 0.0), (0, 0, 0))
-        for i, (bx, by) in enumerate(org):
-            genbuild.box(pl, 'Ground_Plot%d' % i, bx - PLOT_OVER,
-                         bx + bw[i] + PLOT_OVER, by - PLOT_OVER,
-                         by + bd[i] + PLOT_OVER, 0.0, 24.0)
-        made.append('ZONE_SetBPlots')
+        # PLOTS follow their block: one actor per block carrying the block's
+        # own yaw, so a plot stays square to the buildings standing on it.
+        for bi in range(COLS * ROWS):
+            c, r = bi % COLS, bi // COLS
+            bx = WL.STREET + sum(cw[:c]) + c * WL.STREET
+            by = WL.STREET + sum(rd[:r]) + r * WL.STREET
+            b_dy, b_th = bend_at(c)
+            pa = genbuild.mkactor('ZONE_SetBPlots%03d' % bi,
+                                  (ox + bx, oy + by + b_dy, 0.0),
+                                  (0, math.degrees(b_th), 0))
+            genbuild.box(pa, 'Ground_Plot%d' % bi,
+                         -WL.PLOT_OVER, L['bw'][bi] + WL.PLOT_OVER,
+                         -WL.PLOT_OVER, L['bd'][bi] + WL.PLOT_OVER, 0.0, 24.0)
+            made.append('ZONE_SetBPlots%03d' % bi)
     finally:
         genbuild.live(False)
     print('ground laid: plate, %d streets, %d shared plots'
-          % (COLS + ROWS + 2, len(org)))
+          % (COLS + ROWS + 2, COLS * ROWS))
 
-    placed = []
-    for i, blk in enumerate(blocks):
-        bx, by = org[i]
-        front, back = _rows(blk)
-        fd = max([b[3] for b in front] or [0])
-        for row, y0, yaw in ((front, 0.0, 0.0), (back, fd, 180.0)):
-            cx = 0.0
-            for j, (name, sp, w, d) in enumerate(row):
-                # buildings BUTT inside a row - party walls, no gap. The back
-                # row is turned 180 so its FRONT faces the far street, which
-                # is what puts a frontage on both sides of every road.
-                label = 'SETB_%s' % name
-                px = ox + bx + cx + (w if yaw else 0.0)
-                py = oy + by + y0 + (d if yaw else 0.0)
-                r = json.loads(ue.tool(S, 'add_to_scene_from_asset', {
-                    'asset_path': '%s/SM_Mass_%s' % (BAKED, name),
-                    'name': label,
-                    'xform': {'location': {'x': px, 'y': py, 'z': 24.0},
-                              'rotation': {'pitch': 0.0, 'yaw': yaw,
-                                           'roll': 0.0},
-                              'scale': {'x': 1.0, 'y': 1.0, 'z': 1.0}}}
-                    ))['returnValue']
-                ue.tool(A, 'set_label', {'actor': r, 'label': label})
-                placed.append((label, r, sp,
-                               ANGLE_OF[(i + j) % len(ANGLE_OF)]))
-                made.append(label)
-                cx += w
-    print('%d baked masses placed, chamfered at %.0f uu'
-          % (len(placed), MW.CHAMFER))
-
+    # TWO MCP CALLS PER BUILDING, NOT FOUR. At 432 placements the round trip
+    # IS the build time - measured at 0.667 s, four calls each is 19 minutes
+    # and two is under ten. Both savings were verified on a probe actor
+    # rather than assumed:
+    #   - add_to_scene_from_asset's `name` already sets the label, so the
+    #     set_label call was redundant (find_actors sees it either way);
+    #   - the mesh component path is derivable as <actor>.StaticMeshComponent0.
+    # The derivation is PROVEN ONCE PER RUN against get_components and then
+    # trusted, so a future asset with a differently-named component fails
+    # loudly on the first building instead of silently binding nothing - the
+    # exact fault this file already carries an assertion for.
     cache = {}
-    for label, r, sp, ang in placed:
-        mi = wb.mi_for(sp, ang, cache)
-        n = 0
-        for c in json.loads(ue.tool(A, 'get_components', {
-                'actor': r}))['returnValue']:
-            if 'StaticMeshComponent' in c.get('refPath', ''):
-                ue.tool(OBJ, 'set_properties', {'instance': c, 'values':
-                        json.dumps({'overrideMaterials': [mi]})})
-                n += 1
-        assert n, 'no mesh component bound on %s' % label
-    # THE GROUND IS NOT A SPAWNED STATIC MESH ACTOR. Buildings are, so their
-    # component's refPath contains "StaticMeshComponent" and the test above
-    # works. The ground is built by genbuild, whose components are named for
-    # their ROLE - Ground_Plate, Kerbing_RoadV0 - so that same test matched
-    # nothing here and this loop did nothing at all, silently, for every run
-    # since it was written. The board has never had a material: what looked
-    # like a dark grey plate was the master's default.
-    #
-    # wood_board's bind() already knew this and tested the role prefixes; the
-    # knowledge was there and did not travel. The assertion is the real fix -
-    # a binding loop that can match zero components must say so.
-    ground = 0
+    placed = 0
+    verified = False
+    t0 = time.time()
+    for p in L['placements']:
+        r = json.loads(ue.tool(S, 'add_to_scene_from_asset', {
+            'asset_path': '%s/%s' % (BAKED, p['asset']),
+            'name': 'SETB_%03d' % placed,
+            'xform': {'location': {'x': ox + p['x'], 'y': oy + p['y'],
+                                   'z': 24.0},
+                      'rotation': {'pitch': 0.0, 'yaw': p['yaw'],
+                                   'roll': 0.0},
+                      'scale': {'x': 1.0, 'y': 1.0, 'z': 1.0}}}
+            ))['returnValue']
+        comp = {'refPath': r['refPath'] + '.StaticMeshComponent0'}
+        if not verified:
+            got = [c['refPath'] for c in json.loads(ue.tool(A, 'get_components', {
+                'actor': r}))['returnValue']
+                if 'StaticMeshComponent' in c.get('refPath', '')]
+            assert got and got[0] == comp['refPath'], (
+                'derived component path %r does not match the actor\'s real '
+                'one %r - the fast path would bind nothing, silently'
+                % (comp['refPath'], got[0] if got else None))
+            verified = True
+        ue.tool(OBJ, 'set_properties', {'instance': comp, 'values': json.dumps(
+            {'overrideMaterials': [wb.mi_for(p['species'], p['angle'], cache)]})})
+        placed += 1
+        if placed % 100 == 0:
+            print('  %d/%d placed (%.0fs)' % (placed, len(L['placements']),
+                                              time.time() - t0))
+    made.append('SETB_')
+    print('%d baked masses placed in %.0fs, chamfered at %.0f uu'
+          % (placed, time.time() - t0, MW.CHAMFER))
+
     ensure_board_mis()
+    ground = 0
     for nm, ref in (('ZONE_SetBGround', 'MI_model_board'),
                     ('ZONE_SetBRoad', 'MI_board_road'),
                     ('ZONE_SetBPlots', 'MI_board_plot')):
@@ -340,10 +325,8 @@ def main():
                             json.dumps({'overrideMaterials': [
                                 {'refPath': '%s/%s.%s' % (MATD, ref, ref)}]})})
                     hit += 1
-        assert hit, ('%s bound 0 components to %s - the board would render '
-                     'as the master default and the road value, which is the '
-                     'whole point of this pass, would be silently absent'
-                     % (nm, ref))
+        assert hit, ('%s bound 0 components to %s - the board would render as '
+                     'the master default' % (nm, ref))
         ground += hit
     print('materials bound (%d timber MIs, %d ground components)'
           % (len(cache), ground))
@@ -354,19 +337,32 @@ def main():
     cx_t = ox + town_w / 2.0
     cy_t = oy + town_d / 2.0
     # the middle north-south street, for the shot taken from inside the town
-    st_x = ox + sum(cw[:1]) + 1 * STREET + STREET / 2.0
+    st_x = ox + sum(cw[:1]) + 1 * WL.STREET + WL.STREET / 2.0
+    # FOUR FRAMINGS, and the pair at the top is the owner's answer on scale:
+    # "player should be able to zoom out to see most if not all of the
+    # gameboard, but the main view would be closer in as you describe to sell
+    # the scale." So SURVEY exists to prove the board is big, and OBLIQUE is
+    # the view the game is actually played from - a crop, with city running
+    # off the frame, which is what B1 is and why B1 reads as a city rather
+    # than as a model of one.
     shots = (
-        # the whole town. Aimed at mid-height rather than at the board, so the
-        # tallest block stays inside the vertical field instead of clipping.
-        ('SETB_oblique', look_at(cx_t, cy_t, 3200.0, 15000.0, -14.0, 38.0)),
+        # SURVEY - the zoom-out. 23,000 uu of depth needs roughly 20,000 of
+        # distance in a 58.5 deg vertical field, and the oblique needs more
+        # again, so this is solved from the town size rather than guessed.
+        ('SETB_survey', look_at(cx_t, cy_t, 1500.0,
+                                max(town_w, town_d) * 1.25, -30.0, 38.0)),
+        # OBLIQUE - the main view. Deliberately INSIDE the board's extent, so
+        # the city leaves the frame on at least two sides.
+        ('SETB_oblique', look_at(ox + town_w * 0.38, oy + town_d * 0.42,
+                                 3400.0, 13000.0, -15.0, 38.0)),
         # STANDING IN A STREET, looking along it. The god's-eye of a whole
         # board is the one view a photographer of a physical model never
         # takes, and every frame before the set was that view.
         ('SETB_street', look_at(st_x, cy_t, 560.0, 4200.0, -3.0, 90.0)),
         # raking across the near frontages - the angle where a 14 uu arris
         # actually casts something and the chamfer can be judged
-        ('SETB_raking', look_at(cx_t, oy + town_d * 0.30, 1500.0,
-                                8000.0, -7.0, 56.0)))
+        ('SETB_raking', look_at(ox + town_w * 0.30, oy + town_d * 0.26,
+                                1500.0, 8000.0, -7.0, 56.0)))
     for tag, cam in shots:
         ue.tool(APP, 'SetCameraTransform', {'transform': cam})
         time.sleep(10)

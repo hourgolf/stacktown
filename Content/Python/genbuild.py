@@ -3876,9 +3876,12 @@ def _roof_furniture(a, spec, ix0, ix1, iy0, iy1, z, rnd):
         hd = d * (0.14 + 0.26 * rnd.random())
         hx = ix0 + (w - hw) * rnd.random()
         hy = iy0 + (d - hd) * rnd.random()
-        # one element in three is a TANK or stair head - tall and narrow
-        # rather than a low box, which is what breaks a flat skyline
-        tall = rnd.random() < 0.34
+        # ONE IN SIX, not one in three. At 1/3 the tall elements bristled -
+        # and once the CROWN form landed on the tall tiers they were doing the
+        # same job in the same places, so the tops read as busy rather than
+        # detailed. The crowns now carry the verticality and the roof keeps
+        # the occasional tank; B1 has them but uses them sparingly.
+        tall = rnd.random() < 0.17
         hh = (120.0 + 220.0 * rnd.random()) if tall else (44.0 + 90.0 * rnd.random())
         if tall:
             hw *= 0.55

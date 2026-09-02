@@ -1,11 +1,30 @@
 # The Direction-B design lane — charter (staff when the work starts)
 
-**Created 2026-08-31 on the owner's word ("set up a dedicated direction
-B design team lane if needed"). Judgment applied: the lane exists ON
-PAPER now and gets STAFFED — a fresh session opened with this charter —
-when direction-B production actually begins. Staffing it before the
-gameplay scaffolding lands would idle it; the beta's build order
-(BETA_TWIN_PLAN phases A-E) precedes catalogue work (phase F).**
+**Created 2026-08-31; STAFFING REVISED same day, coordinator's call on
+an owner signal: STAFF NOW.** The original gate (wait for beta phases
+A-E) was engineering economics against idling the lane — obsoleted by
+two facts: phase A PROVED the catalogue pointer, which is the only
+machinery the wooden catalogue actually depends on; and the owner asked
+to SEE "the actual wood block model city" — a mechanism demo on grey
+masses cannot carry that, and direction B's v0 look is UNIQUELY cheap
+to make real, because per DIRECTION_B.md B1 the direction at massing
+level IS windowless carved blocks: wooden masses with honest grain,
+tone and patina ARE direction-B-v0, not a placeholder for it. The beta
+lane continues phases B-E in parallel; editor windows interleave under
+the standing announce discipline.**
+
+## First commission (scoped deliberately narrow)
+
+**THE FIRST WOODEN BOARD**: (1) the wood MATERIAL FAMILY — grain, tonal
+range (pale pine to walnut per B1), and the patina AGE SCALAR (material-
+level per the open question below unless argued otherwise — argue it
+first, it is the lane's first declaration); (2) a WOODEN MASSING
+CATALOGUE SLICE covering the test-city identity keys — massing-only
+blocks through genbuild's spec layer under the byte-identical contract;
+(3) the swap demonstrated: TestCity resolving through the PROVEN
+ActiveCatalogue pointer to wood — the owner sees the wooden city
+standing. Night glow, inlay boards, water and terrain come after the
+owner has judged the first board, not before.**
 
 ## The lane's scope
 
@@ -46,8 +65,15 @@ set is DIRECTION_B.md and nothing else. The coordinator session holds
 owner-word relay, commits, and cross-lane verification; the flagship
 design lane's precedents (identity manifest, byte-identical proof) are
 your contracts when you touch shared generation. Announce before you
-mutate. Start by proposing the wooden catalogue's first archetype
-declarations for the owner's word."
+mutate. Your assignment is the FIRST COMMISSION above: argue the
+patina question first (it is your first declaration), then the wood
+material family, then the massing slice for the test-city identity
+keys under the byte-identical contract (run genbuild_identity.py
+before and after anything touching generation), then show the owner
+the wooden city standing in TestCity through the ActiveCatalogue
+pointer the beta lane proved. The beta gameplay session (DESIGN B
+(WOOD) — title historical, it runs the BETA lane) works in parallel;
+editor windows are negotiated through the coordinator."
 
 ## Open question for the lane's first session (flagged by the flagship
 ## design lane at handover, 2026-08-31)

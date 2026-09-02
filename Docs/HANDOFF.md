@@ -107,6 +107,19 @@ priorities come from the reader's own findings.
 - The single-mesh bake fidelity gap (§9.1).
 - Gameplay: **nothing in-engine.** A Lane 2 agent started the headless
   economy sim on 2026-08-25 — see `Docs/WORKSTREAMS.md` Lane 2.
+- **The real UMG HUD needs ~1 minute of human hands in the Designer** —
+  confirmed blocked for editor-scripting, not guessed (see §5's WidgetTree
+  entry). `WBP_HUD` already exists at `/Game/Stacktown/Runtime/WBP_HUD`,
+  empty. The ask: open it in the UMG Designer, drop a Canvas Panel on the
+  root if one isn't already there, add six Text Blocks onto it (rough
+  vertical stack, top-left corner is fine), and name them exactly
+  `MoneyText`, `DemandText`, `SelectedNameText`, `SelectedStateText`,
+  `SelectedPriceText`, `BuyPromptText` — Designer-named widgets are
+  variables by default, no extra step needed. Save. Once those six exist
+  with those names, the Event Tick / text-binding logic that reads them
+  from GameInstance and the selected `BP_Parcel` is a normal
+  `write_graph_dsl` function-graph edit, same tooling as everything else
+  in this file — that part is NOT blocked, only the tree construction is.
 
 ---
 
@@ -253,6 +266,72 @@ Every item cost hours. They are ordered by how much.
   Measured 2026-08-27: live 350s vs fastbake 2.6s, identical bounds.
   FASTBAKE is the production path; the live merge is for nothing on the
   judgment path at all.
+- **A session-fresh Blueprint FUNCTION may not resolve as a callable
+  node until the editor restarts** (beta lane, 2026-08-31, hit twice —
+  phase A diagnostics and phase B selection): a function added via the
+  DSL compiles but calls to it from other graphs fail to resolve in the
+  same editor session. WORKAROUND that avoids the broken resolution
+  path entirely: inline the logic into a CUSTOM EVENT and dispatch via
+  SetTimerByFunctionName (stock node, string-based runtime dispatch).
+  Workarounds of this shape get an EXPIRY: on the next natural editor
+  restart, migrate to the proper function call so the polling timer
+  doesn't fossilize as architecture. EXPIRY PAID 2026-09-01: post-restart,
+  `find_node_types` resolved `SelectTick` as a normal `CallFunction` node;
+  the timer and its dispatch were removed, replaced with a direct call
+  wired into `EventTick`.
+- **The editor's quit prompt is a save-all with a friendly face**
+  (2026-09-01: a save-on-quit click during a coordinated restart wrote
+  a disposable test rig — 23 actors, "built live and unsaved" by
+  declaration — permanently into TestCity.umap; every lane inherited
+  them, and the rig's own cleanup assertions kept passing because they
+  check the LIVE level, not the map file). RULE: clear disposable rigs
+  and deliberate-unsaved scene state BEFORE any editor shutdown, so the
+  quit prompt has nothing to trap — and clear AT IMMINENCE, NOT AT
+  INQUIRY (refined 2026-09-01 after a speculative clear emptied the
+  board mid-owner-review: a scheduling question is not a shutdown, and
+  the owner's view outranks pre-positioning; the clear fires in the
+  same minute as the actual quit). Detection when suspected: compare
+  the map file's mtime against the editor process start time — the
+  wood lane's method, evidence not inference.
+- **`pgrep -f <pattern>` can match the WATCHER that runs it: a wait
+  loop whose own command line contains the pattern waits for itself,
+  forever, and answers "RUNNING" for a job that never started**
+  (2026-09-01, direction-B lane: `while pgrep -f wood_set.py; do
+  sleep; done; ... mk_woodbake &` — the bake was reported in-progress
+  across several exchanges and had never launched; assets on disk were
+  the old set). Wait on a CAPTURED PID with `kill -0`, never on a
+  pattern that can see the waiter. Fifth member of the reports-success-
+  while-doing-nothing family (with: one material instance reused
+  across species, a leftover rig measured as the subject, a binding
+  loop matching zero components, the zsh no-match glob below).
+- **Under zsh, a no-match glob kills the rest of an `&&` chain silently
+  enough to look like success** (2026-09-01, direction-B lane: `rm
+  *.bmp` with no matches aborted the chain before a heredoc wrote a
+  README — the lane reported the README as written and it was not; the
+  error scrolled past). Same family as the rename-on-&&-chain trap:
+  a multi-step shell chain is only as done as its LAST step, verified
+  by reading the result back, never by exit-looking output.
+- **A palette hit is a NAME, not an identity: check the CATEGORY before
+  believing it** (2026-09-01, coordinator's error, owner's second look
+  caught it): the Blueprint action search showed "City Tick" placeable
+  and it was taken as proof the Python bridge's city_tick had
+  registered — it was the phase-A TOY CityTick function on BP_Parcel,
+  a name collision with legacy code. With Context Sensitive off, none
+  of the bridge's four functions existed anywhere, and the automation
+  instrument (find_node_types) had been RIGHT all along. Same family
+  as the substring traps below, at the UI level. Corollary, now solid:
+  Python-defined @unreal.ufunction BFL functions do not reach the
+  Blueprint action database in this setup, and Execute Python Script
+  is editor-utility-only — a runtime BP cannot call Python through a
+  graph node at all.
+- **A substring test standing in for a NUMERIC one inverts answers**
+  (two instances, 2026-08-31, different lanes, same family): `'_c' in
+  name` matched "_contemporary" and silently discarded 8 recipe
+  families from a census; `'0.77' in readback` reported a Custom
+  Primitive Data write as LOST because the float came back as
+  0.76999998092651367. Both were caught only by re-running with a real
+  parse/compare. When the question is numeric or structural, parse and
+  compare — never grep the repr.
 - **Python bytecode lives OUTSIDE the repo on this machine** (found
   2026-08-31, cost an hour): `sys.pycache_prefix` is
   `~/Library/Caches/com.apple.python`, so `rm -rf __pycache__` clears
@@ -316,6 +395,152 @@ Every item cost hours. They are ordered by how much.
   re-applied the throttle while PRINTING that it had restored. Caught by
   reading output, not exit codes. State changes prove themselves by
   READ-BACK (cvar.py), never by printing intent.
+- **`_guard.py` cannot survive PIE.** It calls
+  `UnrealEditorSubsystem.get_editor_world().get_path_name()` for its
+  level check, and `get_editor_world()` returns `None` while PIE is
+  running — the guard itself crashes before a script's own code runs.
+  `rung.sh` is therefore unusable for any PIE-time Python; call
+  `Tools/measure/uepy.py <script>` directly instead (skips the
+  guard-prepend step). Found running a live economy-driver probe during
+  PIE, 2026-09-01. Separately: `EditorActorSubsystem.
+  get_all_level_actors()` also returns EMPTY via bare Python during PIE
+  — only the MCP bridge toolset's own actor/scene queries correctly
+  resolve to the PIE world; that PIE-context resolution is NOT a general
+  property of Python running in the editor process, it's specific to
+  that bridge. The method that DOES work from bare Python:
+  `UnrealEditorSubsystem.get_game_world()` (a separate method from
+  `get_editor_world()`) + `GameplayStatics.get_game_instance(that
+  world)`.
+- **A Python-defined `@unreal.uclass()` — `BlueprintFunctionLibrary` or
+  plain `Object` — does not reach Blueprint's action database in this
+  project's setup**, even though it is genuinely registered
+  (`ObjectTools.search_subclasses` finds it) and genuinely callable from
+  Python with correct results. Confirmed the hard way, 2026-09-01: two
+  restructure attempts across two editor restarts to fix a "the node
+  doesn't show up in search" problem, before the owner's OWN palette
+  check (not a tooling search) confirmed no such node exists anywhere,
+  under any name. The earlier "it's placeable, I saw it in the palette"
+  report was a NAME COLLISION with an unrelated legacy event sitting in
+  the same category — verify a palette hit by its CATEGORY, not just its
+  name, before trusting it; this is the same species of false-positive
+  as a name-keyed lookup over anything a generator emits more than once
+  (see instrument hygiene). The stock "Execute Python Script" node is
+  ALSO no fallback here — it is editor-utility-blueprint-only, absent
+  from Actor/Pawn graphs. The working alternative for Python-driven
+  gameplay logic in this project: a `unreal.
+  register_slate_post_tick_callback` registered from `init_unreal.py`,
+  reading/writing state directly via `get_game_world()` — no Blueprint
+  node ever created, no palette involved.
+- **A bare `(bind x (CastToFoo ...))` in the Blueprint DSL silently eats a
+  failed cast.** It's a real DynamicCast node (Then/CastFailed exec
+  branches); the bare bind form only wires Then, so on failure nothing
+  downstream runs and nothing logs — no error, no "Accessed None," just
+  silence (beta lane, phase B, 2026-08-31). Wire `:CastFailed` with a loud
+  print wherever a failed cast would otherwise be invisible.
+- **A baked catalogue actor's placed LOCATION is its bounds MIN CORNER,
+  not its center.** Confirmed twice independently by two different lanes —
+  camera P0's aiming (2026-08-29, cost three probe rounds, undocumented
+  until now) and beta lane's selection work (2026-08-31) — before either
+  lane knew the other had already paid for it. Any aiming/bounds math
+  against a placed catalogue actor must compute the true center via
+  `get_actor_bounds`, never assume actor location = center.
+- **Editing a Blueprint instance variable (e.g. `BoardCentre`) while PIE
+  is running only touches the transient PIE-world copy of that actor** —
+  it is lost on `StopPIE` and never reaches the editor-world actor. Set it
+  on the editor-world actor path before `StartPIE` if it needs to survive
+  the session; mid-PIE edits are fine for same-session testing but must be
+  re-applied to the editor-world copy to persist.
+- **`BP_LensRig`'s `BoardCentre` moves the boom's ORBIT ORIGIN, not its
+  aim.** `EventTick` sets `Location = BoardCentre + polar(Reach, Azimuth,
+  Height)` but `Rotation` from `Tilt`/`Azimuth`/`Pan` alone — those are
+  driven only by WASD/ladder-stop input and never recomputed toward
+  `BoardCentre`. A trace along the camera's forward vector (the correct,
+  intentional design for focus-as-selection — see `Docs/CAMERA_DESIGN.md`
+  "Focus is attention") therefore does NOT track `BoardCentre`; moving
+  `BoardCentre` relocates the rig without turning it to face anything. A
+  six-block selection-trace investigation (beta lane, 2026-08-31 into
+  2026-09-01) mistook this for an asset/vintage/collision defect before
+  the actual DSL was read — see the measurement-chain entry above.
+- **`CaptureViewport` and `GetVisibleActors` reflect the EDITOR world, not
+  the live PIE world, even during in-viewport PIE.** Same underlying split
+  as the `BoardCentre`-mid-PIE entry above (PIE runs a transient duplicate
+  world alongside the editor's own), landing on a different tool this
+  time. `GetVisibleActors` returns actor paths without the `UEDPIE_0_`
+  prefix — the tell. Confirmed 2026-09-01: pushed correct, verified
+  Owned/Tier state onto live PIE `BP_Parcel` actors (proven via
+  `GameplayStatics.get_all_actors_of_class` + `get_editor_property`,
+  which DO read the PIE world), then called `CaptureViewport` at those
+  exact world coordinates and saw nothing — because the editor-world
+  copies of those same actors never ran `EventBeginPlay` (PIE-only) and
+  so never resolved a mesh at all. Confirmed by checking the editor-world
+  copies directly after `StopPIE`: `mesh=None` on both, matching what the
+  capture showed. There is currently no known route to a PIE-accurate
+  screenshot through this bridge; a visual acceptance pass needs either a
+  different capture path or a human actually watching PIE.
+- **`/Engine/BasicShapes/Cube`'s own default material slot is
+  `WorldGridMaterial`, not an opaque surface.** Spawning it via Python
+  (`SetStaticMesh` to the bare asset) and never overriding the material
+  reproduces this exactly — the editor's own "drag a basic shape into the
+  level" UI applies `/Engine/BasicShapes/BasicShapeMaterial` as a
+  convenience on top, which nothing in a Python-driven spawn path does
+  automatically. Confirmed 2026-09-01 building the empty-lot placeholder
+  (`PARCELIZATION_CONTRACT.md`'s amendment A4): every property read back
+  correct — mesh assigned, component visible, transform and world bounds
+  exactly matching the intended footprint — and the placeholder was still
+  functionally invisible until `Rendering|Material|SetMaterial` explicitly
+  set slot 0 to `BasicShapeMaterial`. A property-correct actor is not the
+  same claim as a rendering-correct one; this is the second time that gap
+  has cost real time this session (see the `CaptureViewport` entry above).
+- **A `PrintString` node's `Duration` pin left at `0.0` prints to the
+  Output Log correctly and is simultaneously invisible on-screen** — the
+  nastiest kind of debug residue, because every log-based check says PASS
+  while the human sees nothing. Confirmed 2026-09-01: the owner reported
+  "selection doesn't work" after the click/highlight redesign's
+  predecessor mechanism (focus-as-selection); `SelectTick`'s trace, cast,
+  and text-generation were all already correct and had already succeeded
+  multiple times in the owner's own session — provable by reading the
+  Output Log directly (`GetLogEntries`) rather than trusting the struct
+  fields (see the measurement-chain entry above for why `HitResult`
+  introspection is a dead end). The actual defect was three
+  `Development|PrintString` nodes in `SelectTick`
+  (`K2Node_CallFunction_182/183/184`) with `Duration="0.0"`, a leftover
+  debug value never meant for player-facing display. Fixed with
+  `set_pin_value` targeting each node's `Duration` pin directly, not
+  `write_graph_dsl` — `SelectTick` contains a `Math|Vector|vector*vector`
+  expression that reads back fine but cannot be recreated via
+  `create_node`/`write_graph_dsl` (`"AssertionError: The node could not
+  be created"`), so any DSL rewrite of this event fails even when the
+  edit is unrelated to that node. `set_pin_value` edits an existing pin
+  on an existing node without touching graph structure and has no such
+  restriction — treat it as the default tool for a small edit inside any
+  event that already contains a non-recreatable node type, rather than
+  reaching for `write_graph_dsl` and discovering the limitation live.
+  General lesson: when an instrument (a log line, a passing test) and
+  the human's lived experience disagree, suspect the display/visibility
+  layer before suspecting the mechanism underneath it — the mechanism
+  had been correct the whole time.
+- **There is no path found to build a UMG widget tree (CanvasPanel +
+  child widgets) programmatically in this project.** Confirmed
+  2026-09-01 attempting a real HUD to replace `PrintString`.
+  `WidgetBlueprintFactory` + `AssetToolsHelpers` DO create a valid
+  `WidgetBlueprint` asset cleanly — that part works. But its
+  `WidgetTree` is BlueprintProtected: `get_editor_property('WidgetTree')`
+  fails on both the Blueprint asset and its generated class's CDO
+  (`"Property 'WidgetTree'... is protected and cannot be read"`),
+  `dir()` on both surfaces zero widget/tree-related methods, and
+  `unreal.WidgetBlueprintLibrary` does not exist in this build — three
+  separate access paths tried and logged, not one naming guess. The
+  MCP bridge has no UMG-equivalent toolset either (`list_toolsets`
+  confirmed). This isn't just a missing accessor: UMG widget trees are
+  a DESIGN-TIME construct compiled from the Widget Designer, and
+  standard Blueprint graph nodes don't build one from nothing at
+  runtime either (`Create Widget` instantiates an ALREADY-DESIGNED
+  class, it doesn't construct one). A HUD's actual layout needs a
+  human in the Designer, or C++ (a hard stop per `AGENTS.md`).
+  Fallback in place until then: `PrintString` calls with a real
+  `Duration` and a stable per-message `Key` (`"ParcelHUD"`,
+  `"EconHUD"`) so messages replace themselves instead of stacking —
+  functional, not the asked-for widget.
 
 ### Material and geometry
 
@@ -336,6 +561,28 @@ Every item cost hours. They are ordered by how much.
 - **Additive geometry cannot make a dent.**
 - **Baking skeletal → static loses material slot NAMES** (count survives). Read
   the roles from the source and apply positionally.
+- **FASTBAKE SHIPS NO SIMPLE COLLISION — on any asset.** (CORRECTED
+  2026-09-01 by the coordinator, replacing its own same-day claim that
+  plain assets ship one hull.) The disproof: untouched
+  `SM_Bld_vernacular8_t0_w820` has a genuinely empty `AggGeom`, same as
+  the corner variants. The hull found on `SM_Bld_vernacular_t0_w1230`
+  was the beta lane's DIAGNOSTIC `generate_convex_collisions` output,
+  accidentally swept to disk by a save-all during the selection
+  investigation — REVERTED to committed bytes on the owner's word,
+  2026-09-01. The editor's in-memory copy still carries the hull until
+  the next restart, so the file must be re-checked clean after any
+  subsequent save-all (the coordinator holds this check).
+  The trap inside the trap: "verified unsaved via git status" is only
+  good until the NEXT save-all — an in-memory asset edit stays live all
+  session and any later broad save sweeps it to disk silently. And the
+  rule that follows (wood lane's phrasing, adopted): A SAVE-ALL IS A
+  MUTATION WITH AN UNBOUNDED SUBJECT LIST — every other mutating call
+  in this project names what it touches; `save_assets` with an empty
+  list saves whatever ANYONE dirtied. Save explicit paths, always.
+  Production is unaffected as long as selection runs `complex=true` (it
+  does — SW3, NW1 and the parcel are the proof complex traces answer);
+  anything that later wants `complex=false` traces must add simple
+  collision to the WHOLE catalogue first, not just corners.
 
 ### Measurement — the most expensive category
 
@@ -360,6 +607,16 @@ was asking the wrong question and returning "ok".**
 - **Do not invent a threshold and then judge against it.** The "surface must
   exceed sd 4.8" target was the *film grain* floor and had nothing to do with
   whether a surface reads as card.
+- **Verify the measurement chain, not the setup.** Six blocks of a
+  selection-trace investigation confirmed that `BoardCentre` correctly moved
+  the boom's position, and treated that as proof the trace was aimed at the
+  target. It wasn't: `SelectTick`'s trace fired along the camera's
+  independently input-driven forward vector the whole time — `BoardCentre`
+  only ever moved the orbit origin, never the rotation. Every "miss" across
+  six blocks was chased as an asset/vintage/collision defect; none of it
+  was, because the ray's actual path against the target was never checked
+  until block seven. When a test depends on A causing B, print B, not A —
+  confirming A happened is not evidence B did.
 
 ### Process
 
@@ -441,4 +698,11 @@ into the wrong project. It has already caught it happening.
 3. **Masked foliage material.** Opaque card fills alpha-cut leaf gaps; the pack's
    own materials clash with the diorama. Neither works.
 4. **Street lighting for two facing rows.**
-5. **`PaperDetail` texture** — bound but its contribution is untraced.
+5. **`PaperDetail` texture** — RESOLVED 2026-08-31 (direction-B lane,
+   traced from `wire_paper.py:74-93` — the code that wired it, not a
+   graph guess): PaperDetail is the ROUGHNESS DETAIL channel — a
+   grayscale sample on the same tiled UVs as the paper normal, feeding
+   the Alpha of the RoughMin/RoughMax Lerp. It replaced the older
+   world-scale Noise alpha. `PaperMottle` (checked in the same pass) is
+   bound to the three coarse normal samplers — the parked two-octave
+   system — and is not a colour channel either.

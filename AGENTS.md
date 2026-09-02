@@ -17,6 +17,17 @@ The gate is written in `Docs/ONE_BUILDING_GATE.md` and it was written **before**
 built, deliberately. If the gate passes, this repository's purpose is complete and the next
 scope is opened by the owner — not by an agent noticing there is room for a second building.
 
+**Currency note (2026-09-01, coordinator, recording the owner's own openings):** the
+sentence above has since happened, in stages, each on the owner's word in a written,
+dated document. Blocks and streets: the Stage 2 carve-out recorded in the gate file.
+The test city and its gameplay slice: `Docs/BETA_TWIN_PLAN.md` and `Docs/BETA_LANE.md`
+(owner-worded 2026-08-31). A second art direction: `Docs/DIRECTION_B.md` and
+`Docs/DIRECTION_B_LANE.md` (owner-worded 2026-08-31). The scope list above is kept as
+written because it records what THIS repository's founding question was — but where it
+appears to forbid work those documents open, the later owner-worded document wins. No
+scope beyond those documents is open, and the mechanism is unchanged: the owner opens
+scope, never an agent.
+
 Use Unreal Engine 5.8. Native Epic Unreal MCP is the authoritative bridge for editor state,
 actors, assets, viewport control, captures, and automation. Search the Toolset Registry and
 existing project tools before creating a new editor utility.

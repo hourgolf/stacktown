@@ -94,6 +94,25 @@ also earned the rule that keeps it fixed.
   defect that a check's known answer depends on, replacing the known answer
   is part of the fix. Other checks in this repo calibrated against real
   defects should be audited for the same shape.
+- **The content-browser thumbnail is an INVALID instrument for every
+  material in this project.** The master's edge wear is
+  saturate((1-max|n|)/0.30), written for axis-aligned chamfered boxes —
+  a preview SPHERE's normals are almost never axis-aligned, so wear
+  saturates over the whole ball and albedo lifts 1.42x everywhere
+  (found 2026-08-31: oak previewed as pale cream; the known-answer
+  control was MI_dist_teal, an established shipped colour, previewing
+  as washed-out mint — the control convicted the instrument, not the
+  material). Judge materials on BOXES (a staged block or a building),
+  never on CaptureAssetImage or the asset picker's ball.
+- **The anisotropy metric: grain is directional; a ratio near 1.0 is
+  not wood.** Measure a candidate texture's directional energy ratio on
+  crops of both its normal and its diffuse before admitting it as a
+  grain source. Detail without direction is not grain — three
+  high-detail pallet maps measured 1.01–1.02 and were rejected while
+  reading as "wood" to the eye. First live use (2026-08-31, direction-B
+  species sourcing) proved a veneer's grain lives in its DIFFUSE, not
+  its normal (ash: normal 1.07/2.26 vs diffuse 4.78/5.22, same asset,
+  within-subject), which is what motivated the D8 grain-mask extension.
 - **The honest catalogue precedes breadth.** No zoning or archetype plan is
   sized against declared combinations — only against baked-and-stamped
   ones. CORRECTED 2026-08-27 (S18): the ladder sweep measures the X axis
@@ -327,7 +346,23 @@ also earned the rule that keeps it fixed.
   reproducibility 2.8 levels (the real noise floor) against 44 levels of
   phase noise. dof_matrix's twelve captures were the folk version; this
   is the criterion.
-- **Prefer a WITHIN-FRAME control, and state your settle criterion**
+- **LENS STATE IS EXPOSURE STATE: assert it before every measured
+  frame.** LOOK_Post runs manual exposure with physical-camera coupling,
+  so depthOfFieldFstop drives BRIGHTNESS as well as defocus — dof.py's
+  own comment ("a brightness ladder wearing a depth-of-field label")
+  warned and nothing enforced it. 2026-08-31/09-01: a DOF study left
+  f/22 standing and silently underexposed every TestCity capture after
+  it by ~6 stops (baked-set mean 8.0 vs reference 102.4; restored to
+  0.1 by resetting f/4 alone). RULE: the capture path calls dof.reset()
+  (f/4, ISO 800, 1/60 — the documented gate condition) — MANDATORY, in
+  code, before any measured or shown frame, and any frame whose lens
+  state wasn't asserted is an unlabeled sample. The restore is session
+  state; a reload silently reverts it, which is why convention was
+  never going to hold. COROLLARY: the guard lives at ue.tool(), so a
+  capture made through DIRECT MCP calls bypasses it — captures go
+  through ue.py, full stop; a direct-MCP CaptureViewport is an
+  unlabeled sample by definition unless the same block asserts
+  LOOK_Post's lens state and the evidence says so.
   (2026-08-30). FOUR measurements went wrong in one day and every one was
   a BETWEEN-SUBJECT comparison in a scene that drifts: the grass alpha
   cutoff's "improvement" was its control moving; the tree-card "1.57x
@@ -386,6 +421,22 @@ also earned the rule that keeps it fixed.
   WALL is the material being judged - never the building listing the most
   stocks (ACCEPT_Modern lists seven and shows two at any size).
 
+## Editor grants are exclusive and serial (coordinator rule, 2026-09-01)
+
+Written after the coordinator caused the collision it exists to prevent:
+two lanes held standing approvals ("bake now-ish" / "take the editor
+when free"), both activated, and a tower bake died when the other lane's
+PIE came up mid-run — both lanes had followed announce-before-PLAY
+correctly; the mutex that failed was the coordinator. RULES:
+- An editor grant (bake window, PIE block, mutation window) is EXCLUSIVE
+  and SERIAL, issued by the coordinator one at a time.
+- A standing "do X next" EXPIRES the moment another lane's window opens,
+  and re-arms only on the coordinator's explicit relay.
+- Bakes get announced windows exactly like PIE blocks — a preflight that
+  checks once cannot protect a process that runs for minutes (the
+  2026-09-01 tower bake; bake_catalogue's per-phase PIE re-check is the
+  tooling half of the fix).
+
 ## The bake policy (owner-adopted 2026-08-30)
 
 Answering the owner's own question after four waves in two days: yes, it
@@ -427,7 +478,12 @@ fix, never to FIND one. Therefore:
   STEP, not a thing to remember. The repair depends on a level
   inventory (label -> mesh mapping), which is therefore LOAD-BEARING
   INFRASTRUCTURE: regenerated as part of every wave, never maintained
-  by hand.
+  by hand. SCOPE WIDENED 2026-08-31: the sweep covers DATA ASSETS too —
+  DA_Catalogue's mesh references are the same casualty class (found
+  all-None by the beta lane; the runtime resolved nothing), so the
+  catalogue DataAsset is repopulated by its rerunnable script as part
+  of the same post-wave step. Anything holding soft references to baked
+  assets is in scope; enumerate the holders, don't discover them.
 - The treadmill's real cost is EDITOR-WINDOW SERIALIZATION AND ATTENTION
   (16 min per 156 models — compute is not the scarce resource; the one
   writer is).

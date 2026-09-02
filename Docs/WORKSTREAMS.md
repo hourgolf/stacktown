@@ -118,7 +118,11 @@ Needs Unreal MCP access.
    in the material and it blocks using bought assets properly.
 2. **Masked foliage variant of the master.** Alpha-tested, same card band.
 3. **The single-mesh bake fidelity gap** (`HANDOFF.md` §9.1).
-4. **Trace `PaperDetail`** — bound, contribution unknown.
+4. **Trace `PaperDetail`** — RESOLVED 2026-08-31: it is the roughness
+   detail channel (grayscale, paper-normal UVs, Alpha of the
+   RoughMin/RoughMax Lerp; replaced the world-scale Noise alpha).
+   Traced from `wire_paper.py:74-93`; full record in HANDOFF §open
+   questions.
 
 **Read `HANDOFF.md` §5 "Measurement" before starting.** This lane is where every
 expensive mistake in the project happened.

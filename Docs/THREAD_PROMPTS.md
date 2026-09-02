@@ -41,8 +41,9 @@ message. Repo: `https://github.com/hourgolf/stacktown` (private).
 >    band. Opaque card fills the gaps between alpha-cut leaf cards and turns a
 >    canopy into a solid cone; the asset pack's own materials give correct
 >    leaves but clash with the diorama. Neither currently works.
-> 3. **Trace `PaperDetail`** — it is bound on master and instances but its
->    contribution is unknown. `PaperTiling` was similarly inert until this week.
+> 3. **Trace `PaperDetail`** — RESOLVED 2026-08-31: roughness detail
+>    channel (Alpha of the RoughMin/RoughMax Lerp, paper-normal UVs),
+>    traced from `wire_paper.py:74-93`. See HANDOFF for the record.
 >
 > Working rules for this project: run anything that mutates through
 > `rung.sh <script>`, which prepends a guard refusing to run against the wrong

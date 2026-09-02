@@ -90,3 +90,4 @@ Tools/measure/lens_mode.json
 # img.load BMP cache above is not - it is regenerable by construction, and the
 # asset that actually ships is the imported .uasset.
 Tools/textures/grain_masks/
+Content/Python/citystate.json

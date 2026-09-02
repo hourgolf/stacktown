@@ -1,4 +1,4 @@
-"""Replace the test city's placeholder masses with REAL baked buildings.
+"""Place the test city's 14 lots as interactive, empty BP_Parcel instances.
 
 RUN THROUGH rung.sh - it mutates. TestCity only. Idempotent.
 
@@ -9,6 +9,52 @@ NOTHING IN THE CATALOGUE FITS AN 800 UU LOT. The boxes were not a staging
 decision, they were the only thing that could stand there. BLOCK_LEN is now
 4920 (410 x 12), lots are 820, and citylayout's LOTS-ARE-CATALOGUE-WIDTHS
 test fails if that ever drifts again.
+
+REWRITTEN 2026-09-01 for "play from scratch"
+(PARCELIZATION_CONTRACT.md's amendment, A3). Two real changes from the
+version this replaces:
+
+1. SPAWNS BP_Parcel, NOT StaticMeshActor. The original §3 design ("the
+   builder emits BP_Parcel directly") was declared but never actually
+   wired - this file still spawned plain StaticMeshActors right up until
+   this rewrite, confirmed by reading the file rather than trusting an
+   earlier summary of it. Only PARCEL_Demo0 was ever a real BP_Parcel.
+2. SETS IDENTITY, NOT THE MESH. RecipeId/WidthUU/CornerSide are the
+   parcel's own immutable identity (set once, here, at spawn - matches
+   the original §3 reasoning, unchanged). Tier=0 and Owned=False ALWAYS,
+   never the pin's declared tier - a fresh purchase starts small and
+   grows via the tick (A2). The static mesh itself is never touched here;
+   BP_Parcel.ResolveMesh (called at its own EventBeginPlay, which only
+   fires in PIE) resolves an empty-lot placeholder until the driver marks
+   it owned. This means the level shows NO buildings in the bare editor
+   view now (that's expected - PARCEL_Demo0 already worked this way; the
+   city was always meant to be seen through PIE, not the editor viewport).
+
+CONSEQUENCE FOR GAP MEASUREMENT: the existing gap-rhythm logic advances
+by each building's MEASURED built extent, not its parcel width (see the
+GAPS/SETBACK block below) - originally read from the PLACED ACTOR's
+bounds. With no mesh resolved until PIE, that reads back empty/zero now.
+Measures the CANDIDATE STATIC MESH ASSET's own local bounding box instead
+(`sm.get_bounding_box()`, bare-Python, no MCP call - this script runs
+inside the editor process via rung.sh, and an MCP call from there
+deadlocks) - confirmed to match the placed-actor measurement exactly
+(cross-checked 2026-09-01: both give SM_Bld_vernacular_t0_w1230's true
+width as 746.7 uu, and the MCP StaticMeshTools.get_bounds route used only
+for that cross-check agrees to the decimal).
+
+DEFERRED, NOT DROPPED: per-parcel repaint (street.py's per-lot colour
+variation, `repaint()` below) painted the ACTOR'S ACTUAL MESH's material
+slots at spawn time - meaningless now that the mesh isn't assigned until
+PIE, and potentially reassigned again as a parcel grows. Repainting a
+mesh that changes at runtime needs its own design (most likely: the
+driver re-applies it in Python each time it pushes a Tier/Owned change,
+mirroring how it already pushes those two fields) - out of scope for this
+wiring pass per the owner's own priority order (selection feedback > HUD
+completeness > tuning; colour variation is polish, not selection feel).
+`repaint()` stays defined, just uncalled, so the working logic is here
+for whoever picks this up rather than lost. Until then every building
+uses its bake's default materials - a real, visible, explicitly chosen
+gap, not a silent one.
 
 PLACEMENT CONVENTIONS ARE street.py's, not new ones:
   - a baked building's origin is its LEFT-FRONT CORNER, so a row facing the
@@ -22,9 +68,12 @@ import random
 
 import unreal
 import _path  # noqa: F401
-import palette
 import recipes
 import citylayout as L
+import testcity_pins
+
+PARCEL_CLASS_PATH = '/Game/Stacktown/Runtime/BP_Parcel.BP_Parcel_C'
+_SIDE_LETTER = {'left': 'L', 'right': 'R'}
 
 BAKED = '/Game/Stacktown/Baked'
 # PER-LOT WIDTH, not one width. The first version hardcoded 820 because
@@ -55,21 +104,28 @@ eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 eal = unreal.EditorAssetLibrary
 
 
-def catalogue_at(width):
-    """Every (recipe, tier) whose baked mesh exists at this width."""
-    out = []
-    for rid in sorted(recipes.RECIPES):
-        if width not in [round(w) for w in recipes.widths(rid)]:
-            continue
-        for t in range(recipes.tier_count(rid)):
-            if eal.does_asset_exist('%s/%s'
-                                    % (BAKED, recipes.asset_name(rid, t, width))):
-                out.append((rid, t))
-    return out
+def baked_asset_names():
+    """Every asset name actually present under BAKED, queried directly from
+    the content browser - not derived from recipes.py's declared space,
+    which is far larger than what's baked (testcity_pins.py's own corner
+    -bake story: ten exist of what a complete set would need). This is the
+    `have` set testcity_pins.require() checks each pin against."""
+    names = set()
+    for a in eal.list_assets(BAKED, recursive=False, include_folder=False):
+        names.add(a.split('.')[0].rsplit('/', 1)[-1])
+    return names
 
 
 def repaint(actor, sm, rid, scheme):
-    """street.py's repaint, reused - slot names come from the recipe base."""
+    """street.py's repaint, reused - slot names come from the recipe base.
+
+    NOT CALLED from build() as of the 2026-09-01 rewrite - see the module
+    docstring's "DEFERRED, NOT DROPPED" note. Kept working and callable
+    (needs `palette.scheme_for(key, rid)` for `scheme` at the call site,
+    not imported here since nothing currently calls this) for whoever
+    redesigns per-parcel paint against a mesh that's assigned at PIE time
+    and can change tier during play, rather than at editor-placement
+    time."""
     base = recipes.RECIPES[rid]['base']
     want = {base.get('wall') or 'MI_dist_buff': scheme['wall'],
             base.get('trim') or 'MI_paint_cream': scheme['trim'],
@@ -89,18 +145,12 @@ def repaint(actor, sm, rid, scheme):
 
 
 def build():
-    if not (L.parcelmeta.selftests(verbose=False) and L.selftests(verbose=False)):
-        raise SystemExit('layout self-tests failed - placing nothing')
-    stock = {}
-    for b in L.blocks():
-        for _k, lx0, lx1, _c in L.lots(b):
-            w = round(lx1 - lx0)
-            if w not in stock:
-                stock[w] = catalogue_at(w)
-                if not stock[w]:
-                    raise SystemExit('no baked catalogue at width %d' % w)
-    print('catalogue: %s'
-          % ', '.join('w%d:%d' % (w, len(v)) for w, v in sorted(stock.items())))
+    if not (L.parcelmeta.selftests(verbose=False) and L.selftests(verbose=False)
+            and testcity_pins._selftest()):
+        raise SystemExit('layout/pin self-tests failed - placing nothing')
+    have = baked_asset_names()
+    print('catalogue: %d baked assets under %s' % (len(have), BAKED))
+    parcel_class = unreal.load_class(None, PARCEL_CLASS_PATH)
 
     killed = 0
     for a in list(eas.get_all_level_actors()):
@@ -109,7 +159,7 @@ def build():
             killed += 1
 
     rnd = random.Random(SEED)
-    made, missing = 0, []
+    made = 0
     gaps_used, setbacks_used, prev_end = [], [], None
     corners_placed = 0
     for bname in sorted(L.blocks()):
@@ -127,34 +177,32 @@ def build():
         cursor, prev_end = None, None
         for i, (key, lx0, lx1, corner) in enumerate(L.lots(bname)):
             w = round(lx1 - lx0)
-            rid, t = rnd.choice(stock[w])
-            # A CORNER PARCEL ASKS FOR THE CORNER ASSET. Handed by which side
-            # of the block meets the crossing, and deep so the flank is a full
-            # elevation on the cross street rather than a stub two thirds of
-            # the way along it. Every draw is made from the SAME rnd sequence
-            # whether or not the lot is a corner, so adding corners does not
-            # reshuffle the rest of the city.
-            if corner:
-                asset = recipes.asset_name(rid, t, w,
-                                           depth=recipes.DEPTH_CORNER,
-                                           corner=turn_side)
-            else:
-                asset = recipes.asset_name(rid, t, w)
+            # PINNED, NOT DRAWN (Docs/BETA_TWIN_PLAN.md, testcity_pins.py):
+            # each lot names a fixed (recipe, tier) identity so the same
+            # city renders under any catalogue - a draw from `stock[w]`
+            # dealt a DIFFERENT city per bake set (measured: removing one
+            # asset changed 7 of 14 buildings), which the wooden twin
+            # cannot demonstrate anything against. require() raises loudly
+            # (PinNotBaked) rather than falling back to a draw - the whole
+            # point of pinning is that this never silently happens.
+            rid, t = testcity_pins.identity(key)
+            asset = testcity_pins.require(
+                key, have, corner_side=turn_side if corner else None)
             sm = eal.load_asset('%s/%s' % (BAKED, asset))
-            # DRAW EVERYTHING BEFORE THE EXISTENCE CHECK. These two draws
-            # sat AFTER it, so a `continue` on a missing asset consumed
-            # fewer random numbers and shifted every later lot - meaning the
-            # city depended on WHICH ASSETS HAPPENED TO BE BAKED. Each
-            # on-demand bake changed the draws for everything after it, so
-            # the missing list moved every run and never converged. SEED
-            # promises the same city every time, not the same city per bake
-            # state.
+            # gap/setback are positioning, not identity - still drawn from
+            # the SAME rnd sequence as before pinning, so the street's
+            # rhythm is unchanged by this change.
             gap_draw = rnd.uniform(*GAPS)
             back = rnd.choice((0.0, 0.0, rnd.uniform(*SETBACK),
                                rnd.uniform(*SETBACK)))
             if not sm:
-                missing.append(asset)
-                continue
+                # require() already proved `asset` is in `have`, the exact
+                # set list_assets() just reported - load_asset failing
+                # anyway means the content browser disagreed with itself
+                # between those two calls, not a missing bake.
+                raise SystemExit(
+                    'INTERNAL: %s required %s but load_asset failed - '
+                    'have-set and content browser disagree' % (key, asset))
             # street.py's rhythm: advance by the parcel width and a VARIED
             # gap, and let some parcels sit back off the building line. The
             # gap is deliberate and legible rather than an artefact of fill.
@@ -165,7 +213,11 @@ def build():
             # 61..1926 uu against a 40..300 range - so the rhythm was not
             # transplanted at all, it was buried under fill slack. Advancing
             # by the measured right edge is what actually reproduces the
-            # intent the ranges encode.
+            # intent the ranges encode. Measured off the CANDIDATE ASSET's
+            # own local bounds now (built_w), not the placed actor's world
+            # bounds - see the module docstring's "CONSEQUENCE FOR GAP
+            # MEASUREMENT" note.
+            built_w = sm.get_bounding_box().max.x - sm.get_bounding_box().min.x
             if cursor is None:
                 cursor = lx0
             else:
@@ -177,23 +229,31 @@ def build():
             px = cursor if yaw == 0.0 else cursor + w
             face = face_y + sign * back
             a = eas.spawn_actor_from_class(
-                unreal.StaticMeshActor, unreal.Vector(px, face, Z),
+                parcel_class, unreal.Vector(px, face, Z),
                 unreal.Rotator(0.0, 0.0, yaw))       # ROLL, PITCH, YAW
             a.set_actor_label('TC_Bld_%s_%s_t%d' % (key, rid, t))
-            a.static_mesh_component.set_editor_property('static_mesh', sm)
-            # PER-PARCEL PAINT, street.py's rule. The palette is keyed on the
-            # PARCEL, not the recipe, so two of the same building are
-            # different colours. Without this every mesh takes its bake
-            # defaults and a street of 24 buildings comes out one flat brown -
-            # which is exactly how the first placement looked.
+            # IDENTITY ONLY - never the mesh. RecipeId/WidthUU/CornerSide
+            # are immutable, set once, here. Tier=0 and Owned=False ALWAYS
+            # (amendment A2/A3) - a fresh purchase starts small and grows
+            # via the tick; the pin's declared tier (t above) lives only
+            # in this actor's LABEL, a stable id, never in its live state.
+            a.set_editor_property('RecipeId', unreal.Name(rid))
+            a.set_editor_property('WidthUU', float(w))
+            a.set_editor_property('Tier', 0)
+            a.set_editor_property('Owned', False)
+            a.set_editor_property(
+                'CornerSide', _SIDE_LETTER[turn_side] if corner else '')
+            # PER-PARCEL PAINT DEFERRED - see the module docstring. Not
+            # called: repainting the mesh at spawn time is meaningless
+            # when ResolveMesh (PIE-only) assigns the real mesh later.
             if corner:
                 corners_placed += 1
-            repaint(a, sm, rid, palette.scheme_for(key, rid))
-            o, e = a.get_actor_bounds(False)
-            prev_end = o.x + e.x
+            prev_end = px + built_w if yaw == 0.0 else px
             made += 1
-    print('cleared %d placeholder(s); placed %d real buildings (%d corner)'
-          % (killed, made, corners_placed))
+    print('cleared %d placeholder(s); placed %d empty parcels (%d corner), '
+          'all %d lots pinned, require() green - each resolves its real '
+          'mesh once owned, in PIE'
+          % (killed, made, corners_placed, len(testcity_pins.PINS)))
     # VERIFY THE DISTRIBUTION LANDED - the known-answer discipline applied to
     # placement. A transplant that silently misses its ranges is not one.
     g = [v for v in gaps_used if v > 0]
@@ -204,8 +264,6 @@ def build():
     print('setbacks: %d of %d set back, max %.0f   (street.py %g..%g)'
           % (len(sb), len(setbacks_used), max(sb) if sb else 0.0,
              SETBACK[0], SETBACK[1]))
-    if missing:
-        print('MISSING %d: %s' % (len(missing), sorted(set(missing))[:4]))
     return made
 
 

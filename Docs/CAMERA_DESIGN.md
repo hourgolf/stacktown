@@ -85,6 +85,28 @@ selection mechanic**:
   a pull (~1–2%). Include it. It is the literal name of what this
   design is for.
 
+### Amendment, 2026-08-31 — selection moved off focus-as-attention
+
+The rationale above is unchanged as *design intent* and stays in force
+for the camera's cinematic language — racks, breathing, the aperture
+table. It is **no longer the selection mechanic.** In the first live
+session the owner actually played, center-of-screen "what's in focus
+is what's selected" fought the player: selecting a parcel meant
+steering the whole camera to park it at frame-center, which reads as
+attention in a director's cut and as broken aiming in a player's
+hands. The owner's own words: **cursor click, like roads** — selection
+now follows a mouse cursor and `GetHitResultUnderCursor`, matching the
+existing road-tool interaction the player already understood, not the
+boom's own gaze.
+
+The boom keeps racking focus to the selection for the cinematic
+payoff — that part of "Focus is attention" still holds, and still
+matters for the show-mode read. What changed is *what drives the
+selection*: not where the lens points, but where the player clicks.
+Treat this section as the visual-language spec for the rack itself,
+and the click-select mechanism (beta gameplay lane) as the upstream
+trigger that now feeds it.
+
 ## Exposure: breathe small, breathe slow (proposal)
 
 The doctrine fixes exposure for *judgment* — reproducibility of

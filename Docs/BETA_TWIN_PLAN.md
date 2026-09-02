@@ -95,5 +95,17 @@ DESIGN's look lane.
    assumes 6, never assumes uniform deltas — and a tier-up whose asset
    does not exist BLOCKS LOUDLY ("growth blocked: not baked") instead
    of resolving a null mesh.
+6. **Only ONE parcel is currently interactive** (found 2026-09-01,
+   designing phase E's session shape): `testcity_pins`/
+   `mk_testcity_builds.py` place all 14 pinned lots as plain
+   `StaticMeshActor`s, never `BP_Parcel` — `PARCEL_Demo0` is the sole
+   `BP_Parcel` instance in `TestCity`. The stated core loop ("buy low
+   -tier parcels -> collect -> watch them grow -> buy deeper into the
+   board") needs more than one buyable parcel to mean anything. This is a
+   real prerequisite for a meaningful phase E session, not yet scoped as
+   its own piece of work — converting some or all of the 14 pinned lots
+   to `BP_Parcel` instances (and reconciling each one's pin identity as
+   its initial `RecipeId`/`Tier`, rather than a catalogue draw) is a
+   separate body of work from phase C/D's tick/buy wiring.
 Also: all beta tooling that spawns declares intent per genbuild's
 record()/live() contract (commit 726be63).

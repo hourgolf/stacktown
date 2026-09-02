@@ -50,6 +50,8 @@ REGISTRY = {
                                               'place_catalogue.py'),
     'PLOT':      ('a lot around a home: garden, fences, drive, shed',
                                               'genbuild.build_house / build_walkup'),
+    'PARCEL':    ('runtime gameplay parcel actors - the buy/grow/resolve unit',
+                                              'BP_Parcel, beta gameplay lane'),
     'SHOP':      ('shopfront dressing: awnings, fascia boards, signs',
                                               'step_shopfronts.py'),
     'PROP':      ('yard props, and the Stage 1 tree kept deliberately',

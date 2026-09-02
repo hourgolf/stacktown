@@ -78,8 +78,12 @@ def _pin(rid, tier, w, corner):
 # range". These fourteen are a MASSING-RANGE spread, computed rather than
 # picked by taste: at each width the available identities were sorted by built
 # height (measured offline through genbuild's sink, the D4 census) and sampled
-# evenly across that range. The result spans 370 uu to 7531 uu — 3.7 m to 75 m
-# at 1:1, a real skyline rather than fourteen mid-rises.
+# evenly across that range. The result spanned 370 uu to 7531 uu at the time
+# this spread was chosen — 3.7 m to 75 m at 1:1, a real skyline rather than
+# fourteen mid-rises. SW3's repin (see "SECOND TOWER" below) now measures
+# taller than that original ceiling (8185 uu actual vs 7531 projected) - the
+# spread's INTENT (five widths, four corners, a real skyline) still holds,
+# the specific number in this sentence is dated to before that repin.
 #
 #     NE0   w2460  contemporary6    t3   h  2547 uu   CORNER
 #     NE1   w820   vernacular8      t0   h   370 uu
@@ -94,7 +98,14 @@ def _pin(rid, tier, w, corner):
 #     SW0   w1230  contemporary4    t4   h  3286 uu
 #     SW1   w820   vernacular       t5   h  1996 uu
 #     SW2   w1230  tower            t6   h  7490 uu
-#     SW3   w1640  modern7          t4   h  3971 uu   CORNER
+#     SW3   w1640  tower            t6   h  8185 uu   CORNER
+#           (repinned from modern7_t4/h3971 - see "SECOND TOWER" below.
+#           8185 is MEASURED off the actual baked mesh 2026-09-01
+#           (get_bounds, /Game/Stacktown/Baked/SM_Bld_tower_t6_w1640_d1500_cR),
+#           not the 7531 this same recipe/tier/width projected offline via
+#           genbuild's D4 census before it existed - record the gap, not just
+#           the number: an offline projection and a baked measurement
+#           disagreed by ~650 uu (~9%) for the identical identity.)
 #
 # THE FOUR CORNERS WERE REPINNED, and the reason is worth keeping. The first
 # spread was computed against PLAIN asset names and put modern6_t1, vernacular3_t4,
@@ -105,17 +116,27 @@ def _pin(rid, tier, w, corner):
 # actually buildable, still chosen for spread within that set (h 1195 / 1968 /
 # 2547 / 3971). NE0 had exactly ONE candidate and no choice was available.
 #
-# The cost of this constraint, recorded: SW3 wanted tower_t6 at 7531 uu and
-# cannot have it, so the 75 m tower survives only at SW2 (w1230, not a corner).
-# One tower, not two. If a second is wanted, that is FOUR corner bakes, not a
-# pin edit - and it is the owner's call whether a first board needs it.
+# SECOND TOWER, DECIDED AND BUILT. The cost above was recorded as FOUR
+# corner bakes, not a pin edit - that math was wrong, corrected by the
+# direction-B lane's own derivation to ONE bake (only SW3's specific
+# corner variant was ever needed, not a complete four-corner set). Owner's
+# word 2026-08-31 via the coordinator: build the second tower. Asset
+# baked, gate-passed, stamped, on disk 2026-09-01:
+# SM_Bld_tower_t6_w1640_d1500_cR. SW3 repins from modern7_t4 to tower_t6
+# below - this comment used to say the opposite of that decision while
+# the decision sat unrecorded elsewhere, which is how this thread nearly
+# died once already. The record outranks recollection only if the record
+# gets written.
 #
 # WHAT IS NOT SETTLED, AND IS NOT MINE TO SETTLE: the ARRANGEMENT. Height
 # range is measurable and is met; WHICH lot carries WHICH height is a look
-# call. As it stands the tallest three (SW0 3286, SW3 3971, SW2 7490) all sit
-# on the SW block while NE tops out at 2547 - a lopsided skyline that no eye
-# has judged and that a board read may well reject. The owner's eye decides
-# the arrangement; this table is the thing their decision edits.
+# call. As it stood before the second tower, the tallest three (SW0 3286,
+# SW3 3971, SW2 7490) already all sat on the SW block while NE topped out at
+# 2547 - a lopsided skyline that no eye had judged. SW3's repin makes this
+# MORE lopsided, not less: SW block now carries TWO towers (SW2 7490, SW3
+# 8185) alongside SW0's 3286, while NE still tops out at 2547. Recording the
+# fact, not deciding it - the owner's eye decides the arrangement; this
+# table is the thing their decision edits.
 PINS = {
     'NE0': _pin('contemporary6', 3, w=2460, corner=True),
     'NE1': _pin('vernacular8', 0, w=820, corner=False),
@@ -130,7 +151,7 @@ PINS = {
     'SW0': _pin('contemporary4', 4, w=1230, corner=False),
     'SW1': _pin('vernacular', 5, w=820, corner=False),
     'SW2': _pin('tower', 6, w=1230, corner=False),
-    'SW3': _pin('modern7', 4, w=1640, corner=True),
+    'SW3': _pin('tower', 6, w=1640, corner=True),
 }
 
 

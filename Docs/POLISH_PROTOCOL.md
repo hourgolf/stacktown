@@ -94,6 +94,65 @@ also earned the rule that keeps it fixed.
   defect that a check's known answer depends on, replacing the known answer
   is part of the fix. Other checks in this repo calibrated against real
   defects should be audited for the same shape.
+- **THE NULL FIRST: before tuning any parameter, switch its OWNER off
+  and confirm the frame changes.** One capture. 2026-09-02: a four-rung
+  source-size ladder on LIGHT_BoardKey (area varied 100x, exposure-
+  matched) moved local contrast, shadow lift and spread by nothing to
+  three decimals — because the key is INERT (intensity 26 against the
+  city rig's 2e7 rect lights, whose 67,568 uu radius reaches the board
+  from 33,000 uu away). The soft-key decision the owner had approved
+  days earlier was never in effect; every "soft key" frame judged was
+  lit by the CITY rig, sun and sky. Third member of the family with the
+  crossed normals and the f/22 leak: a mechanism reasoned about, built,
+  approved and discussed while contributing nothing measurable, because
+  nobody asked whether it did anything at all. AND THE WORD "FRAME" IS
+  LOAD-BEARING: INERTNESS IS A PROPERTY OF A LIGHT AND A FRAME, NEVER OF
+  A LIGHT ALONE. Same day: CITY_StreetKey_C measured exactly 0.00 from
+  the density board's frame and +9.39 — second-biggest light in the
+  scene — from the play board's frame. A null licenses a conclusion
+  about the frame it was measured in and nothing wider; a removal
+  argued from one frame would have gutted the lighting of the board the
+  game is played on, irreversibly, because nobody re-lights a board
+  they believe was always like that.
+- **MEASURE THE FLOOR BEFORE READING ANY DELTA, and A-B-A every
+  light.** 2026-09-02 lighting census: the first pass reported the
+  skylight and two street keys as NEGATIVE contributors — the frame got
+  brighter when they were switched off, which an additive light cannot
+  do. The scene was still converging after 476 actors had been placed
+  and the baseline rose under the whole census. Re-run A-B-A with a
+  fresh control before AND after each light (drift per pair 0.04-0.66);
+  four identical captures gave the floor (0.16 levels) that made the
+  1.3-level artefact distinguishable from a 1.3-level effect. Result
+  worth keeping: INTENSITY NUMBERS DO NOT RANK LIGHTS — CITY_Sun at 430
+  contributed +23.6 levels, CITY_Key at 2.05e7 only +8.1 (directional
+  lights don't attenuate; the rect lights are aimed 33,000 uu away).
+- **A CRASHED RUN POISONS THE NEXT RUN'S BASELINE: restore from the
+  recorded pre-touch state, never from an in-run capture.** 2026-09-02:
+  a fill ladder died on its own lens guard with the fill at 0.5x and
+  never reached its restore; the next run read the halved scene as
+  "normal", laddered down from it, and faithfully restored to the
+  contaminated values — three lights and the ISO sat wrong until a
+  confirm-not-assert check against the drift-cancelled census (the
+  numbers recorded BEFORE anything was touched) caught it. Every ladder
+  script records its baseline from the pre-touch census file, and every
+  window ends with a read-back against that file, not against memory.
+- **A guard tested only on round numbers is tested only where it cannot
+  fail.** The lens guard's exact-float equality false-refused real
+  values that round-trip through float32; its planted-defect proof
+  missed the mode because every planted value was tidy. Fixed to a 0.1%
+  relative tolerance; the lesson is that a guard's proof set must
+  include the ugly inputs production will actually hand it.
+- **ASK THE NULL QUESTION OF THE INSTRUMENT TOO: does this number mean
+  the same thing on both sides of the comparison?** 2026-09-02: the
+  lighting study's headline — local contrast "8x lower than B1" — was
+  a per-pixel gradient (grad_p90) compared across RESOLUTIONS: our
+  2802x1570 captures against a 768x768 reference. Resampled to 768 the
+  same frame reads 28, not 12; the real gap is ~3x. Two ladders had
+  been aimed at a deficit a third smaller than believed. Every
+  comparison against a reference is made at MATCHED RESOLUTION, stated
+  in the README's first line. The family at one remove: earlier
+  failures were mechanisms with no authority over the subject; this was
+  a measurement with no authority over the comparison.
 - **The content-browser thumbnail is an INVALID instrument for every
   material in this project.** The master's edge wear is
   saturate((1-max|n|)/0.30), written for axis-aligned chamfered boxes —
@@ -436,6 +495,13 @@ correctly; the mutex that failed was the coordinator. RULES:
   checks once cannot protect a process that runs for minutes (the
   2026-09-01 tower bake; bake_catalogue's per-phase PIE re-check is the
   tooling half of the fix).
+- A grant is issued against a CHECKED state, never a believed one
+  (added 2026-09-02 after the second grant to land over a live PIE —
+  the owner was playing, and "the board is quiet" was the coordinator's
+  inference from silence). The coordinator verifies PIE through the
+  bridge before every grant; the outgoing holder CONFIRMS stopped
+  rather than being assumed stopped; the incoming holder re-checks PIE
+  before its first actor regardless of what the grant says.
 
 ## The bake policy (owner-adopted 2026-08-30)
 

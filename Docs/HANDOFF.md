@@ -304,6 +304,18 @@ Every item cost hours. They are ordered by how much.
   while-doing-nothing family (with: one material instance reused
   across species, a leftover rig measured as the subject, a binding
   loop matching zero components, the zsh no-match glob below).
+- **A foreground command that TIMES OUT reports a completed step it did
+  not complete: the tool returns, the caller reads a return, and the
+  work stopped partway** (2026-09-02, direction-B lane: a board clear
+  timed out at 476 -> 126 actors and would have been reported "board
+  cleared" — the number was only visible because the clear happened to
+  print progress). A destructive bulk operation must be written as a
+  LOOP UNTIL THE QUERY IS EMPTY, not as one long call whose completion
+  is assumed from its return: `while search() non-empty: delete batch`,
+  then assert the search is empty as a separate statement. Sixth member
+  of the reports-success-while-doing-nothing family. Worse than the
+  others because a HALF-cleared board looks exactly like a cleared one
+  from anywhere except the count — the tell is a number, never a look.
 - **Under zsh, a no-match glob kills the rest of an `&&` chain silently
   enough to look like success** (2026-09-01, direction-B lane: `rm
   *.bmp` with no matches aborted the chain before a heredoc wrote a
@@ -541,6 +553,20 @@ Every item cost hours. They are ordered by how much.
   `Duration` and a stable per-message `Key` (`"ParcelHUD"`,
   `"EconHUD"`) so messages replace themselves instead of stacking —
   functional, not the asked-for widget.
+- **`StaticMesh` and `OverrideMaterials` cannot be set in one combined
+  `ObjectTools.set_properties` write — the mesh change resets the
+  material-slot array, silently dropping whatever `OverrideMaterials`
+  value was in the same call.** Caught live 2026-09-02 building
+  `study_dress.py` (a study-only editor-world dressing script, never
+  saved): the first lot's read-back showed `StaticMesh` landed correctly
+  but `OverrideMaterials` came back empty, from a single call that set
+  both. Fix: two sequential `set_properties` calls, mesh first, then
+  material — matches how `BP_Parcel.ResolveMesh` already does this in
+  Blueprint (`SetStaticMesh`, then a separate `SetMaterial` node), which
+  is presumably why that path never hit this: it was never combined into
+  one write to begin with. Any future Python-side mesh+material
+  assignment should default to the two-call form rather than discover
+  this again.
 
 ### Material and geometry
 

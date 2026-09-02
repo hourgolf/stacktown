@@ -62,7 +62,16 @@ import wood_board as wb  # noqa: E402   mi_for, ANGLES, TOOTH, constants
 S, A, OBJ, MIT = wb.S, wb.A, wb.OBJ, wb.MIT
 APP, MATD, LEVEL = wb.APP, wb.MATD, wb.LEVEL
 OUT = wb.OUT
-BAKED = '/Game/Stacktown/BakedWood'
+
+# THE LOOK-STUDY MASSES LIVE APART FROM THE SHIPPED CATALOGUE.
+# /Game/Stacktown/BakedWood holds the 36 SM_WMass_* that the game's pointer
+# resolves against - shipped content. These 20 are the density rig's own
+# vocabulary: rebuilt whenever the board is rebuilt, disposable by design.
+# They shared a folder until 2026-09-02 and were separable only by prefix,
+# which is the situation folder-over-prefix was adopted to avoid: the first
+# cleanup that deleted "the old wooden test assets" would have taken the
+# catalogue with them.
+BAKED = '/Game/Stacktown/LookStudy'
 
 # THE TOWN IS BUILT FROM THE BAKE TABLE, not from a second hand-written list.
 # The six-block version carried its own copy of the footprints, which is two
@@ -363,6 +372,14 @@ def main():
         # actually casts something and the chamfer can be judged
         ('SETB_raking', look_at(ox + town_w * 0.30, oy + town_d * 0.26,
                                 1500.0, 8000.0, -7.0, 56.0)))
+    # THE LADDER MUST SHOOT THIS EXACT FRAME. lighting_ab.py varies one
+    # lighting variable and compares frames; if it re-derived the camera it
+    # would be comparing two framings as well as two lights. Writing the
+    # transform out means the study and the board cannot disagree about where
+    # the camera was.
+    json.dump(dict(shots)['SETB_oblique'],
+              open(os.path.join(OUT, 'ab_camera.json'), 'w'), indent=1)
+
     for tag, cam in shots:
         ue.tool(APP, 'SetCameraTransform', {'transform': cam})
         time.sleep(10)

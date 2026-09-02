@@ -41,7 +41,16 @@ import _path  # noqa: F401,E402
 import genbuild  # noqa: E402
 
 RUNG = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'Tools', 'rung.sh')
-OUT = '/Game/Stacktown/BakedWood'
+
+# THE LOOK-STUDY MASSES LIVE APART FROM THE SHIPPED CATALOGUE.
+# /Game/Stacktown/BakedWood holds the 36 SM_WMass_* that the game's pointer
+# resolves against - shipped content. These 20 are the density rig's own
+# vocabulary: rebuilt whenever the board is rebuilt, disposable by design.
+# They shared a folder until 2026-09-02 and were separable only by prefix,
+# which is the situation folder-over-prefix was adopted to avoid: the first
+# cleanup that deleted "the old wooden test assets" would have taken the
+# catalogue with them.
+OUT = '/Game/Stacktown/LookStudy'
 TMP = tempfile.gettempdir()
 
 # TWENTY BLOCKS. Six read as a cluster; a woodblock town needs population,

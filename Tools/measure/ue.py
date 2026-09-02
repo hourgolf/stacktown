@@ -153,7 +153,21 @@ def _assert_lens():
                              'unchecked\n')
         return
     want = _expect_lens
-    if max(abs(a - b) for a, b in zip(got, want)) < 1e-6:
+    # RELATIVE tolerance, not exact equality. The first version compared with
+    # 1e-6 absolute and false-refused a capture whose lens was IDENTICAL to
+    # what it declared - "at f/4 ISO 853.381 1/60 but expects f/4 ISO 853.381
+    # 1/60 ... 0.0 stops off". UE stores these as float32 and they do not
+    # survive a python round-trip bit-exact, so any solved (non-round) value
+    # trips it.
+    #
+    # The planted-defect proof missed this because every value it used was a
+    # ROUND NUMBER - 4.0, 22.0, 800 - which round-trips exactly. A guard tested
+    # only on tidy inputs is tested only where it cannot fail.
+    #
+    # 0.1% is far tighter than the eye or the measurement: an ISO error that
+    # small is 0.0014 stops, while the fault this exists to catch (f/22 vs
+    # f/4) is nearly five.
+    if all(abs(a - b) <= max(1e-6, 1e-3 * abs(b)) for a, b in zip(got, want)):
         return
     raise LensStateError(
         'LENS STATE IS EXPOSURE STATE: LOOK_Post is at f/%g ISO %g 1/%g but '

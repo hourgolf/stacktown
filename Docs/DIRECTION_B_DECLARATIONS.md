@@ -1846,13 +1846,237 @@ real model. B2's white block reads as PROPOSED, which is a third state:
 proposed is a design the maker has mocked up; unowned is a lot nobody has
 touched.
 
-So direction B may want THREE plot states where the flagship needs two:
-**bare** (unowned), **white block** (proposed / bought but unbuilt), **timber**
-(built). The middle is already parked and owner-open per B2. For the owner
-when the beta session's empty-lot work surfaces, so both products answer in
-their own language rather than one borrowing the other's.
+**CLOSED by the owner, 2026-09-02: TWO STATES, NOT THREE.** *"We shouldn't
+show proposed blocks."* An unbought lot is **bare board**; a built one is
+**timber**. B2's parked white-block idea is closed with it.
+
+The reasoning that survives is the owner's own: *"players should be able to
+build wherever board space is available... we just need to figure out the grid
+behind the scenes so players feel like they have ultimate control of laying
+out their city."* A proposed-block state implies the game has decided what
+goes where, which is the opposite of that. Bare board says the space is
+YOURS; a white block says the space is SPOKEN FOR.
 
 ---
+
+### The wiring, built 2026-09-02, and the trap it walked around
+
+Implementation began under the coordinator's window. The floor is measured,
+the script is written, and the master edit itself is **not applied** — the
+wire step was refused by the permission classifier in this session and waits
+on the owner's own decision. What follows is design, recorded now because the
+trap is worth more than the wiring.
+
+**Where it lands.** `M_StacktownMaster` has **90 referencers and only 8 are
+wood.** D16 puts wear at material level for good structural reasons, and the
+price of that is a graph the flagship depends on. The four scalars are
+ScalarParameters with `bUseCustomPrimitiveData` set and `PrimitiveDataIndex`
+0..3 — so they stay named parameters an MI can still override for testing,
+and read per-instance CPD in the game. No new node type, no new material.
+
+**THE TRAP.** `EdgeWearLift` has exactly one consumer, `Multiply_1` pin B, so
+the obvious splice is:
+
+    lift' = EdgeWearLift * Attention          <-- WRONG
+
+With `Attention` defaulting to 0 this sets edge wear to **zero on all 82
+flagship materials.** It is not inert; it is the most destructive edit
+available, and it wears the costume of a no-op — a new parameter, defaulted
+off. The wooden board would never have revealed it, because the wooden board
+does not render those materials. What is wired instead:
+
+    lift' = EdgeWearLift * (1 + Attention * AttentionGain)
+
+At `Attention = 0` that is `EdgeWearLift * 1.0`, exact in IEEE rather than
+close. Negative Attention is settled dust, positive is burnish, **0 is
+today**. `AttentionGain` is per-SPECIES (an MI override, no CPD), which is
+D16's own split doing its job: the instance says how far along, the species
+says which way.
+
+**"Defaults to off" is a claim about the parameter, not about the expression
+it lands in.** That sentence is the general form and it belongs beside D9's
+half-repointed family.
+
+**The proof standard, met before the edit rather than after.** D8's
+split-proof rule requires the no-op half to prove itself by render on a
+flagship material. Three details make it real rather than ceremonial:
+
+1. **The floor spans a recompile, not two static captures.** POLISH_PROTOCOL
+   records Lumen cache invalidation measuring 47.5 levels between captures of
+   an identical scene. So the floor is: shoot, force a no-op recompile of
+   this same master, shoot again. **0.7091 levels.**
+2. **The crop is what the subject fills.** The first framing put the three
+   flagship cubes in a tenth of the picture; a whole-frame diff would have
+   averaged a real change into nothing. Re-framed, the floor rose 0.3904 ->
+   0.7091, and higher is the honest direction — the noise lives on the lit
+   surfaces, not the empty ground. Stored as fractions, not pixels, because
+   `grad_p90` already proved a resolution change can move a window silently.
+3. **Revert restores the connection BEFORE deleting nodes.** Deleting first
+   would leave `Multiply_1` pin B dangling — the flagship's edge wear gone
+   everywhere — which is worse than the edit being undone.
+
+**Attention drives EdgeWearLift, not Age.** The relay that opened this window
+said Age; D16 says Attention, and the inversion is the entire reason the
+ladder does not read as an age gradient. Followed the declaration.
+
+### THE SPECIES CURVES, MEASURED. 2026-09-02.
+
+Age is built and shot. `BaseColor * lerp(White, AgedTint, saturate(Age))` —
+inert twice over, since Age 0 returns White and `AgedTint` defaults white, so
+a species that has declared no curve renders unchanged even at Age 1.
+
+SE0 walnut and SW3 oak in one frame, same camera, same light, one variable:
+
+| Age | walnut | oak |
+|---|---|---|
+| 0.0 | 42.13 | 102.58 |
+| 0.5 | 44.81 | 100.57 |
+| 1.0 | 47.02 | 97.35 |
+
+**walnut +4.89, it LIGHTENS. oak −5.23, it darkens. 10.12 levels apart from
+one Age value.**
+
+This is the section's own argument stopping being an argument. D16 claimed
+that walnut fades toward honey-brown under UV while every other timber in the
+palette ambers and deepens, and that *"a single shared 'age toward the
+board's honey tone' curve would have been WRONG for one of the seven and
+slightly wrong for the rest, and nobody would have known why the dark
+buildings looked stale."* Two species now visibly diverge under one number.
+
+**The magnitudes are a first pass and the direction is the claim.** The seven
+tint ratios in `wear_age.py` carry D16's directions, taken from real timber
+behaviour; their strength is a dial for the owner's eye, not a measured
+constant. Nothing downstream should treat those numbers as settled.
+
+**And the limit belongs in the same breath as the result:** this ages by
+SPECIES. Every walnut on the board ages together, because the per-building
+channel does not arrive (below). Frames and their README are in
+`Saved/DirectionB/wear/species/`, and the README leads with that limit rather
+than burying it, because a reader who takes these frames for game behaviour
+has been misled by evidence that is otherwise honest.
+
+**Failure and Scorch were NOT shot.** Both are parameters connected to
+nothing. A ladder on a floating parameter is three frames of renderer drift
+wearing a label, and this pass came close to filing that report twice
+already.
+
+### CORRECTED, same day: the first Attention verdict used an INVALID test
+
+The section below was written from two measurements, and one of them could
+not have produced a result no matter what was true. **A ScalarParameter with
+`bUseCustomPrimitiveData` set reads the PRIMITIVE's data and ignores the
+instance's scalar override entirely** — so "overrode Attention to 5 on
+`MI_wood_walnut`, arris moved −0.06" was a test of nothing. The verdict was
+right; the reasoning under it was not, and a right answer reached that way is
+worth no more than a guess.
+
+**Retested with an instrument that works**: flip `bUseCustomPrimitiveData`
+off, drive the parameter from the instance, restore the flag afterwards. Age
+and Attention through the identical rig, same camera, same patch:
+
+| driven from the instance, CPD flag off | delta | drift |
+|---|---|---|
+| `Age = 1` (per-species tint) | **−10.67 levels** | −0.14 |
+| `Attention = 8` (7.4x on EdgeWearLift) | **−0.05 levels** | −0.05 |
+
+Age moves the frame seventy-six times the drift. Attention does not move it
+at all. **Attention's mechanism is confirmed dead, and Age's graph is
+confirmed live**, both now on evidence that could have come out either way.
+
+### AND THE ONE THAT BLOCKS EVERYTHING: CPD NEVER ARRIVES
+
+Age works when driven from the instance and does nothing when driven through
+Custom Primitive Data. Writing `CustomPrimitiveData.data` on the component
+read-back verified — the array grows, the values land, the assertion passes —
+and the shader ignores it.
+
+D16 predicted this in its own footnote and this lane did not act on it: *"The
+property's own description is 'Optional user defined DEFAULT VALUES for the
+custom primitive data of this primitive' — that is the editor-set defaults
+array, which is NOT the same thing as the runtime per-component values a
+`SetCustomPrimitiveDataFloat` call writes."* The write went to the defaults
+array. The shader reads the runtime one.
+
+**This blocks the whole per-instance architecture, not just one channel.**
+Age, Attention, Failure and Scorch all ride CPD by declaration, and none of
+them can be driven per-building until the delivery is a
+`SetCustomPrimitiveDataFloat` call rather than a property write. The four
+scalars, the channel map, the splices and the species curves are all correct
+and all currently unreachable from the game side.
+
+**What still stands, and it is not nothing:** the Age chain is built and
+proven, the seven species curves are written with walnut running backwards as
+D16 requires, and the material can age a whole species at a time today. What
+it cannot do is age ONE BUILDING.
+
+### THE ATTENTION MECHANISM DOES NOT WORK. Measured 2026-09-02.
+
+D16 above says: *"The burnish half already exists: `EdgeWearWidth` /
+`EdgeWearLift` is a curvature proxy that LIFTS value at the arris. It scored
+0.00 on every board this lane ever made, because `add_cube` leaves `max|n|`
+at 1 on every face. The 14 uu chamfer on the baked masses gives it a surface
+for the first time. **Attention is not a new system; it is an existing one,
+newly reachable.**"*
+
+**That last claim was a prediction, and it is false.** Measured on a shipped
+`SM_WMass_*` at a close camera, on the dressed play board:
+
+| what was driven | how far | arris response |
+|---|---|---|
+| `EdgeWearLift` default, in the master | 1.42 -> 12.0, an 8.5x lift | none |
+| `Attention`, overridden on `MI_wood_walnut` | 0 -> 5, a 5x multiplier | −0.06 levels — INVALID TEST, see the correction above; kept because the record of how a right answer was nearly reached for a wrong reason is the useful part |
+
+The column profile settles it. The pixels that respond most to Attention
+0 -> 5 are **the same columns that respond most to a 0 -> 0 comparison**, and
+the pure-drift response is TWICE as large: peak signal 0.855 against peak
+drift 1.775, a signal-to-noise of 0.48. The mechanism is not weak. It is not
+there.
+
+**The wiring is not what failed**, and that distinction matters for whoever
+picks this up. The four scalars are present on the instance and readable
+(`Age`, `Attention`, `Failure`, `Scorch`, `AttentionGain` all list on
+`MI_wood_walnut`), the CPD channels match `cpdmap.py` under its double-entry
+self-test, and `MI_wood_*` does not override `EdgeWearLift`, so the master's
+value does reach it. Everything the wire was responsible for arrived. The
+thing it arrived at was already inert.
+
+**The chamfer geometry is almost certainly present**, so that is not the
+cause either: `fastbake.py` refuses a bake where bevelled parts average under
+20 triangles each ("a chamfered box is 44 triangles, a sharp one 12"), and
+`mk_woodcat.py` bakes the shipped catalogue at `CHAMFER = 14.0`. A chamfer
+that did not take would have failed the bake, not shipped silently.
+
+**Which leaves the normals as the first suspect.** The proxy is
+`saturate((1 - max|n|) / 0.30)`, and it only separates a chamfer from a face
+if the chamfer facet carries its OWN normal. Averaged or welded vertex
+normals across the bevel would leave `max|n|` high on the facet and slightly
+below 1 on the faces — which is what the measurements weakly look like: the
+flat face moved +0.21 and the arris +0.17, the face moving MORE than the
+edge. Unconfirmed; it is the next thing to test, not a finding.
+
+**What this costs D16.** The six-state ladder's Attention rung has no
+mechanism behind it. Polish-as-attention — the inversion that stops the
+ladder reading as a simple age gradient — cannot be shown until either the
+bake emits hard normals on chamfer facets, or Attention drives something
+other than the curvature proxy. **Age, Failure and Scorch are untouched by
+this**: none of them depend on edge curvature, and all three remain wired,
+inert at 0, and ready. Attention alone is blocked.
+
+**The measurement traps this pass walked into, all of them the same shape.**
+Recorded because three separate readings were nearly reported as findings:
+
+1. A whole-frame mean over a subject occupying a tenth of the frame. The
+   flagship floor read 0.3904 and was 0.39 of empty ground.
+2. A "floor" of 0.7091 taken between two fast captures, used to convict an
+   edit at 2.13 — when doing NOTHING for 75 seconds produces 2.58. Fixed by
+   cycling wire and revert repeatedly so drift hits both populations and
+   cancels: across a wire 0.3498, across a revert 0.4951, one population.
+3. An "arris patch" 62 px wide over a chamfer about 11 px wide — 80% flat
+   face, diluting the very thing being measured by roughly five times.
+
+Every one of them would have reported a confident number about the wrong
+pixels. The column profile is the instrument that finally answered, because
+it asks the frame WHERE it responded instead of being told where to look.
 
 ## D17 — the wooden catalogue mapping. Phase F, 2026-09-01.
 
@@ -1945,3 +2169,284 @@ purpose — v0 ships fast because the owner is waiting on a wooden game.
 **Whether four bands READ as growth when a player watches a building climb is
 a look question nobody has asked yet.** It will need frames, not argument, and
 the owner seeing it live is the test.
+
+---
+
+## D18 — TestCity's lighting rig is this lane's. Owner, 2026-09-02.
+
+**Owner's word, verbatim through the coordinator: "RIG IS DIRECTION-B'S NOW."**
+
+TestCity is the wooden game's map, so the lights that actually reach the board
+— `CITY_Key`, `CITY_Fill`, `CITY_Sun`, `CITY_Sky` and the studio room's light —
+are this lane's to study and tune. Recorded here so the next reader does not
+re-litigate a boundary that has moved.
+
+**What this reverses.** Until today those lights were another lane's shared
+scene state and explicitly out of bounds; the lighting study's own closing
+section says so — "Option 2 is not [mine], and the boundary matters more than
+the study." That reading was correct when written and is now superseded.
+
+**What is unchanged.** Flagship maps keep their rigs untouched:
+`Sandbox_Bench`, `Stage2_*`. The boundary moved for TestCity only, because
+TestCity became the wooden game's map. "Your lane is only to help design-b"
+still governs everything else.
+
+### LIGHT_BoardKey is retired
+
+Measured 2026-09-02: switching it fully off changed the frame by **0.06 luma
+levels**. It has never lit anything. It sat at intensity 26 while the city
+rig's rect lights measure 2.0 x 10^7 — a units mismatch, present since the day
+it was placed and approved.
+
+It is removed rather than repaired, and the reason is the trap it became: **a
+second rig with no authority is worse than no second rig**, because it draws
+tuning effort, earns approval, and absorbs a design decision — the soft-source
+argument — that was never in effect. `board_light.py` goes with it.
+
+### The study restarts on the real instrument
+
+Null-first on **each** `CITY_*` light before any ladder: switch it off, capture,
+confirm the frame changes. Only lights that demonstrably move the frame get
+tuned. Then source size, then the ranked mechanisms of `LIGHTING_STUDY.md`.
+
+This is the guard that null result bought, now standing doctrine: **before
+tuning a parameter, switch its owner off and confirm the frame changes.**
+Applied here to four lights before a single value is touched.
+
+---
+
+## D19 — the studio surround. Owner's verdict, 2026-09-02. Design only.
+
+**The owner's verdict on the first wooden play board:** the timber, the species
+ladder and the chamfers read as wood. What still says *rendering* is **the
+floor and the backdrop** — a shadowless uniform beige plane under a flat grey
+sky.
+
+That is founding failure 5 in a lighter shade. The doctrine already says it:
+*"a model in a black void is a render; a model in a lit room is a model."* Ours
+is no longer a black void. It is a beige one.
+
+### What B2 actually shows, which is not what the brief assumed
+
+The brief asked for a table surface with grain and falloff. Reading B2 — the
+honey city photographed on a table in a studio — that is **not** what makes it
+read as a photograph:
+
+- **There is almost no floor in the frame.** The model fills it and runs off
+  every edge. There is no expanse of visible table at all.
+- **The board's own RIM is dark and prominent** — a deep timber edge banding
+  the model, which is what says "object with a boundary" rather than "terrain
+  extending forever".
+- **The backdrop is a wall with a TONAL GRADIENT**, cool and neutral against
+  the warm wood, darker at one corner than the other. Not a flat field.
+- **Depth of field does the rest** — the far edge of the model is soft, so the
+  surround is mostly *out of focus*, which is a large part of why so little of
+  it needs to exist.
+
+**So the surround problem is at least half a FRAMING problem.** A photographed
+model fills its frame; ours sits in the middle of acres of empty floor and the
+floor is therefore doing work it should never have been asked to do.
+
+### The four candidates, ranked by what the reference supports
+
+1. **THE BOARD EDGE.** A deep, dark rim around the plate. B2 has one and it is
+   the single most "object on a table" cue in the image. Cheapest of the four
+   and the only one that is pure geometry — no lighting, no material study.
+2. **FRAMING.** The play pose shows the whole board plus surround. B2 crops
+   in. Whether the boom's default pose should sit lower and closer is the
+   owner's call, and it costs nothing to test.
+3. **THE BACKDROP.** A wall with a tonal gradient, cool against the warm
+   timber, rather than a flat grey sky. The studio room already has walls;
+   whether they are in frame from the play pose is the question.
+4. **FLOOR FALLOFF.** The board should be the brightest thing on a surface
+   that darkens toward the edges. Ranked LAST of the four because B2 barely
+   shows floor — this is the one the brief led with and the reference supports
+   least.
+
+### The honest complication
+
+**The play board is sparse.** Fourteen buildings cannot fill a frame the way
+B2's several hundred do. Some of the emptiness the owner is reading as "floor
+problem" may be a DENSITY problem wearing a floor's clothes, and the density
+board — 476 buildings — is the control that would tell them apart.
+
+That comparison is free: both boards exist, and the same framing on each
+answers whether the surround or the sparseness is doing the damage. **It
+should be shot before any of the four candidates is built.**
+
+### Method
+
+Null-first and A-B-A as standing doctrine, matched resolution against B2 for
+every comparison, subject named in line one of every README. But this is a
+LOOK study before it is a measurement: pairs to the owner's eye, and the
+numbers exist to say which mechanism moved what, never which frame is right.
+
+**Boundary — the OWNER'S OWN WORD, 2026-09-02:** *"Yes — the room is theirs
+too."* TestCity's studio room — floor, walls and backdrop, and `LOOK_Post` as
+it affects the room — sits inside this lane's grant alongside the lights.
+Flagship maps keep their rooms untouched.
+
+This replaces the coordinator's extension of D18, which was recorded here
+first so the owner could veto it and was then put to them explicitly. The
+distinction matters and is kept: a boundary that moves should move in the
+owner's words, not in a relay's reading of them.
+
+---
+
+## D20 — the growing plate. Owner, 2026-09-02. Design only.
+
+**Owner's word:** *"small plate that grows... players should be able to build
+wherever board space is available (we can constrain the board size at first so
+they can't travel into the void and drop a building) we just need to figure out
+the 'grid' behind the scenes so players feel like they have ultimate control of
+laying out their city."*
+
+The placement grid and its data model are the beta lane's (`PLACEMENT_GRID.md`,
+with roads folded in, since drawn roads and placement are one system). **This
+declaration is only what a growing plate LOOKS like.**
+
+### The principle, which B3 already supplies
+
+B3's board *"reads as MANY FITTED INLAY PIECES making the landscape; that
+visible pieced construction is part of the look."*
+
+So the plate does not stretch, scale or fade in at its edges. **It grows the
+way a real planning model grows: someone cuts another piece and fits it.** The
+seam where two pieces meet is not concealed — it is the evidence that a person
+built this, and it is the same argument as D12's hand tolerance and D14's
+wedges. Every time this direction has been asked to hide a fabrication mark, it
+has been wrong to.
+
+### A new piece arrives PALE, and ages into the board
+
+This is the part that costs nothing because it already exists.
+
+D16 gives every timber an `Age` scalar that oxidises along its own species
+curve, and B3's locked patina says new work starts pale and settles. **A
+freshly cut plate piece is fresh timber.** So a newly added piece arrives at
+`Age` 0 — visibly paler than the board around it — and ambers into the field
+over game time.
+
+That makes **expansion legible with no UI at all**: the newest ground is the
+palest, and the board carries its own history the way B3's reference does with
+*"visibly fresher blocks where the model was updated over years."* The player
+can see where their city grew last, and how long ago, by looking at the floor.
+
+**The seam never fades; the tone difference does.** Piecing is permanent
+construction; age is a finish.
+
+### The growing edge shows END GRAIN
+
+A model-maker's board in progress has a raw sawn edge where the next section
+will go. End grain is what a cut across the grain exposes, and this lane
+already renders it — the polar-sampling master edit, the thing that first made
+a maple block's top read as a block cut from a log.
+
+So: **the outer boundary of the current plate shows end grain**, raw and
+unfinished, saying "this is where the board stops for now". When a piece is
+fitted beyond it, that edge becomes an interior seam and its end grain is
+covered. The board's frontier is visibly a work in progress, which is exactly
+what the owner's constraint ("constrain the board size at first so they can't
+travel into the void") should look like rather than an invisible wall.
+
+D19's dark RIM is then the finished outer edge — and it must **move** as the
+plate grows, because a rim is a trim piece a maker re-fits, not a boundary the
+world has. Rim on the finished side, end grain on the frontier.
+
+### The piece quantum — a PROPOSAL, to be reconciled with the beta lane
+
+This lane does not own the grid, but the piece size must land on the quanta
+that already govern everything:
+
+    catalogue WIDTH_QUANTUM   410      (nothing may violate this — D-roads §3)
+    citylayout BLOCK_LEN     4920      = 410 x 12
+    citylayout BLOCK_DEPTH   1500
+    woodlayout STREET         560
+
+**Proposed: one piece = one city block plus its bounding streets**, on the 410
+quantum. It is the smallest unit that is a *place* rather than a fragment — a
+piece the player recognises as "a block of my city" — and it means a plate
+grows by whole blocks, never by half a building.
+
+**The quantum is the beta lane's to set**, and if their grid wants a different
+unit this lane follows it; what must survive is that the piece is a WHOLE
+number of 410s and contains complete blocks, because a seam running through a
+building is the one thing the fitted-piece language cannot survive.
+
+### What is NOT proposed
+
+- **No proposed-block state.** Closed by the owner in the same breath: an
+  unbought lot is bare board. Bare board says the space is yours.
+- **No fade, scale or dissolve on arrival.** A piece is fitted. If it needs a
+  moment of motion, it is a piece being set down, not an object materialising.
+- **No hidden seams.** See the principle.
+
+### What was asked, kept verbatim so the answer has something to answer
+
+1. Does the plate grow **automatically** as the city reaches its frontier, or
+   is fitting a piece **a thing the player does**? B3 makes terraforming and
+   water-laying build verbs; extending the board could be one too, and that
+   would make the plate itself part of the game rather than its container.
+2. Does the **rim** move with every piece, or does the board run to a raw edge
+   until the player chooses to trim it? The second is more honest to the craft
+   and gives "finishing your board" a meaning.
+
+### Answered by the owner, 2026-09-02, relayed via the coordinator
+
+Both questions came back as one answer: **BOTH AUTOMATIC.**
+
+1. **Fitting a piece is not a player verb.** New pieces appear when growth
+   triggers fire, and the rim follows. The board is the **container**, not part
+   of the game's action.
+2. **The rim moves automatically.** There is no trim verb; the player does not
+   shape the frontier deliberately.
+
+This closes the more interesting half of the proposal against itself, and it
+should be said plainly rather than buried: the "finishing your board" reading in
+question 2 — a raw edge the player chooses when to trim — is **rejected**, and
+the "plate as a build verb" reading in question 1 is **rejected**. What survives
+is everything above about how a piece LOOKS when it arrives, and nothing about
+who makes it arrive. That is a smaller declaration than the one this section
+opened with, and it is the right size: the plate is scenery that keeps up with
+the city, not a thing the city is played on.
+
+### Growth is not scheduled yet — this declaration is DECLARED, NOT BUILT
+
+Owner, same relay: growth is **purchase-fill only at first.** No plate expansion
+in early versions. The beta lane builds a placement v0 — click-to-place along
+the existing arterial, small hard-edged plate, no growth
+(`PLACEMENT_GRID.md` §7).
+
+So everything in D20 that describes **arrival** — the pale new piece ageing into
+the board, the raw end-grain frontier, the moving rim, the visible seam — has no
+trigger to fire it and **is not to be built.** It stays declared, in this
+document, waiting. When growth is scheduled, this section is the brief; until
+then a lane that builds any of it is building for a mechanic that does not
+exist.
+
+What is NOT parked, because purchase-fill is shipping: **bare board is the
+correct look for an unbought lot** (above, "no proposed-block state"), and the
+plate's hard edge is a real edge the player is refused at, not a fade. Those are
+live requirements for v0.
+
+### The quantum needed no meeting
+
+`PLACEMENT_GRID.md` §3 adopts this lane's hard requirement **verbatim and as a
+requirement**, not as a preference it is free to soften: a plate piece must be a
+whole number of 410-uu quanta AND must contain complete blocks. It also defers
+to the proposal above — **one piece = one city block plus its bounding
+streets** — as the natural unit, noting it is exactly the shape
+`citylayout.py`'s `blocks()` already produces.
+
+Read on disk by this lane, not accepted on the relay's word. Two lanes agreeing
+about a number is exactly the kind of claim that has been wrong before in this
+document (see D17's retracted citation), and the cost of opening the file was
+one command.
+
+### The camera consequence, flagged by the beta lane and owned there
+
+`PLACEMENT_GRID.md` §3 closes by flagging that a growing plate breaks the boom's
+hardcoded `BoardCentre` (currently `(0,0,0)`) and its `Reach` clamp
+(300..40000), both sized to the 14-lot board. That is their math and their
+flag; recorded here only so this lane does not later "discover" it as new. It
+is parked with the rest of growth.

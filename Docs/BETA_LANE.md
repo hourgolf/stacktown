@@ -41,6 +41,25 @@ HUD, and PIE play sessions for the owner. NOT in scope: phase F
    POLISH_PROTOCOL's instruments before inventing anything. When a
    fault has a syntactic signature, grep is the detector. One capture
    is one sample. A convenient accessor is not a measurement.
+9. **A lane never runs PIE against the owner's real citystate.json —
+   absolute, not stakes-weighted; "it's only demo data" is not a
+   defence.** The economy driver (`init_unreal.py`) defaults every
+   PIE session to the owner's real file unless a lane deliberately
+   opts out first. Two opt-out routes, checked in this order:
+   `unreal._stacktown_state_override = <path>` (a Python-channel
+   session sets this directly before `StartPIE`); or write
+   `Content/Python/lane_pie.marker` (any file tool can do this — empty
+   content means `citystate_test.json`, non-empty content is read as
+   the path to use). **Protocol: write the marker (or set the
+   override) → StartPIE → test → StopPIE.** The driver deletes the
+   marker and clears the override the moment it sees PIE end, so
+   neither can survive into the owner's next hand-started session —
+   including a marker left behind by a session that crashed mid-test.
+   Every PIE start logs `CITY DRIVER: session state file -> <path>
+   (override|marker|default)`; a lane whose session logged `default`
+   forgot the marker, and that log line is the audit trail for it.
+   The owner never writes the marker. Full reasoning and the two
+   named failure modes: HANDOFF §5.
 
 ## Opening prompt for the session that staffs this lane
 

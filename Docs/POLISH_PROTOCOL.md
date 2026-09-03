@@ -153,6 +153,117 @@ also earned the rule that keeps it fixed.
   in the README's first line. The family at one remove: earlier
   failures were mechanisms with no authority over the subject; this was
   a measurement with no authority over the comparison.
+- **A "no-op" edit to a SHARED master must be neutral from every
+  referencer's frame, and the obvious form usually isn't.** 2026-09-02:
+  the natural splice for the wear system, EdgeWearLift * Attention,
+  drives every FLAGSHIP material's edge wear to ZERO at the default
+  Attention = 0 — the precise opposite of inert — and the wood board
+  could never have shown it, because the wood board renders none of
+  those 82 materials. The neutral form is EdgeWearLift * (1 + Attention
+  * AttentionGain): exactly 1.0 at the default in IEEE, not merely
+  close. Rules that follow: a shared-master edit is proven on a frame
+  of the OTHER product's materials (concrete/slate/card cubes at a
+  fixed camera); the floor for that proof spans a forced no-op
+  recompile of the same master; the diff reads on a crop that the
+  subject actually fills; and a revert restores the original
+  connection BEFORE deleting, because a dangling consumer pin is a
+  silent loss worse than the edit it undoes.
+- **Three measurement traps of one shape (2026-09-02, wear proof), and
+  the instrument that beat them.** (1) A whole-frame mean over a
+  subject filling a tenth of the frame is a measurement of the empty
+  ground — crop to what the subject fills. (2) A floor taken between two
+  fast captures cannot convict an edit measured minutes later: doing
+  NOTHING for 75 s produced 2.58 levels of drift against a 0.39 "floor".
+  Cycle wire/revert so drift lands on BOTH populations (across a wire
+  0.35, across a revert 0.50 — one population, edit inert). (3) A patch
+  wider than the feature dilutes it — a 62-px "arris patch" over an
+  ~11-px chamfer was 80% flat face, ~5x dilution. THE INSTRUMENT THAT
+  WORKED: the COLUMN PROFILE — ask the frame WHERE it responded rather
+  than telling it where to look; if the columns responding to the edit
+  are the same columns responding to a 0->0 comparison, the mechanism is
+  absent, not weak. And the finding it delivered: EdgeWearLift is INERT
+  on the baked wooden masses — D16's "the chamfer gives edge wear a
+  surface" was a prediction wearing the grammar of a fact. Suspect the
+  NORMALS across the bevel, not the geometry.
+- **CUSTOM PRIMITIVE DATA HAS TWO ARRAYS, AND THE SHADER READS THE OTHER
+  ONE.** 2026-09-02: the component property `customPrimitiveData` is the
+  editor-set DEFAULTS array ("optional user defined default values" —
+  D16's own footnote); a write there read back perfectly and reached
+  the shader never. Runtime per-instance values need a FUNCTION CALL —
+  SetCustomPrimitiveDataFloat on the component — not a property write.
+  Corollary that invalidated a test the same day: a ScalarParameter
+  with bUseCustomPrimitiveData set IGNORES INSTANCE OVERRIDES entirely
+  (it reads the primitive), so overriding it on an MI to test the chain
+  tests nothing; flip the flag off, drive from the instance, restore.
+  A material can be proven to WORK at species level this way (Age: -10.67
+  levels vs 0.14 drift) while being unreachable per building until the
+  runtime call exists.
+- **A SAFETY GUARD FIRING UNEXPECTEDLY IS EVIDENCE, NOT AN OBSTACLE — and
+  if you must substitute a guard, reuse the file's own verification
+  helpers.** 2026-09-02: study_dress --clear refused with "wrong level
+  open ()" — an EMPTY level name, which was PIE spinning up underneath
+  the clear (the PIE world answers with no level name). The lane read
+  it as a bridge quirk, routed around the guard with a fresh check of
+  its own, and that fresh check misread an unset StaticMesh (the bridge
+  returns unset refs in several shapes — the STRING 'None' among them)
+  as still-dressed, aborting after one parcel; the file's own
+  _is_cleared() helper existed for exactly that and was sitting in the
+  file being worked around. Result: 13 of 14 parcels left dressed in
+  the editor world with PIE live — one save-on-quit away from breaking
+  from-scratch play. Rule: an unexpected refusal stops the window and
+  gets diagnosed; a substituted guard is the file's own helper, never a
+  new one written at the moment you are already off the path.
+- **PROVENANCE OVERRIDES THE REFERENCER SNAPSHOT.** A referencer graph
+  answers "what points at this asset RIGHT NOW"; for anything a script
+  assigns at build time to a rig that is currently down, the honest
+  answer is zero and the honest conclusion is nothing. 2026-09-02:
+  MI_board_plot and MI_board_road showed 0 referencers and read as
+  dead — wood_set.py:131 declares them in BOARD_STOCKS and line 323
+  applies them to the board rig every build. Before calling an asset
+  unused, grep Content/Python for its name; the script that creates or
+  assigns it is the ownership evidence, and it outranks the snapshot.
+- **The edge-wear curvature proxy reads the SHADED normal
+  (PixelNormalWS), not the geometric one — a normal-mapped surface
+  swamps the chamfer signal.** 2026-09-02, on the wood fork: the
+  "welded bevel normals" hypothesis was DISPROVEN by measurement
+  (72.7% of both face and shading normals on SM_WMass_w1230_tower are
+  non-axis; the bevel is hard-normalled exactly as edge_wear.py
+  wanted); the real defect is that the proxy asked a geometric
+  question ("is this facet off-axis?") of a shaded answer (the normal
+  AFTER PaperNormalAmount 0.55 perturbs it) — which is also why driving
+  the lift moved the FLAT face more than the arris. Swapped to
+  VertexNormalWS on the fork only. AND THAT DID NOT FIX IT (signal/drift
+  1.20 against a 0.478 floor) — a real defect fixed, the mechanism still
+  inert, next suspect the lerp's magnitude (Multiply_1's A input).
+  Reported unfinished on purpose: a plausible fix that doesn't move the
+  frame is not a result.
+- **"THE CONTENT IS BACK" AND "THE ASSET IS CLEAN" ARE DIFFERENT FACTS.**
+  2026-09-03: the shared master was edited and then fully, correctly
+  reverted (195 expressions, original drivers verified) — and still read
+  is_dirty=TRUE, because the flag survives an edit-then-revert. A dirty
+  flag is a loaded gun: any save-all (or the quit prompt) re-serializes
+  the asset and lands a changed LFS oid in the repo — a flagship asset
+  change as a side effect of someone else's tidy-up. After reverting a
+  shared asset, RELOAD IT FROM DISK (writes nothing, restores disk
+  truth, clears the flag) and verify is_dirty=False; and every lane
+  saves by EXPLICIT PATH, never an empty list, never save-all.
+- **A READ-BACK PROVES ASSIGNMENT, NEVER EFFECT — for fonts as for CPD.**
+  2026-09-03: the runtime-built HUD bar came up with every glyph as
+  the missing-glyph fallback box on the owner's screen, after the
+  SlateFontInfo built from the imported FontFace assets had been
+  "verified by constructing one and reading it back" and the live
+  TextBlocks read their font objects as non-null. Same shape as the
+  CPD defaults array and the zero-width pads: the input is set, the
+  output was never looked at. Any runtime-styled UI is verified by
+  RENDERED glyphs (a capture, or the owner's eyes) before the debug
+  channel it replaces is retired; a stock engine font (Roboto) is the
+  null control that separates "the SetFont path" from "these assets."
+  The general form (design lane, same day): a read-back proves the
+  WRITE LANDED, never that the thing the write was FOR now works — and
+  the danger is reporting the two in the same column, where the tested
+  rows lend the untested one their weight. Four times this week the
+  instrument answered a narrower question than the one asked, and the
+  tell was identical every time: nothing failed.
 - **The content-browser thumbnail is an INVALID instrument for every
   material in this project.** The master's edge wear is
   saturate((1-max|n|)/0.30), written for axis-aligned chamfered boxes —

@@ -2353,6 +2353,34 @@ owner's words, not in a relay's reading of them.
 
 ---
 
+
+### The room has TWO masters, and nobody had mapped the second
+
+Recorded 2026-09-02, after the studio room rendered magenta in PIE and the
+shared master was the obvious suspect:
+
+| actor | material | parent |
+|---|---|---|
+| `CITY_Room_Floor` | `MI_studio_grey` | `M_StacktownMaster` |
+| `CITY_Room_N/S/E/W` | `MI_studio_wall_city` | **`M_StudioWall`** |
+
+`M_StudioWall` is built by `mk_studioroom.py` and is **UNLIT emissive** — a
+sound-stage cyclorama that ignores every light in the level, with
+`use_emissive_for_dynamic_area_lighting` off so its emission stays out of
+Lumen GI and the room contributes provably zero light to the board.
+
+**Why this matters beyond bookkeeping.** Both the floor and the walls were
+reported magenta, and the shared master — which this lane had edited and
+reverted — was the natural culprit. But only the FLOOR descends from it. The
+walls descend from a second master this lane never touched, and an unlit
+material has no lighting path to invalidate in the first place. So the shared
+master cannot be the whole cause, and possibly not any of it.
+
+D19 gave this lane the room. It did not give this lane a map of the room, and
+"the studio surround is ours" quietly implied one master where there are two.
+Anyone reasoning about the room's look — the backdrop gradient, the floor —
+now has both.
+
 ## D20 — the growing plate. Owner, 2026-09-02. Design only.
 
 **Owner's word:** *"small plate that grows... players should be able to build

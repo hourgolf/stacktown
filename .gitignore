@@ -91,3 +91,15 @@ Tools/measure/lens_mode.json
 # asset that actually ships is the imported .uasset.
 Tools/textures/grain_masks/
 Content/Python/citystate.json
+
+# ---- lane state-file isolation (HANDOFF.md Sec5, 2026-09-03) ---------------
+# citystate_test.json is a lane's throwaway save, written by the driver when
+# lane_pie.marker is present; the marker itself is the lane's own opt-out
+# signal, written before StartPIE and deleted by the driver at PIE end. Never
+# the owner's real citystate.json (see the entry above), never meant to be
+# reviewable state - both are per-session scratch, same reasoning as that one.
+Content/Python/citystate_test.json
+Content/Python/lane_pie.marker
+
+# Wear A/B captures (design lane, 2026-09-03): ~1 GB of PNGs, local only.
+Saved/DirectionB/wear/

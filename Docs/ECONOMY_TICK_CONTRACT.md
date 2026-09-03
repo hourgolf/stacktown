@@ -247,6 +247,53 @@ called (see "Explicitly out of scope" below, unchanged principle,
 same file). Decide it with the owner's own economy notes when that pass
 happens, not by inference from tonight's session.
 
+## Patina's Age channel — declared 2026-09-02, blocking the wear window
+
+The design lane's wear system reads CPD channel 0 (`Age`, `cpdmap.py` —
+"oxidises along THIS species curve") per parcel. This contract declares
+the semantic before the driver wires it, per the design lane's own ask.
+
+**Age = ticks-since-last-tier-change, normalized, RESET TO 0 ON TIER-UP.**
+`Age = min(1.0, age_ticks / AGE_MATURE_TICKS)`, `AGE_MATURE_TICKS = 150`
+(5 minutes at the 2s tick throttle — a tunable constant, not a measured
+or final number, changeable in one place if it reads too fast or slow
+live).
+
+**Corrected 2026-09-02, same day it was first declared wrong: this is
+locked owner doctrine, not this lane's call.** `Docs/DIRECTION_B.md` B3,
+verbatim: "PATINA MECHANIC: LOCKED. New/upgraded buildings start pale
+and age toward the board's honey tone over game time." UPGRADED, not
+just new — a tier-up is exactly the event this resets on. The first
+version of this declaration argued Age should stay monotonic (cumulative
+oxidation, D3's "does not repaint itself" read as being about wear too)
+— coherent on its own terms, and wrong: it argued against the owner's
+own intake words without checking them first, the repo-outranks
+-consensus lesson applied to a design doc instead of a code claim. D3 is
+about TONE (species/colour never changing with tier); B3 is the actual
+patina-over-time mechanic, and B3 governs Age. `Attention` (channel 4)
+still layers on top of this, not instead of it — D16's nuance refines
+what a *settled* building's edges look like, it doesn't override B3's
+own reset-on-upgrade rule.
+
+**Where this state lives, and why not in `citystate.json`'s core
+schema:** `age_ticks` is tracked and persisted by `_sync_parcels`
+directly, NOT by `econrules.tick()`/`citytick.city_tick()`. Both of
+those have their own proven self-tests asserting EXACT state equality
+against known answers (`citytick.py`'s own `__main__`, `assert s ==
+direct_s2`); adding a field inside the tick pipeline itself would break
+those assertions for a change that has nothing to do with the economy
+they're proving. `_sync_parcels` already reads and writes
+`citystate.json` independently of tick/buy (it's where Price/Accum
+already get pushed) — `age_ticks` is one more additive field down that
+same, already-proven side door, incremented once per throttled sync for
+every currently-owned parcel, never touched by `econrules.py` at all.
+
+**The other three wear channels (`Attention`, `Failure`, `Scorch`) stay
+at 0 in this pass** — their own mechanics don't exist yet, and 0 is
+already each one's correct neutral/inert value per `cpdmap.py`'s own
+table (`Attention` is -1..+1 with 0 = "today"; `Failure`/`Scorch` are
+0..1 with 0 = untouched).
+
 ## Explicitly out of scope
 
 Packaged/shippable builds — `PythonScriptPlugin` is editor-only, so (b')

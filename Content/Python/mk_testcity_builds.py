@@ -71,9 +71,15 @@ import _path  # noqa: F401
 import recipes
 import citylayout as L
 import testcity_pins
+import placement
 
 PARCEL_CLASS_PATH = '/Game/Stacktown/Runtime/BP_Parcel.BP_Parcel_C'
-_SIDE_LETTER = {'left': 'L', 'right': 'R'}
+# Deep underground, all 30 stacked at one point - collision is off and the
+# actor is hidden before this script ever returns, so overlap and
+# visibility don't matter, but a real out-of-band position is a second,
+# independent guarantee against a stray trace ever landing on a dormant
+# one (belt-and-braces, not load-bearing on its own).
+_POOL_GRAVEYARD = unreal.Vector(0.0, 0.0, -50000.0)
 
 BAKED = '/Game/Stacktown/Baked'
 # PER-LOT WIDTH, not one width. The first version hardcoded 820 because
@@ -154,7 +160,7 @@ def build():
 
     killed = 0
     for a in list(eas.get_all_level_actors()):
-        if a.get_actor_label().startswith(('TC_Mass', 'TC_Bld')):
+        if a.get_actor_label().startswith(('TC_Mass', 'TC_Bld', 'POOL_')):
             eas.destroy_actor(a)
             killed += 1
 
@@ -231,29 +237,58 @@ def build():
             a = eas.spawn_actor_from_class(
                 parcel_class, unreal.Vector(px, face, Z),
                 unreal.Rotator(0.0, 0.0, yaw))       # ROLL, PITCH, YAW
-            a.set_actor_label('TC_Bld_%s_%s_t%d' % (key, rid, t))
-            # IDENTITY ONLY - never the mesh. RecipeId/WidthUU/CornerSide
-            # are immutable, set once, here. Tier=0 and Owned=False ALWAYS
-            # (amendment A2/A3) - a fresh purchase starts small and grows
-            # via the tick; the pin's declared tier (t above) lives only
-            # in this actor's LABEL, a stable id, never in its live state.
-            a.set_editor_property('RecipeId', unreal.Name(rid))
-            a.set_editor_property('WidthUU', float(w))
-            a.set_editor_property('Tier', 0)
-            a.set_editor_property('Owned', False)
-            a.set_editor_property(
-                'CornerSide', _SIDE_LETTER[turn_side] if corner else '')
-            # PER-PARCEL PAINT DEFERRED - see the module docstring. Not
-            # called: repainting the mesh at spawn time is meaningless
-            # when ResolveMesh (PIE-only) assigns the real mesh later.
+            # DORMANT, not active - empty-mode's unified pool (2026-09-02,
+            # PARCELIZATION_CONTRACT.md's pool doctrine, extended to
+            # pins): this actor's real identity (RecipeId/WidthUU/Tier/
+            # Owned/CornerSide) is set by init_unreal.py's pin-
+            # reactivation pass at PIE start, reading testcity_pins
+            # directly - never here, and never TC_Bld_ labelled anymore.
+            # What DOES have to happen here, and only here: the gap/
+            # setback rhythm above needs the real baked asset's bounding
+            # box (built_w), an editor-only read the driver doesn't have
+            # and shouldn't need - so this actor is pre-positioned at its
+            # final, rhythm-adjusted transform right now and left hidden/
+            # non-colliding until the driver decides, via EmptyStart,
+            # whether to ever show it. Label carries the pin key so
+            # reactivation can find it by name, same discipline as the
+            # placement pool's own POOL_NN -> pid relabel on activation.
+            a.set_actor_label('POOL_PIN_%s' % key)
+            a.set_actor_hidden_in_game(True)
+            a.set_actor_enable_collision(False)
             if corner:
                 corners_placed += 1
             prev_end = px + built_w if yaw == 0.0 else px
             made += 1
-    print('cleared %d placeholder(s); placed %d empty parcels (%d corner), '
-          'all %d lots pinned, require() green - each resolves its real '
-          'mesh once owned, in PIE'
-          % (killed, made, corners_placed, len(testcity_pins.PINS)))
+
+    # DORMANT POOL (PARCELIZATION_CONTRACT.md: "a parcel actor is a
+    # pooled, pre-placed object; placement activates, reset deactivates").
+    # No Python API in this build spawns an actor into the GAME/PIE world
+    # (confirmed 2026-09-02 by exhausting every candidate: World has no
+    # spawn method at all, GameplayStatics has none for generic actors,
+    # and the only spawn_actor_from_class in the whole `unreal` module
+    # lives on the two editor-world-only subsystems) - so a placement-
+    # time click can only ACTIVATE an actor that already exists, never
+    # create one. These 30 are that inventory: no identity (BP_Parcel's
+    # own class defaults - Owned=False - already read as an empty-lot
+    # placeholder, same as a fresh pinned lot), hidden, non-colliding,
+    # labelled POOL_00.. so the driver can find them by prefix and so a
+    # half-activated one is never mistaken for real city content.
+    pooled = 0
+    for i in range(placement.POOL_SIZE):
+        a = eas.spawn_actor_from_class(
+            parcel_class, _POOL_GRAVEYARD, unreal.Rotator(0.0, 0.0, 0.0))
+        a.set_actor_label('POOL_%02d' % i)
+        a.set_actor_hidden_in_game(True)
+        a.set_actor_enable_collision(False)
+        pooled += 1
+
+    print('cleared %d placeholder(s); pre-positioned %d dormant pin slots '
+          '(%d corner) at their rhythm-adjusted transforms, all %d lots '
+          'pinned, require() green - identity/visibility land at PIE '
+          'start via init_unreal.py\'s pin-reactivation pass, gated on '
+          'EmptyStart; %d dormant placement-pool actors staged '
+          '(placement.POOL_SIZE)'
+          % (killed, made, corners_placed, len(testcity_pins.PINS), pooled))
     # VERIFY THE DISTRIBUTION LANDED - the known-answer discipline applied to
     # placement. A transplant that silently misses its ranges is not one.
     g = [v for v in gaps_used if v > 0]

@@ -536,3 +536,131 @@ real problem instead of an accepted one — see
 `Docs/ROADS_AS_MECHANIC.md` §3.1, which already names `citylayout.py`'s
 hard-coded grid as something drawn roads will displace as a source of
 truth regardless.
+
+## Pool doctrine, 2026-09-02 — a parcel actor is pooled, not spawned
+
+**A `BP_Parcel` instance is now a pooled, pre-placed object. Placement
+ACTIVATES one; reset DEACTIVATES it back. Nothing in this project spawns
+a `BP_Parcel` at runtime, and nothing should — the capability doesn't
+exist to spawn one.** This amends §3/A3 above in one specific way: the
+builder (`mk_testcity_builds.py`) now emits TWO kinds of `BP_Parcel`
+content, not one — the 14 pinned lots exactly as A3 already describes,
+PLUS a fixed-size pool of dormant actors (`placement.POOL_SIZE`, 30 as
+of this writing) with no identity, hidden, collision off, labelled
+`POOL_00`..`POOL_29`.
+
+**Why, found live, not designed in advance:** `PLACEMENT_GRID.md`'s v0
+(free placement over the pinned board) was built assuming a runtime
+spawn call existed, the same way `mk_testcity_builds.py` already spawns
+the 14 pins at editor time via `EditorActorSubsystem.
+spawn_actor_from_class`. The owner's first live click proved that
+assumption wrong: `unreal.World` has no spawn method in this build,
+`GameplayStatics` has none for generic actors (only decal/sound/emitter/
+dialogue), and the only `spawn_actor_from_class` in the entire `unreal`
+Python module lives on `EditorActorSubsystem`/`EditorLevelLibrary` —
+both editor-world only, the same world-split trap `_sync_parcels`
+already has to avoid (`HANDOFF.md` §5). Confirmed exhaustively (a
+module-wide scan for every class exposing anything named `spawn_actor*`)
+before landing on the pool, not assumed after one failed guess. A
+Blueprint-side reverse-request channel (Python validates, a Blueprint
+already ticking in the game world calls the native Spawn-Actor-From-
+-Class node) was checked too — the node itself IS placeable via the DSL
+(`Game|SpawnActorfromClass`, confirmed via `get_node_type_pins`) — but
+was passed over for the pool: every pool operation (`set_actor_location_
+and_rotation`, property writes, `set_actor_hidden_in_game`, `set_actor_
+enable_collision`) was already proven live this session, where the
+reverse-channel path would have been new DSL-graph surface with its own
+unresolved ordering risk (a plain, non-deferred spawn runs `BeginPlay`
+before a `then`-branch could set identity).
+
+**The mechanics:**
+- `placement.POOL_SIZE` (currently 30) is the ONE authority for pool
+  size — declared in `placement.py` itself, with the derivation (v0's
+  physical max at its one fixed width, `floor(12100/820)=14` per side x
+  2 sides = 28, plus 2 spare) written where the constant lives.
+  `mk_testcity_builds.py` imports it rather than holding a second copy.
+- `placement.place()` refuses once `POOL_SIZE` placed lots already exist
+  in `citystate.json` (counted by the `'placement'` key, independent of
+  the live pool) — the count check is pure Python, no live-actor
+  visibility needed, and in practice the OVERLAP/off-board geometry
+  checks refuse first (~28 max), making the count check a backstop for
+  when geometry changes (a second width, more frontage) outpaces it.
+- Activation (`init_unreal.py`'s placement channel): finds the lowest-
+  numbered live actor labelled `POOL_*`, sets location/rotation →
+  identity (`RecipeId`/`WidthUU`/`Tier=0`/`Owned=False`/`CornerSide`) →
+  label (the `pid`) → hidden off → collision on, in that order, so the
+  actor is never visible or solid while half-configured. The actor's
+  own `EventTick` change-detection (A5) is what actually resolves the
+  placeholder mesh — activation is not a special case of that mechanism,
+  it's the same one every tier-up already uses.
+- Deactivation (the reset channel): every live actor whose label is `P`
+  + digits only (a placed `pid`, by `_next_pid`'s own construction —
+  pinned labels are always a compass prefix + digit, e.g. `SW2`, never
+  bare `P`) gets hidden, collision off, and relabelled to a pool slot
+  number not already in use by another dormant actor.
+- Exhaustion (no dormant actor found for an accepted placement) and
+  activation/deactivation count mismatches both log a warning AND show
+  the player an on-screen message — loud on both sides, not just the
+  log, after the first live click's silent refusal read as "nothing
+  happens."
+
+**Revisit the moment roads/growth adds frontage or a second placeable
+width** — the whole cap, and the assumption that one fixed-size pool
+covers v0's entire legal area, is provably a v0 artifact the day either
+changes.
+
+### Extension, 2026-09-02 — empty mode: the 14 pins join the same pool
+
+**A pinned lot is now ALSO a pooled, pre-placed object — not a second
+mechanism alongside the placement pool, the same one.** The owner's own
+four-decision brief (`[[stacktown-roads-mechanic]]`) named both a
+starter-preset start and an empty-board start; this is that decision,
+realized with zero new activation machinery. `GameInstance.EmptyStart`
+(bool, instance-editable, CDO default `TRUE`) gates whether the 14 pins
+activate at session start — `false` shows the board every session before
+this one ran on; `true` opens fully empty, the placement pool the only
+way anything appears.
+
+**Why the pins are PRE-POSITIONED at build time rather than positioned
+by the driver at reactivation, and why that's not a shortcut:**
+`mk_testcity_builds.py`'s own street rhythm (randomized gap/setback,
+seeded, advancing by each candidate's REAL baked bounding box —
+`built_w`, read via `sm.get_bounding_box()`) is EDITOR-ONLY math; the
+driver has no equivalent read. Two honest options existed: duplicate
+that math in Python (two copies of one algorithm, guaranteed to drift
+the first time either one changes without the other), or let the
+builder — which already computes the correct rhythm-adjusted transform
+for every other purpose — bake that transform into the dormant actor's
+initial position, leaving ONLY identity/visibility/collision for
+reactivation to decide. The second option is what shipped: each pin's
+dormant actor is spawned at build time at its exact rhythm-adjusted
+transform, labelled `POOL_PIN_<key>` (e.g. `POOL_PIN_NE0`) for that
+SPECIFIC key, hidden, non-colliding, no identity. **Do not "simplify"
+this into computing position at reactivation time** — that reintroduces
+the exact two-copies-of-one-algorithm hazard this design exists to
+avoid, for a rhythm that was never state, only ever build-time
+placement.
+
+**Reactivation is a direct label lookup, not `plan_reactivation`'s
+sorted allocation.** A placed lot can claim ANY dormant pool slot
+(`POOL_00`..`POOL_29`, fungible); a pin cannot — it has exactly ONE
+predetermined slot, the one build labelled for it. `init_unreal.py`'s
+`_reactivate_pinned_parcels` therefore just checks "does `POOL_PIN_<key>`
+exist" per pin and activates it (identity from `testcity_pins` directly
+— `RecipeId`/`WidthUU`/`Tier=0`/`Owned=False`/`CornerSide` from
+`citylayout.cross_street_end` — then label → hidden off → collision on,
+same order as placement activation), never allocates. `POOL_PIN_*`
+labels are excluded everywhere the placement pool searches for a
+claimable slot (the click-driven activation, the reset-deactivation
+loop's `used_nums` count) — a pin's reserved slot is never fungible with
+the general 30, in either direction.
+
+**The overlap scan now checks pinned spans too.** Once pins and
+placements share a pool, a player placing across a pinned pad became
+reachable for the first time — `placement.PINNED_SPANS` (computed once
+from `citylayout.blocks()`/`lots()`, independent of whether any pin is
+currently activated) is checked in `resolve_click` before the placed-lot
+loop, with a distinct "crosses a pinned lot" message. This is unrelated
+to `EmptyStart`: the pins' GROUND is reserved even when they're not
+currently shown, because `EmptyStart` is a per-session display choice,
+not a redefinition of where the starter city's lots physically sit.

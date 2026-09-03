@@ -125,19 +125,40 @@ Not used in the HUD, kept as sources: `SixCaps.ttf` (the face Tomorrow
 replaced), `SpaceMono-Regular.ttf`, `EricaOne-Regular.ttf`, and the six
 Tomorrow weights the bar does not call for.
 
-**Font assets — IMPORTED 2026-09-02, verified binding:**
+**Font assets — the ones to bind, corrected 2026-09-02:**
 
-    /Game/Stacktown/UI/Fonts/F_Tomorrow_Regular
-    /Game/Stacktown/UI/Fonts/F_Tomorrow_Medium
-    /Game/Stacktown/UI/Fonts/F_Tomorrow_SemiBold
-    /Game/Stacktown/UI/Fonts/F_SpaceMono_Bold
+    /Game/Stacktown/UI/Fonts/Tomorrow-Regular_Font
+    /Game/Stacktown/UI/Fonts/Tomorrow-Medium_Font
+    /Game/Stacktown/UI/Fonts/Tomorrow-SemiBold_Font
+    /Game/Stacktown/UI/Fonts/SpaceMono-Bold_Font
 
-These are **FontFace** assets, and that is the right type: `SlateFontInfo`
-takes a FontFace directly — `SlateFontInfo(font_object=<FontFace>, size=N)`
-binds and reads back — so no `UFont` wrapper is needed. A first attempt built
-one anyway and died on `unreal.TypefaceEntry`, which Python does not expose;
-the wrapper was never required. `Content/Python/import_fonts.py` rebuilds all
-four in one command.
+**These are `UFont` assets, and the earlier claim that a raw `FontFace` would
+do was wrong.** `SlateFontInfo(font_object=<FontFace>)` assigns and reads back
+true — and renders every glyph as the missing-glyph box. The beta lane's
+control settled it: Roboto, a UFont, draws real glyphs through the identical
+`SetFont` path with the identical typeface value, while a FontFace beside it
+draws boxes. Raw FontFace via SlateFontInfo does not draw in this build.
+
+**Ruled out on the way, by measurement rather than argument:** `LoadingPolicy`
+reads `LazyLoad` with a `SourceFilename` outside Content, which looks exactly
+like a face streaming from a missing file. It is not — each `.uasset` is its
+`.ttf` plus about 1.5 KB (`F_Tomorrow_Regular` 61,091 against 59,520), so the
+font data is embedded and LazyLoad only governs when that payload is paged in.
+
+**Typeface name:** pass **empty / `None`** — that is the value the Roboto
+control renders with. The typeface entries could not be read from Python (the
+same struct reader that cannot see `TypefaceEntry` returns an empty list here,
+so "empty" means "cannot see", not "is empty"), and rendering is the only test
+that settles it.
+
+`Content/Python/import_fonts_composite.py` rebuilds all four: the engine's
+`FontFileImportFactory` carries `batch_create_font_asset`, so it constructs
+the UFont beside the face and nothing has to hand-build a Typeface — which is
+what defeated the first attempt.
+
+**Tidy owed:** the four original `F_*` FontFace assets still sit in that
+folder and draw boxes. Nothing should reference them. They are left in place
+rather than deleted mid-diagnosis; retiring them needs the owner's word.
 
 **`SlateFontInfo` also carries `letter_spacing`**, so the +0.03em on the
 Tomorrow labels is a code value the beta lane sets with everything else,
@@ -286,3 +307,119 @@ this direction has spent months removing.
   to remove once players expect it.
 - **No background behind the selection cluster.** One bar, one plane. A second
   panel inside the bar is how a minimal HUD stops being minimal.
+
+## 7. Reset confirmation — designed, NOT YET BUILT (2026-09-03)
+
+**Why this exists.** A stray N press wiped six built towers back to a
+fresh seed, mid-owner-session — `citytick.city_reset()` is, by its own
+docstring, "LOUD by design," and it is: the log line is unmissable, the
+state file visibly changes. What it was never checked against is
+whether the KEY that fires it is exactly as loud. It wasn't — one tap,
+no confirmation, full wipe, same input weight as panning the camera.
+This section specifies the fix. It is a specification, not a build —
+the editor is held for the owner's own play session; nobody implements
+this until that hold lifts.
+
+**The gesture: HOLD, not double-tap.** Both were on the table. Hold-to-
+confirm wins on a single ground: a double-press has no honest way to
+show its own state on screen before the second press lands — there is
+nothing to display except "you have N seconds left to press again,"
+which is a countdown wearing a different gesture. A hold's own
+progress *is* its display — the player's finger is still on the key
+while the prompt is up, so "keep holding" reads as continuous cause and
+effect the way a second, separate keypress cannot. It also matches
+the coordinator's own naming of the on-screen text as "hold to reset,"
+not "press again to reset."
+
+**Threshold: 2.0 seconds.** Long enough that a single accidental tap
+(the exact failure mode this exists to prevent) can never cross it —
+even a held key from a stuck keyboard event reads as a deliberate
+choice by two seconds, where one tap does not. Short enough that a
+genuinely-intended reset does not feel punished for being genuine.
+
+**On-screen feedback: text, not a meter.** Section 6 already rules out
+progress bars and meters for game state, and holds to that reasoning
+here even though this is input feedback, not economy state — a filling
+bar is exactly the "mobile game" UI tell section 6 exists to keep out,
+and this HUD has no precedent for one anywhere. The prompt is a single
+line of plain text, the same channel `SelectTick`'s selection debug
+line used before the real HUD existed
+(`Development|PrintString`, a stable `Key` so repeated calls replace
+rather than stack, short `Duration` so it vanishes the instant the key
+is released rather than lingering as a stale message) — this is
+authored on purpose as a TRANSIENT system message, not a persistent
+bar element, so it deliberately does NOT go through the
+GameViewportSubsystem construction section 5 specifies. Building it as
+a seventh permanent widget would mean new layout math for something
+that is invisible 99% of a session; PrintString is the right tool for
+a rare, input-driven, self-clearing message, not a compromise standing
+in for a "real" one.
+
+**Copy:** `"HOLD N TO RESET — <n>s"` where `<n>` counts DOWN from 2.0 to
+0.0 at one decimal place, so the number the player watches is "how much
+longer," matching the direction they're already holding toward, not a
+count-up that reads like a stopwatch. Colour: reuse the accent bronze
+already declared in section 2 (`#C08A4E`) converted through the same
+sRGB curve section 2 already specifies — a new colour for a single
+transient line is exactly the kind of one-off swatch section 2's "no
+large-scale albedo variation" reasoning argues against, even though
+that reasoning was written about materials, not UI.
+
+**BP_LensRig additions — exactly what the graph needs, nothing left
+implicit:**
+
+    Variable   NHoldTime  (Float, NOT instance-editable, internal only)
+    Variable   NHoldFired (Bool,  NOT instance-editable, internal only)
+
+**The accumulator is `DeltaSeconds`, not a wall-clock timestamp.**
+Every other timed thing in this graph (`FInterpTo`'s camera easing) is
+already driven off the tick's own `DeltaSeconds`, and this stays
+consistent with it rather than introducing a second notion of time via
+an absolute `GetTimeSeconds` difference — the two would drift under
+anything that changes simulation rate, and there is no reason for a
+2-second confirm gesture to be exempt from the same clock the boom's
+own motion already trusts.
+
+**A RELEASE LATCH is required, not optional — caught before build,
+2026-09-03.** The first cut of this spec reset `NHoldTime` to `0.0`
+the instant it fired and left it at that: with `EventTick` polling at
+frame rate, a hold that continues past the 2.0s threshold would cross
+it again 2.0s later, and again, for as long as the key stays down —
+one long press could fire `SetResetRequested` more than once, each one
+a fresh wipe attempt racing the driver's own consume-and-clear tick.
+The fix is a second bool, `NHoldFired`, that gates the fire condition
+and is cleared ONLY on release, not on fire:
+
+    if IsInputKeyDown(PlayerController, "N"):
+        if not NHoldFired:
+            NHoldTime = NHoldTime + DeltaSeconds
+            if NHoldTime >= 2.0:
+                <cast to BP_StacktownGameInstance>
+                SetResetRequested(true, GameInstance)
+                NHoldFired = true
+            else:
+                remaining = 2.0 - NHoldTime
+                PrintString(
+                    "HOLD N TO RESET — " + ToString(remaining, 1 decimal) + "s",
+                    Duration=0.15, Key="ResetConfirm",
+                    TextColor=(the section-2 accent, sRGB-converted))
+    else:
+        NHoldTime = 0.0
+        NHoldFired = false
+
+Once `NHoldFired` is true, the whole inner block is skipped for the
+rest of that hold — no more accumulation, no more prompt, exactly one
+`SetResetRequested` per press-to-release cycle. The `else` branch is
+the only place either variable is cleared, so the gesture only re-arms
+after a genuine release: the player must let go and press again to
+fire a second reset, which is the entire point of a confirm gesture —
+holding harder or longer than 2.0s must never do MORE than a clean
+2.0s hold does.
+
+**What this does NOT change:** `SetResetRequested`'s own consumer
+(`init_unreal.py`'s reset channel) is untouched — this is entirely a
+gate in FRONT of the same existing verb, not a new reset pathway. The
+owner has already been told, in plain language, that a bare N wipes
+the session; this specification is the fix for the NEXT owner and every
+player after them, not a substitute for that warning while it's still
+unbuilt.

@@ -1,0 +1,38 @@
+[
+ {
+  "light": "CITY_Sun",
+  "intensity": 430,
+  "delta": 28.36605200107296,
+  "drift": 0.22839555003932333
+ },
+ {
+  "light": "CITY_Key",
+  "intensity": 20495818,
+  "delta": 6.3519258309578674,
+  "drift": 0.013058006792221022
+ },
+ {
+  "light": "CITY_Fill",
+  "intensity": 18984812,
+  "delta": 2.906942606964094,
+  "drift": 0.2053071736748393
+ },
+ {
+  "light": "CITY_StreetKey_A",
+  "intensity": 8221555,
+  "delta": 3.8396388839636586,
+  "drift": 0.004426319689770253
+ },
+ {
+  "light": "CITY_StreetKey_C",
+  "intensity": 2513690.75,
+  "delta": 9.39317218820041,
+  "drift": 0.009372513718602704
+ },
+ {
+  "light": "CITY_Sky",
+  "intensity": 12,
+  "delta": 1.1062356506044182,
+  "drift": 0.02017189723446222
+ }
+]

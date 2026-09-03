@@ -1,0 +1,27 @@
+{
+  "location": {
+    "x": -6498.382723187702,
+    "y": -17854.15979493226,
+    "z": 9000.0
+  },
+  "rotation": {
+    "roll": 0.0,
+    "pitch": -25.0,
+    "yaw": 70.0
+  },
+  "fov_degrees": 73.73979529168804,
+  "board_centre": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "boom_params": {
+    "azimuth": 250.0,
+    "reach": 19000.0,
+    "height": 9000.0,
+    "tilt": -25.0,
+    "pan": 0.0,
+    "focal": 24.0
+  },
+  "source": "BP_LensRig EventBeginPlay defaults (Azimuth/Reach/Height/Tilt/Pan/Focal) + BoardCentre read live off the placed instance, 2026-09-02 - this is the actual first-boot play framing, not a guess"
+}

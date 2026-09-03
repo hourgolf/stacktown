@@ -103,23 +103,31 @@ priorities come from the reader's own findings.
   light. Needs a separate map — blocked because `load_level` crashes the editor
   over remote execution, so the owner must create and open it.
 - The backdrop does not cover the view down the street.
-- Edge wear does not work on imported geometry (see §5).
+- Edge wear does not work on imported geometry (see §5) — AND, found
+  2026-09-02 on the wooden masses, may be INERT ON FASTBAKED CHAMFERS
+  TOO: an 8.5x EdgeWearLift drive moved a 14 uu bevelled arris by
+  nothing (column profile = pure drift). Suspect averaged/welded
+  normals across the bevel (fastbake creates assets with
+  enable_recompute_normals=False), so the curvature proxy never sees a
+  low max|n| facet. Nobody has measured the flagship's own edge wear on
+  a baked chamfer; FLAGSHIP LANE RETURN BRIEFING ITEM. The wood lane is
+  running the normals diagnosis on its own baker first.
 - The single-mesh bake fidelity gap (§9.1).
 - Gameplay: **nothing in-engine.** A Lane 2 agent started the headless
   economy sim on 2026-08-25 — see `Docs/WORKSTREAMS.md` Lane 2.
-- **The real UMG HUD needs ~1 minute of human hands in the Designer** —
-  confirmed blocked for editor-scripting, not guessed (see §5's WidgetTree
-  entry). `WBP_HUD` already exists at `/Game/Stacktown/Runtime/WBP_HUD`,
-  empty. The ask: open it in the UMG Designer, drop a Canvas Panel on the
-  root if one isn't already there, add six Text Blocks onto it (rough
-  vertical stack, top-left corner is fine), and name them exactly
-  `MoneyText`, `DemandText`, `SelectedNameText`, `SelectedStateText`,
-  `SelectedPriceText`, `BuyPromptText` — Designer-named widgets are
-  variables by default, no extra step needed. Save. Once those six exist
-  with those names, the Event Tick / text-binding logic that reads them
-  from GameInstance and the selected `BP_Parcel` is a normal
-  `write_graph_dsl` function-graph edit, same tooling as everything else
-  in this file — that part is NOT blocked, only the tree construction is.
+- **The real UMG HUD: CORRECTED 2026-09-03.** The earlier version of this
+  item said "Designer-named widgets are variables by default, no extra
+  step needed" — WRONG for this bridge: designer-placed widgets become
+  widget-compiler UPROPERTYs that the DSL's node creation cannot
+  reference (see §5). What actually works: the owner placed ONE Canvas
+  Panel root in the Designer (the only thing code cannot create), the
+  DSL could reach NEITHER that panel NOR GetWidgetFromName — the bar is
+  built HOSTLESS: every widget (Border, boxes, spacer, the six named
+  TextBlocks) is CONSTRUCTED AT RUNTIME in BP_LensRig's BeginPlay per
+  `Docs/DIRECTION_B_HUD.md`'s construction order, held in DSL-added
+  object variables for binding, and added to the screen with
+  GameViewportSubsystem.AddWidget; WBP_HUD is unused. Never ask the
+  owner to place the six texts by hand — they would be unreachable.
 
 ---
 
@@ -293,6 +301,118 @@ Every item cost hours. They are ordered by how much.
   same minute as the actual quit). Detection when suspected: compare
   the map file's mtime against the editor process start time — the
   wood lane's method, evidence not inference.
+- **Spawning into the PIE world from Python: `unreal.World` has NO
+  `spawn_actor`, and the editor spawn helpers spawn into the EDITOR
+  world.** (2026-09-02, placement v0's first live click: the whole
+  chain worked to `placement.place()` and died on
+  `'World' object has no attribute 'spawn_actor'`, suppressed after the
+  first occurrence.) CORRECTION, same day, the coordinator's own wrong
+  advice retracted: the deferred pair
+  `GameplayStatics.begin_deferred_actor_spawn_from_class` DOES NOT
+  EXIST in this build's Python reflection either — a scan of the whole
+  `unreal` module found exactly two spawn functions, both EDITOR-world
+  (EditorActorSubsystem / EditorLevelLibrary .spawn_actor_from_class).
+  THERE IS NO PYTHON-REFLECTED WAY TO SPAWN AN ACTOR INTO THE PIE
+  WORLD in this build. A runtime spawn must happen in a Blueprint
+  already ticking in the game world (reverse request channel: Python
+  validates, Blueprint's SpawnActor node executes) — OR the design
+  avoids runtime spawning entirely with a POOL of dormant pre-placed
+  actors that Python ACTIVATES through reflected calls
+  (set_actor_location, set_actor_hidden_in_game,
+  set_actor_enable_collision, property writes): no spawn needed, and
+  friendlier to packaging. Twin
+  lesson from the same click: a refusal that is loud in the log and
+  silent on screen reads to the player as "nothing happens" — every
+  player-facing refusal gets on-screen text.
+- **A reservation is only real in the mode that makes it real**
+  (2026-09-02, empty-board mode's first click): the pinned-lot overlap
+  guard — added the same day to stop placements crossing the starter
+  city's footprints — kept reserving those 14 spans in EMPTY mode,
+  where the pins are dormant and nothing stands there; every click on
+  the bare road refused "crosses a pinned lot." Any guard derived from
+  content that a mode can switch off must read that mode; a self-test
+  that exercises the guard in BOTH modes is the detector.
+- **The legal placement area is measured off THE THING THE PLAYER SEES,
+  never derived from the math that was supposed to produce it**
+  (2026-09-02): placement's plate was first one BLOCK_LEN (±2460), then
+  citylayout's four-block union (±6050); the board MESH the owner
+  clicks on measures ±7650 (get_actor_bounds on the board actor) —
+  1,600 uu a side of visible, standable plate the procedural layout
+  never knew about, and every refusal there read as "can't build on the
+  board." The self-test that asserted plate == layout union was itself
+  the bug; the honest check is containment (layout fits inside the
+  measured plate).
+- **A pooled actor derives its look ONCE at BeginPlay from empty
+  identity; activation must trigger a re-derive, or the derived state
+  stays wrong while every property reads right** (2026-09-02, placement
+  v0's second live click): seven lots activated exactly where the owner
+  clicked — location, mobility, mesh, material, visibility all correct on
+  a live read — and none were visible, because the placeholder pad's
+  scale was computed at PIE start from WidthUU = 0 and the Tick
+  change-detection watched only Owned/Tier. Read the DERIVED values
+  (scale), not just the inputs, when an actor "should be visible"; and
+  every field that activation writes must be in the change-detection
+  set, or deactivation must reset it.
+- **The Blueprint DSL cannot place a getter for a DESIGNER-placed widget
+  ("Is Variable" on a widget-tree widget), only for variables it added
+  itself — and it cannot place UserWidget.GetWidgetFromName either**
+  (2026-09-03, HUD build): the widget compiler turns the designer's
+  Canvas Panel into a UPROPERTY on the generated class — reflection
+  reads it on the CDO — but the DSL's node creation walks the
+  Blueprint's own variable-description list, so
+  `Variables|Default|GetCanvasPanel_43` "does not exist" no matter how
+  many compiles run (API-level or the Designer's own button), and
+  GetWidgetFromName missed under three namespaces. THE ROUTE THAT WORKS
+  NEEDS NO WIDGET BLUEPRINT AT ALL: `GameViewportSubsystem.AddWidget
+  (UWidget, GameViewportWidgetSlot)` takes any constructed widget, so the
+  whole HUD is Construct-Object-from-Class in BP_LensRig's BeginPlay
+  (Border → row HorizontalBox → clusters → TextBlocks), styled with
+  SetFont/SetFontSize/SetColorAndOpacity, held in DSL-added object
+  variables for binding, added straight to the viewport. WBP_HUD is
+  unused. DSL gotchas met on the way: Panel|SetContent takes self
+  first (unlike the Class|X|Set family); MakeSlateFontInfo needs a real
+  MakeFontOutlineSettings struct ("None" is only for object refs);
+  Math|Vector2D|MakeVector2D; colours must be converted sRGB→linear
+  through the curve, not byte/255. Designer-placed widgets stay
+  unreachable to code; never rely on them for binding.
+- **Never OpenEditorForAsset on the level PIE is playing — it raises a
+  MODAL on the main thread and the whole bridge blocks** (2026-09-03:
+  every MCP call from every session timed out at 300 s; the editor
+  process stayed alive at ~45% CPU with the port listening, and only
+  the owner dismissing the dialog freed it). The tell: calls time out
+  while `ps` shows the editor busy and `lsof` shows 8000 LISTENING —
+  that is a blocked main thread, not a dead process, and the fix is a
+  human at the dialog. To see the player's view during PIE, verify by
+  state (object variables, viewport widgets, log) and leave pixels to
+  the owner; do not bring the level tab forward.
+- **LANES NEVER TEST ON THE OWNER'S LIVE SAVE.** 2026-09-03: the six-tower
+  city the owner built in their first from-scratch session was wiped by
+  a CITYSTATE RESET at 02:00:59. First attributed to a lane's PIE test;
+  CORRECTED the same hour: the lane has no input injection and logged
+  zero resets across its own sessions, and the 02:00:03 session carried
+  a placed lot AND a B-key buy — human input — so the reset was almost
+  certainly the owner's own N press, which they had been taught as a
+  casual "fold placed lots back" key while it actually wipes money and
+  ownership. Two lessons, both real: the economy's state file
+  (citystate.json) is ONE shared file, so any lane's N press, reset
+  channel or test seed WOULD land on the owner's city; and a reset that
+  destroys a session must not sit on a bare key with no confirmation. Rule: the driver takes a STATE-PATH OVERRIDE and every lane
+  session runs against citystate_test.json (logged at registration:
+  "CITY DRIVER: state file = ..."); the owner's citystate.json is
+  touched by nobody but the owner. Corollary for HUD reads: a bar whose
+  text is built from live values at construction shows "$100.0" after a
+  reset without any tick binding — construction-time truth is not
+  proof the binding runs.
+- **One unguarded property read kills the WHOLE economy driver, silently**
+  (2026-09-02): a pre-staged placement channel read PlaceRequestX/Y at
+  the top of the driver's tick body before the properties existed on
+  the GameInstance; the read threw every tick, the outer try/except
+  swallowed it once-per-class, and the economy tick, Price/Accum and the
+  CPD push all went dead behind it with one suppressed log line to
+  show. Rule: every request-and-clear channel read in the driver gets
+  its OWN local try/except defaulting to no-request; the tell is the
+  EconHUD freezing — if money stops ticking, suspect the driver body
+  before the economy.
 - **`pgrep -f <pattern>` can match the WATCHER that runs it: a wait
   loop whose own command line contains the pattern waits for itself,
   forever, and answers "RUNNING" for a job that never started**
@@ -567,6 +687,132 @@ Every item cost hours. They are ordered by how much.
   one write to begin with. Any future Python-side mesh+material
   assignment should default to the two-call form rather than discover
   this again.
+- **A `write_graph_dsl` call can return success, compile clean, and still
+  not reach the live graph — with no orphaned node left behind to explain
+  it** (beta lane, 2026-09-03, fixing EventTick's Money/Demand text so it
+  updates every frame instead of only on the Reset key). Five submissions
+  targeting only `(event EventTick ...)` — not the full multi-event script
+  `read_graph_dsl` returns for that graph. The first four failed on real
+  pin-connection errors (the four traps below); the fifth returned
+  `{"returnValue":null}` with a clean `LogBlueprint: Compiling` and no
+  error after it in the log — and `read_graph_dsl`, called twice to rule
+  out staleness, still rendered the OLD EventTick verbatim, unchanged.
+  Ruled out a duplicate/orphaned override before concluding this:
+  `find_nodes(title="Tick", entry_points_only=true)` found exactly the
+  same two entry nodes (`ReceiveTick`, `SelectTick`) as before any edit,
+  and a raw `get_connected_subgraph` dump from the real Tick entry node
+  contained none of the new bind names anywhere. Cause UNRESOLVED.
+  Stopped rather than keep guessing against a Blueprint that was
+  otherwise stable and working — the untouched original logic (camera,
+  LMB/B/N, placement) still runs correctly; nothing broke, the fix simply
+  never took. NEXT ATTEMPT should not retry this call shape: build the
+  new logic as its own FUNCTION GRAPH and splice one CallFunction into
+  EventTick's exec chain — the shape that persisted reliably for
+  `SelectTick` (see the function-graph-resolution entry above) — rather
+  than resubmitting a whole existing event body.
+- **The DSL's read-back `type_id` label is not always the write-time
+  node** — four distinct ways this bit in the same session (2026-09-03),
+  on code that was either untouched or a straight copy of something
+  currently live and compiling, not new code being drafted:
+    - `Class|Factory|SetText`, read back verbatim from a WORKING,
+      already-compiled TextBlock `SetText` call, resolves on write to an
+      unrelated Factory class's boolean `bText` property setter
+      (`get_node_type_pins` confirmed: self = `Factory Object Reference`,
+      value pin = `bText` Boolean) — `"Could not connect pin ReturnValue
+      to bText"`. Correct node, verified by pins: `Class|Text|SetText`
+      (`Text` in, `self` = `Text Object Reference`).
+    - `Rendering|SetVisibility`, used on a UMG widget, is actually a
+      boolean actor/component visibility setter (`bNewVisibility`) —
+      `"Could not connect pin SelectionCluster to bNewVisibility"`.
+      Correct node: `Class|Widget|SetVisibility` (`ESlateVisibility Enum`
+      value, `self` = `Widget Object Reference`).
+    - The inline-multi-output-node-as-argument trap (a call like
+      `(Utilities|Casting|CastToBP_Parcel (Collision|BreakHitResult
+      _hitresult))` silently connects to the callee's FIRST output —
+      `bBlockingHit`, a Boolean — regardless of the target pin's actual
+      type) fired on a VERBATIM, untouched, currently-compiling line
+      copied straight from `read_graph_dsl`'s own output —
+      `"Could not connect pin bBlockingHit to Object"`. This was assumed
+      to only be a risk for newly-authored code; it is not — it applies
+      to ANY inline multi-output call resubmitted through this tool,
+      regardless of provenance. Fix: never pass a multi-output node call
+      inline as an argument; `bind` it with a full positional
+      destructuring list (`_` for every unwanted output, confirmed
+      against `get_node_type_pins`) and pass the named variable instead.
+    - A plain-looking `(bind _location (Collision|BreakHitResult
+      _hitresult))` — also copied verbatim from a working read-back, also
+      currently live — turned out to secretly need output index 4
+      (`Location`), not output 0 (`bBlockingHit`): `.x _location` failed
+      with `"Could not connect pin bBlockingHit to InVec"`. The read-back
+      renderer had silently collapsed what must originally have been a
+      destructuring bind down to a plain-looking one, discarding which
+      output it actually pointed at — a plain `(bind name (Node ...))` in
+      a read-back is not proof the underlying node is single-output.
+      Fixed by folding it into ONE shared destructuring bind alongside the
+      HitActor extraction: `(bind (_ _ _ _ _location _ _ _ _ _hitactor _ _
+      _ _ _ _ _ _) (Collision|BreakHitResult _hitresult))`, positions
+      taken from `get_node_type_pins`, never guessed from memory.
+
+  General rule going forward: before resubmitting ANY `read_graph_dsl`
+  output through `write_graph_dsl` — changed lines or not — treat every
+  multi-output node call as suspect. Verify it is either fully
+  destructured or dot-accessed, and verify any `Type|Id` string against
+  `get_node_type_pins` unless its self-type and pin order are already
+  known-good from a call made THIS session — never from memory, and never
+  from a prior session's transcript.
+- **A `write_graph_dsl` call can report success on a graph the running
+  process never actually executes** (beta lane, 2026-09-03, same window
+  as the entry above — a DIFFERENT mechanism from it, easy to conflate
+  since both look like "the write didn't take"). `init_unreal.py`'s
+  economy driver is a Slate post-tick callback registered ONCE per
+  editor process (`register_slate_post_tick_callback`, guarded against
+  double-registration by an attribute on the `unreal` module). Editing
+  the FILE on disk does nothing to the ALREADY-RUNNING callback — Python
+  captured a reference to the old function object at registration time,
+  and the registration guard blocks a plain re-import from replacing it.
+  The tell: grep the log for the callback's own "registered" line
+  (`CITY DRIVER: registered` here) and compare its timestamp against the
+  edit's — if the edit is newer, the running process is still executing
+  the OLD code, no matter how many times it's been resubmitted. Confirmed
+  by adding a new log line to the edited function and never seeing it
+  fire across three full PIE sessions post-edit. Fix needs one of: an
+  editor restart (this project restarts often enough that it usually
+  arrives on its own, but don't assume it has), or a session with an
+  in-process Python channel (`Tools/rung.sh`, not this bridge)
+  unregistering the stale callback, clearing the guard attribute, and
+  re-importing. A DSL graph write (the entry above) and a `.py` file edit
+  fail to "take" for completely unrelated reasons — a graph write is
+  live the moment it compiles; a Python file is only ever a proposal
+  until something re-imports it.
+- **The economy driver's save file is shared by every lane in this
+  editor, and the safe default is the OWNER'S real file, not a test
+  one** (beta lane, 2026-09-03: a stray owner N-press wiped six built
+  towers back to a fresh seed — see `citytick.city_reset`'s own "LOUD by
+  design" comment — and the post-mortem found every lane's PIE had been
+  writing `citystate.json` by default all along). The economy driver
+  (`_state_path_source` in `init_unreal.py`) picks the save path in this
+  order: `unreal._stacktown_state_override` (a path, set by a session
+  with a Python channel, before `StartPIE`) > `Content/Python/
+  lane_pie.marker` existing (a file-tools-only lane's route — empty
+  content means `citystate_test.json`, non-empty content is read as the
+  path) > neither set, which is `citytick.STATE_PATH` — the owner's real
+  file — UNCONDITIONALLY. That ordering is the fix: the FIRST design put
+  the test path behind a GameInstance bool defaulting off, which put the
+  OWNER on the test path too, since a hand-started PIE never sets a bool
+  either — inverted from what was needed. A lane must opt OUT every
+  time, deliberately, or it is on the real file. The driver clears both
+  routes the instant it sees PIE end (a `pie_was_running` transition in
+  the tick state, not a fixed per-tick check), so neither can leak into
+  the owner's next hand-started session. Every PIE start logs `CITY
+  DRIVER: session state file -> <path> (override|marker|default)` — the
+  audit trail for the two failure modes this can't fully engineer away:
+  (1) a marker left behind by a lane session that crashed mid-test,
+  closed by the driver's own PIE-end cleanup, not by the lane remembering
+  to; (2) a lane that simply forgets to write the marker before
+  `StartPIE` — still possible, still real exposure, but now visible after
+  the fact as a `default` line in the log against that lane's own
+  session instead of invisible. See `Docs/BETA_LANE.md` contract 9 for
+  the protocol.
 
 ### Material and geometry
 
@@ -655,6 +901,34 @@ was asking the wrong question and returning "ok".**
 
 ---
 
+- **`EditorAssetLibrary` has NO reload in this build. The entry point is
+  `EditorLoadingAndSavingUtils.reload_packages`, which takes PACKAGES —
+  not asset paths — plus a `ReloadPackagesInteractionMode` whose values
+  are `ASSUME_POSITIVE` / `ASSUME_NEGATIVE` / `INTERACTIVE`.** Get the
+  package with `asset.get_outermost()`. `ASSUME_POSITIVE` is the
+  non-interactive one; an interactive mode sits waiting on a dialog
+  nobody is watching. (2026-09-02, direction-B lane, clearing a dirty
+  flag on the shared master without writing it.)
+
+  **Why a reload at all:** a fully and correctly reverted edit still
+  leaves the asset DIRTY. The content is back; the asset is not clean.
+  While that flag is set, any save-all re-serialises the package and
+  lands a changed LFS oid in the repo — a flagship asset modified by
+  another lane, arriving as a side effect of somebody else's tidy-up.
+  Reloading from disk discards the in-memory copy and the flag with it,
+  and writes nothing. **"The content is back" and "the asset is clean"
+  are different facts**, and the first was verified and reported as
+  though it settled the second.
+
+  **The guard is the lesson, not the API.** The first script guessed
+  `EditorAssetLibrary.reload_asset`, then `reload_assets`, then
+  `ReloadPackagesInteractionMode.LOAD_ALL_CHANGED` — three wrong names in
+  a row. Each time it REFUSED with an explicit "do NOT work around this
+  by saving the asset", because saving was the one outcome the whole
+  exercise existed to prevent and is exactly what a tired operator
+  reaches for when a reload call keeps failing. A refusal branch that
+  names the tempting wrong move is worth more than the guess it replaces.
+
 ## 6. The recipe — measured numbers
 
 Full detail in `Docs/MINIATURE_RECIPE.md`. Essentials:
@@ -732,3 +1006,53 @@ into the wrong project. It has already caught it happening.
    world-scale Noise alpha. `PaperMottle` (checked in the same pass) is
    bound to the three coarse normal samplers — the parked two-octave
    system — and is not a colour channel either.
+
+- **BLUEPRINT GRAPHS ARE NOT READABLE FROM PYTHON (2026-09-03).**
+  `Blueprint.UbergraphPages` and `EdGraph.Nodes` are protected to
+  Python's get_editor_property (same wall as WidgetTree), and
+  `BlueprintEditorLibrary.find_event_graph` hands back a graph whose
+  node list is equally closed. There is NO in-process authority on
+  what a graph contains: the MCP's read_graph_dsl (an EXEC-reachability
+  walk from the event node) is the best structural reader available,
+  get_connected_subgraph follows data links too and sweeps every
+  orphan, and find_nodes matches spaced display titles ("Cast To
+  BP_Parcel"), so its empty result proves nothing. Repeated
+  write_graph_dsl submissions to the SAME event leave every superseded
+  chain in the page as orphans (12 hit traces, 22 SetHighlighted after
+  one evening) — the third HUD write compiled clean with the click
+  chain's body dropped, and the owner found it. Rules: a graph that has
+  been written more than twice is a junkyard — move the body to a
+  FRESH function graph and leave the event as one call; after EVERY
+  write, read_graph_dsl back before compile; and the only proof that a
+  chain runs is behaviour (a click producing its CITY PLACE line).
+
+- **INPUT MOVED TO PYTHON; BP_LensRig FROZEN (2026-09-03, 04:00-04:40).**
+  Three "press Play" calls in one night were issued on compile-clean
+  graphs that did nothing, with the owner as the only test instrument
+  ("this is starting to feel like a death spiral and potentially a
+  project management issue"). What settled it was INSTRUMENTATION, not
+  another rewrite: an in-process probe (slate post-tick, no asset
+  touched) logged that every mouse-down reached the PlayerController,
+  and that calling the rig's TickBody directly via reflection in the
+  same frame as a real press still wrote no PlaceRequest - the break was
+  inside the DSL-written function, and no reader could show where.
+  Decision: player input lives in Content/Python/clickdriver.py (own
+  slate callback, imported by init_unreal.py, guarded): cursor trace,
+  parcel select + SetHighlighted via call_method, PlaceRequestX/Y for
+  empty plate, B -> BuyRequestPID (the label), hold-N 2 s -> reset with
+  a release latch and an on-screen countdown. Proven HEADLESS in a
+  coordinator PIE on the test file: click_at -> "CITY PLACE: P1
+  activated", click on P1 -> selected + highlighted, B -> "CITY BUY: P1
+  bought". Facts the port will need: HitResult reaches Python only via
+  to_dict() ('hit_actor', 'location'); get_hit_result_under_cursor_by_
+  channel returns None on a miss; GameplayStatics.break_hit_result is
+  not exposed; BP_LensRig.SelectedParcel is NOT instance-editable, so the
+  reflected write is refused and the selection is held in Python (the
+  HUD's selection cluster stays collapsed until that variable is made
+  instance-editable - a variable-flag edit, not a graph write); rung.sh's
+  guard cannot run during PIE (editor world is None) - use uepy.py with
+  the script's own project assert. PROCESS RULES that came out of it:
+  the owner never tests a guess - every human run answers one question
+  with a log line; a proven graph is frozen and features go in new
+  graphs, new actors or the driver; a working click gets committed the
+  minute it is proven.

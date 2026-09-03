@@ -1,0 +1,55 @@
+{
+ "rows": [
+  {
+   "mean": 75.35782721168228,
+   "grad_p90": 11,
+   "grad_p99": 63,
+   "lift": 0.509090909090909,
+   "spread": 147,
+   "peak_pct": 40.31044704192183,
+   "intensity": 26.0,
+   "matched": true,
+   "size": "4000x2600"
+  },
+  {
+   "mean": 75.55360888719159,
+   "grad_p90": 11,
+   "grad_p99": 63,
+   "lift": 0.5,
+   "spread": 147,
+   "peak_pct": 40.29476215805816,
+   "intensity": 26.0,
+   "matched": true,
+   "size": "2000x1300"
+  },
+  {
+   "mean": 75.64586282773452,
+   "grad_p90": 11,
+   "grad_p99": 62,
+   "lift": 0.5,
+   "spread": 147,
+   "peak_pct": 40.27578117541156,
+   "intensity": 26.0,
+   "matched": true,
+   "size": "1000x650"
+  },
+  {
+   "mean": 75.72620193946999,
+   "grad_p90": 11,
+   "grad_p99": 62,
+   "lift": 0.5,
+   "spread": 147,
+   "peak_pct": 40.2717121982933,
+   "intensity": 26.0,
+   "matched": true,
+   "size": "400x260"
+  }
+ ],
+ "b1": {
+  "grad_p90": 92,
+  "grad_p99": 231,
+  "lift": 0.337,
+  "spread": 190,
+  "peak_pct": 16.2
+ }
+}

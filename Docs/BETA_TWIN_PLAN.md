@@ -1,5 +1,17 @@
 # The beta twin — one gameplay, two catalogues (owner decisions, 2026-08-31)
 
+> **SEAM 0 — SEPARATION (owner's word, 2026-09-02, verbatim):** "nothing
+> we're doing in this direction B wood city should be affecting the
+> flagship models or the teams handling the flagship project for now.
+> these are separate projects with different yet similar looks. The wood
+> city is an easier to render and scale version that we can then hopefully
+> borrow some mechanics for flagship down the road." This outranks every
+> seam below where they overlap: direction B never edits the shared master
+> material (a proven-inert edit is still an edit — it forks its own), never
+> edits fastbake/genbuild's flagship paths (it copies what it needs into its
+> own baker), never touches the flagship catalogue. Mechanics may flow from
+> the wood city to the flagship later; assets never flow the other way.
+
 **The premise, from the architecture's luckiest fact: the gameplay layer
 resolves meshes by catalogue key and never knows what a building looks
 like. Two versions of the same game = two catalogues behind one

@@ -11,19 +11,17 @@ tick/buy never need to know which path produced it.
 v0 SCOPE, PLACEMENT_GRID.md section 7/8 - deliberately narrow, named as
 exactly that rather than silently standing in for the eventual answer:
 
-  - ONE road: the existing arterial. citylayout.py's own blocks() offsets
-    y_in = +/-HALF from Y=0 for every quadrant, so Y=0 IS the arterial
-    centerline - not re-measured here, reused from the layout that
-    already declared it. Multi-road frontage is out of scope entirely,
-    not stubbed.
-  - A FIXED width (820, the catalogue's narrowest) and a FIXED recipe
-    (vernacular, the same safe default mk_testcity_builds.py's own
-    original design used) for every placed lot. PLACEMENT_GRID.md left
-    "which width, which recipe" an open question on purpose; resolving
-    it for real - auto-fit-largest, a player-chosen palette, whatever -
-    is follow-on work, not this declaration's job. Fixed-width sidesteps
-    auto-fit's own complexity so v0 can test the FEEL of clicking to
-    place, which is the actual open question per the owner's brief.
+  - TWO roads as of 2026-09-03: the arterial (Y=0) and the cross street
+    (X=0), citylayout.py's own single crossing - resolve_road below picks
+    the nearer by point-to-segment distance, RESOLVE_ROAD_NOTES.md. Still
+    not the general N-road case: PINNED_SPANS has no cross-street entries
+    (section 6, still open), and a second crossing would need a second
+    _in_crossing-style check, not assumed to generalize for free.
+  - A width PARAMETER (default 820, the catalogue's narrowest) and a
+    FIXED recipe (vernacular, the same safe default mk_testcity_builds.py's
+    own original design used) for every placed lot. PLACEMENT_GRID.md left
+    "which recipe" an open question on purpose; a player-chosen palette is
+    follow-on work, not this declaration's job.
   - NO GROWTH. The owner's word, verbatim: "purchase-fill only at
     first." This module has no plate-expansion logic anywhere in it,
     not even a stub - the plate bounds below are the whole board for as
@@ -140,59 +138,225 @@ def _snap(x):
     return round(x / WIDTH_QUANTUM) * WIDTH_QUANTUM
 
 
-def resolve_click(state, x, y, pins_active=True):
-    """(ok, reason, lot). Pure - no state mutation, so a caller can
-    preview a refusal (e.g. to decide whether to even attempt place())
-    without committing anything. `lot` is None on refusal, else
-    {'x0', 'x1', 'side'}.
+# REACH (2026-09-03, owner: "a parcel showed up 'generally' around the
+# click"): v0 snapped ANY click to the arterial's frontage, from any
+# distance - a click on the studio floor placed a pad 5000 uu away.
+# Two new refusals bound the click to the block the pad will occupy:
+# inside the corridor (|y| < ROAD_HALF) is the road itself; beyond the
+# block's back edge plus REACH_SLACK is "too far from a road". The pad
+# still snaps in X and sits at the frontage in Y; the click only has to
+# land on the block it is asking for. The ghost preview (clickdriver.py)
+# uses resolve_click too, so what it shows is exactly what a click gets.
+ROAD_HALF = citylayout.HALF             # 1130: centreline to facade line
+BLOCK_DEPTH = citylayout.BLOCK_DEPTH    # 1500: facade line to back edge
+REACH_SLACK = 600.0                     # forgiveness behind the block
 
-    Three refusal conditions, per PLACEMENT_GRID.md section 2 exactly:
-    off-board, overlap, no legal frontage (folded into off-board here -
-    see the note below on why this v0 does not model a separate
-    "too far from the road" refusal).
 
-    `pins_active` - MODE-GATED, not a permanent fact about the board
-    (found live, 2026-09-02, the session right after empty mode shipped:
-    the pinned-span check below applied regardless of EmptyStart, so
-    every one of the owner's clicks on an EMPTY board still refused
-    against ground the player could not see anything standing on).
-    Default True matches every self-test below and every session before
-    this fix - the caller (init_unreal.py's placement channel) passes
-    the GameInstance's actual EmptyStart-derived value; a placement pool
-    actor and a dormant POOL_PIN_ actor never actually conflict (they
-    are disjoint pool ranges - see PARCELIZATION_CONTRACT.md's pool
-    doctrine), so in empty mode a placed lot may legally land exactly
-    where a pin's own footprint sits."""
-    if not (PLATE_X_MIN <= x <= PLATE_X_MAX):
-        return False, 'off-board: x=%.1f outside plate [%.1f, %.1f]' % (
-            x, PLATE_X_MIN, PLATE_X_MAX), None
-    side = 'north' if y >= 0 else 'south'
-    x0 = _snap(x - V0_WIDTH / 2.0)
-    x1 = x0 + V0_WIDTH
-    if x0 < PLATE_X_MIN or x1 > PLATE_X_MAX:
-        return False, 'off-board: snapped span [%.1f, %.1f] exceeds plate' \
-            % (x0, x1), None
-    # PINNED lots first - a player must not be able to place across the
-    # starter city's own pads once pins and placements share one pool
-    # (2026-09-02's empty-mode work), but ONLY while the pins are
-    # actually standing (pins_active) - checked before the placed-lot
-    # loop below purely for a clearer refusal message (pinned vs.
-    # player-made); both loops are otherwise the same span-overlap test.
-    if pins_active:
+# PLATE_Y_MIN/MAX: the same board-mesh measurement PLATE_X_MIN/MAX above
+# already cites (get_actor_bounds on the board actor, min=(-7650,-4230,
+# -200) max=(7650,4230,0)) - reused here for the cross street's own
+# along-bound rather than re-measured, since it is the same one mesh.
+PLATE_Y_MIN = -4230.0
+PLATE_Y_MAX = 4230.0
+
+# Both roads share ROAD_HALF/BLOCK_DEPTH - citylayout.py's own docstring
+# draws exactly this cross ("arterial, CORRIDOR wide" / "cross street,
+# CORRIDOR wide", the SAME CORRIDOR both times, one crossing) - not two
+# independently-chosen numbers that happen to match.
+ARTERIAL = {
+    'id': 'arterial', 'start': (PLATE_X_MIN, 0.0), 'end': (PLATE_X_MAX, 0.0),
+    'side_plus': 'north', 'side_minus': 'south', 'axis': 'x',
+}
+CROSS_STREET = {
+    'id': 'cross', 'start': (0.0, PLATE_Y_MIN), 'end': (0.0, PLATE_Y_MAX),
+    'side_plus': 'west', 'side_minus': 'east', 'axis': 'y',
+}
+ROADS = (ARTERIAL, CROSS_STREET)
+
+# The same "too far from a road" reach resolve_click already enforces in
+# Y for the one-road case, reused here as resolve_road's own outer claim
+# distance - see RESOLVE_ROAD_NOTES.md section 5's "no number proposed
+# here" left this open; this is the answer, matching the number already
+# proven live rather than inventing a second one that could drift from it.
+ROAD_MAX_REACH = ROAD_HALF + BLOCK_DEPTH + REACH_SLACK
+
+
+def _project_to_road(road, x, y):
+    """(along, across, length) in `road`'s own frame -
+    RESOLVE_ROAD_NOTES.md section 4. `along` is distance from `start`
+    toward `end`, unbounded (the caller clamps against `length`);
+    `across` is the SIGNED perpendicular offset - positive is the
+    `side_plus` side. Pure vector projection, no trig: `direction` is
+    the unit vector start->end, `normal` is `direction` rotated +90
+    degrees (so along the arterial, whose direction is +X, normal is
+    +Y - across>=0 there means y>=0, matching resolve_click's own
+    `side='north' if y>=0` exactly, unchanged convention)."""
+    sx, sy = road['start']
+    ex, ey = road['end']
+    dx, dy = ex - sx, ey - sy
+    length = (dx * dx + dy * dy) ** 0.5
+    ux, uy = dx / length, dy / length
+    nx, ny = -uy, ux
+    tx, ty = x - sx, y - sy
+    along = tx * ux + ty * uy
+    across = tx * nx + ty * ny
+    return along, across, length
+
+
+def _in_crossing(roads, x, y):
+    """True if `(x, y)` falls inside MORE THAN ONE road's own in-corridor
+    band (`abs(across) < ROAD_HALF`, standing on that road's pavement,
+    not its frontage) with its `along` in-segment - the click is on
+    pavement two roads physically share, so no single road's claim is
+    the honest answer. Factored out of `resolve_road` so it and
+    `resolve_click` (which wants this as its OWN, distinctly-worded
+    refusal, not folded into "off-board") can never disagree about the
+    rule. NOT the corner-lot question (RESOLVE_ROAD_NOTES.md section 7,
+    still open, still unanswered here) - the narrower, unambiguous case
+    of standing on the pavement itself where two roads overlap."""
+    count = 0
+    for road in roads:
+        along, across, length = _project_to_road(road, x, y)
+        if 0.0 <= along <= length and abs(across) < ROAD_HALF:
+            count += 1
+    return count > 1
+
+
+def lot_road_id(lot):
+    """A placed lot's road, defaulting to 'arterial' for any lot dict
+    that predates this key - v0's placement.py wrote none, so the
+    owner's own real citystate.json has entries with no 'road_id' key
+    at all (2026-09-03, coordinator: "the owner's real save has four
+    such lots"). Three call sites had independently written the exact
+    same `.get('road_id', 'arterial')` before this existed - this
+    function's own overlap-scan below, clickdriver.py's ghost-box
+    frame, and init_unreal.py's _lot_transform - the same drift risk
+    ROAD_MAX_REACH's own comment already flagged for a different pair
+    of numbers. ONE place this fallback rule lives now; the other two
+    call THIS, not their own copy."""
+    return lot.get('road_id', 'arterial')
+
+
+def resolve_road(roads, x, y):
+    """(road, local) | (None, None) - RESOLVE_ROAD_NOTES.md section 2.
+    `local` is {'along', 'across', 'side'} in the WINNING road's own
+    frame; `side` is already relabelled to that road's own
+    'side_plus'/'side_minus' names (section 4's 'plus'/'minus' is an
+    implementation detail, never returned - a caller should never need
+    to know which sign convention a road picked).
+
+    Nearest-road selection, section 5: for each candidate, the distance
+    is the perpendicular offset if the click's `along` falls inside the
+    segment's own [0, length] span, else the distance to whichever
+    endpoint is nearer (point-to-SEGMENT, not point-to-infinite-line -
+    a click past a short segment's end must not claim frontage on a
+    road that does not reach that far). The nearest candidate wins,
+    subject to ROAD_MAX_REACH - beyond every road's reach is (None,
+    None), the generalized form of today's single-road off-board
+    refusal. Near the crossing (`_in_crossing` above) refuses the same
+    way, before nearest-road selection ever runs."""
+    if _in_crossing(roads, x, y):
+        return None, None
+    best = None
+    best_dist = None
+    for road in roads:
+        along, across, length = _project_to_road(road, x, y)
+        if 0.0 <= along <= length:
+            dist = abs(across)
+        else:
+            clamped = max(0.0, min(length, along))
+            dist = ((along - clamped) ** 2 + across ** 2) ** 0.5
+        if best_dist is None or dist < best_dist:
+            best = (road, along, across)
+            best_dist = dist
+    if best is None or best_dist > ROAD_MAX_REACH:
+        return None, None
+    road, along, across = best
+    side = road['side_plus'] if across >= 0.0 else road['side_minus']
+    return road, {'along': along, 'across': across, 'side': side}
+
+
+def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
+    """(ok, reason, lot) - the click -> lot decision, MULTI-ROAD as of
+    2026-09-03 (RESOLVE_ROAD_NOTES.md; resolve_road above, wired in
+    rather than standalone now). Road/side selection and the outer
+    reach bound are entirely resolve_road's job; this function does
+    what resolve_road deliberately leaves unanswered: the in-the-road
+    refusal (read off the WINNING road's own corridor, and only when
+    the click's `along` actually falls inside THAT road's own segment -
+    a click past a road's own end can share its `across` with the
+    corridor without standing on it, test 2's off-board case among
+    them), snapping back to WORLD space before quantizing, the
+    pinned-span check (arterial only - PINNED_SPANS has no cross-street
+    entries, RESOLVE_ROAD_NOTES.md section 6, still open), and the
+    placed-lot overlap check, now scoped to lots on the SAME road via
+    the 'road_id' key place() below writes.
+
+    There is no separate "too far from a road" refusal here distinct
+    from resolve_road's own (None, None): any road resolve_road hands
+    back is ALREADY within ROAD_MAX_REACH by construction (its own
+    outer bound), so that case can only ever surface below as
+    'off-board', never re-derived a second time against a number that
+    could drift from resolve_road's - see ROAD_MAX_REACH's own comment
+    above for why the two are the same number on purpose.
+
+    world_coord = road['start'][axis] + along, THEN snapped - not
+    `along` snapped directly. Neither PLATE_X_MIN nor PLATE_Y_MIN is a
+    multiple of WIDTH_QUANTUM, so snapping the road-relative offset
+    would shift the grid off-quantum silently. Converting to world
+    space first makes the arterial case reduce EXACTLY to the
+    pre-multi-road math (road['start'][0] is PLATE_X_MIN, along =
+    x - PLATE_X_MIN, so world_coord == x always - self-test 13 checks
+    this identity directly) while correctly generalizing to the cross
+    street's own Y axis.
+
+    `pins_active` gates the PINNED_SPANS check only, unchanged from
+    before multi-road - see empty-mode's own caller for why this is
+    mode-gated, not a permanent board fact."""
+    road, local = resolve_road(ROADS, x, y)
+    if road is None:
+        if _in_crossing(ROADS, x, y):
+            return False, (
+                'in the crossing: (%.1f, %.1f) is pavement shared by '
+                'more than one road' % (x, y)), None
+        return False, (
+            'off-board: (%.1f, %.1f) is not within reach of any road'
+            % (x, y)), None
+    along, across, side = local['along'], local['across'], local['side']
+    _, _, length = _project_to_road(road, x, y)
+    if 0.0 <= along <= length and abs(across) < ROAD_HALF:
+        return False, (
+            'in the road: |across|=%.0f is inside the %s corridor '
+            '(half %.0f)' % (abs(across), road['id'], ROAD_HALF)), None
+    axis_idx = 0 if road['axis'] == 'x' else 1
+    world_coord = road['start'][axis_idx] + along
+    x0 = _snap(world_coord - width / 2.0)
+    x1 = x0 + width
+    axis_min = min(road['start'][axis_idx], road['end'][axis_idx])
+    axis_max = max(road['start'][axis_idx], road['end'][axis_idx])
+    if x0 < axis_min or x1 > axis_max:
+        return False, (
+            'off-board: snapped span [%.1f, %.1f] exceeds the %s road'
+            % (x0, x1, road['id'])), None
+    if pins_active and road is ARTERIAL:
         for pin_x0, pin_x1, pin_side in PINNED_SPANS:
             if pin_side != side:
                 continue
             if x0 < pin_x1 and pin_x0 < x1:
-                return False, 'overlap: [%.1f, %.1f] crosses a pinned ' \
-                    'lot at [%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1), None
+                return False, (
+                    'overlap: [%.1f, %.1f] crosses a pinned lot at '
+                    '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
     for p in state['parcels'].values():
         lot = p.get('placement')
         if not lot or lot['side'] != side:
             continue
+        if lot_road_id(lot) != road['id']:
+            continue
         if x0 < lot['x1'] and lot['x0'] < x1:
-            return False, 'overlap: [%.1f, %.1f] crosses an existing lot ' \
-                'at [%.1f, %.1f]' % (x0, x1, lot['x0'], lot['x1']), None
-    return True, '', {'x0': x0, 'x1': x1, 'side': side}
+            return False, (
+                'overlap: [%.1f, %.1f] crosses an existing lot at '
+                '[%.1f, %.1f]' % (x0, x1, lot['x0'], lot['x1'])), None
+    return True, '', {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
 
 
 def _next_pid(state):
@@ -207,7 +371,7 @@ def _next_pid(state):
     return 'P%d' % n
 
 
-def place(state, x, y, pins_active=True):
+def place(state, x, y, pins_active=True, width=V0_WIDTH):
     """One placement attempt. (state, pid, ok, reason) - pid is None on
     refusal. On success, state['parcels'][pid] has EXACTLY the shape
     citytick.ensure_parcel() already produces for a pinned parcel
@@ -225,14 +389,15 @@ def place(state, x, y, pins_active=True):
         return state, None, False, (
             'pool exhausted: %d/%d placed lots already active'
             % (placed, POOL_SIZE))
-    ok, reason, lot = resolve_click(state, x, y, pins_active=pins_active)
+    ok, reason, lot = resolve_click(state, x, y, pins_active=pins_active, width=width)
     if not ok:
         return state, None, False, reason
     pid = _next_pid(state)
     state['parcels'][pid] = {
-        'rid': V0_RECIPE, 'tier': 0, 'width': V0_WIDTH,
+        'rid': V0_RECIPE, 'tier': 0, 'width': width,
         'owned': False, 'accum': 0.0,
-        'placement': {'x0': lot['x0'], 'x1': lot['x1'], 'side': lot['side']},
+        'placement': {'x0': lot['x0'], 'x1': lot['x1'], 'side': lot['side'],
+                      'road_id': lot['road_id']},
     }
     return state, pid, True, ''
 
@@ -298,61 +463,78 @@ if __name__ == '__main__':
     if os.path.exists(_SELFTEST_PATH):
         os.remove(_SELFTEST_PATH)
 
-    # 1. A clean click just off the plate's centre places at (-820, 0),
-    #    hand-computed: x=-410, width 820 -> x0 = snap(-410 - 410) =
-    #    snap(-820) = -820, x1 = -820 + 820 = 0. y=100 (>=0) -> 'north'.
-    #    NOT x=0 (the original, pre-empty-mode version of this test) -
-    #    a lot centred on the crossing would be adjacent-testable in
-    #    test 5 only by reaching to x=1230, which is REAL pin territory
-    #    (NE0 starts at 1130) the moment pins joined the overlap scan.
-    #    Shifted the whole 1/3/4/5 sequence toward the NW quadrant's
-    #    clear cross-street gap instead - same relative shape (one lot,
-    #    an overlap probe, an opposite-side non-overlap, one adjacent
-    #    lot), just off-centre so neither end ever reaches a real pin.
+    # 1. A clean click near the plate's WEST edge places just inside it.
+    #    RELOCATED 2026-09-03, multi-road integration: the old point
+    #    (x=-410) sat only 410 uu from the cross street's own centreline
+    #    but 1500 uu from the arterial's - once resolve_click offers BOTH
+    #    roads, the cross street legitimately wins there now (self-test
+    #    15 proves this exact point resolves to CROSS_STREET when both
+    #    roads are offered), so asserting arterial-frontage placement at
+    #    that x would be asserting something now false, not a regression.
+    #    Needed a point where |x| clearly beats |y| (arterial nearer) AND
+    #    lands on an UNPINNED span - queried PINNED_SPANS directly rather
+    #    than re-deriving citylayout's table by hand: north/south frontage
+    #    is WALL-TO-WALL pinned from 1130..6050 (both signs) with no gap
+    #    of its own, so the only open ground left is the two edge margins,
+    #    PLATE_X_MIN..-6050 and 6050..PLATE_X_MAX, each 1600 uu wide.
+    #    x=-7000, width 820: x0 = snap(-7000-410) = snap(-7410) = -7380,
+    #    x1 = -7380+820 = -6560, clear of the pin at -6050 by 510 uu.
+    #    y=1500 (>=0) -> 'north'; cross-street distance there is 7000,
+    #    arterial wins by a wide margin, no ambiguity.
     s = citytick.seed_state()
-    s, pid, ok, reason = place(s, -410.0, 100.0)
+    s, pid, ok, reason = place(s, -7000.0, 1500.0)
     assert ok and pid == 'P1' and reason == '', (pid, ok, reason)
     assert s['parcels']['P1'] == {
         'rid': 'vernacular', 'tier': 0, 'width': 820.0,
         'owned': False, 'accum': 0.0,
-        'placement': {'x0': -820.0, 'x1': 0.0, 'side': 'north'},
+        'placement': {'x0': -7380.0, 'x1': -6560.0, 'side': 'north',
+                       'road_id': 'arterial'},
     }, s['parcels']['P1']
 
     # 2. Off-board: x beyond PLATE_X_MAX is refused, no parcel added.
     #    8000 is beyond the four-block board's own 6050 edge, not just
     #    beyond the old one-block 2460 - must still be a genuine miss
-    #    after the plate widened to match the real board.
+    #    after the plate widened to match the real board. Also proves
+    #    resolve_click's in-the-road check is gated on `along` actually
+    #    being IN the winning road's own segment: at y=0 across=0 always,
+    #    which would misfire as "in the road" if checked blind - along
+    #    here is 350 uu PAST the arterial's own east end, so that check
+    #    is correctly skipped and this falls through to off-board instead.
     s2, pid2, ok2, reason2 = place(s, 8000.0, 0.0)
     assert not ok2 and pid2 is None and 'off-board' in reason2, (
         pid2, ok2, reason2)
     assert 'P2' not in s2['parcels'], 'refused placement must not register'
 
-    # 3. Overlap on the SAME side is refused: P1 spans [-820, 0] north;
-    #    a click at x=-500 (snap(-500-410)=snap(-910)=-820, same span as
-    #    P1 exactly) crosses it.
-    s3, pid3, ok3, reason3 = place(s, -500.0, 50.0)
+    # 3. Overlap on the SAME side is refused: P1 spans [-7380, -6560]
+    #    north; a click at x=-7050 (snap(-7050-410)=snap(-7460)=-7380,
+    #    same span as P1 exactly) crosses it.
+    s3, pid3, ok3, reason3 = place(s, -7050.0, 1500.0)
     assert not ok3 and pid3 is None and 'overlap' in reason3, (
         pid3, ok3, reason3)
     assert 'P2' not in s3['parcels']
 
     # 4. The SAME x, opposite side (y<0, 'south') is NOT an overlap -
     #    frontage sides are independent spans.
-    s4, pid4, ok4, reason4 = place(s, -410.0, -50.0)
+    s4, pid4, ok4, reason4 = place(s, -7000.0, -1500.0)
     assert ok4 and pid4 == 'P2', (pid4, ok4, reason4)
     assert s4['parcels']['P2']['placement']['side'] == 'south'
     assert s4['parcels']['P2']['placement'] == {
-        'x0': -820.0, 'x1': 0.0, 'side': 'south'}
+        'x0': -7380.0, 'x1': -6560.0, 'side': 'south', 'road_id': 'arterial'}
 
     # 5. A second, non-overlapping north placement gets the next pid in
-    #    sequence, not a reused one, and its span is adjacent, not
-    #    overlapping: click at x=410 -> snap(410-410)=snap(0)=0, span
-    #    [0, 820] - touches P1's [-820,0] at the boundary, does not cross
-    #    it (x0 < lot.x1 and lot.x0 < x1 is false when x0 == lot.x1
-    #    exactly), and stays well clear of NE0's real span (1130..3590).
-    s5, pid5, ok5, reason5 = place(s4, 410.0, 60.0)
+    #    sequence, not a reused one. NOT adjacent to P1 this time (a real,
+    #    measured constraint, not a simplification of convenience): the
+    #    west margin is exactly 1600 uu wide and two 820-wide lots need
+    #    1640 - they cannot both fit, let alone touch, in the same margin.
+    #    Placed on the EAST margin instead (x=7000, mirroring test 1):
+    #    x0 = snap(7000-410) = snap(6590) = 6560, x1 = 6560+820 = 7380,
+    #    clear of the pin at 4410..6050 by 510 uu, same shape as P1's own
+    #    clearance. Proves the second-placement/next-pid path without
+    #    claiming an adjacency the geometry cannot actually support.
+    s5, pid5, ok5, reason5 = place(s4, 7000.0, 1500.0)
     assert ok5 and pid5 == 'P3', (pid5, ok5, reason5)
     assert s5['parcels']['P3']['placement'] == {
-        'x0': 0.0, 'x1': 820.0, 'side': 'north'}
+        'x0': 6560.0, 'x1': 7380.0, 'side': 'north', 'road_id': 'arterial'}
 
     # 6. Compatibility with the EXISTING driver contract, not just
     #    self-consistency: ensure_parcel's own pinned-parcel shape is a
@@ -396,7 +578,7 @@ if __name__ == '__main__':
             'accum': 0.0,
             'placement': {'x0': 0.0, 'x1': 0.0, 'side': 'north'},
         }
-    s8, pid8, ok8, reason8 = place(full, 0.0, 100.0)
+    s8, pid8, ok8, reason8 = place(full, 0.0, 1500.0)
     assert not ok8 and pid8 is None and 'pool exhausted' in reason8, (
         pid8, ok8, reason8)
 
@@ -436,7 +618,7 @@ if __name__ == '__main__':
     #     click at its centre, 2360, must refuse before ever reaching the
     #     placed-lot loop (fresh seed_state, nothing placed yet).
     s11 = citytick.seed_state()
-    ok11, reason11, lot11 = resolve_click(s11, 2360.0, 100.0)
+    ok11, reason11, lot11 = resolve_click(s11, 2360.0, 1500.0)
     assert not ok11 and lot11 is None and 'pinned lot' in reason11, (
         ok11, reason11, lot11)
 
@@ -447,7 +629,7 @@ if __name__ == '__main__':
     #      nothing standing on it. NE0's centre, same 2360/100 as 11,
     #      only the mode differs.
     ok11b, reason11b, lot11b = resolve_click(
-        s11, 2360.0, 100.0, pins_active=False)
+        s11, 2360.0, 1500.0, pins_active=False)
     assert ok11b and reason11b == '' and lot11b is not None, (
         ok11b, reason11b, lot11b)
     assert lot11b['side'] == 'north'
@@ -467,14 +649,230 @@ if __name__ == '__main__':
                         ('SW3', 'POOL_PIN_SW3')], pairs12
     assert unmatched12 == [], unmatched12
 
-    print('placement self-check: 13/13 pass (pure-Python click->lot->state '
+    # 13. resolve_road REDUCES TO TODAY'S MATH on the arterial alone -
+    #     RESOLVE_ROAD_NOTES.md section 4's own claim, checked, not
+    #     asserted. Same four points resolve_click's own tests already
+    #     use above: side must match resolve_click's y>=0 rule exactly,
+    #     and recovering x from `along` (start=(PLATE_X_MIN,0), so
+    #     x = along + PLATE_X_MIN, direction is +X) must reproduce the
+    #     original x - a single-road candidate list is the "alone" this
+    #     claim is about; test 16 below is what changes once a second
+    #     road can outcompete it.
+    for x, y, want_side in ((-410.0, 1500.0, 'north'),
+                             (-410.0, -1500.0, 'south'),
+                             (2360.0, 1500.0, 'north'),
+                             (0.0, 50.0, 'north')):
+        road13, local13 = resolve_road([ARTERIAL], x, y)
+        assert road13 is ARTERIAL, (x, y, road13)
+        assert local13['side'] == want_side, (x, y, local13)
+        assert abs(local13['across'] - y) < 1e-9, (x, y, local13)
+        assert abs((local13['along'] + PLATE_X_MIN) - x) < 1e-9, (
+            x, y, local13)
+
+    # 14. The cross street alone, same reduction shape, its own axis:
+    #     `across` reduces to -x (direction is +Y so the unit normal
+    #     points -X - see resolve_road's own docstring), and positive x
+    #     is 'east' the same way positive y is 'north' for the arterial -
+    #     both conventions fall out of the math, neither is asserted
+    #     independently of it.
+    for x, y, want_side in ((1500.0, -410.0, 'east'),
+                             (-1500.0, -410.0, 'west'),
+                             (1500.0, 2360.0, 'east')):
+        road14, local14 = resolve_road([CROSS_STREET], x, y)
+        assert road14 is CROSS_STREET, (x, y, road14)
+        assert local14['side'] == want_side, (x, y, local14)
+        assert abs(local14['across'] - (-x)) < 1e-9, (x, y, local14)
+        assert abs((local14['along'] + PLATE_Y_MIN) - y) < 1e-9, (
+            x, y, local14)
+
+    # 15. Nearest-road selection actually disambiguates: (-410, 1500) is
+    #     1500 uu from the arterial's centreline but only 410 uu from the
+    #     cross street's - with both roads offered, the cross street
+    #     must win, even though test 13 above (arterial ALONE) resolves
+    #     this exact point to the arterial - the whole point of the
+    #     "alone" qualifier in RESOLVE_ROAD_NOTES.md section 4's claim.
+    road15, local15 = resolve_road(ROADS, -410.0, 1500.0)
+    assert road15 is CROSS_STREET, (road15, local15)
+    assert abs(local15['across'] - 410.0) < 1e-9, local15
+    assert local15['side'] == 'west', local15
+
+    # 16. REFUSES NEAR THE CROSSING: a click inside BOTH roads' own
+    #     ROAD_HALF corridor (standing on pavement common to both, not
+    #     legal frontage for either) - the origin itself and three more
+    #     points scaled up to just inside ROAD_HALF (1130), each on the
+    #     diagonal so both roads' `across` share the same magnitude.
+    #     This is the narrow, unambiguous case RESOLVE_ROAD_NOTES.md
+    #     section 2's docstring names, NOT the still-open corner-lot
+    #     question (section 7) - a click merely NEAR a corner but inside
+    #     only one corridor still resolves (test 17).
+    for x, y in ((0.0, 0.0), (100.0, 100.0), (500.0, 500.0),
+                 (1000.0, 1000.0)):
+        road16, local16 = resolve_road(ROADS, x, y)
+        assert road16 is None and local16 is None, (x, y, road16, local16)
+
+    # 17. Just past the crossing ambiguity zone (both `across` magnitudes
+    #     exceed ROAD_HALF), resolve_road picks a winner again rather
+    #     than refusing forever - proves 16 is a narrow band, not a
+    #     dead zone swallowing the whole quadrant near the origin.
+    road17, local17 = resolve_road(ROADS, 2000.0, 2000.0)
+    assert road17 is not None and local17 is not None, (road17, local17)
+
+    # 18. Point-to-SEGMENT, not point-to-infinite-line (RESOLVE_ROAD_NOTES
+    #     .md section 5's own distinction): 5000 uu past the arterial's
+    #     own east end, sitting exactly ON its infinite centreline
+    #     (y=0) - an infinite-line distance would read 0 and wrongly
+    #     accept; the finite segment's own end makes this "too far",
+    #     same refusal shape as test 19's real off-board click.
+    road18, local18 = resolve_road([ARTERIAL], PLATE_X_MAX + 5000.0, 0.0)
+    assert road18 is None and local18 is None, (road18, local18)
+
+    # 19. Too far from EITHER road, both roads offered - includes the
+    #     owner's own logged bad click (PLAYABLE_PLAN.md section 1:
+    #     "a click at (4671, 6954) - on the studio floor, off the board
+    #     entirely - placed P1 at (4100, 1880), five thousand units
+    #     away") - the exact point that motivated REACH existing at all,
+    #     now checked against the multi-road resolver too, not just the
+    #     single-road one resolve_click already refuses it against.
+    for x, y in ((4671.0, 6954.0), (100000.0, 100000.0)):
+        road19, local19 = resolve_road(ROADS, x, y)
+        assert road19 is None and local19 is None, (x, y, road19, local19)
+
+    # 20. resolve_road INTEGRATED into resolve_click, 2026-09-03: a click
+    #     on the cross street's WEST side succeeds and gets road_id='cross'.
+    #     x=-1500, y=2500 - along=py+4230=6730 (in [0,8460]), across=1500
+    #     (>=0 -> side_plus='west'), well clear of both ROAD_HALF (1130)
+    #     and any arterial competition (arterial dist there is 2500, cross
+    #     dist is 1500, cross wins). world_coord recovers y exactly (2500,
+    #     the cross street's own axis), same identity test 14 already
+    #     proves for resolve_road alone: x0=snap(2500-410)=snap(2090)=2050,
+    #     x1=2870. Fresh state - PINNED_SPANS never applies off the
+    #     arterial, so no pin geometry to clear here.
+    s20 = citytick.seed_state()
+    s20, pid20, ok20, reason20 = place(s20, -1500.0, 2500.0)
+    assert ok20 and pid20 == 'P1' and reason20 == '', (pid20, ok20, reason20)
+    assert s20['parcels']['P1']['placement'] == {
+        'x0': 2050.0, 'x1': 2870.0, 'side': 'west', 'road_id': 'cross'
+    }, s20['parcels']['P1']
+
+    # 21. The EAST side of the cross street, same state (proves the two
+    #     sides are independent spans on this road too, same shape as
+    #     test 4 for the arterial): x=1500, y=2500 -> across=-1500
+    #     (<0 -> side_minus='east'), same x0/x1 as test 20 (only side
+    #     sign differs, `across`'s magnitude and `along` are unchanged).
+    s21, pid21, ok21, reason21 = place(s20, 1500.0, 2500.0)
+    assert ok21 and pid21 == 'P2', (pid21, ok21, reason21)
+    assert s21['parcels']['P2']['placement'] == {
+        'x0': 2050.0, 'x1': 2870.0, 'side': 'east', 'road_id': 'cross'
+    }, s21['parcels']['P2']
+
+    # 22. In-the-road, ARTERIAL frame: x=3000, y=500 - arterial across=500
+    #     (<1130), along=10650 (in-segment) -> refused. Not a crossing
+    #     (cross across there is -3000, |3000|>1130) and arterial
+    #     unambiguously nearest (500 < cross's 3000) - a clean single-road
+    #     in-the-road case, message must name the arterial specifically.
+    ok22, reason22, lot22 = resolve_click(citytick.seed_state(), 3000.0, 500.0)
+    assert not ok22 and lot22 is None, (ok22, reason22, lot22)
+    assert 'in the road' in reason22 and 'arterial' in reason22, reason22
+
+    # 23. In-the-road, CROSS-STREET frame - the case that did NOT exist
+    #     before multi-road integration, and the one a blind `abs(y)`
+    #     check (the old single-road shape) could never produce: x=200,
+    #     y=3000. Cross across=-200 (<1130), arterial across=3000 (not a
+    #     candidate - not <1130 either, so still no crossing ambiguity),
+    #     cross wins nearest-road (200 < 3000). Message must name 'cross',
+    #     proving the refusal is read off the WINNING road's own frame,
+    #     not hard-coded to the arterial the way it used to be.
+    ok23, reason23, lot23 = resolve_click(citytick.seed_state(), 200.0, 3000.0)
+    assert not ok23 and lot23 is None, (ok23, reason23, lot23)
+    assert 'in the road' in reason23 and 'cross' in reason23, reason23
+
+    # 24. The crossing refusal is reachable through resolve_click itself,
+    #     not just resolve_road directly (test 16's own check) - same four
+    #     points test 16 already uses, now proven at the layer the click
+    #     driver actually calls.
+    for x, y in ((0.0, 0.0), (100.0, 100.0), (500.0, 500.0),
+                 (1000.0, 1000.0)):
+        ok24, reason24, lot24 = resolve_click(citytick.seed_state(), x, y)
+        assert not ok24 and lot24 is None, (x, y, ok24, reason24, lot24)
+        assert 'crossing' in reason24, (x, y, reason24)
+
+    # 25. lot_road_id's own backward-compat contract, added 2026-09-03 to
+    #     replace three independently-written copies of the same
+    #     `.get('road_id', 'arterial')` (this module's own overlap-scan,
+    #     clickdriver.py's ghost-box frame, init_unreal.py's
+    #     _lot_transform) with one shared function all three now call: a
+    #     dict with the key present returns it unchanged; a dict WITHOUT
+    #     it defaults to 'arterial'.
+    assert lot_road_id({'x0': 0.0, 'x1': 820.0, 'side': 'north'}) == 'arterial'
+    assert lot_road_id({'x0': 0.0, 'x1': 820.0, 'side': 'north',
+                         'road_id': 'arterial'}) == 'arterial'
+    assert lot_road_id({'x0': 0.0, 'x1': 820.0, 'side': 'west',
+                         'road_id': 'cross'}) == 'cross'
+
+    # 26. SURVIVES A RESTART - the part of "session-start reactivation for
+    #     cross-street lots" this module can actually prove headless
+    #     (2026-09-03, coordinator's ask). A state carrying a cross-street
+    #     placed lot AND a LEGACY placed lot with no 'road_id' key at all
+    #     (the owner's own real save has four such lots, predating this
+    #     key entirely) round-trips through citytick's own
+    #     save_state/load_state - the SAME persistence functions a PIE
+    #     restart's _read_state ultimately calls, not a bare
+    #     json.dumps/loads standing in for them.
+    #
+    #     What this does NOT reach, named plainly rather than implied:
+    #     _reactivate_placed_parcels itself (init_unreal.py, `unreal`-only
+    #     - GameInstance.CityStateJSON, live pool actors,
+    #     set_actor_location_and_rotation) and whether a reactivated
+    #     actor's mesh/collision/label actually resolve right on screen -
+    #     the same live-only gap this module's docstring has named since
+    #     v0. plan_reactivation itself needs no new proof here: its own
+    #     signature is (pids, pool_labels) - bare strings - it never
+    #     receives a placement dict at all, so it is oblivious to road_id
+    #     by construction, not merely untested against it (self-test 12
+    #     already proves this genericity a different way, a pin-key
+    #     namespace instead of a road-id split).
+    s26 = citytick.seed_state()
+    s26['parcels']['P1'] = {
+        'rid': V0_RECIPE, 'tier': 2, 'width': V0_WIDTH, 'owned': True,
+        'accum': 12.5,
+        'placement': {'x0': 2050.0, 'x1': 2870.0, 'side': 'west',
+                      'road_id': 'cross'},
+    }
+    s26['parcels']['P2'] = {
+        'rid': V0_RECIPE, 'tier': 0, 'width': V0_WIDTH, 'owned': False,
+        'accum': 0.0,
+        'placement': {'x0': -7380.0, 'x1': -6560.0, 'side': 'north'},
+    }  # legacy shape: no 'road_id' key, exactly the owner's real four
+    citytick.save_state(s26, _SELFTEST_PATH)
+    loaded26 = citytick.load_state(_SELFTEST_PATH)
+    assert loaded26['parcels']['P1']['placement']['road_id'] == 'cross', (
+        loaded26['parcels']['P1'])
+    assert lot_road_id(loaded26['parcels']['P1']['placement']) == 'cross'
+    assert loaded26['parcels']['P1']['tier'] == 2, loaded26['parcels']['P1']
+    assert loaded26['parcels']['P1']['owned'] is True, loaded26['parcels']['P1']
+    assert 'road_id' not in loaded26['parcels']['P2']['placement'], (
+        loaded26['parcels']['P2'])
+    assert lot_road_id(loaded26['parcels']['P2']['placement']) == 'arterial'
+    if os.path.exists(_SELFTEST_PATH):
+        os.remove(_SELFTEST_PATH)
+
+    print('placement self-check: 26/26 pass (pure-Python click->lot->state '
           'contract, plate bounds measured off the real board mesh and '
           'contain citylayout\'s block union, session-start reactivation '
           'planning for both placed and pinned lots, pinned-span overlap '
-          'refusal mode-gated on pins_active; live cursor-trace coordinates, '
-          'actor spawn/resolve, '
-          'and the feel itself are NOT provable here - see module '
-          'docstring, and PLACEMENT_GRID.md section 8 - the owner\'s own '
-          'click on empty board is the real acceptance test)')
+          'refusal mode-gated on pins_active, resolve_road MULTI-ROAD '
+          'FRONTAGE NOW WIRED INTO resolve_click per RESOLVE_ROAD_NOTES.md '
+          '- reduces to today\'s math on either road alone, nearest-road '
+          'disambiguation, crossing refusal (reachable both directly and '
+          'through resolve_click), point-to-segment not point-to-line, the '
+          'owner\'s own logged off-board click, cross-street placement on '
+          'both sides, in-the-road refused on whichever road actually won, '
+          'lot_road_id\'s backward-compat default now the single source '
+          'three call sites share, a cross-street lot AND a legacy '
+          'road_id-less lot both surviving a real save_state/load_state '
+          'round-trip intact; live cursor-trace coordinates, actor '
+          'spawn/resolve, and the feel itself are NOT provable here - see '
+          'module docstring, and PLACEMENT_GRID.md section 8 - the '
+          'owner\'s own click on empty board is the real acceptance test)')
     if os.path.exists(_SELFTEST_PATH):
         os.remove(_SELFTEST_PATH)

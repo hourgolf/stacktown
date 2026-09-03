@@ -135,6 +135,12 @@ def _place_refusal_message(reason):
         return 'Already built there'
     if reason.startswith('pool exhausted'):
         return 'No more lots available'
+    if reason.startswith('in the road'):
+        return "That's the road - click the block beside it"
+    if reason.startswith('too far from a road'):
+        return 'Too far from a road'
+    if 'crossing' in reason:
+        return "That's the crossing - pick one road's frontage"
     return "Can't build here"
 
 
@@ -208,6 +214,74 @@ def _write_state(gi, state):
     gi.set_editor_property('CityStateJSON', _citytick.json.dumps(state))
 
 
+
+
+def _lot_transform(lot):
+    """World placement for a lot dict from placement.resolve_click:
+    (x, y, yaw). The convention every mesh on a lot relies on (see
+    _apply_lot_offset): the actor sits on the pad's centre line, local +x
+    runs ALONG the road from the lot's near corner, local +y points AWAY
+    from the road. Arterial (axis x): north (x0, +1880, 0), south
+    (x1, -1880, 180) - unchanged from v0. Cross street (axis y, road at
+    x=0, PLACEMENT_GRID.md section 2.1b): x0/x1 are the lot's Y span;
+    west (x<0) sits at (-1880, y0, yaw 90) so local +x is +y and local +y
+    is -x; east (x>0) at (+1880, y1, yaw -90) so local +x is -y and local
+    +y is +x. Derived from the rotation, then MEASURED (2026-09-03)."""
+    side = lot['side']
+    if _placement.lot_road_id(lot) == 'cross':
+        if side == 'west':
+            return -_PAD_CENTER_Y, float(lot['x0']), 90.0
+        return _PAD_CENTER_Y, float(lot['x1']), -90.0
+    if side == 'north':
+        return float(lot['x0']), _PAD_CENTER_Y, 0.0
+    return float(lot['x1']), -_PAD_CENTER_Y, 180.0
+
+
+def _apply_lot_offset(actor, width):
+    """Pad and mass share ONE component ("Building") with DIFFERENT pivots
+    (design lane's ruling + coordinator's PIE measurement, 2026-09-03):
+    the placeholder is /Engine/BasicShapes/Cube, centre-pivot, scaled to
+    width x 1500 x 30; a catalogue mass has genbuild's front-LEFT pivot at
+    ground (local y 0..D, x 0..W). The actor sits at the pad's centre
+    line (+/-_PAD_CENTER_Y) with x at the lot's road-side corner and yaw
+    0 north / 180 south, so one actor transform cannot serve both meshes:
+    the cube must move half a width along +x to cover the lot span, the
+    mass must move half the block depth toward the road so its front
+    face lands on the facade line (it sat 750 uu back - a doubled
+    setback, not a designed one). Both offsets are LOCAL, so the south
+    side's yaw 180 resolves them correctly without a special case.
+    Decided by the mesh actually on the component, not by Owned/Tier, so
+    the Blueprint's own ResolveMesh timing can never leave a frame with
+    the wrong offset. Idempotent - called at activation, reactivation and
+    every sync for placement-created lots (preset pins keep the builder's
+    transform)."""
+    # Whole body guarded: this runs inside the economy driver's sync, and
+    # HANDOFF.md's scar is exact - one unguarded call here killed every
+    # tick of the driver (13:39, 2026-09-03, get_relative_location is not
+    # a Python method on SceneComponent; the property is relative_location).
+    try:
+        for c in actor.get_components_by_class(unreal.StaticMeshComponent):
+            if c.get_name() != 'Building':
+                continue
+            mesh = c.get_editor_property('static_mesh')
+            is_placeholder = mesh is None or mesh.get_name() == 'Cube'
+            if is_placeholder:
+                want = unreal.Vector(float(width) / 2.0, 0.0, 0.0)
+            else:
+                want = unreal.Vector(0.0, -(_PAD_CENTER_Y - _citylayout.HALF), 0.0)
+            cur = c.get_editor_property('relative_location')
+            if (abs(cur.x - want.x) > 0.5 or abs(cur.y - want.y) > 0.5
+                    or abs(cur.z - want.z) > 0.5):
+                c.set_relative_location(want, False, False)
+            return
+    except Exception as e:
+        key = 'lot_offset:' + type(e).__name__
+        seen = getattr(unreal, '_stacktown_driver_state', {}).get('seen_errors')
+        if seen is not None and key not in seen:
+            seen.add(key)
+            unreal.log_warning('CITY SYNC: lot offset skipped - %s' % e)
+
+
 def _sync_parcels(gw, gi):
     """Per PARCELIZATION_CONTRACT.md's amendment (A1/A6): find every
     BP_Parcel actor, register any not yet known to citystate.json (seeded
@@ -254,6 +328,8 @@ def _sync_parcels(gw, gi):
                 state, pid, rid, width, _state_path_for())
             changed = changed or inserted
         p = state['parcels'][pid]
+        if p.get('placement'):
+            _apply_lot_offset(a, p['width'])
         if bool(a.get_editor_property('Owned')) != bool(p['owned']):
             a.set_editor_property('Owned', bool(p['owned']))
         if int(a.get_editor_property('Tier')) != int(p['tier']):
@@ -417,9 +493,7 @@ def _reactivate_placed_parcels(gw, gi):
         p = state['parcels'][pid]
         lot = p['placement']
         pool_actor = pool_actors[label]
-        face_y = _PAD_CENTER_Y if lot['side'] == 'north' else -_PAD_CENTER_Y
-        yaw = 0.0 if lot['side'] == 'north' else 180.0
-        spawn_x = lot['x0'] if lot['side'] == 'north' else lot['x1']
+        spawn_x, face_y, yaw = _lot_transform(lot)
         # IDENTICAL sequence to the click-driven activation, including
         # restoring the ACTUAL current Tier/Owned - unlike a fresh
         # placement (always Tier=0/Owned=False), a reactivated lot may
@@ -437,6 +511,7 @@ def _reactivate_placed_parcels(gw, gi):
         pool_actor.set_actor_label(pid)
         pool_actor.set_actor_hidden_in_game(False)
         pool_actor.set_actor_enable_collision(True)
+        _apply_lot_offset(pool_actor, p['width'])
         unreal.log('CITY REACTIVATE: %s restored at (%.0f, %.0f)'
                    % (pid, spawn_x, face_y))
     for pid in unmatched:
@@ -614,8 +689,16 @@ def _city_driver_tick(delta_seconds):
                 pins_active = not bool(gi.get_editor_property('EmptyStart'))
             except Exception:
                 pins_active = True
+            # Width rides a PYTHON-SIDE channel (unreal._stacktown_place_width,
+            # set by clickdriver.py next to PlaceRequestX/Y): both drivers are
+            # in-process, so a GameInstance variable - a Blueprint edit - is
+            # not needed for Python-to-Python. Consume-and-clear like the
+            # rest; absent means today's default width.
+            req_width = getattr(unreal, '_stacktown_place_width', None) or _placement.V0_WIDTH
+            unreal._stacktown_place_width = None
             new_state, pid, ok, reason = _placement.place(
-                city_state, px_req, py_req, pins_active=pins_active)
+                city_state, px_req, py_req, pins_active=pins_active,
+                width=float(req_width))
             if not ok:
                 unreal.log_warning('CITY PLACE: refused - %s' % reason)
                 # Owner's first live click refused silently on screen -
@@ -681,10 +764,7 @@ def _city_driver_tick(delta_seconds):
                         unreal.LinearColor(1.0, 0.4, 0.0, 1.0),
                         3.0, 'CityPlace')
                 else:
-                    face_y = _PAD_CENTER_Y if lot['side'] == 'north' else -_PAD_CENTER_Y
-                    yaw = 0.0 if lot['side'] == 'north' else 180.0
-                    spawn_x = (lot['x0'] if lot['side'] == 'north'
-                               else lot['x1'])
+                    spawn_x, face_y, yaw = _lot_transform(lot)
                     # ORDER MATTERS (the owner's own instruction): location
                     # -> identity -> label -> hidden off -> collision on,
                     # so the actor is never momentarily visible or solid
@@ -706,6 +786,7 @@ def _city_driver_tick(delta_seconds):
                     pool_actor.set_actor_label(pid)
                     pool_actor.set_actor_hidden_in_game(False)
                     pool_actor.set_actor_enable_collision(True)
+                    _apply_lot_offset(pool_actor, new_state['parcels'][pid]['width'])
                     unreal.log('CITY PLACE: %s activated at (%.0f, %.0f)'
                                % (pid, spawn_x, face_y))
             _write_state(gi, new_state)

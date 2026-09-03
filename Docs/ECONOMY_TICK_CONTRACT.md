@@ -247,6 +247,109 @@ called (see "Explicitly out of scope" below, unchanged principle,
 same file). Decide it with the owner's own economy notes when that pass
 happens, not by inference from tonight's session.
 
+## Economy pacing table — proposed 2026-09-03, NOT APPLIED
+
+`econrules.py` and `econrules.json` are untouched by this section — numbers
+and rationale only, for the owner to read before anything here lands.
+Answers PLAYABLE_PLAN.md §2.3's pacing brief. **Assumes growth stays
+AUTOMATIC** (the "Growth model" section directly above is still open and
+this table does not resolve it) — this is a speed change to the current
+mechanic, not an answer to whether it should be automatic at all.
+
+### Today's numbers, and why they feel like they do
+
+    money_start        100
+    price_base           50
+    price_per_100uu       2
+    price_per_tier       25
+    rent_per_tier         10
+    growth_threshold      40
+    demand_default       1.0
+    tick interval          2.0 s  (init_unreal.py _TICK_INTERVAL_S, not
+                                   in econrules.json — unchanged by this
+                                   proposal either way)
+
+**A structural fact worth stating before any numbers, because it explains
+the "every 8 seconds" complaint precisely:** `tick()`'s formulas are both
+linear in `(tier+1)` — `growth_threshold*(tier+1)` needed, `rent_per_tier*
+(tier+1)*demand` earned per tick — so the `(tier+1)` factor cancels
+exactly. **Every tier-up costs the identical number of ticks, regardless
+of which tier it's climbing from.** Today that's `40/(10*1.0) = 4` ticks =
+8 seconds, matching the owner's own log exactly (P4: tier 1 at :15, tier 2
+at :23, tier 3 at :32 — 8s apart each time, not accelerating or slowing).
+Confirmed by simulation, not just algebra: at today's constants a fresh
+vernacular lot (6 tiers) tops out in **40 seconds total.** A second lot is
+affordable **6.6 seconds** after the first purchase.
+
+### Option A — retune the existing constants, no code change
+
+The linear-cancellation above means constants alone can hit ONE pacing
+target precisely but not both at once for a 6-tier ladder: pinning the
+first tier-up to 2–3 minutes forces the full ladder (5 tier-ups, all
+equal-length) to 10–15 minutes, short of the 20–30 minute target.
+Proposed, prioritizing the target that defines a new player's first few
+minutes:
+
+    rent_per_tier        2     (was 10)
+    growth_threshold    150     (was 40)
+    price_base           80     (was 50)
+    price_per_100uu       2     (unchanged)
+    price_per_tier        25     (unchanged)
+    money_start          100     (unchanged)
+
+Simulated result (vernacular, 6 tiers, width 820 — placement.py's V0):
+first tier-up **150s (2.5 min)**, every subsequent tier-up also 150s (the
+cancellation still holds), full ladder **750s (12.5 min)**. Second lot:
+buying the first (820uu, tier 0) costs 96.4, leaving 3.6 of the starting
+100 — affording a second identical lot needs 92.8 more seconds (**1.55
+min**) of rent at the new, much slower income rate. That is the "second
+lot is a decision" target hit directly: waiting on a fresh purchase now
+competes on the clock with waiting on the first lot's own tier-up.
+
+### Option B — one-line code change, hits both pacing targets exactly
+
+Requires changing `tick()`'s threshold term from `growth_threshold *
+(tier+1)` to `growth_threshold * (tier+1)**2` (rent stays linear — a
+higher-tier building earning proportionally more rent is the part of
+today's shape worth keeping). This breaks the cancellation on purpose:
+ticks-to-advance becomes `k*(tier+1)` where `k =
+growth_threshold/rent_per_tier` — each successive tier-up costs more than
+the last, the "harder as you build higher" shape city-builders usually
+have and today's formula doesn't.
+
+    rent_per_tier          2     (was 10)
+    growth_threshold      120     (was 40)
+    price_base              80     (was 50)
+    (price_per_100uu, price_per_tier, money_start unchanged, same as A)
+
+Simulated (vernacular, 6 tiers): tier-up times 120s, 240s, 360s, 480s,
+600s (2, 4, 6, 8, 10 minutes — each one exactly 2 minutes longer than the
+last). First tier-up **120s = 2.0 min** (the target window's own lower
+edge). Full ladder **1800s = 30.0 min** (the target window's own upper
+edge) — `k=60` is the unique ratio that pins both bounds at once for a
+6-tier ladder; there is no slack either direction, which is worth the
+owner knowing rather than discovering as "it only barely fits." Second
+lot: identical to option A (same price/rent-at-tier-0 constants), 92.8s.
+
+### Recipes with a different tier count
+
+Contemporary (7 tiers) and office (4 tiers) shift under either option
+because total ladder time scales with tier count. Not simulated here
+pending the owner's choice of option — `rent_per_tier`/`growth_threshold`
+are global constants (`econrules.json`), not per-recipe, so whichever
+option is chosen applies uniformly and the office ladder (the shortest)
+finishes fastest by construction. Worth a second simulation pass once
+A vs. B is decided, not before — no reason to hand-compute seven
+recipes' worth of numbers for an option that might not be chosen.
+
+### What this does not touch
+
+The buy-price-vs-tier-price interaction (`price_per_tier`, buying an
+ALREADY-grown unowned lot) is unchanged from today in both options —
+this pass only tuned the fresh-purchase and growth-speed numbers PLAYABLE
+_PLAN.md named. `demand_default` also unchanged; demand as a dial (rather
+than a fixed 1.0) is its own open surface, not touched here.
+
 ## Patina's Age channel — declared 2026-09-02, blocking the wear window
 
 The design lane's wear system reads CPD channel 0 (`Age`, `cpdmap.py` —

@@ -182,6 +182,153 @@ to break that discipline.
 
 ---
 
+
+### 2.1 Amendment, 2026-09-03 — reach, the road band, and the ghost (owner: "go ahead with the ghost pad")
+
+The owner's first full session (04:38) showed why v0 read as "a parcel
+showed up generally around the click": `resolve_click` bounded x to the
+plate and snapped everything else, so a click on the studio floor at
+(4671, 6954) placed a pad at (4100, 1880), five thousand units away.
+Two refusals now bound the click to the block it asks for, both in
+`placement.resolve_click` (the pure resolver, so the ghost and the click
+can never disagree):
+
+- **in the road** — `|y| < ROAD_HALF` (1130, `citylayout.HALF`): the
+  click is on the carriageway or footway. Screen text: "That's the
+  road - click the block beside it".
+- **too far from a road** — `|y| > ROAD_HALF + BLOCK_DEPTH + REACH_SLACK`
+  (1130 + 1500 + 600 = 3230): behind the block's back edge with 600 uu
+  of forgiveness. Screen text: "Too far from a road".
+
+The **ghost**: while the cursor rests on empty plate, `clickdriver.py`
+runs the same resolver and draws the footprint a click would get - a
+green box with "click to place", or a red box (on overlap, the refused
+span) or a red label with the refusal - as a debug box for v0; a
+translucent pad mesh is later polish. Cached per 20-uu cell so the
+resolver is not re-run every frame.
+
+**Measured, not assumed (my own PIE, 2026-09-03):** an activated pad is
+the `Building` component itself - a cube scaled to width x 1500 x 30,
+centred on the actor - so at `_PAD_CENTER_Y` = 1880 its front edge sits
+exactly on the facade line (1130); the "stretched into the road" note
+from 2026-09-02 was the old 1130-centred placement and is resolved. A
+BOUGHT lot's mass (SM_WMass_w820_setback2) spans y = 1879..2579: front
+at the pad's centre line, 750 uu behind the facade. Whether that is the
+catalogue's intended setback (the mass name says two quanta, 820) or a
+double setback is a design-lane question - not touched here.
+
+### 2.1a Width cycle — spec, NOT wired (2026-09-03, PLAYABLE_PLAN.md §2.2)
+
+The player chooses the ghost's width before clicking, instead of every
+placed lot defaulting to `V0_WIDTH` (820). This section specs the wiring
+precisely enough to build in one pass in `clickdriver.py`; it does not
+touch `placement.py` or `clickdriver.py` itself - both stay exactly as
+2.1 left them until this is built.
+
+**The ladder, and its source.** `woodmap.WIDTHS = (820.0, 1230.0, 1640.0,
+2050.0, 2460.0)` - five widths, "RE-BAKED ON THE FLAGSHIP WIDTH LADDER"
+per `woodmap.py`'s own section-1 docstring (the wood catalogue reuses the
+flagship's five widths rather than a second, independent ladder). This
+is the correct source, not `recipes.py`'s own width table: `BP_
+StacktownGameInstance.ActiveCatalogue` is the wood catalogue for this
+slice (HANDOFF §2, "swapped flagship->wood, 2026-09-01"), and only
+`woodmap.WIDTHS` is proven baked for it (`woodmap.asset_name` raises on
+any width off this exact ladder). `V0_WIDTH` (820.0) is already
+`WIDTHS[0]` - the cycle's own default state should start there, so a
+session that never touches the keys places identically to today.
+
+**The keys.** Primary: mouse scroll wheel. Fallback: Q/E. Both follow
+`clickdriver.py`'s own established key idiom exactly (`_KEY` dict,
+`unreal.Key()` + `set_editor_property('key_name', <name>)`, polled via
+`pc.is_input_key_down(key)` with an edge computed against the previous
+tick's `_st['down']` - see `_tick`'s existing `edges` loop, which this
+extends rather than replaces):
+
+    unreal Key names to add to _KEY: 'MouseScrollUp', 'MouseScrollDown', 'Q', 'E'
+
+`MouseScrollUp`/`MouseScrollDown` are real, distinct `FKey`s in this
+engine (not an axis read) - each wheel notch registers as a one-tick
+`IsInputKeyDown` pulse, so the SAME edge-detection the B/N keys already
+use (`down and not previously-down`) is the whole mechanism; no new
+polling shape needed. Scroll up -> widen (index + 1); scroll down ->
+narrow (index - 1); clamp to `[0, len(WIDTHS)-1]`, no wraparound (an
+owner cycling past the top should land ON the top, not snap back to the
+bottom - the same "loud, specific, not surprising" discipline the
+refusal messages already hold to). Q mirrors scroll-down, E mirrors
+scroll-up - the direction PLACEMENT_GRID.md's own brief implies by
+listing them as one fallback for one gesture ("Scroll wheel (or Q/E)"),
+not independently chosen here.
+
+**NAMED CONFLICT, not resolved here:** Q and E are ALSO the zoom-ladder
+step keys in `BP_LensRig`'s own `EventTick`/`TickBody` (camera focal
+stops) - a Blueprint graph, FROZEN, and this session never confirmed
+whether that camera code is still the live path post-freeze or whether
+it moved with the click chain. If it is still live, binding Q/E in
+`clickdriver.py` too means one press does BOTH a camera zoom step AND a
+width-cycle step, simultaneously, from two different systems that do
+not know about each other. Verify which is true (a measured PIE
+check, not an assumption) before wiring Q/E; scroll wheel alone has no
+such conflict and could ship first, with Q/E added only once the
+camera question is answered - splitting a two-key feature into "ship the
+unambiguous half now" is cheaper than guessing wrong on a frozen graph.
+
+**State: where the chosen width lives.** One new key in `clickdriver.py`'s
+existing `_st` dict, next to `n_acc`/`selected`: `_st['width_index']`,
+integer, default `0` (-> `WIDTHS[0]` = 820, today's behaviour exactly).
+Persists for the whole PIE session the same way `_st['selected']`
+already does - a per-session choice, not per-hover and not saved to
+`citystate.json` (the CHOICE is input state, not city state; only the
+placed lot's resulting `width` value becomes state, same as `rid`/`tier`
+today).
+
+**How it flows into `resolve_click`.** One new parameter, appended so
+every existing call site (including all 19 self-tests) keeps working
+unchanged:
+
+    def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
+        ...
+        x0 = _snap(x - width / 2.0)
+        x1 = x0 + width
+        ...
+
+Every place `V0_WIDTH` appears inside `resolve_click`'s OWN body becomes
+`width` (the parameter); `V0_WIDTH` the module constant stays, now
+serving only as the parameter's default and as `WIDTHS[0]`'s value in
+the cycle above - not removed, since it is still the correct default for
+any caller that does not care (exactly today's 13 arterial/pinned-
+overlap self-tests, none of which need to pass a width to prove what
+they prove). `place(state, x, y, pins_active=True, width=V0_WIDTH)`
+takes the same new parameter, passes it straight through to
+`resolve_click`, and writes it into the new parcel's dict in place of
+the literal `V0_WIDTH` (`'width': width` instead of `'width': V0_WIDTH`)
+- the one line that currently hardcodes it.
+
+**The two callers that need the width threaded through, concretely:**
+
+- `clickdriver.py`'s `_preview` (the ghost): reads
+  `WIDTHS[_st['width_index']]` once per call, passes it to
+  `placement.resolve_click(..., width=that_value)` - today's call site
+  already computes a box from `lot['x0']`/`lot['x1']`, which already
+  reflects whatever width `resolve_click` used internally, so the box
+  drawing code itself needs no change, only the extra argument.
+- `clickdriver.py`'s `click_at_hit`'s off-parcel branch: today writes
+  `PlaceRequestX/Y` only, and the DRIVER (`init_unreal.py`'s placement
+  channel) is what actually calls `placement.place()` - so the chosen
+  width has to cross that same channel. Simplest: one more
+  request-and-clear field on `BP_StacktownGameInstance`, `PlaceRequest
+  Width` (a variable-flag edit, not a graph write - same category as the
+  queued `SelectedParcel` one), written alongside `PlaceRequestX/Y` and
+  read by the driver's existing placement-channel code the same tick it
+  reads X/Y, passed to `place(..., width=that_value)` in place of the
+  implicit default. Not a new channel shape, one more field on an
+  existing one.
+
+**Proof, once built:** three pads placed in a row at three different
+scroll positions, `citystate.json`'s three `width` values matching the
+three chosen ladder entries exactly, plus a capture showing the ghost's
+box resizing live as the wheel turns - PLAYABLE_PLAN.md §2.2's own
+proof bar, unchanged.
+
 ## 3. Board growth
 
 **The plate starts small and constrained**, per the owner's own words —

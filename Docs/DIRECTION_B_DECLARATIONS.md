@@ -2606,3 +2606,169 @@ to `ZONE_SetBRoad` and `ZONE_SetBPlots`. The referencer graph was a snapshot of
 a board that happened to be **down**. **Provenance overrides the snapshot** —
 and the reading that would have got this wrong was true, just not about what it
 appeared to be about.
+
+---
+
+## D22 — the ghost pad. Look only, 2026-09-03.
+
+The driver draws a debug box today and that is right for proving the resolver.
+This is what it should LOOK like once the feel is settled. Asset creation waits
+for a grant; nothing here is built.
+
+### What the ghost IS
+
+**A piece of board that has not been carved yet.** Not a hologram, not a
+selection rectangle, not a highlighted tile. The plate is a pale timber ground
+at `#BEB19F` with pale inlay ribbons at `#DFD6C9`; a ghost is the moment before
+a maker cuts a block — the outline chalked on the stock.
+
+That reading gives the accept state its colour for free and rules out the
+obvious alternative, below.
+
+### Accept: pale fresh-cut timber, not green
+
+    fill      #DFD6C9   the road inlay's exact tone, at 0.34 opacity
+    edge      #F2ECE1   a 6 uu proud rim at 0.85 opacity
+    height    40 uu above the plate — proud, so it casts a faint shadow
+
+**Green is rejected, and the reason is not taste.** A saturated green would be
+the only green in the entire frame, which does make it unmissable — and makes
+it the one thing on the board that is obviously software. Every other decision
+in this direction has been to remove the tells that say a program drew this
+(D14's admitted carvings, D12's hand tolerance, the HUD's paper-then-bar, the
+board's visible seams). A green ghost spends all of that on a hover state.
+
+The pale-timber ghost is legible for a different reason: **it is the only thing
+on the board with a soft edge and no grain.** Presence, not hue.
+
+### Refuse: red, and red is CORRECT here
+
+    fill      none — no fill at all
+    edge      #B4472E   the same 6 uu rim, 0.9 opacity, no proud offset
+    plus      the refusal text at the cursor, per PLACEMENT_GRID §2.1
+
+**A refusal is a UI event, not a material state**, and it SHOULD look foreign.
+Nothing in a wooden model is red; that is exactly why it reads instantly and
+why it does not have to belong. The asymmetry is deliberate: accept speaks the
+board's language because it is a promise about the board, refuse speaks the
+interface's language because it is a fact about the rules.
+
+**And the fill goes away on refusal, which does more work than the colour.**
+A red-filled rectangle still looks like a thing being placed. An outline with
+nothing in it looks like an outline — the shape says "no block here" before the
+hue says "not allowed".
+
+### It has to read at the boom's distance, which sets the edge
+
+The first-boot framing is reach 19000 (`study_pose.json`). An 820 uu pad at
+that distance is a few dozen pixels across, and the zoom ladder runs in to
+1350 and 800.
+
+**At the far stop a fill of any opacity is a smudge and the EDGE is the whole
+signal.** So the rim is specified proud (40 uu) rather than flat: at distance
+it catches the key light and reads as a bright line, and a bright line survives
+downsampling in a way a 34%-opacity wash does not. The fill matters at the
+close stops, where it stops the ghost reading as a wireframe.
+
+That is one look serving both ends of the ladder, which is the constraint the
+camera study already established: nothing may be tuned for one zoom stop.
+
+### Mechanism — and the channel it must NOT use
+
+**Not CPD channel 3.** PLAYABLE_PLAN §2.1 offered "Selection" for the ghost
+tint, and the channel is reserved for exactly that in `cpdmap.py`. But Custom
+Primitive Data does not reach the shader on this setup: the component property
+is the editor-set DEFAULTS array while the shader reads runtime values only a
+`SetCustomPrimitiveDataFloat` call writes. **A CPD tint would read back as set
+and draw nothing.**
+
+So: **a translucent MI on the ghost component only** — two instances off
+`M_WoodMaster`, `MI_ghost_accept` and `MI_ghost_refuse`, swapped by the driver.
+Two assets, no runtime channel, no dependency on anything unproven.
+
+**AND THE DETAIL THAT MAKES IT WORK, without which this fails silently.**
+Blend mode is a MASTER-level property, and `M_WoodMaster` is `BLEND_Opaque`
+(read 2026-09-03). An instance cannot be translucent by setting an opacity
+value alone — it must also carry the base-property override:
+
+    bOverride_BlendMode = true
+    BlendMode           = BLEND_Translucent
+    then the Opacity scalar
+
+The fork is ready for this and needs no change: **`MP_Opacity` is already
+connected**, driven by a ScalarParameter (`Opacity`, default 1.0), so once the
+blend mode is overridden that parameter does real work. Checked, not assumed.
+
+Without `bOverride_BlendMode` the instance renders fully opaque and the
+Opacity parameter does nothing — it sets, it reads back, and it draws a solid
+block. That is the same shape as the CPD failure this declaration exists to
+route around, and it would be found by the owner rather than by a test. **The
+proof frame is what catches it: a ghost that is not see-through is not a
+ghost.**
+
+The cost is one extra shader permutation per instance, which for two assets is
+nothing worth trading the look for.
+
+**Proof, per this lane's own rule: a MEASURED FRAME at the far stop and at a
+close stop, accept and refuse, or the look is not accepted.** Opacity and the
+rim width are the two numbers most likely to be wrong on the first pass, and
+neither can be judged from the arithmetic.
+
+---
+
+## D23 — lot-state glow. Declaration only, 2026-09-03.
+
+B4 makes night glow carry ownership, activity and selection at once. This
+declares what the lot states look like. **The mechanism is blocked and the
+declaration says so rather than pretending otherwise.**
+
+### First, a correction to the brief: "refused" is not a lot state
+
+The four asked for were for sale / owned / growing / refused. Three of those
+are properties of a LOT. **Refusal is a property of the CURSOR** — it is about
+where the player is pointing, it lasts as long as the hover, and no lot is in a
+refused state when nobody is looking at it. It belongs to D22's ghost, where it
+already lives, and putting it in the glow set would mean a lot could sit on the
+board glowing red at nobody.
+
+Three states, then:
+
+| state | glow | what the player reads |
+|---|---|---|
+| for sale | `GlowLevel` 0.35, `GlowState` 0.5 — neutral warm | "this is available" |
+| owned | `GlowLevel` 0.15, `GlowState` 0.5 — barely lit | settled, unremarkable |
+| growing | `GlowLevel` 0.55 pulsing to 0.35 over 2.5 s, `GlowState` 0.62 | "something is happening here" |
+
+**For sale glows MORE than owned, which is the inversion worth stating.** The
+instinct is to light up what the player owns. But an owned lot is the default
+condition of a working city — light every one of them and the board is a
+runway. What deserves attention is what the player could still act on, so
+availability is brighter than ownership and a finished city goes quiet. Same
+argument as D16's polish-means-attention: the interesting signal is where
+something is possible, not where something exists.
+
+**Growing pulses and nothing else does.** Motion is the scarcest signal on a
+static board; spend it on the one state that is genuinely transient.
+
+### The mechanism is BLOCKED and this is a declaration, not a plan
+
+`GlowLevel` and `GlowState` are CPD channels 1 and 2, reserved for these in
+`cpdmap.py`. **CPD does not reach the shader** — measured: Age driven through
+CPD moved nothing, the same Age driven from the material instance moved the
+frame −10.67 levels against 0.14 drift, and the CPD write read back correct
+throughout.
+
+So the per-lot glow **cannot be built** until the runtime push lands (a real
+`SetCustomPrimitiveDataFloat` on the component, not a property write). Until
+then this is the brief and nothing more.
+
+**Do not substitute the per-instance route.** Driving glow from `MI_wood_*`
+would light every lot of a species at once, which is worse than no glow: it
+would look like a mechanic and behave like a bug, and somebody would spend an
+evening on it.
+
+**And when the push does land, per this lane's rule: the glow is proven by a
+MEASURED FRAME showing two adjacent lots in different states, or it is not
+proven.** A read-back proves the write landed, never that the thing the write
+was for now works — four instances of that this week, every one with the same
+tell: nothing failed.

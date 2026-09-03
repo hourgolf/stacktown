@@ -35,11 +35,11 @@ import unreal, time
 
 RESET_HOLD_S = 2.0
 _KEY = {}
-for _name in ('LeftMouseButton', 'B', 'N'):
+for _name in ('LeftMouseButton', 'B', 'N', 'MouseScrollUp', 'MouseScrollDown'):
     _k = unreal.Key(); _k.set_editor_property('key_name', _name); _KEY[_name] = _k
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
-       'errs': set(), 'selected': None, 'rig_mirror_failed': False}
+       'errs': set(), 'selected': None, 'rig_mirror_failed': False, 'width_index': 0}
 
 
 def _log(msg):
@@ -111,9 +111,10 @@ def click_at_hit(gw, gi, rig, actor, x, y):
                                           unreal.LinearColor(0.7, 1.0, 0.8, 1.0), 2.5, 'clickmsg')
         _log('selected %s (%s)' % (label, status))
         return 'select'
+    unreal._stacktown_place_width = _current_width()
     gi.set_editor_property('PlaceRequestX', float(x))
     gi.set_editor_property('PlaceRequestY', float(y))
-    _log('place request at (%.0f, %.0f) [hit %s]' % (x, y, actor.get_actor_label() if actor else 'nothing'))
+    _log('place request at (%.0f, %.0f) width %d [hit %s]' % (x, y, _current_width(), actor.get_actor_label() if actor else 'nothing'))
     return 'place'
 
 
@@ -136,12 +137,112 @@ def press_n_reset(gw, gi, rig):
     _log('RESET requested (N held %.1fs)' % RESET_HOLD_S)
 
 
+# ---- Ghost pad (2026-09-03, owner: "go ahead with the ghost pad") ----
+# While the cursor rests on empty plate, draw where a click would land and
+# whether it would be accepted, using placement.resolve_click - the SAME
+# pure resolver place() uses, so the preview can never disagree with the
+# click. v0 draws it as a debug box (green = will place, red = refused)
+# with a one-line label; a translucent pad mesh is the later polish.
+GHOST_Z = 60.0
+GHOST_COLOR_OK = unreal.LinearColor(0.35, 1.0, 0.55, 1.0)
+GHOST_COLOR_NO = unreal.LinearColor(1.0, 0.35, 0.3, 1.0)
+
+
+def _widths():
+    import woodmap
+    return list(woodmap.WIDTHS)
+
+
+def _current_width():
+    ws = _widths()
+    i = max(0, min(_st.get('width_index', 0), len(ws) - 1))
+    return float(ws[i])
+
+
+def _cycle_width(step, gw):
+    """Scroll wheel cycles the wood catalogue's width ladder for the ghost
+    (PLACEMENT_GRID.md section 2.1a). Q/E deliberately NOT bound: they are
+    the rig's zoom-ladder keys and would double-fire."""
+    ws = _widths()
+    _st['width_index'] = (_st.get('width_index', 0) + step) % len(ws)
+    _st['ghost_cache'] = None
+    unreal.SystemLibrary.print_string(gw, 'Lot width %d' % int(ws[_st['width_index']]), True, False,
+                                      unreal.LinearColor(0.8, 0.9, 1.0, 1.0), 1.2, 'widthmsg')
+
+
+def _lot_box(lot, iu, placement):
+    """(cx, cy, hx, hy) of a lot's pad in world space, both roads."""
+    half_w = (lot['x1'] - lot['x0']) / 2.0
+    mid = (lot['x0'] + lot['x1']) / 2.0
+    depth_h = placement.BLOCK_DEPTH / 2.0
+    if placement.lot_road_id(lot) == 'cross':
+        cx = -iu._PAD_CENTER_Y if lot['side'] == 'west' else iu._PAD_CENTER_Y
+        return (cx, mid, depth_h, half_w)
+    cy = iu._PAD_CENTER_Y if lot['side'] == 'north' else -iu._PAD_CENTER_Y
+    return (mid, cy, half_w, depth_h)
+
+
+def _preview(gi, x, y):
+    """(ok, short_reason, box) - box is (cx, cy, hx, hy) or None."""
+    import init_unreal as iu
+    import placement
+    state = iu._read_state(gi)
+    try:
+        pins_active = not bool(gi.get_editor_property('EmptyStart'))
+    except Exception:
+        pins_active = True
+    width = _current_width()
+    ok, reason, lot = placement.resolve_click(state, x, y, pins_active=pins_active, width=width)
+    box = None
+    if lot is not None:
+        box = _lot_box(lot, iu, placement)
+    elif reason.startswith('overlap'):
+        # resolve_click gives no lot on overlap; show the refused span anyway,
+        # in the winning road's frame.
+        road, local = placement.resolve_road(placement.ROADS, x, y)
+        if road is not None:
+            axis = 0 if road['axis'] == 'x' else 1
+            a0 = placement._snap(road['start'][axis] + local['along'] - width / 2.0)
+            box = _lot_box({'x0': a0, 'x1': a0 + width, 'side': local['side'], 'road_id': road['id']}, iu, placement)
+    short = iu._place_refusal_message(reason) if not ok else 'click to place  (width %d, scroll to change)' % int(width)
+    return ok, short, box
+
+
+def _draw_ghost(gw, ok, text, box, x, y):
+    color = GHOST_COLOR_OK if ok else GHOST_COLOR_NO
+    if box is not None:
+        cx, cy, hx, hy = box
+        unreal.SystemLibrary.draw_debug_box(gw, unreal.Vector(cx, cy, GHOST_Z),
+                                            unreal.Vector(hx, hy, 12.0), color,
+                                            unreal.Rotator(0.0, 0.0, 0.0), 0.05, 6.0)
+        unreal.SystemLibrary.draw_debug_string(gw, unreal.Vector(cx, cy, GHOST_Z + 80.0), text, None, color, 0.05)
+    else:
+        unreal.SystemLibrary.draw_debug_string(gw, unreal.Vector(x, y, GHOST_Z + 80.0), text, None, color, 0.05)
+
+
+def _hover(gw, gi, pc):
+    hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, True)
+    if hit is None:
+        return
+    d = hit.to_dict()
+    if not d.get('blocking_hit') or _is_parcel(d.get('hit_actor')):
+        return
+    loc = d['location']
+    key = (round(loc.x / 20.0), round(loc.y / 20.0))
+    cache = _st.get('ghost_cache')
+    if cache is None or cache[0] != key:
+        ok, text, box = _preview(gi, loc.x, loc.y)
+        cache = (key, ok, text, box)
+        _st['ghost_cache'] = cache
+    _draw_ghost(gw, cache[1], cache[2], cache[3], loc.x, loc.y)
+
+
 def _tick(dt):
     try:
         gw = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
         if gw is None:
             if _st['world'] is not None:
-                _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None)
+                _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None, ghost_cache=None)
             return
         pc = unreal.GameplayStatics.get_player_controller(gw, 0)
         gi = unreal.GameplayStatics.get_game_instance(gw)
@@ -159,6 +260,8 @@ def _tick(dt):
             down = pc.is_input_key_down(key)
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
+        if not _st['down'].get('LeftMouseButton', False):
+            _hover(gw, gi, pc)
         if edges['LeftMouseButton']:
             hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, True)
             if hit is None:
@@ -170,6 +273,10 @@ def _tick(dt):
                 else:
                     loc = d['location']
                     click_at_hit(gw, gi, rig, d.get('hit_actor'), loc.x, loc.y)
+        if edges['MouseScrollUp']:
+            _cycle_width(+1, gw)
+        if edges['MouseScrollDown']:
+            _cycle_width(-1, gw)
         if edges['B']:
             press_b(gw, gi, rig)
         if _st['down'].get('N', False):
@@ -231,6 +338,8 @@ def register():
     unreal._stacktown_clickdriver_handle = unreal.register_slate_post_tick_callback(_tick)
     unreal._stacktown_click_at = _click_at
     unreal._stacktown_press = _press
+    unreal._stacktown_set_width_index = lambda i: _st.__setitem__('width_index', int(i)) or _st.__setitem__('ghost_cache', None)
+    unreal._stacktown_preview = lambda x, y: _preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y)
     unreal.log('CLICK DRIVER: registered (hold N %.1fs to reset)' % RESET_HOLD_S)
 
 

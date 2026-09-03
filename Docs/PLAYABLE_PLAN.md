@@ -51,11 +51,13 @@ write is.
 ### 2.1 Placement feel - the ghost pad (biggest win, Python-side, no BP writes)
 
 While the cursor hovers empty plate, show WHERE the click would land: a
-spare pool parcel moved each tick to the snapped position, at the width
-the click would get, drawn in a "ghost" state (CPD channel 3 "Selection"
-is reserved for exactly this kind of runtime tint; a second option is a
-translucent material instance on the ghost only). Red ghost + the refusal
-text when the spot is illegal. The click then places exactly what the
+box at the snapped footprint, at the width the click would get - shipped
+2026-09-03 as a debug box drawn by the click driver (green = will place,
+red = refused, with the reason). The translucent pad that replaces it is
+the design lane's, as a material instance on the ghost only - NOT a CPD
+tint: custom primitive data written through the component property does
+not reach the shader on this setup (design lane, measured), so a CPD
+ghost would read back as set and draw nothing. The click then places exactly what the
 ghost showed. Proof: a capture with the ghost on a legal spot and one on a
 refused spot; the owner's play note.
 

@@ -1056,3 +1056,74 @@ into the wrong project. It has already caught it happening.
   with a log line; a proven graph is frozen and features go in new
   graphs, new actors or the driver; a working click gets committed the
   minute it is proven.
+
+- **GHOST PAD + REACH (2026-09-03, owner's word "go ahead with the
+  ghost pad").** placement.resolve_click gained two refusals (in the
+  road / too far from a road, PLACEMENT_GRID.md §2.1) and clickdriver.py
+  draws the would-be footprint on hover with the same resolver. Proven
+  headless in a marker-isolated coordinator PIE: six preview points
+  (road, overlap, legal, too far, off-board, studio floor) resolved as
+  specified; the draw call runs. Self-tests: placement 13/13 after
+  moving the test clicks from y=100 (now "in the road") onto the block.
+  Facts: KismetSystemLibrary draw_debug_box/draw_debug_string work from
+  a slate post-tick callback in PIE; an activated pad's front edge is on
+  the facade line (measured), the bought mass sits 750 uu behind it -
+  the setback convention is an open design question, not a bug.
+
+- **PAD/MASS OFFSET FIX, MEASURED (2026-09-03 13:41).** The design
+  lane's ruling (genbuild's mass pivot is the FRONT-LEFT corner at
+  ground; "setback2" in a mass name is a HEIGHT BAND, not a street
+  setback) plus the coordinator's finding that the pad and the mass are
+  the SAME component ("Building": a centre-pivot Cube before purchase,
+  the mass after) explained two live misalignments: the bought mass sat
+  750 uu behind the facade (a doubled offset) and the pad cube sat half
+  a lot off the lot span in X. Fix in init_unreal._apply_lot_offset:
+  keep the actor at (x0|x1, +/-1880, yaw 0|180) and set the component's
+  RELATIVE location by the mesh actually on it - Cube: (W/2, 0, 0);
+  mass: (0, -750, 0) - applied at activation, reactivation and every
+  sync for placement-created lots. Measured in an isolated PIE: fresh
+  pad P3 bounds x [-3280, -2460] == lot span, y [1130, 2630] front on the
+  facade; bought P2 (north) x [2437, 3269] vs lot [2460, 3280], front y
+  1117 (plinth oversail); bought P1 (south) front y -1129. Both sides,
+  both states. Scar re-earned on the way: get_relative_location is not
+  a Python method (the property is relative_location) and the first cut
+  killed every driver tick until the helper was wrapped - the "one
+  unguarded call" rule applies to helpers called FROM the sync too.
+
+- **WIDTH CYCLE SHIPPED AND MEASURED (2026-09-03 13:5x).** Scroll wheel
+  (MouseScrollUp/Down, discrete FKeys) cycles woodmap.WIDTHS on the ghost;
+  the width rides a PYTHON-SIDE channel (unreal._stacktown_place_width,
+  consume-and-clear in the placement consumer) - both drivers are
+  in-process, so no GameInstance variable and no Blueprint edit. Q/E NOT
+  bound (the rig's zoom-ladder keys; would double-fire). Proven headless
+  in an isolated PIE: preview boxes at 1230 and 2050; placed P4 (north,
+  [0, 1230]) and P5 (south, [-2050, 0]) with pads covering their spans
+  exactly and citystate widths matching. DEFECT MADE VISIBLE BY THE
+  TEST: both clicks hit the CROSS STREET (TC_Road_Cross / TC_Walk_C4 at
+  x=0) and v0 placed lots straddling it - resolve_click knows one road.
+  The beta lane's resolve_road (19/19) is the fix; integration into
+  resolve_click (both roads, crossing refusal) is the next headless
+  window, and the ghost inherits it for free.
+
+- **CROSS STREET LIVE AND MEASURED (2026-09-03 14:04).** The beta lane
+  integrated resolve_road into resolve_click (24/24; lots carry
+  placement.road_id, x0/x1 are the span along the winning road's axis);
+  the driver gained _lot_transform (arterial unchanged; cross street
+  west = (-1880, y0, yaw 90), east = (+1880, y1, yaw -90) so local +x
+  runs along the road and local +y points away from it, which is what
+  _apply_lot_offset and genbuild's pivot both assume) and the ghost box
+  is road-aware. Measured in an isolated PIE: west pad P6 x [-2630,
+  -1130] (front on the facade), y == lot span; after purchase its mass
+  front at x=-1129; east pad P7 x [1130, 2630], y == lot span, yaw -90.
+  The crossing refuses with its own player text. TEST ARTIFACT worth
+  knowing: two _stacktown_click_at calls in ONE remote-exec script write
+  PlaceRequestX/Y twice in the same frame and the driver consumes only
+  the last - not a bug a human can hit, but a headless test must sleep
+  between placements.
+  RESTART PROOF (14:10): a fresh isolated session reactivated all seven
+  test-save lots - five arterial, two cross-street - on the exact
+  transforms they were placed with (cross west (-1880, -3280, yaw 90),
+  east (1880, 3280, yaw -90)), masses and pads with the right offsets;
+  the lane's lot_road_id helper (26/26) is what the legacy lots without
+  a road_id key resolve through.
+

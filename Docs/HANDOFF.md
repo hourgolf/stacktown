@@ -1157,3 +1157,143 @@ into the wrong project. It has already caught it happening.
   packages from the day's lane work; NEVER save-all, the owner decides
   per asset.
 
+- **FREE PLACEMENT ALONG THE ROAD (2026-09-03, owner: "let it slide
+  freely along the road").** placement._snap now rounds to
+  POSITION_QUANTUM = 10 uu instead of the 410 width quantum, so the pad
+  lands under the click; widths stay on woodmap's ladder. Self-tests
+  that encoded the old snap (1, 4, 5, 20, 21) were moved to the free
+  values (27/27); the overlap and reach logic is unchanged and the
+  ghost inherits it. Live after re-registration.
+
+- **A JSON UNDER Content/ IS A DATATABLE SOURCE TO THE EDITOR (2026-09-03
+  17:23).** placement.py's and citytick.py's self-tests wrote their
+  throwaway state files next to themselves in Content/Python/; the
+  editor's auto-reimport watcher saw each one appear, dispatched
+  ReimportDataTableFactory on it (log: "FactoryCreateFile: DataTable with
+  ReimportDataTableFactory ... _selftest_citystate_placement.json"), and
+  on the third occurrence the game thread stopped answering - MCP calls
+  timed out, the remote-exec node went silent - the shape of a modal
+  prompt only the owner can dismiss. Both artifacts now live in
+  Saved/SelfTest/. Rule: no test writes under Content/, ever; and when
+  the editor goes silent, the first thing to read is the LAST log line,
+  which named the cause here. Also from this window: the MCP property
+  reader returns None for an enum it cannot see (BlendMode on a material
+  instance's base-property overrides, typeface lists) - a None there is
+  not absence; check through the in-editor API before calling an asset
+  broken (design lane).
+  THE CLASS, not the instance (design lane, beta lane, same hour): five
+  JSONs sit under Content/Python - the owner's citystate.json, rewritten
+  EVERY TICK by the economy driver; citystate_test.json (the lane
+  isolation state, also rewritten during lane PIE); econrules.json;
+  genbuild_identity.json; study_pose.json - all inside the /Game/
+  directory the engine default monitors with only Localization/*
+  excluded, and the project had no AutoReimport section of its own.
+  Fix applied in Config/DefaultEditorPerProjectUserSettings.ini: the
+  engine entry removed and re-added with Python/* and *.json excluded
+  (FAutoReimportWildcard.bInclude defaults to false = exclude). Takes
+  effect at the next editor start. Long-term the state files belong in
+  Saved/, but moving the owner's save path is a change for their word.
+  PROVEN BY A PROCESS SAMPLE (17:5x): the game thread sat in
+  FAutoReimportManager::ProcessAdditions -> UCSVImportFactory::
+  FactoryCreateText -> FSlateApplication::AddModalWindow - the CSV/JSON
+  import options dialog, a Slate MODAL that stops every tick (MCP HTTP,
+  remote exec, the drivers) while it waits, with the process at 100% CPU
+  drawing it. Two facts for next time: it fires on file ADDITIONS (a new
+  JSON appearing under /Game/), not on rewrites of an existing one, so
+  the transient self-test artifacts were the trigger and the owner's
+  per-tick save was not; and the dialog can sit behind the main window
+  or on another Space, which is why "the editor should still be up" and
+  "nothing answers" were both true. `sample <pid> 2` from the shell is
+  the instrument when the editor goes silent - it needs no permission
+  and names the frame.
+
+- **SELECTION FLAG LIVE; BOUGHT MASSES HAVE NO COLLISION (2026-09-03
+  22:5x).** The beta lane made BP_LensRig.SelectedParcel instance
+  editable (set_variable_instance_editable, compile clean, explicit-path
+  save); in an isolated PIE the driver's mirror write now lands
+  (rig.SelectedParcel = P3 after a headless click). Found on the way: a
+  cursor/line trace on ECC_VISIBILITY passes straight through a BOUGHT
+  lot's wooden mass and hits the board - the baked masses carry no
+  collision, only the placeholder pad cube does. So today a player can
+  select a pad but not a building. Owning fix is the bake path
+  (collision on the masses, or a per-lot invisible collision box the
+  driver keeps on the Building component's footprint) - PLAYABLE_PLAN
+  section 2.6's "click a building selects it" depends on it.
+  HUD CLUSTER PROVEN BY CAPTURE (22:5x): with P3 selected headlessly the
+  bar's right cluster reads "vernacular  UNOWNED  $66.4  PRESS B TO BUY"
+  and the pad is highlighted cyan - the runtime-constructed HUD's
+  selection half is live for the first time. (Status bar also shows a
+  red "Diagnostics" badge - unread, worth a look when the editor is idle.)
+
+- **BOUGHT-MASS COLLISION: DRIVER-SIDE, NOT THE BAKE PATH (2026-09-03,
+  headless, answering the entry above).** Checked genbuild.py itself
+  first, not just the finding above: zero matches for
+  collision/CollisionComplexity/BodySetup anywhere in it - the bake path
+  has never generated collision, not a flag left off. Recommend the
+  per-lot box the driver keeps, not a bake-path change, for four
+  reasons: no cross-lane dependency, ships without the design lane's
+  schedule; no re-bake - the width-ladder-doubt finding already put the
+  catalogue at 548 declared vs 284 baked, so a bake-path fix leaves
+  every EXISTING mass collision-less until individually redone, where a
+  driver-side fix covers every lot, old or new, the moment it activates;
+  the geometry it needs (width, footprint) is already fully known to
+  the driver - placement.py's width/side/road_id, the same width-based
+  math _apply_lot_offset already does; and the pad and the bought mass
+  are already the SAME "Building" component (PAD/MASS OFFSET FIX
+  above), so this may not even need a new component - a runtime
+  collision-profile override on that EXISTING component, in the same
+  is_placeholder branch _apply_lot_offset already has, may be enough.
+  That last point is the one open question, not settled here: whether
+  Python reflection can set a StaticMeshComponent's collision profile/
+  complexity at runtime the way it already sets relative_location.
+  Also worth naming: a box across the LOT's own rectangular footprint
+  may be the RIGHT shape for click-selection specifically, not a
+  compromise - no notches a real silhouette could introduce, and
+  SelectedParcel is a whole-actor selection everywhere in this project,
+  never sub-mesh. Not a claim the bake path should never get real
+  collision (physics, camera occlusion would want it) - only that
+  PLAYABLE_PLAN 2.6's "click a building selects it" doesn't need it.
+
+- **RUNTIME COMPONENTS CANNOT BE ADDED FROM PYTHON (2026-09-03 23:16).**
+  The driver-side click box (a BoxComponent per lot) died in the same
+  way the runtime spawn did: AActor.add_component_by_class is not
+  reflected in this build (dir(unreal.Actor) has only add_tick_
+  prerequisite_component / create_input_component), new_object makes an
+  unregistered component with no physics state, and RegisterComponent is
+  not callable. Removed. The slab ghost from the same window WORKS:
+  SM_GhostPad_w820 on the borrowed pool actor, MI_ghost_accept, bounds
+  820 x 1500 at the facade line, z 2..44. Building selection therefore
+  goes the ASSET route: collision on the wood masses themselves - one
+  mass first (add_simple_collisions BOX, or complex-as-simple on the
+  body setup), proven by a trace that stops on it in an isolated PIE,
+  then all masses; fastbake's enable_collision/collision_mode for future
+  bakes is a shared-code change and the owner's call.
+  COMPLEX-AS-SIMPLE IS NOT ENOUGH (23:3x): with the flag set and saved
+  on SM_WMass_w820_setback2, and after reload_packages, a Visibility
+  trace still passes through the mass in two isolated PIEs - the body
+  never cooked; a trace flag cannot conjure a trimesh a GeometryScript
+  mesh created with collision off never built. Next step is the
+  analytic BOX (no cooking) as the mechanism proof, then convex
+  decomposition for the silhouette, each proven by a trace before any
+  rollout.
+  RESOLVED (23:5x): the cursor trace was asking for COMPLEX collision
+  (bTraceComplex=True) - per-triangle geometry the masses never had, so
+  even the analytic box could not stop it; a sphere trace by profile hit
+  P1 at once, and a SIMPLE line trace on Visibility stops on the mass
+  (box), the pad cube, the board and both roads, and passes the ghost
+  slab (0 prims, as it must). clickdriver now traces simple. Rollout of
+  collision to all masses is the design lane's; shape (box vs convex
+  hulls) decided by one more simple-trace test on the same asset.
+  BUILDING SELECTION PROVEN (23:5x): with ONE convex hull on
+  SM_WMass_w820_setback2 (set_convex_decomposition_collisions 4/16/100000
+  - the decomposer returns exactly one hull for a stepped mass at every
+  setting; a hull cannot follow a concave step) and the click driver
+  tracing SIMPLE, a click on bought P1 selects it. The hull tapers: simple
+  traces from z=6000 hit z=4352 at the centre, ~3530 at the base edges,
+  the board just outside - less air than a 4581 box, more than the
+  silhouette above the base stage. Rollout to all wood masses is the
+  design lane's (hulls; box where the decomposer yields nothing).
+  Ledger theme of the week, in the design lane's words: twice the fault
+  was in the INSTRUMENT (a reader blind to an enum; a trace asking for
+  complex geometry) and both times the SUBJECT was changed first.
+

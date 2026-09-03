@@ -162,15 +162,63 @@ def fork(also=ALSO):
 
 
 def verify():
-    """The shared master must be exactly as the flagship left it: 195
-    expressions, BaseColor on its original driver, EdgeWearLift on its."""
+    """Cold read of BOTH masters. This is also the POST-RESTART check.
+
+    A save reporting is_dirty=False proves the write landed, not that what
+    landed is right - so after an editor relaunch the fork is read back from
+    scratch here rather than trusted. Everything below comes off the loaded
+    assets; nothing is remembered.
+    """
+    rows = []
     n = len(json.loads(ue.tool(M, 'get_expressions', {
         'material_or_function': {'refPath': WM.SHARED}}))['returnValue'])
-    print('shared master expressions: %d  %s'
-          % (n, 'OK' if n == 195 else 'CHANGED - INVESTIGATE'))
-    ok = json.loads(ue.tool(AT, 'exists', {'path': FORK_ASSET}))['returnValue']
-    print('fork present:', ok)
-    return n == 195
+    rows.append(('shared master expressions', n == 195, n))
+    rows.append(('fork present', json.loads(ue.tool(AT, 'exists', {
+        'path': FORK_ASSET}))['returnValue'], FORK_ASSET.split('/')[-1]))
+
+    import wear as W  # noqa: E402  - imported here so --plan stays light
+    fn = len(json.loads(ue.tool(M, 'get_expressions', {
+        'material_or_function': {'refPath': WM.FORK}}))['returnValue'])
+    rows.append(('fork expressions', fn == 210, fn))
+
+    for name, idx in WM.__dict__.get('WEAR_CHANNELS', ()) or (
+            ('Age', 0), ('Attention', 4), ('Failure', 5), ('Scorch', 6)):
+        e = W.find_param(name)
+        if e is None:
+            rows.append(('%s present' % name, False, 'MISSING'))
+            continue
+        p = W._props(e, ['PrimitiveDataIndex', 'bUseCustomPrimitiveData',
+                         'DefaultValue'])
+        good = (p.get('PrimitiveDataIndex') == idx
+                and p.get('bUseCustomPrimitiveData') is True
+                and p.get('DefaultValue') == 0.0)
+        rows.append(('%s ch%d, cpd, default 0' % (name, idx), good,
+                     'ch%s' % p.get('PrimitiveDataIndex')))
+
+    # the Age chain and the normals correction, neither covered by cpdmap
+    tint = any('VectorParameter' in e['refPath'] for e in
+               json.loads(ue.tool(M, 'get_expressions', {
+                   'material_or_function': {'refPath': WM.FORK}}))['returnValue'])
+    rows.append(('AgedTint vector param on the fork', tint, tint))
+    ins = json.loads(ue.tool(M, 'get_expression_inputs', {
+        'material_or_function': {'refPath': WM.FORK},
+        'expression': {'refPath': WM.FORK + ':MaterialExpressionAbs_0'}}))['returnValue']
+    if isinstance(ins, str):
+        ins = json.loads(ins)
+    src = ''
+    for i in ins:
+        if isinstance(i, dict):
+            x = i.get('expression')
+            src = (x.get('refPath') if isinstance(x, dict) else x) or ''
+    rows.append(('curvature proxy reads VertexNormalWS',
+                 'VertexNormalWS' in src, src.rsplit(':', 1)[-1] or 'NOTHING'))
+
+    print('%-42s %-6s %s' % ('check', 'pass', 'value'))
+    for label, ok, val in rows:
+        print('%-42s %-6s %s' % (label, 'YES' if ok else 'NO', val))
+    allok = all(r[1] for r in rows)
+    print('\n%s' % ('ALL PASS' if allok else 'FAILURES - do not build on this'))
+    return allok
 
 
 if __name__ == '__main__':

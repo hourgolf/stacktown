@@ -237,6 +237,7 @@ def _lot_transform(lot):
     return float(lot['x1']), -_PAD_CENTER_Y, 180.0
 
 
+
 def _apply_lot_offset(actor, width):
     """Pad and mass share ONE component ("Building") with DIFFERENT pivots
     (design lane's ruling + coordinator's PIE measurement, 2026-09-03):

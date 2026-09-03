@@ -2714,6 +2714,106 @@ close stop, accept and refuse, or the look is not accepted.** Opacity and the
 rim width are the two numbers most likely to be wrong on the first pass, and
 neither can be judged from the arithmetic.
 
+### The rim: GEOMETRY, and the far-stop capture already ruled out the alternative
+
+Ruling 2026-09-03, after the coordinator's capture showed the translucent fill
+alone does not read at the boom's far stop — which is what this declaration
+predicted, and the prediction is now the evidence.
+
+Three ways to make the rim, and two of them lose for the same reason:
+
+- **A material border** (distance-to-edge in UV or from object bounds). It
+  draws a band of a different colour on a flat surface — which is *another
+  flat wash*, and a flat wash at the far stop is exactly what just failed. It
+  would also stretch with the pad's scale unless the bounds are passed in,
+  since the ghost is a scaled cube and UV space scales with it.
+- **Fresnel.** Does not apply. Fresnel needs viewing-angle variation across
+  the surface; a flat pad seen from a fixed 25 degree boom tilt has almost
+  none, so the term is near-constant across the whole quad and produces a
+  wash, not an edge.
+- **Geometry — take this one.** A raised lip is a real surface at a different
+  angle to the key light, so it returns a genuinely different luminance rather
+  than a different colour at the same luminance. That is why D22 said *proud*
+  rather than *outlined*: at distance the signal that survives downsampling is
+  a lit line, and only geometry produces one.
+
+**The shape: a purpose-baked ghost pad, not a scaled cube.** A shallow slab
+with a raised border, emitted through the same `fastbake` path as the masses so
+it carries the catalogue's chamfer and pivot conventions — front-left origin,
+so it drops straight into the placement offsets the driver already applies. One
+component, one material, real lit geometry, rim included. It is the smallest
+asset this lane would ever bake and it removes a debug-draw call from the
+hover path.
+
+**The debug outline stays until that exists**, and it is not a stopgap to be
+ashamed of: a debug line is drawn at constant screen width, which is precisely
+why it reads at every zoom stop. What it cannot do is belong to the board —
+it is unlit, it ignores occlusion, and it reads as a wireframe. So it is
+correct for proving the resolver and wrong for the shipped look, which is the
+same distinction D22 drew between a refusal (interface language, allowed to
+look foreign) and an accept (board language, must belong).
+
+### The dimensions, and the arithmetic corrects this declaration's own number
+
+**D22's 6 uu rim is wrong and would not have read at all.** Worked from the
+actual pose (`study_pose.json`: fov 73.74, the boom's reach ladder) at the
+2802 px capture width:
+
+| reach | uu per pixel | a 6 uu rim | a 45 uu rim |
+|---|---|---|---|
+| 19000 (survey) | 10.2 | **0.6 px** | 4.4 px |
+| 3500 (working) | 1.87 | 3.2 px | 24 px |
+| 1350 | 0.72 | 8 px | 62 px |
+| 800 (closest) | 0.43 | 14 px | **105 px** |
+
+Six uu is **sub-pixel at the survey stop** — the exact failure this section was
+written to prevent, specified inside the section that prevents it.
+
+**And no single height satisfies both ends.** The ladder spans 19000 to 800, a
+24:1 range; a rim that reads at the survey stop is a 105-pixel kerb at the
+closest one. That is not a number to be tuned, it is a contradiction.
+
+**The contradiction dissolves because the survey stop is the wrong target.**
+The owner's camera ruling: *"player should be able to zoom out to see most if
+not all of the gameboard, but the main view would be closer in."* The ghost is
+a **placement affordance** — it exists while the player is choosing where to
+build, and that happens in the working view, not the survey view. Sizing it for
+19000 optimises the one stop at which nobody places anything.
+
+So D22's far-stop argument, which the capture appeared to confirm, was aimed at
+the wrong stop. The capture was right that a flat fill does not read; the
+conclusion drawn from it — make the rim survive the survey stop — did not
+follow.
+
+**Rim: 12 uu proud, 60 uu wide in plan.** 6 px at the working stop, 17 at 1350,
+28 at the closest — present at every stop a player places from, a kerb at none.
+It does **not** read at the survey stop, deliberately; the debug outline
+already covers that case at constant screen width, and if placement from the
+survey view is ever wanted, that is the tool for it.
+
+### Five slabs, not one scaled
+
+    width   820 / 1230 / 1640 / 2050 / 2460      the catalogue's 410 quanta
+    depth   1500                                  BLOCK_DEPTH, the lot, constant
+    slab    30 uu thick, top face 30 uu above the plate
+    rim     60 uu wide in plan, top face 42 uu above the plate (12 proud)
+    pivot   front-left at ground, per the fastbake convention
+    chamfer 14 uu, the catalogue's own value
+
+**Scaling one slab in X would stretch the rim.** A 60 uu rim baked at 820 and
+scaled to 2460 is 180 uu on the left and right edges and still 60 front and
+back — a rim of two different widths on one rectangle, which reads as a
+mistake rather than as a style. Five assets is what the catalogue already
+costs for the same reason (36 masses across five widths), and PLAYABLE_PLAN
+§2.2 puts width in the player's hands, so the five are needed the moment that
+lands rather than being speculative.
+
+Depth does not vary: the ghost shows the LOT, and every lot is 1500 deep.
+
+**Proof: a measured frame at the working stop and the closest stop, accept and
+refuse.** The survey stop is no longer part of the acceptance, and that change
+is the finding above rather than a relaxation.
+
 ---
 
 ## D23 — lot-state glow. Declaration only, 2026-09-03.

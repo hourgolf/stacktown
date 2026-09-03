@@ -131,11 +131,19 @@ V0_RECIPE = 'vernacular'  # the project's own long-standing safe default
 POOL_SIZE = 30
 
 
+# POSITION is free along the road (owner, 2026-09-03: "let it slide freely
+# along the road" - the 410 snap made the pad land "near" the click, not
+# under it). WIDTHS stay on the catalogue ladder; only where a lot sits is
+# continuous, rounded to POSITION_QUANTUM to keep spans exact in JSON and
+# the overlap scan free of float noise.
+POSITION_QUANTUM = 10.0
+
+
 def _snap(x):
-    """Nearest 410 multiple. A placed lot's edges always land on the
-    quantum, never between - the same discipline citylayout.py's own
-    partitions and woodmap.py's own width ladder both already hold to."""
-    return round(x / WIDTH_QUANTUM) * WIDTH_QUANTUM
+    """Nearest POSITION_QUANTUM (10 uu) - effectively free placement along
+    the road. Until 2026-09-03 this was the 410 width quantum, which is
+    still what the width ladder itself is built on (woodmap.WIDTHS)."""
+    return round(x / POSITION_QUANTUM) * POSITION_QUANTUM
 
 
 # REACH (2026-09-03, owner: "a parcel showed up 'generally' around the
@@ -486,9 +494,13 @@ if __name__ == '__main__':
     # _SELFTEST_PATH matches citytick.py's own TEST_PATH pattern exactly.
     import os
     import citytick
-    _SELFTEST_PATH = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        '_selftest_citystate_placement.json')
+    # OUTSIDE Content/ (2026-09-03): the editor's auto-reimport treats any
+    # JSON under Content/ as a DataTable source, fired a reimport on this
+    # artifact mid-self-test and stalled the game thread on a prompt.
+    _SELFTEST_DIR = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), 'Saved', 'SelfTest')
+    os.makedirs(_SELFTEST_DIR, exist_ok=True)
+    _SELFTEST_PATH = os.path.join(_SELFTEST_DIR, '_selftest_citystate_placement.json')
     if os.path.exists(_SELFTEST_PATH):
         os.remove(_SELFTEST_PATH)
 
@@ -506,8 +518,10 @@ if __name__ == '__main__':
     #    is WALL-TO-WALL pinned from 1130..6050 (both signs) with no gap
     #    of its own, so the only open ground left is the two edge margins,
     #    PLATE_X_MIN..-6050 and 6050..PLATE_X_MAX, each 1600 uu wide.
-    #    x=-7000, width 820: x0 = snap(-7000-410) = snap(-7410) = -7380,
-    #    x1 = -7380+820 = -6560, clear of the pin at -6050 by 510 uu.
+    #    x=-7000, width 820: x0 = -7000-410 = -7410 (position is FREE on
+    #    a 10 uu grid since 2026-09-03, the owner's "let it slide freely
+    #    along the road"), x1 = -7410+820 = -6590, clear of the pin at
+    #    -6050 by 540 uu.
     #    y=1500 (>=0) -> 'north'; cross-street distance there is 7000,
     #    arterial wins by a wide margin, no ambiguity.
     s = citytick.seed_state()
@@ -516,7 +530,7 @@ if __name__ == '__main__':
     assert s['parcels']['P1'] == {
         'rid': 'vernacular', 'tier': 0, 'width': 820.0,
         'owned': False, 'accum': 0.0,
-        'placement': {'x0': -7380.0, 'x1': -6560.0, 'side': 'north',
+        'placement': {'x0': -7410.0, 'x1': -6590.0, 'side': 'north',
                        'road_id': 'arterial'},
     }, s['parcels']['P1']
 
@@ -548,7 +562,7 @@ if __name__ == '__main__':
     assert ok4 and pid4 == 'P2', (pid4, ok4, reason4)
     assert s4['parcels']['P2']['placement']['side'] == 'south'
     assert s4['parcels']['P2']['placement'] == {
-        'x0': -7380.0, 'x1': -6560.0, 'side': 'south', 'road_id': 'arterial'}
+        'x0': -7410.0, 'x1': -6590.0, 'side': 'south', 'road_id': 'arterial'}
 
     # 5. A second, non-overlapping north placement gets the next pid in
     #    sequence, not a reused one. NOT adjacent to P1 this time (a real,
@@ -563,7 +577,7 @@ if __name__ == '__main__':
     s5, pid5, ok5, reason5 = place(s4, 7000.0, 1500.0)
     assert ok5 and pid5 == 'P3', (pid5, ok5, reason5)
     assert s5['parcels']['P3']['placement'] == {
-        'x0': 6560.0, 'x1': 7380.0, 'side': 'north', 'road_id': 'arterial'}
+        'x0': 6590.0, 'x1': 7410.0, 'side': 'north', 'road_id': 'arterial'}
 
     # 6. Compatibility with the EXISTING driver contract, not just
     #    self-consistency: ensure_parcel's own pinned-parcel shape is a
@@ -780,7 +794,7 @@ if __name__ == '__main__':
     s20, pid20, ok20, reason20 = place(s20, -1500.0, 2500.0)
     assert ok20 and pid20 == 'P1' and reason20 == '', (pid20, ok20, reason20)
     assert s20['parcels']['P1']['placement'] == {
-        'x0': 2050.0, 'x1': 2870.0, 'side': 'west', 'road_id': 'cross'
+        'x0': 2090.0, 'x1': 2910.0, 'side': 'west', 'road_id': 'cross'
     }, s20['parcels']['P1']
 
     # 21. The EAST side of the cross street, same state (proves the two
@@ -791,7 +805,7 @@ if __name__ == '__main__':
     s21, pid21, ok21, reason21 = place(s20, 1500.0, 2500.0)
     assert ok21 and pid21 == 'P2', (pid21, ok21, reason21)
     assert s21['parcels']['P2']['placement'] == {
-        'x0': 2050.0, 'x1': 2870.0, 'side': 'east', 'road_id': 'cross'
+        'x0': 2090.0, 'x1': 2910.0, 'side': 'east', 'road_id': 'cross'
     }, s21['parcels']['P2']
 
     # 22. In-the-road, ARTERIAL frame: x=3000, y=500 - arterial across=500

@@ -33,6 +33,14 @@ the probe runs above (is_input_key_down edges reached the controller).
 """
 import unreal, time
 
+# TRACES ARE SIMPLE, NOT COMPLEX (2026-09-03 23:5x): bTraceComplex=True asks
+# for per-triangle collision, which the baked wooden masses never carry -
+# the cursor passed straight through every bought building to the board.
+# Simple traces use the collision primitives: the pad cube's own box, the
+# masses' box/hulls the design lane adds, the board's and roads' simple
+# bodies (all measured), and NOT the ghost slab (0 prims - it must never
+# eat the click that places it).
+
 RESET_HOLD_S = 2.0
 _KEY = {}
 for _name in ('LeftMouseButton', 'B', 'N', 'MouseScrollUp', 'MouseScrollDown'):
@@ -192,6 +200,12 @@ def _lot_box(lot, iu, placement):
 # nothing here is ever saved. The debug label stays for the reason text.
 GHOST_MI = {'accept': '/Game/Stacktown/Materials/MI_ghost_accept',
             'refuse': '/Game/Stacktown/Materials/MI_ghost_refuse'}
+GHOST_SLAB = '/Game/Stacktown/BakedWood/SM_GhostPad_w%d'
+
+
+def placement_half():
+    import citylayout
+    return citylayout.HALF
 
 
 def _ghost_actor(gw):
@@ -224,17 +238,31 @@ def _ghost_show(gw, ok, box, lot):
     width = abs(lot['x1'] - lot['x0'])
     try:
         g.set_actor_location_and_rotation(unreal.Vector(x, y, 2.0), unreal.Rotator(0.0, 0.0, yaw), False, False)
-        if float(g.get_editor_property('WidthUU')) != float(width):
-            g.set_editor_property('WidthUU', float(width))
         comps = [c for c in g.get_components_by_class(unreal.StaticMeshComponent) if c.get_name() == 'Building']
         if comps:
             c = comps[0]
+            # The baked slab for this width (design lane, D22: five assets,
+            # front-left pivot, 1500 deep, 12 uu proud rim). The parcel's
+            # own WidthUU is never touched, so its change-detection never
+            # runs and never rescales or repositions this component.
+            sm_path = GHOST_SLAB % int(width)
+            sm = unreal.load_asset(sm_path)
+            if sm is not None:
+                if c.get_editor_property('static_mesh') != sm:
+                    c.set_static_mesh(sm)
+                    c.set_relative_scale3d(unreal.Vector(1.0, 1.0, 1.0))
+                want = unreal.Vector(0.0, -(iu._PAD_CENTER_Y - placement_half()), 0.0)
+            else:
+                # no slab baked for this width: fall back to the scaled cube
+                want = unreal.Vector(width / 2.0, 0.0, 0.0)
+                if float(g.get_editor_property('WidthUU')) != float(width):
+                    g.set_editor_property('WidthUU', float(width))
             mi = unreal.load_asset(GHOST_MI['accept' if ok else 'refuse'])
             if mi is not None and c.get_material(0) != mi:
                 c.set_material(0, mi)
             cur = c.get_editor_property('relative_location')
-            if abs(cur.x - width / 2.0) > 0.5 or abs(cur.y) > 0.5:
-                c.set_relative_location(unreal.Vector(width / 2.0, 0.0, 0.0), False, False)
+            if abs(cur.x - want.x) > 0.5 or abs(cur.y - want.y) > 0.5:
+                c.set_relative_location(want, False, False)
         if not _st.get('ghost_shown'):
             g.set_actor_enable_collision(False)
             g.set_actor_hidden_in_game(False)
@@ -306,7 +334,7 @@ def _draw_ghost(gw, ok, text, box, x, y):
 
 
 def _hover(gw, gi, pc):
-    hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, True)
+    hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)
     if hit is None:
         return
     d = hit.to_dict()
@@ -360,7 +388,7 @@ def _tick(dt):
         else:
             _ghost_hide()
         if edges['LeftMouseButton']:
-            hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, True)
+            hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)
             if hit is None:
                 _log('click hit nothing')
             else:
@@ -403,7 +431,7 @@ def _click_at(x, y):
     gi = unreal.GameplayStatics.get_game_instance(gw)
     rig = _st['rig'] or _find_rig(gw)
     start = unreal.Vector(float(x), float(y), 3000.0); end = unreal.Vector(float(x), float(y), -3000.0)
-    hit = unreal.SystemLibrary.line_trace_single(gw, start, end, unreal.TraceTypeQuery.ECC_VISIBILITY, True, [],
+    hit = unreal.SystemLibrary.line_trace_single(gw, start, end, unreal.TraceTypeQuery.ECC_VISIBILITY, False, [],
                                                  unreal.DrawDebugTrace.NONE, True)
     if hit is None:
         return 'trace hit nothing at (%s, %s)' % (x, y)

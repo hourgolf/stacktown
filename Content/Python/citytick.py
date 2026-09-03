@@ -111,7 +111,11 @@ if __name__ == '__main__':
     r = econrules.rules()
     assert (r['money_start'], r['demand_default']) == (100, 1.0), \
         'econrules.json changed - recompute the known answers below WITH it'
-    TEST_PATH = os.path.join(HERE, '_selftest_citystate.json')
+    # OUTSIDE Content/ (2026-09-03, see placement.py): the editor's
+    # auto-reimport treats a JSON under Content/ as a DataTable source.
+    _TEST_DIR = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'Saved', 'SelfTest')
+    os.makedirs(_TEST_DIR, exist_ok=True)
+    TEST_PATH = os.path.join(_TEST_DIR, '_selftest_citystate.json')
     try:
         if os.path.exists(TEST_PATH):
             os.remove(TEST_PATH)

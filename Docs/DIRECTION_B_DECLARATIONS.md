@@ -2009,6 +2009,64 @@ proven, the seven species curves are written with walnut running backwards as
 D16 requires, and the material can age a whole species at a time today. What
 it cannot do is age ONE BUILDING.
 
+### THE NORMALS HYPOTHESIS IS WRONG. Counted 2026-09-02.
+
+The section below names welded or averaged bevel normals as the first suspect,
+and the commit message repeated it. **It is disproven.** Read out of
+`SM_WMass_w1230_tower` with GeometryScript rather than argued about:
+
+| max&#124;n&#124; | faces | what the proxy would return |
+|---|---|---|
+| 1.00 | 72 | 0.00 — the flat faces, correctly |
+| 0.71 | 144 | 0.97 — the chamfer facets |
+| 0.58 | 48 | 1.00 — the corner triangles |
+
+264 triangles, **72.7% of them non-axis, in the FACE normals and the SHADING
+normals alike.** The bevel is present, hard-normalled, and is exactly the
+geometry `edge_wear.py` was designed for. `mk_woodcat` needs no change and the
+baker was never at fault. A suspect named from plausibility and left standing
+for hours is how a wrong idea gets into a commit message; counting took one
+script.
+
+### WHAT WAS ACTUALLY WRONG: the proxy reads the SHADED normal
+
+`Abs_0` — the front of the curvature chain — is fed by **`PixelNormalWS`**,
+the normal *after* the grain normal map perturbs it. This master writes a
+normal map (`PaperNormalAmount` 0.55, `MP_Normal` connected), so the proxy has
+never seen a geometric facet normal on any board this lane made.
+
+`edge_wear.py`'s own docstring states the intent: *"the geometry is entirely
+axis-aligned boxes with 45 degree chamfer facets. So the world normal IS a
+curvature proxy."* That is a geometric question, and the wiring answers a
+shaded one.
+
+**It also explains the failure's shape**, which nothing else did: driving
+`EdgeWearLift` moved the flat face **+0.21** and the arris only **+0.17** — the
+face moving MORE than the edge. A normal-mapped flat face is perturbed
+off-axis across its whole area, while the chamfer's own 45° signal is swamped
+by the same perturbation.
+
+Swapped to `VertexNormalWS` **on the fork only** — the flagship's master keeps
+its wiring, being no longer this lane's to correct.
+
+### AND THE FIX DID NOT WORK, which is the part that matters
+
+Against a drift floor of **0.478**, driving `EdgeWearLift` to 12 through the
+corrected proxy peaks at **0.572**. Signal/drift **1.20**. That is not a
+result.
+
+So: a real defect is found and fixed, and **at least one more cause is still
+out there.** The defect is not being presented as the answer. A plausible fix
+that does not move the frame is the exact shape this document has caught four
+times now, and calling it closed because the story is satisfying would be the
+fifth.
+
+**Next, scoped and untested:** `Multiply_1`'s A input is `Multiply_24`
+(`VectorParameter_0` x `Add_12`, the base albedo path), and its output goes to
+`LinearInterpolate_2` pin B with the curvature mask as Alpha. If the lerp's two
+ends sit close together, a 70x lift on B still barely moves the result. One
+trace and one A/B.
+
 ### THE ATTENTION MECHANISM DOES NOT WORK. Measured 2026-09-02.
 
 D16 above says: *"The burnish half already exists: `EdgeWearWidth` /
@@ -2046,7 +2104,9 @@ cause either: `fastbake.py` refuses a bake where bevelled parts average under
 `mk_woodcat.py` bakes the shipped catalogue at `CHAMFER = 14.0`. A chamfer
 that did not take would have failed the bake, not shipped silently.
 
-**Which leaves the normals as the first suspect.** The proxy is
+**~~Which leaves the normals as the first suspect.~~ DISPROVEN — see the
+count above. Kept because the reasoning below is exactly how a plausible
+suspect becomes an assumption.** The proxy is
 `saturate((1 - max|n|) / 0.30)`, and it only separates a chamfer from a face
 if the chamfer facet carries its OWN normal. Averaged or welded vertex
 normals across the bevel would leave `max|n|` high on the facet and slightly
@@ -2450,3 +2510,71 @@ hardcoded `BoardCentre` (currently `(0,0,0)`) and its `Reach` clamp
 (300..40000), both sized to the 14-lot board. That is their math and their
 flag; recorded here only so this lane does not later "discover" it as new. It
 is parked with the rest of growth.
+
+---
+
+## D21 — the twin stops sharing a master. Owner, 2026-09-02.
+
+**Owner's word:** *"nothing we're doing in this direction B wood city should be
+affecting the flagship models or the teams handling the flagship project for
+now. these are separate projects with different yet similar looks. The wood
+city is an easier to render and scale version that we can then hopefully borrow
+some mechanics for flagship down the road."*
+
+### This lane argued the other way and was overruled
+
+The argument against forking was real and is recorded rather than quietly
+dropped: `M_StacktownMaster` is 195 expressions, and the grain, paper, seam and
+end-grain work all fork with it. Two masters means a fix to one is not a fix to
+the other, and the twin rule was supposed to mean both cities speak one
+fabrication language.
+
+**The owner's principle outranks it, and the reason is in their own sentence:
+"separate projects."** A twin that shares a master is not a market test, it is
+a skin — one lane's experiment lands in the other lane's product, and the
+flagship team inherits changes nobody on that team approved. What the twin
+shares is a *vocabulary*, not an asset. That reading also makes "borrow some
+mechanics for flagship down the road" possible in a way the shared master
+quietly prevented: you cannot borrow selectively from something you are
+already forced to share.
+
+### What was done
+
+- The shared master was **reverted to exactly the flagship's state** — 195
+  expressions, `BaseColor` back on `LinearInterpolate_3`, `Multiply_1` pin B
+  back on `EdgeWearLift` — and verified by read-back, not by intent.
+- **`M_WoodMaster`** duplicated from it. Direction B's wear lives there and
+  only there. 210 expressions with the four CPD channels, the Attention splice,
+  the Age chain and the `VertexNormalWS` correction.
+- **Nine instances re-parented**: the seven `MI_wood_*`, plus `MI_board_plot`
+  and `MI_board_road`.
+- **`MI_model_board` and `MI_studio_grey` left alone.** Both are referenced by
+  flagship maps. `MI_studio_grey` is referenced by TestCity too, and the rule
+  would say duplicate — but USING an unchanged shared material changes nothing
+  for the flagship, and the studio room's actors are persistent saved content,
+  so a per-session repoint would be "looks done but isn't" wearing a script.
+  When D19's room work actually needs to edit it: duplicate, repoint once,
+  saved on the owner's word.
+
+### The boundary is structural, not remembered
+
+`Content/Python/cpdmap.py` owns the channel map. `Content/Python/woodmaster.py`
+owns which master this lane may write to, and names the shared one **only** so
+`assert_not_shared()` can refuse a write aimed at it. Both wear scripts read
+their target from there.
+
+That mattered immediately: `wear.py` and `wear_age.py` each had the shared
+master hardcoded a **second** time, inside the strings they hand to the
+programmatic toolset. Retargeting the module constant alone would have left
+them rebuilding the wire on the flagship's master while every line of the code
+read as though it pointed at the fork.
+
+### The zero-referencer trap, worth its own line
+
+`MI_board_plot` and `MI_board_road` reported **zero referencers** — which reads
+as "dead asset, leave it." They are not dead: `wood_set.py`'s `BOARD_STOCKS`
+declares both and `ensure_board_mis()` creates them at rig build time, applied
+to `ZONE_SetBRoad` and `ZONE_SetBPlots`. The referencer graph was a snapshot of
+a board that happened to be **down**. **Provenance overrides the snapshot** —
+and the reading that would have got this wrong was true, just not about what it
+appeared to be about.

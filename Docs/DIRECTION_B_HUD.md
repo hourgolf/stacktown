@@ -78,39 +78,74 @@ bar:
 | rotting | `#A8AAA8` (cold — the grey) |
 | burnt | `#6A6560` |
 
-## 3. Fonts
+## 3. Fonts — Tomorrow for words, Space Mono Bold for numbers
 
-Two families, three faces. All three are **SIL Open Font License** from Google
-Fonts — free for commercial use, redistributable, embeddable.
+Owner chose **Tomorrow** over Six Caps for labels, 2026-09-02, after a side by
+side. Two families, and the division between them is a rule rather than a
+taste: **anything made of words is Tomorrow; anything that is a live number is
+Space Mono Bold.**
 
-**`Space Mono Bold` for every live number** — `MoneyText`, `SelectedPriceText`.
-Monospace means the digits are all one width, so a number that changes while
-you watch it does not shuffle sideways. This was the one polish concern flagged
-in the first draft and the owner's instinct landed exactly on it.
+All are SIL Open Font License from Google Fonts — commercial use,
+redistribution and embedding all permitted, verified at each family's OFL.
 
-**`Six Caps` for labels** — `DemandText`, `SelectedNameText`,
-`SelectedStateText`. It is extremely condensed and caps-only, which is precisely
-what a thin full-width bar wants: it stays legible at a large size while taking
-almost no width, and it is light enough not to compete with the timber.
+**Tomorrow** (Regular / Medium / SemiBold) for every text label. Nine weights,
+real lowercase, a squarish geometric skeleton that suits a board of
+right-angled timber blocks. It goes wherever the HUD goes next — tooltip,
+menu, title card — which Six Caps could not, being a single-weight condensed
+caps face. That reach is what decided it.
 
-**`Space Mono Regular` for `BuyPromptText`.** The prompt is an instruction that
-has to read instantly; Six Caps is a labelling face and a condensed caps
-sentence is slower to read than it looks.
+**Space Mono Bold** for `MoneyText` and `SelectedPriceText`, and this is
+NOT a stylistic preference — it is read out of the font files:
 
-**Erica One: not recommended here, and the instinct is not wrong.** It is a
-heavy poster display face — it would dominate a minimal strip and fight the
-board for attention, which is the one thing the owner asked the HUD not to do.
-Where it *would* be right is a title card or main-menu wordmark, where being
-loud is the job. Worth keeping for that.
+| font | digit advance widths |
+|---|---|
+| SpaceMono-Bold | **TABULAR — all ten identical** |
+| Tomorrow-Medium | proportional — ten distinct, 431 to 681 units |
+| Tomorrow-Bold | proportional — ten distinct, 478 to 730 units |
+| SixCaps | proportional — 171 to 234 |
+| EricaOne | proportional — 402 to 729 |
 
-**Sourcing** (editor work — happens in a granted window, not before):
-download each family from `fonts.google.com`, confirm the OFL on the page,
-commit the `.ttf` beside the existing texture sources, then import as Font
-assets at these paths so the beta lane's `SetFont` calls have targets:
+Tomorrow's `1` is **431 units against its `8` at 681** — a 58% spread. At
+30 px that is about 7.5 px of movement per digit that changes, and a money
+value ticking over several digits would visibly shuffle sideways under the
+label beside it. Space Mono's ten digits are byte-identical in width, so the
+number changes and nothing moves. Tomorrow carries the HUD everywhere words
+appear; it does not carry the money.
 
-    /Game/Stacktown/UI/Fonts/F_SixCaps
+**Erica One has no HUD role, and that is not a rejection of the choice.** It
+is a heavy poster display face: in a thin bar it would dominate the strip and
+fight the board, which is the one thing the HUD was asked not to do, and its
+digits are proportional too. Its real home is the **game's wordmark — a title
+card or main-menu lockup**, where being loud is the job and nothing has to
+share the space. It stays in the repo for that. Worth saying plainly that the
+one deliberately-loud face in a set of three is a good instinct to have had;
+it just belongs on the screen before the board, not on top of it.
+
+Not used in the HUD, kept as sources: `SixCaps.ttf` (the face Tomorrow
+replaced), `SpaceMono-Regular.ttf`, `EricaOne-Regular.ttf`, and the six
+Tomorrow weights the bar does not call for.
+
+**Font assets — IMPORTED 2026-09-02, verified binding:**
+
+    /Game/Stacktown/UI/Fonts/F_Tomorrow_Regular
+    /Game/Stacktown/UI/Fonts/F_Tomorrow_Medium
+    /Game/Stacktown/UI/Fonts/F_Tomorrow_SemiBold
     /Game/Stacktown/UI/Fonts/F_SpaceMono_Bold
-    /Game/Stacktown/UI/Fonts/F_SpaceMono_Regular
+
+These are **FontFace** assets, and that is the right type: `SlateFontInfo`
+takes a FontFace directly — `SlateFontInfo(font_object=<FontFace>, size=N)`
+binds and reads back — so no `UFont` wrapper is needed. A first attempt built
+one anyway and died on `unreal.TypefaceEntry`, which Python does not expose;
+the wrapper was never required. `Content/Python/import_fonts.py` rebuilds all
+four in one command.
+
+**`SlateFontInfo` also carries `letter_spacing`**, so the +0.03em on the
+Tomorrow labels is a code value the beta lane sets with everything else,
+rather than something to type into the designer.
+
+Six Caps, Erica One and `SpaceMono-Regular` are committed as sources and
+**deliberately not imported** — importing every downloaded file would leave
+unused Font assets in the content browser looking like part of the HUD.
 
 ## 4. CODE STYLES — the beta lane sets these
 
@@ -119,55 +154,125 @@ Sizes are for a 1080p-tall viewport and scale with it.
 | widget | font | size | colour |
 |---|---|---|---|
 | `MoneyText` | Space Mono Bold | 30 | `#E8E0D4` |
-| `DemandText` | Six Caps | 34 | `#9A9187` |
-| `SelectedNameText` | Six Caps | 38 | `#E8E0D4` |
-| `SelectedStateText` | Six Caps | 30 | *state colour above* |
+| `DemandText` | Tomorrow Medium | 20 | `#9A9187` |
+| `SelectedNameText` | Tomorrow SemiBold | 22 | `#E8E0D4` |
+| `SelectedStateText` | Tomorrow Medium | 18 | *state colour above* |
 | `SelectedPriceText` | Space Mono Bold | 26 | `#C08A4E` |
-| `BuyPromptText` | Space Mono Regular | 17 | `#9A9187` |
+| `BuyPromptText` | Tomorrow Regular | 16 | `#9A9187` |
 
-Six Caps sizes look large next to the Space Mono ones and are not a mistake —
-the face is about a third the width of a normal caps face at the same point
-size, so 34 in Six Caps and 30 in Space Mono sit at roughly the same visual
-weight. Six Caps also wants **letter-spacing +2** to stop the condensed forms
-crowding.
+`DemandText` and `SelectedStateText` stay **uppercase**, set in the string
+rather than by the font — Tomorrow has lowercase and the labels choose not to
+use it, which is a decision the copy can revisit without changing a font.
+Letter-spacing **+0.03em** on the Tomorrow labels; the numbers take none.
 
-## 5. OWNER PLACES — the designer half
+## 5. CONSTRUCTION ORDER — the runtime build
 
-**The bar.**
-1. Add a **Border**. Anchor: **top, stretched horizontally** (the anchor
-   preset with the horizontal bar at the top). Offsets: left `0`, right `0`,
-   top `0`, **height `76`**.
-2. Brush colour `#2A2A2E`, alpha **0.88**. No corner radius, no outline.
-3. Padding: left `28`, right `28`, top `0`, bottom `0`.
-4. Inside the Border, add a **Horizontal Box**. Set its vertical alignment to
-   **Fill** so both clusters centre themselves in the bar's height.
+Rewritten 2026-09-02. This half was designer instructions until the widget
+root turned out unreachable to the tooling and the bar became a runtime build.
+**The beta lane's code is now the spec**, so the numbers are given as slot
+values rather than as a paragraph somebody has to translate into slot values
+by eye — that transcription step is where a layout silently stops matching its
+declaration.
 
-**Left cluster — always visible.**
-5. In the Horizontal Box, add a **Horizontal Box** (this is the left cluster).
-6. `MoneyText`, then `DemandText`. Gap **24 px** (slot padding, left = 24 on
-   `DemandText`).
+**THE ROOT IS UNRESOLVED AND THIS IS WRITTEN ROOT-AGNOSTIC.** The designer's
+panel cannot be referenced from the DSL, `GetWidgetFromName` is not placeable
+either, and `GameViewportSubsystem.AddWidget` is being probed — which would
+make the bar hostless. Everything below says **`<ROOT>`** and holds for
+whichever lands. Only step 1's slot type changes with it: a Canvas root takes
+the anchor/offset block; a viewport-added root takes its own alignment call
+and ignores that block.
 
-**The gap.**
-7. Add a **Spacer** with slot **Size = Fill**. This is what pushes the
-   selection cluster to the right edge and keeps it there at any window width.
+### Build order — parents before children, every time
 
-**Right cluster — the selection.**
-8. Add a **Horizontal Box** (the right cluster).
-9. `SelectedNameText`, `SelectedStateText`, `SelectedPriceText`,
-   `BuyPromptText`, in that order. Gaps: **20 px** between the first three,
-   **28 px** before `BuyPromptText` — the prompt is an instruction, not
-   another fact, and the extra air is what says so.
-10. **Set the right cluster to Collapsed by default.** The beta lane shows it
-    when a lot is selected. A permanently visible empty half-bar is the
-    single fastest way a good HUD starts looking unfinished.
+    1  Border            "HudBar"        -> attach to <ROOT>
+    2  HorizontalBox     "HudRow"        -> child of HudBar
+    3  HorizontalBox     "StatusCluster" -> child of HudRow
+    4  TextBlock         MoneyText       -> child of StatusCluster
+    5  TextBlock         DemandText      -> child of StatusCluster
+    6  Spacer            "HudSpacer"     -> child of HudRow
+    7  HorizontalBox     "SelectCluster" -> child of HudRow
+    8  TextBlock         SelectedNameText   -> child of SelectCluster
+    9  TextBlock         SelectedStateText  -> child of SelectCluster
+    10 TextBlock         SelectedPriceText  -> child of SelectCluster
+    11 TextBlock         BuyPromptText      -> child of SelectCluster
 
-**Vertical alignment:** set every text block to **Center** vertically. With
-two families at different sizes, top-aligning them makes the baselines
-disagree and the bar look assembled rather than designed.
+A Border takes exactly **one** child, which is why HudRow exists — adding the
+clusters straight to the Border silently keeps only the last one.
 
-**Do not add a drop shadow to the bar.** The 88% alpha and the value gap
-against the board are doing that job already; a shadow is the UI tell this
-direction has spent months removing.
+### Slot values
+
+**1 · HudBar in `<ROOT>`** — a Canvas slot, if the root is a Canvas:
+
+    Anchors        Min (0.0, 0.0)   Max (1.0, 0.0)     stretched along the top
+    Offsets        Left 0   Top 0   Right 0   Bottom 76
+    Alignment      (0.0, 0.0)
+    AutoSize       false
+
+With those anchors, `Offsets.Bottom` **is the bar's height**, not a margin —
+Left and Right are insets from the screen edges and Top is the drop from the
+anchor line. If the root is the viewport instead, skip this block and place it
+with the subsystem's own top-stretched alignment; the height moves to the
+Border's own size.
+
+**HudBar itself:**
+
+    Brush colour   #2A2A2E at alpha 0.88
+    Padding        Left 28   Right 28   Top 0   Bottom 0
+
+*On that colour:* if it renders far darker than the swatch, the value is being
+taken as linear rather than sRGB. `#2A2A2E` is `(0.165, 0.165, 0.180)` as sRGB
+bytes over 255 and about `(0.022, 0.022, 0.027)` once converted — construct it
+from an sRGB hex rather than typing floats, and check it against section 2's
+swatch rather than against the number.
+
+**2 · HudRow in HudBar** — `HorizontalAlignment Fill`, `VerticalAlignment Fill`.
+Filling vertically is what lets every text block centre itself in the bar's
+height instead of sitting on its top edge.
+
+**3 · StatusCluster in HudRow**
+
+    Size           Auto
+    VAlign         Center
+
+**4 · MoneyText** — padding all zero.
+**5 · DemandText** — `Padding Left 24`. That is the 24 px gap; it lives on the
+second item, never as a margin on both.
+
+**6 · HudSpacer in HudRow** — `Size Fill (1.0)`. This is the whole reason the
+selection cluster stays pinned to the right edge at any window width; without
+it the right cluster butts against the left one and the bar looks broken at
+wide aspect ratios only, which is the kind of bug that ships.
+
+**7 · SelectCluster in HudRow**
+
+    Size           Auto
+    VAlign         Center
+    Visibility     Collapsed          <-- the default, set at construction
+
+**8–10 ·** `SelectedNameText` padding 0; `SelectedStateText` and
+`SelectedPriceText` each `Padding Left 20`.
+**11 · BuyPromptText** — `Padding Left 28`. The wider gap is deliberate: a
+prompt is an instruction, not another fact, and the extra air is what says so.
+
+**Every TextBlock:** `VerticalAlignment Center`, and left-aligned text. With
+two type families at six different sizes, top-aligning makes the baselines
+disagree and the bar reads as assembled rather than designed.
+
+### What the beta lane owns at runtime
+
+- **Show and hide `SelectCluster`** on selection — `Collapsed` to `Visible`,
+  never `Hidden`. Hidden still occupies its layout space, so the spacer would
+  keep the gap open and the bar would look like it had lost something.
+- **Fonts, sizes and colours** from section 4, set at BeginPlay from the
+  imported FontFace assets.
+- **`SelectedStateText`'s colour** per state, from section 2's table.
+
+### Not to be added
+
+No drop shadow on the bar, no rounded corners, no outline, and no second
+background behind `SelectCluster`. One bar, one plane. The 88% alpha and the
+value gap against the board already separate it; anything more is the UI tell
+this direction has spent months removing.
 
 ## 6. What this deliberately leaves out
 

@@ -276,6 +276,28 @@ def resolve_road(roads, x, y):
     return road, {'along': along, 'across': across, 'side': side}
 
 
+
+def lot_rect(lot):
+    """World-space footprint (xmin, xmax, ymin, ymax) of a lot's PAD from
+    its placement dict, both roads: the span along the road's axis, and
+    facade line to block back edge across it, on the lot's side. The ONLY
+    geometry the overlap scan compares - spans within one road miss the
+    corner, where a cross-street lot and an arterial lot share ground."""
+    near, far = ROAD_HALF, ROAD_HALF + BLOCK_DEPTH
+    x0, x1 = float(lot['x0']), float(lot['x1'])
+    if lot_road_id(lot) == 'cross':
+        if lot['side'] == 'west':
+            return (-far, -near, x0, x1)
+        return (near, far, x0, x1)
+    if lot['side'] == 'north':
+        return (x0, x1, near, far)
+    return (x0, x1, -far, -near)
+
+
+def rects_overlap(a, b):
+    return a[0] < b[1] and b[0] < a[1] and a[2] < b[3] and b[2] < a[3]
+
+
 def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
     """(ok, reason, lot) - the click -> lot decision, MULTI-ROAD as of
     2026-09-03 (RESOLVE_ROAD_NOTES.md; resolve_road above, wired in
@@ -346,17 +368,24 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
                 return False, (
                     'overlap: [%.1f, %.1f] crosses a pinned lot at '
                     '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
+    candidate = {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
+    mine = lot_rect(candidate)
     for p in state['parcels'].values():
         lot = p.get('placement')
-        if not lot or lot['side'] != side:
+        if not lot:
             continue
-        if lot_road_id(lot) != road['id']:
-            continue
-        if x0 < lot['x1'] and lot['x0'] < x1:
+        # WORLD footprints, every road (2026-09-03): the corner is where a
+        # cross-street lot and an arterial lot share ground while their
+        # spans never compare (different axes) - the owner placed a lot
+        # onto a standing building there. The rectangle test contains the
+        # old same-road same-side span test, so nothing it refused is
+        # allowed now.
+        if rects_overlap(mine, lot_rect(lot)):
             return False, (
-                'overlap: [%.1f, %.1f] crosses an existing lot at '
-                '[%.1f, %.1f]' % (x0, x1, lot['x0'], lot['x1'])), None
-    return True, '', {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
+                'overlap: [%.1f, %.1f] on the %s crosses an existing lot at '
+                '[%.1f, %.1f] on the %s' % (x0, x1, road['id'], lot['x0'],
+                                            lot['x1'], lot_road_id(lot))), None
+    return True, '', candidate
 
 
 def _next_pid(state):
@@ -856,7 +885,40 @@ if __name__ == '__main__':
     if os.path.exists(_SELFTEST_PATH):
         os.remove(_SELFTEST_PATH)
 
-    print('placement self-check: 26/26 pass (pure-Python click->lot->state '
+    # 27. THE CORNER (2026-09-03, owner: "it allowed me to place where a
+    #     building already existed, and they just grew into a morphed
+    #     building"). A cross-street lot and an arterial lot share ground
+    #     at the corner while their spans live on different axes, so the
+    #     per-road span scan never compared them. The overlap scan now
+    #     compares WORLD footprints (lot_rect) across every lot: an
+    #     arterial south lot at x [1640, 2460] refuses a cross-street east
+    #     click whose span would be y [-2460, -1640] (x 1130..2630 both) -
+    #     and the mirror case, a standing cross lot refusing the arterial
+    #     click - while a click one lot further along the cross street,
+    #     clear of the corner, still resolves. The rectangle test contains
+    #     the old span test: the same-road adjacent-lot refusal (case 3)
+    #     is unchanged above.
+    s27 = citytick.seed_state()
+    s27['parcels']['A'] = {
+        'rid': V0_RECIPE, 'tier': 0, 'width': V0_WIDTH, 'owned': False,
+        'placement': {'x0': 1640.0, 'x1': 2460.0, 'side': 'south',
+                      'road_id': 'arterial'},
+    }
+    ok27, reason27, lot27 = resolve_click(s27, 1500.0, -1900.0, pins_active=False)
+    assert not ok27 and lot27 is None and 'overlap' in reason27 and 'cross' in reason27, (
+        ok27, reason27, lot27)
+    s27b = citytick.seed_state()
+    s27b['parcels']['C'] = {
+        'rid': V0_RECIPE, 'tier': 0, 'width': V0_WIDTH, 'owned': False,
+        'placement': {'x0': -2460.0, 'x1': -1640.0, 'side': 'east',
+                      'road_id': 'cross'},
+    }
+    ok27b, reason27b, lot27b = resolve_click(s27b, 1900.0, -1500.0, pins_active=False)
+    assert not ok27b and lot27b is None and 'overlap' in reason27b, (
+        ok27b, reason27b, lot27b)
+    assert lot_rect(s27['parcels']['A']['placement']) == (1640.0, 2460.0, -2630.0, -1130.0)
+    assert lot_rect(s27b['parcels']['C']['placement']) == (1130.0, 2630.0, -2460.0, -1640.0)
+    print('placement self-check: 27/27 pass (pure-Python click->lot->state '
           'contract, plate bounds measured off the real board mesh and '
           'contain citylayout\'s block union, session-start reactivation '
           'planning for both placed and pinned lots, pinned-span overlap '
@@ -867,7 +929,8 @@ if __name__ == '__main__':
           'through resolve_click), point-to-segment not point-to-line, the '
           'owner\'s own logged off-board click, cross-street placement on '
           'both sides, in-the-road refused on whichever road actually won, '
-          'lot_road_id\'s backward-compat default now the single source '
+          'lot_road_id\'s backward-compat default now the single source, '
+          'CORNER overlap refused across roads by world footprint '
           'three call sites share, a cross-street lot AND a legacy '
           'road_id-less lot both surviving a real save_state/load_state '
           'round-trip intact; live cursor-trace coordinates, actor '

@@ -182,6 +182,82 @@ def _lot_box(lot, iu, placement):
     return (mid, cy, half_w, depth_h)
 
 
+# ---- Ghost actor (D22): a translucent pad instead of the debug box ----
+# Borrows the HIGHEST-numbered dormant POOL_ parcel (activation claims the
+# lowest, so they never meet until the pool is nearly exhausted), sets its
+# Building component to MI_ghost_accept / MI_ghost_refuse (translucent
+# instances proven through disk by mk_ghost_mi.py), drives its size
+# through WidthUU (the parcel's own change-detection scales the pad) and
+# parks it hidden again when the cursor leaves the plate. Runtime-only:
+# nothing here is ever saved. The debug label stays for the reason text.
+GHOST_MI = {'accept': '/Game/Stacktown/Materials/MI_ghost_accept',
+            'refuse': '/Game/Stacktown/Materials/MI_ghost_refuse'}
+
+
+def _ghost_actor(gw):
+    g = _st.get('ghost')
+    if g is not None:
+        try:
+            if unreal.SystemLibrary.is_valid(g):
+                return g
+        except Exception:
+            pass
+    best = None
+    for a in unreal.GameplayStatics.get_all_actors_of_class(gw, unreal.Actor):
+        if a.get_class().get_name() != 'BP_Parcel_C':
+            continue
+        lab = a.get_actor_label()
+        if lab.startswith('POOL_') and not lab.startswith('POOL_PIN_'):
+            if best is None or lab > best.get_actor_label():
+                best = a
+    _st['ghost'] = best
+    _st['ghost_shown'] = False
+    return best
+
+
+def _ghost_show(gw, ok, box, lot):
+    g = _ghost_actor(gw)
+    if g is None or box is None:
+        return False
+    import init_unreal as iu
+    x, y, yaw = iu._lot_transform(lot)
+    width = abs(lot['x1'] - lot['x0'])
+    try:
+        g.set_actor_location_and_rotation(unreal.Vector(x, y, 2.0), unreal.Rotator(0.0, 0.0, yaw), False, False)
+        if float(g.get_editor_property('WidthUU')) != float(width):
+            g.set_editor_property('WidthUU', float(width))
+        comps = [c for c in g.get_components_by_class(unreal.StaticMeshComponent) if c.get_name() == 'Building']
+        if comps:
+            c = comps[0]
+            mi = unreal.load_asset(GHOST_MI['accept' if ok else 'refuse'])
+            if mi is not None and c.get_material(0) != mi:
+                c.set_material(0, mi)
+            cur = c.get_editor_property('relative_location')
+            if abs(cur.x - width / 2.0) > 0.5 or abs(cur.y) > 0.5:
+                c.set_relative_location(unreal.Vector(width / 2.0, 0.0, 0.0), False, False)
+        if not _st.get('ghost_shown'):
+            g.set_actor_enable_collision(False)
+            g.set_actor_hidden_in_game(False)
+            _st['ghost_shown'] = True
+        return True
+    except Exception as e:
+        k = 'ghost:' + str(e)[:60]
+        if k not in _st['errs']:
+            _st['errs'].add(k); unreal.log_warning('CLICK: ghost actor error %s' % e)
+        return False
+
+
+def _ghost_hide():
+    g = _st.get('ghost')
+    if g is None or not _st.get('ghost_shown'):
+        return
+    try:
+        g.set_actor_hidden_in_game(True)
+    except Exception:
+        pass
+    _st['ghost_shown'] = False
+
+
 def _preview(gi, x, y):
     """(ok, short_reason, box) - box is (cx, cy, hx, hy) or None."""
     import init_unreal as iu
@@ -205,6 +281,15 @@ def _preview(gi, x, y):
             a0 = placement._snap(road['start'][axis] + local['along'] - width / 2.0)
             box = _lot_box({'x0': a0, 'x1': a0 + width, 'side': local['side'], 'road_id': road['id']}, iu, placement)
     short = iu._place_refusal_message(reason) if not ok else 'click to place  (width %d, scroll to change)' % int(width)
+    ghost_lot = lot
+    if ghost_lot is None and box is not None:
+        # refused overlap: rebuild the lot dict the box was drawn from
+        road, local = placement.resolve_road(placement.ROADS, x, y)
+        if road is not None:
+            axis = 0 if road['axis'] == 'x' else 1
+            a0 = placement._snap(road['start'][axis] + local['along'] - width / 2.0)
+            ghost_lot = {'x0': a0, 'x1': a0 + width, 'side': local['side'], 'road_id': road['id']}
+    _st['ghost_lot'] = ghost_lot
     return ok, short, box
 
 
@@ -214,7 +299,7 @@ def _draw_ghost(gw, ok, text, box, x, y):
         cx, cy, hx, hy = box
         unreal.SystemLibrary.draw_debug_box(gw, unreal.Vector(cx, cy, GHOST_Z),
                                             unreal.Vector(hx, hy, 12.0), color,
-                                            unreal.Rotator(0.0, 0.0, 0.0), 0.05, 6.0)
+                                            unreal.Rotator(0.0, 0.0, 0.0), 0.05, 3.0)
         unreal.SystemLibrary.draw_debug_string(gw, unreal.Vector(cx, cy, GHOST_Z + 80.0), text, None, color, 0.05)
     else:
         unreal.SystemLibrary.draw_debug_string(gw, unreal.Vector(x, y, GHOST_Z + 80.0), text, None, color, 0.05)
@@ -226,6 +311,7 @@ def _hover(gw, gi, pc):
         return
     d = hit.to_dict()
     if not d.get('blocking_hit') or _is_parcel(d.get('hit_actor')):
+        _ghost_hide()
         return
     loc = d['location']
     key = (round(loc.x / 20.0), round(loc.y / 20.0))
@@ -234,7 +320,16 @@ def _hover(gw, gi, pc):
         ok, text, box = _preview(gi, loc.x, loc.y)
         cache = (key, ok, text, box)
         _st['ghost_cache'] = cache
-    _draw_ghost(gw, cache[1], cache[2], cache[3], loc.x, loc.y)
+    ok, text, box = cache[1], cache[2], cache[3]
+    shown = _ghost_show(gw, ok, box, _st.get('ghost_lot')) if box is not None else False
+    if not shown:
+        _ghost_hide()
+    # The translucent pad carries the close stops; at the far stop D22's own
+    # analysis says only a RIM survives downsampling (checked on a capture,
+    # 2026-09-03: the 34% fill is a smudge at reach 19000). Until a mesh rim
+    # exists, the debug outline IS the rim - drawn over the pad, thinner
+    # than the box-only ghost was.
+    _draw_ghost(gw, ok, text, box, loc.x, loc.y)
 
 
 def _tick(dt):
@@ -242,7 +337,7 @@ def _tick(dt):
         gw = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
         if gw is None:
             if _st['world'] is not None:
-                _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None, ghost_cache=None)
+                _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None, ghost_cache=None, ghost=None, ghost_shown=False, ghost_lot=None)
             return
         pc = unreal.GameplayStatics.get_player_controller(gw, 0)
         gi = unreal.GameplayStatics.get_game_instance(gw)
@@ -262,6 +357,8 @@ def _tick(dt):
             _st['down'][name] = down
         if not _st['down'].get('LeftMouseButton', False):
             _hover(gw, gi, pc)
+        else:
+            _ghost_hide()
         if edges['LeftMouseButton']:
             hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, True)
             if hit is None:
@@ -338,6 +435,7 @@ def register():
     unreal._stacktown_clickdriver_handle = unreal.register_slate_post_tick_callback(_tick)
     unreal._stacktown_click_at = _click_at
     unreal._stacktown_press = _press
+    unreal._stacktown_ghost_at = lambda x, y: (_preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y), _ghost_show(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world(), _st['ghost_cache'][1] if _st.get('ghost_cache') else True, _preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y)[2], _st.get('ghost_lot')))[1]
     unreal._stacktown_set_width_index = lambda i: _st.__setitem__('width_index', int(i)) or _st.__setitem__('ghost_cache', None)
     unreal._stacktown_preview = lambda x, y: _preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y)
     unreal.log('CLICK DRIVER: registered (hold N %.1fs to reset)' % RESET_HOLD_S)

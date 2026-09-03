@@ -1127,3 +1127,33 @@ into the wrong project. It has already caught it happening.
   the lane's lot_road_id helper (26/26) is what the legacy lots without
   a road_id key resolve through.
 
+- **THE CORNER (2026-09-03 14:2x, owner's play report: "it allowed me
+  to place where a building already existed, and they just grew into a
+  morphed building").** The overlap scan compared spans WITHIN a road;
+  a cross-street lot and an arterial lot share ground at the corner on
+  different axes and were never compared. Fixed in placement.resolve_
+  click: lot_rect() gives every lot's world footprint (span along its
+  road, facade line to block back edge across it) and rects_overlap()
+  refuses across all lots and roads; the reason names both roads.
+  Self-test 27 (27/27) covers both directions. Checkpoint 0e35ee9 was
+  committed on the owner's "commit it or not" just before this fix, so
+  the fix is the first change after it. Live after re-registration once
+  the owner's session ends (PIE was running when it was written).
+
+- **GHOST PAD ON A BORROWED ACTOR (2026-09-03 14:5x).** With both lane
+  sessions offline the coordinator ran the design lane's mk_ghost_mi.py
+  (PIE measured off): MI_ghost_accept (opacity 0.34) and MI_ghost_refuse
+  (0.00) created off M_WoodMaster with the blend-mode override, proven
+  translucent AFTER a reload from disk. clickdriver now shows the ghost
+  on the HIGHEST-numbered dormant POOL_ parcel (activation claims the
+  lowest): material swapped on the Building component, size via WidthUU
+  (the parcel's own change-detection scales the cube a frame later and
+  RESETS the component's relative location, so the W/2 offset is
+  re-applied every hover tick), hidden again off-plate; the debug box
+  stays as the rim and the label. Capture at the boom's far stop: the
+  translucent fill alone is not readable - D22's prediction - so the
+  outline is kept over it. Runtime-only; nothing saved. Also seen in
+  that capture: the editor status bar reads "30 Unsaved" - dirty
+  packages from the day's lane work; NEVER save-all, the owner decides
+  per asset.
+

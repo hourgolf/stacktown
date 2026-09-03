@@ -226,6 +226,13 @@ established for the tick alone. Full story, including a real catalogue
 -population bug this caught, is in `PARCELIZATION_CONTRACT.md`'s
 amendment.
 
+## Growth model — RETIRED 2026-09-03, see "Growth contract" below
+
+The open question this section raised is answered by the owner's own
+2026-09-03 word: not automatic (current), not a hybrid — player-initiated
+upgrades, gated on performance. Kept below, unedited, as the record of the
+question being asked; do not read it as still open.
+
 ## Growth model — open design question, raised by the owner 2026-09-01
 
 The owner's own words, watching their first bought lot climb tiers
@@ -247,7 +254,20 @@ called (see "Explicitly out of scope" below, unchanged principle,
 same file). Decide it with the owner's own economy notes when that pass
 happens, not by inference from tonight's session.
 
-## Economy pacing table — proposed 2026-09-03, NOT APPLIED
+## Economy pacing table — RETIRED 2026-09-03, see "Growth contract" below
+
+Both options below assumed growth stays a TIMER and only argued over its
+constants. The owner's own 2026-09-03 word retires that premise entirely
+— growth is not automatic at any speed; it is player-initiated and
+performance-gated. Neither option was ever applied (`Content/Python/
+pacing_option_b.patch`, prepared and self-tested for Option B, is deleted
+— its own patched self-test line never reached the owner: a from-scratch
+run of the applied patch failed, the transcribed number did not match a
+real run, and it does not matter now regardless, since the mechanic it
+was pacing no longer exists). Kept below, unedited, as the record of the
+question being asked and the two answers that were on the table before
+the owner reframed the question itself; do not read either option as
+still live.
 
 `econrules.py` and `econrules.json` are untouched by this section — numbers
 and rationale only, for the owner to read before anything here lands.
@@ -396,6 +416,113 @@ at 0 in this pass** — their own mechanics don't exist yet, and 0 is
 already each one's correct neutral/inert value per `cpdmap.py`'s own
 table (`Attention` is -1..+1 with 0 = "today"; `Failure`/`Scorch` are
 0..1 with 0 = untouched).
+
+## Growth contract — proposal for the owner, 2026-09-03, NOT APPLIED
+
+Like the pacing table above, this crosses the "out of scope" line at the
+bottom of this document (`econrules.py`'s own rules, not the calling
+architecture) — kept here anyway, same precedent that section already
+set, because it is a proposal awaiting the owner's word, not decided
+architecture yet. Nothing in this section is implemented; no code was
+written.
+
+**The owner's own word, verbatim, watching growth run unattended a second
+time:** "building should grow substantially slower...like days if
+anything...their growth is supposed to be a factor of game performance
+(trading success/failure) and user initiated upgrades/modifications."
+This retires automatic growth at ANY speed (both options in the pacing
+table above) and reframes the "Growth model" question above from "how
+fast" to "driven by what."
+
+### 1. The upgrade verb
+
+A lot's tier changes ONLY on a player-initiated UPGRADE action — the same
+shape as the existing buy verb (`BuyRequestPID`), not a new architecture:
+a key + HUD prompt, shown when a lot is selected and eligible; costs
+money (its own price — open question 1 below); refused loudly and
+harmlessly when unaffordable, the same "insufficient funds" shape `buy()`
+already has. `econrules.tick()` stops advancing tier on its own — accum
+either stops existing as a concept or becomes an input to performance
+(open question 2) rather than a growth countdown.
+
+### 2. Performance — what it measures, what it gates
+
+**What exists today, precisely, not assumed:** `demand` is a single
+global scalar, seeded once from `demand_default` (1.0) and never written
+again anywhere in this codebase (checked by grep, not recalled) — read by
+`rent()`, pushed to the HUD, otherwise inert. It is not yet the "dial"
+the module docstring calls it. Rent is tier-linear and per-lot; there is
+no occupancy concept anywhere today. In short: today's model has nothing
+that measures one lot's performance against another's — everything that
+exists is either global (demand) or a pure function of tier (rent).
+
+**Proposed, as a starting shape for the owner to react to, not a final
+answer:** a per-lot performance score, accrued each tick a lot is owned,
+from the gap between rent actually earned and that lot's own tier-scaled
+expectation — a lot earning at or above expectation gains score, below it
+loses score, `demand` (if it ever becomes a real dial rather than a fixed
+1.0) weighting the expectation so a citywide downturn is felt lot-by-lot
+rather than only in the aggregate number. This is ONE shape; open
+question 2 below asks the owner to confirm or replace it.
+
+**What performance does:** gates or discounts the upgrade verb above (a
+hard floor below which upgrading refuses, a cost surcharge/discount
+scaling with score, or both — open question 3); on sustained failure,
+either pushes CPD channel 5 (`Failure`, `cpdmap.py` — 0→0.6 weathers
+toward the species' own grey, 0.6→1 chars) or downgrades the lot's tier
+outright (open question 4). Failure is a real, already-reserved channel
+— `cpdmap.py`'s own table declares it, and ECONOMY_TICK_CONTRACT.md's
+"Patina's Age channel" section above already named it inert ("stays at 0
+in this pass — its own mechanics don't exist yet"). This proposal would
+be that mechanic's first real use, not a retrofit of something already
+wired to anything.
+
+### 3. Passive time
+
+A single constant, e.g. `PASSIVE_DAYS_TO_X` (name and unit open), gating
+whatever small drift happens with no player action at all — the owner's
+own "like days if anything" sets the scale and explicitly allows zero.
+At zero: growth is purely the upgrade verb plus performance, no passive
+component of any kind. Nonzero: some slow, day-scale drift alongside the
+verb (performance recovering slightly on its own, say) — the owner's
+call, not decided here. Either way this needs its own definition of a
+"day," since ticks today run in real wall-clock seconds (2.0s each) with
+no day/session/calendar concept anywhere in `citytick.py`/`econrules.py`
+— a genuinely new piece of vocabulary this proposal introduces rather
+than reuses (open question 5).
+
+### 4. Age (patina), unchanged mechanic, changed rhythm
+
+Not a new rule — `Docs/DIRECTION_B.md` B3, locked owner doctrine, quoted
+already in this file's "Patina's Age channel" section above: **"New/
+upgraded buildings start pale and age toward the board's honey tone over
+game time."** `Age = ticks-since-last-tier-change`, reset to 0 on a
+tier-change — which is now the upgrade verb firing, not an automatic
+threshold-cross. Nothing here changes that rule; it changes how OFTEN it
+fires. Worth naming as a consequence, not a new mechanic: under automatic
+growth, tier-ups happened every few minutes at worst, so Age rarely
+travelled far before resetting. Under player-initiated upgrades, a lot
+the player never upgrades just keeps aging, uninterrupted, for the whole
+session — Age finally gets to show its full pale-to-honey range in
+ordinary play, something the automatic-growth model was quietly
+suppressing the whole time.
+
+### Open questions for the owner
+
+1. **Upgrade price** — the same formula shape as purchase price
+   (`price_base` + per-100uu + per-tier), an independent formula, or a
+   function of the performance score itself?
+2. **Performance score** — confirm or replace the shape in section 2
+   (earned-vs-expected rent, demand-weighted), or name a different
+   signal entirely (occupancy, something else)?
+3. **Does performance GATE or DISCOUNT** the upgrade verb — a hard floor
+   below which upgrading refuses, a cost surcharge/discount, or both?
+4. **On failure** — does channel 5 climb and recover on its own once
+   performance improves, only via a player action, or is a tier
+   downgrade a separate, harder threshold below that?
+5. **Passive time** — zero, or a days-scale value? If nonzero, what does
+   a "day" mean in tick terms — this needs a definition that does not
+   exist in the codebase today.
 
 ## Explicitly out of scope
 

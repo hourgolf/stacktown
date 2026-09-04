@@ -422,6 +422,17 @@ def _apply_lot_offset(actor, width):
             is_placeholder = mesh is None or mesh.get_name() == 'Cube'
             if is_placeholder:
                 want = unreal.Vector(float(width) / 2.0, 0.0, 0.0)
+                # D22 (design lane, 2026-09-04): an activated, unbought pad is
+                # a transient object and wears the ghost's uncarved-board look
+                # - the cube keeps its collision (it must stay selectable), only
+                # its material changes. Once per pad, not per tick.
+                try:
+                    if c.get_material(0) is not None and c.get_material(0).get_name() != 'MI_ghost_accept':
+                        mi = unreal.load_asset('/Game/Stacktown/Materials/MI_ghost_accept')
+                        if mi is not None:
+                            c.set_material(0, mi)
+                except Exception:
+                    pass
             else:
                 want = unreal.Vector(0.0, -(_PAD_CENTER_Y - _citylayout.HALF), 0.0)
             cur = c.get_editor_property('relative_location')

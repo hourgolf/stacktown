@@ -1548,3 +1548,18 @@ into the wrong project. It has already caught it happening.
   things the Age channel reaches. Not an anomaly: the age ladder
   rendering unprompted on a live board for the first time.
 
+- **A TUNING SESSION LEAVES OVERRIDES BEHIND (2026-09-04 03:3x, design
+  lane, caught by a missing git diff).** GlowScale was walked live on
+  MI_wood_oak (12 -> 40 -> 120) and "restored" to 12 - the default at the
+  time; the default was then changed to 40 on the material. An instance
+  override outranks a material default, so oak - the species in every
+  approved frame - would have shipped at the value the ladder REJECTED
+  while the six untested species rendered right. Invisible to the graph
+  read, the cold-read table and the material default; found only by a
+  per-instance read prompted by "why is this asset not modified on
+  disk". Cleared; all seven wood instances saved at GlowScale 40 with
+  their Failure GreyTargets (0.50-0.68), which had also never been
+  written. Rule: after live tuning, CLEAR the overrides you set rather
+  than restore a remembered value; when you change a default, check
+  what overrides it.
+

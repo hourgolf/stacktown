@@ -22,10 +22,12 @@ mid-conversation. Messages are a courtesy; THIS FILE is the record.
 ## Seats
 
 ### COORDINATOR (this session; Fable) — name: stacktownalpha-d6
-STATUS 2026-09-04: driver-side fixes for the owner's play list landed
-(selection re-mirror, Q/E ladder assist, click-camera hold + game
-focus). Editor: no window held. Cannot send messages since ~05:30;
-reads all incoming ones.
+STATUS 2026-09-04 (later): orbit direction flipped on the owner's word
+(two literal pins, read back, compiled, saved - f45ff59); click-camera
+hold + game focus in the driver (d831c11); Q/E ladder assist (2349b8c);
+selection re-mirror (0d1bcfb). Awaiting the owner's relaunch report.
+Editor: no window held. Cannot send messages since ~05:30; reads all
+incoming ones.
 
 ### BETA GAMEPLAY LANE (Sonnet) — last known name: stacktownalpha-09
 ASSIGNMENT: finish the CONTENT half of Docs/HUD_V1.md (money/demand,

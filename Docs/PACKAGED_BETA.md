@@ -231,9 +231,12 @@ presses Play in the main editor WHILE `Tools/play.sh`'s `-game` process
 is also running, and neither has an override set, BOTH processes' own
 drivers tick against the SAME `citystate.json` concurrently — a
 last-writer-wins race on the owner's real save, not a lane-isolation
-question at all. Not observed, not reproduced, just named as a real
-possibility the two-process world creates that the one-process world
-never could. `Docs/TRADE_ADAPTER.md`'s own ledger-consumption design
+question at all. **CLOSED, 2026-09-04**: the standalone game writes
+`Saved/standalone.lock` (its own pid) at driver registration;
+`_state_path_source` now checks that pid (`os.kill(pid, 0)`, proven
+both live and dead headless) and steers an editor PIE to the test file
+instead of the real save whenever it's running, logging why on screen.
+`Docs/TRADE_ADAPTER.md`'s own ledger-consumption design
 has the same shape of risk from a different angle — see its own note,
 added the same day this fact was found.
 

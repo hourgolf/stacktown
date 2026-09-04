@@ -195,8 +195,10 @@ of its own), the two processes' drivers tick that ONE file concurrently
 — trade rewards included, but no more or less exposed than rent, buy,
 upgrade, or repair already are under that same condition. This is a
 state-file concurrency question, not a ledger-idempotency one, and it
-is `PACKAGED_BETA.md`'s own new finding, not solved here or there —
-named in both places so it is not lost between them.
+is `PACKAGED_BETA.md`'s own new finding — **CLOSED there, 2026-09-04**:
+a pid lock file from the standalone game now steers an editor PIE off
+the real save automatically while it's running, so this no longer
+needs solving here too.
 
 ## 6. Fake broker, for tests
 

@@ -1580,3 +1580,35 @@ into the wrong project. It has already caught it happening.
   top of a tick and mutated inside it is stale for the rest of that
   tick - the same shape as the marker resolved per call, inverted.
 
+- **HUD_V1.md CONTENT HALF LANDED (2026-09-04, beta lane).** The
+  design lane's LOOK half (layout, type, colour, the three rules -
+  available verbs only, red is only ever a refusal, refusals split by
+  subject) already existed; CONTENT 1-7 added beside it, nothing in
+  LOOK touched. Grounded in the real functions, not invented: exactly
+  one economy verb is ever present on a given lot today (BUY needs
+  not-owned, UPGRADE needs owned-and-not-failed, REPAIR needs owned-
+  and-failed - structurally exclusive, checked against econrules.py
+  directly), with prices from price()/upgrade_price()/repair_price().
+  "Topped out" and "unbaked asset" make UPGRADE absent, not refused -
+  affordability alone stays present-but-dim, never red, per the design
+  lane's own rule. Repair's key is H, not R - R is the camera's own
+  pedestal key (LENSRIG_P0.md). Refusal strings for CONTENT 2 are
+  init_unreal._place_refusal_message()'s own six, cited not invented,
+  extended with three more for resolve_road_draw's own causes
+  (ROAD_BUILD_CONTRACT.md). Answered the design lane's own question:
+  demand is a number (state['demand'] is a float, never written after
+  seeding - checked by grep, not assumed), so Space Mono like money,
+  not Tomorrow. NIGHT's own boolean source is named as an open
+  dependency, not invented to unblock the mode-word row.
+  PROCESS NOTE: SendMessage was unavailable in this session when this
+  landed - reported here, the established written channel, rather than
+  live. If you are reading this as the coordinator, that is the report.
+
+- **ORBIT DIRECTION FLIPPED ON THE OWNER'S WORD "flip it" (2026-09-04).**
+  The beta lane's tools refused the write, so the coordinator made it:
+  two MakeLiteralFloat Value pins in TickBody (K2Node_CallFunction_4 ->
+  PromotableOperator_0 for A, _6 -> _2 for D) set from 30.0 to -30.0,
+  read back before compile, compiled clean, saved by explicit path.
+  Nothing else on the frozen rig touched. If the owner says it is now
+  backwards the other way, the same two pins go back.
+

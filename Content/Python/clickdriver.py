@@ -135,8 +135,17 @@ def click_at_hit(gw, gi, rig, actor, x, y):
         label = actor.get_actor_label()
         try:
             owned = actor.get_editor_property('Owned'); tier = actor.get_editor_property('Tier')
-            status = 'owned, tier %d' % tier if owned else 'for sale'
-            hint = '[U] upgrade  [H] repair' if owned else '[B] buy'
+            status = 'owned, level %d' % tier if owned else 'for sale'
+            if owned:
+                import init_unreal as iu, econrules
+                st = iu._read_state(gi); p = st['parcels'].get(label, {})
+                try:
+                    price = econrules.upgrade_price(p.get('rid', 'vernacular'), int(p.get('tier', tier)), float(p.get('performance', 0.0) or 0.0))
+                    hint = '[U] upgrade $%.0f   [H] repair' % price
+                except Exception:
+                    hint = '[U] upgrade   [H] repair'
+            else:
+                hint = '[B] buy $%.0f' % float(actor.get_editor_property('Price'))
         except Exception:
             status = ''; hint = ''
         unreal.SystemLibrary.print_string(gw, '%s  %s   %s' % (label, status, hint), True, False,
@@ -600,6 +609,10 @@ def _tick(dt):
             _log('session start; rig=%s' % (_st['rig'].get_name() if _st['rig'] else None))
             _focus_game(pc)
             _st['cam_prev'] = None
+            # Interim key legend until HUD v1 carries it (owner never found road
+            # mode; the legend is the cheapest discoverability there is).
+            unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   scroll: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
+                                              True, False, unreal.LinearColor(0.85, 0.9, 1.0, 1.0), 12.0, 'keylegend')
         rig = _st['rig']
         if rig is None:
             return

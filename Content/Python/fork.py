@@ -179,7 +179,20 @@ def verify():
     import wear as W  # noqa: E402  - imported here so --plan stays light
     fn = len(json.loads(ue.tool(M, 'get_expressions', {
         'material_or_function': {'refPath': WM.FORK}}))['returnValue'])
-    rows.append(('fork expressions', fn == 210, fn))
+    # DERIVED, NOT HARDCODED. This row read `fn == 210` and cried FAILURE on a
+    # correct save the moment Failure and Scorch were added - the same
+    # cry-wolf-on-success shape as the collision verifier, and a magic number
+    # in a check is a promise to go stale. The expected count is the flagship
+    # base plus what this lane's own ledgers say it added.
+    want = 195 + 1          # +1: the VertexNormalWS node, which has no ledger
+    for name in ('wire_ledger', 'age_ledger', 'failure_ledger',
+                 'failure_desat', 'scorch_ledger'):
+        try:
+            with open(os.path.join(W.OUT, name + '.json')) as fh:
+                want += len(json.load(fh).get('added') or [])
+        except Exception:
+            pass
+    rows.append(('fork expressions (want %d)' % want, fn == want, fn))
 
     for name, idx in WM.__dict__.get('WEAR_CHANNELS', ()) or (
             ('Age', 0), ('Attention', 4), ('Failure', 5), ('Scorch', 6)):

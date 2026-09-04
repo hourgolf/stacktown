@@ -526,10 +526,16 @@ def _sync_parcels(gw, gi):
         # own SetStaticMesh without any special-case logic: the next
         # throttled sync, at most _TICK_INTERVAL_S later, re-writes it.
         building = a.get_editor_property('Building')
-        building.set_custom_primitive_data_float(_CPD_AGE, age)
-        building.set_custom_primitive_data_float(_CPD_ATTENTION, 0.0)
-        building.set_custom_primitive_data_float(_CPD_FAILURE, 0.0)
-        building.set_custom_primitive_data_float(_CPD_SCORCH, 0.0)
+        # Per-lot overrides (2026-09-04, the adjacent-lots CPD proof): a
+        # Python-side dict {(pid, channel): value} set by the headless hook
+        # unreal._stacktown_set_cpd wins over the state-derived value for
+        # that lot and channel, so a proof can put two same-species
+        # neighbours in different states without touching state.
+        ov = getattr(unreal, '_stacktown_cpd_override', None) or {}
+        building.set_custom_primitive_data_float(_CPD_AGE, ov.get((pid, 'Age'), age))
+        building.set_custom_primitive_data_float(_CPD_ATTENTION, ov.get((pid, 'Attention'), 0.0))
+        building.set_custom_primitive_data_float(_CPD_FAILURE, ov.get((pid, 'Failure'), 0.0))
+        building.set_custom_primitive_data_float(_CPD_SCORCH, ov.get((pid, 'Scorch'), 0.0))
     if changed:
         _write_state(gi, state)
 
@@ -1086,6 +1092,47 @@ def _register_city_driver():
         except Exception as e:
             unreal.log_warning('CITY DRIVER: standalone lock not written - %s' % e)
     unreal.log('CITY DRIVER: registered')
+
+
+def _set_cpd(pid, channel, value):
+    """Headless hook: hold a per-lot CPD channel at a value (honoured by
+    _sync_parcels every tick) and push it immediately."""
+    ov = getattr(unreal, '_stacktown_cpd_override', None)
+    if ov is None:
+        ov = {}
+        unreal._stacktown_cpd_override = ov
+    ov[(pid, channel)] = float(value)
+    gw = _find_game_world()
+    if gw is None:
+        return 'no world (held for the next session)'
+    idx = _cpdmap.index(channel)
+    for a in unreal.GameplayStatics.get_all_actors_of_class(gw, unreal.Actor):
+        if a.get_class().get_name() == 'BP_Parcel_C' and a.get_actor_label() == pid:
+            for c in a.get_components_by_class(unreal.StaticMeshComponent):
+                if c.get_name() == 'Building':
+                    c.set_custom_primitive_data_float(idx, float(value))
+                    return '%s.%s = %.2f pushed' % (pid, channel, float(value))
+    return '%s not found' % pid
+
+
+def _frame(cx, cy, reach, azimuth, tilt=None):
+    """Headless hook: aim the rig for a capture (BoardCentre, TgtReach,
+    TgtAzimuth, optional TgtTilt) - the rig eases to it."""
+    gw = _find_game_world()
+    if gw is None:
+        return 'no world'
+    for a in unreal.GameplayStatics.get_all_actors_of_class(gw, unreal.Actor):
+        if a.get_class().get_name() == 'BP_LensRig_C':
+            a.set_editor_property('BoardCentre', unreal.Vector(float(cx), float(cy), 0.0))
+            a.set_editor_property('TgtReach', float(reach)); a.set_editor_property('TgtAzimuth', float(azimuth))
+            if tilt is not None:
+                a.set_editor_property('TgtTilt', float(tilt))
+            return 'framed: centre (%.0f, %.0f) reach %.0f azimuth %.0f' % (cx, cy, reach, azimuth)
+    return 'no rig'
+
+
+unreal._stacktown_set_cpd = _set_cpd
+unreal._stacktown_frame = _frame
 
 
 _register_city_driver()

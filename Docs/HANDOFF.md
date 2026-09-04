@@ -1462,3 +1462,23 @@ into the wrong project. It has already caught it happening.
   unless a game with the OLD resolver is running - never rely on the
   lock alone, it depends on a process the owner can close at any time.
 
+- **PER-LOT WEAR PROVEN (2026-09-04 03:xx, design lane's framing,
+  coordinator's session).** Four adjacent same-species oak towers
+  (recipe 'tower' - 'shop' is not in DA_Catalogue_Wood - tier 3, width
+  1230) on the arterial's north side; P2 held at Failure 0.85 and P3 at
+  Scorch 0.5 through set_custom_primitive_data_float on their Building
+  components (the driver's sync now honours a per-lot override dict, the
+  headless hook unreal._stacktown_set_cpd); frames A, A' (drift) and B
+  shot from INSIDE the session by HighResShot 2 in the game world -
+  CaptureViewport renders the EDITOR world and showed bare plate, and
+  so did the first in-session shot, because the rig had been given a
+  reach without the stop's height and tilt (two paths, one blind spot:
+  "agreement between two instruments is evidence only if they can fail
+  separately"). Framed from due south at the BLOCK stop, which MIRRORS
+  x in the frame (left to right P4..P1). Design lane's measurement: P1
+  and P4 within their drift floors; P2 uniform (-26.6/-27.4/-28.0 top/
+  mid/base, spread 1.4); P3 top-down (-30.3/-9.0/-0.1). Per-lot, not
+  per-species; fire and bankruptcy told apart by shape. D23 unblocked.
+  The override dict was cleared after the session - its keys are pids,
+  and the owner's save has a P2 and a P3 too.
+

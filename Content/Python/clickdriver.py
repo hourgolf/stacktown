@@ -59,7 +59,7 @@ def _make_key(name):
         return k
 
 
-for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'L', 'MouseScrollUp', 'MouseScrollDown'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'L', 'Q', 'E', 'MouseScrollUp', 'MouseScrollDown'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -489,6 +489,37 @@ def _road_click(gw, gi, x, y):
     _st['road_start'] = None
 
 
+_cam_state = {}
+
+
+def _ladder_assist(rig):
+    """Q/E ladder assist (2026-09-04, owner: "q/e still doesn't work both
+    ways"). The rig's own graph steps StopIndex on Q/E and writes the four
+    targets from its ladder arrays; whatever that graph does in its own
+    tick, this runs AFTER it (slate post-tick) on the same press and
+    re-writes TgtFocal/TgtReach/TgtHeight/TgtTilt from the rig's own
+    LadderFocal/LadderStandoff/LadderHeight/LadderTilt at the fresh
+    StopIndex, so the rendered pose can never lag the index. Reads only
+    the rig's own tables - no numbers of ours."""
+    try:
+        idx = int(rig.get_editor_property('StopIndex'))
+        focal = list(rig.get_editor_property('LadderFocal'))
+        stand = list(rig.get_editor_property('LadderStandoff'))
+        height = list(rig.get_editor_property('LadderHeight'))
+        tilt = list(rig.get_editor_property('LadderTilt'))
+        if not (0 <= idx < min(len(focal), len(stand), len(height), len(tilt))):
+            return
+        rig.set_editor_property('TgtFocal', float(focal[idx]))
+        rig.set_editor_property('TgtReach', float(stand[idx]))
+        rig.set_editor_property('TgtHeight', float(height[idx]))
+        rig.set_editor_property('TgtTilt', float(tilt[idx]))
+        _log('ladder stop %d -> reach %.0f height %.0f tilt %.1f focal %.0f' % (idx, stand[idx], height[idx], tilt[idx], focal[idx]))
+    except Exception as e:
+        if not _cam_state.get('ladder_warned'):
+            _cam_state['ladder_warned'] = True
+            _log('ladder assist unavailable: %s' % str(e)[:80])
+
+
 def _tick(dt):
     try:
         gw = _world()
@@ -530,6 +561,8 @@ def _tick(dt):
         if edges['G']:
             _road_mode_toggle(gw)
             _ghost_hide()
+        if edges.get('Q') or edges.get('E'):
+            _ladder_assist(rig)
         if edges['L']:
             import init_unreal as iu
             night = 0.0 if getattr(unreal, '_stacktown_night', 0.0) >= 0.5 else 1.0

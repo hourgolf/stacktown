@@ -1563,3 +1563,20 @@ into the wrong project. It has already caught it happening.
   than restore a remembered value; when you change a default, check
   what overrides it.
 
+- **THE RIG'S Q/E "ONE WAY" AND "ORBIT BACKWARDS", READ FROM THE GRAPH
+  (2026-09-04, beta lane, read-only).** A/D: TgtAzimuth +/- 30 deg/s,
+  unclamped (it wraps through the trig) - "backwards" is the sign, two
+  literal pins. Q/E: the clamps are correct (StopIndex 0..4, Min/Max
+  guarded); the bug is upstream - TickBody binds StopIndex ONCE at its
+  top, and each E/Q branch's SetTgtFocal/Reach/Height/Tilt reads that
+  stale value after its own SetStopIndex changed it, so the RENDERED
+  pose is one press behind the stored index and the first press after
+  a direction change moves nothing (traced with a script: E x5 from 0
+  reaches Ladder[4] on the fifth press; the first Q then shows zero
+  change). Fix granted as pin surgery on the frozen rig: two literal
+  flips and eight Array-Get index pins re-sourced to a fresh
+  GetStopIndex after each branch's set; pin read-back before compile,
+  the owner's feel as the final test. Lesson: a value bound once at the
+  top of a tick and mutated inside it is stale for the rest of that
+  tick - the same shape as the marker resolved per call, inverted.
+

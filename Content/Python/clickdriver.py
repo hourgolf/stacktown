@@ -520,6 +520,69 @@ def _ladder_assist(rig):
             _log('ladder assist unavailable: %s' % str(e)[:80])
 
 
+# ---- Clicks never move the camera; keys never lose the game (2026-09-04,
+# owner: "Q/E works up until I click into a lot to build - camera then drops
+# down and is useless after that"). The rig's own graph still runs a click
+# branch on a REAL mouse press (a headless select does not trigger it and
+# leaves the camera alone - measured), and after that click the owner's log
+# shows no key edges at all. Two mitigations, both driver-side:
+#   1. a rolling copy of the boom targets; on a mouse-down frame any target
+#      the rig's click branch moved is written back (the rig ticks before
+#      this callback, so the write-back wins the frame);
+#   2. keyboard focus is returned to the game viewport on every mouse-down
+#      (and at session start), so a click can never strand the keys on a
+#      widget.
+_CAM_KEYS = ('TgtReach', 'TgtHeight', 'TgtTilt', 'TgtFocal', 'TgtAzimuth', 'TgtPan')
+
+
+def _cam_snapshot(rig):
+    snap = {}
+    try:
+        for k in _CAM_KEYS:
+            snap[k] = float(rig.get_editor_property(k))
+        c = rig.get_editor_property('BoardCentre')
+        snap['BoardCentre'] = (c.x, c.y, c.z)
+    except Exception:
+        return None
+    return snap
+
+
+def _cam_hold_on_click(rig):
+    prev = _st.get('cam_prev')
+    if prev is None:
+        return
+    now = _cam_snapshot(rig)
+    if now is None:
+        return
+    moved = []
+    for k in _CAM_KEYS:
+        if abs(now[k] - prev[k]) > 1e-3:
+            try:
+                rig.set_editor_property(k, prev[k]); moved.append(k)
+            except Exception:
+                pass
+    if any(abs(a - b) > 1e-3 for a, b in zip(now['BoardCentre'], prev['BoardCentre'])):
+        try:
+            rig.set_editor_property('BoardCentre', unreal.Vector(*prev['BoardCentre'])); moved.append('BoardCentre')
+        except Exception:
+            pass
+    if moved:
+        _log('click moved the camera (%s) - restored' % ', '.join(moved))
+
+
+def _focus_game(pc):
+    try:
+        unreal.WidgetBlueprintLibrary.set_input_mode_game_only(pc)
+    except Exception as e:
+        if not _cam_state.get('focus_warned'):
+            _cam_state['focus_warned'] = True
+            _log('could not force game input mode: %s' % str(e)[:60])
+    try:
+        unreal.WidgetBlueprintLibrary.set_focus_to_game_viewport()
+    except Exception:
+        pass
+
+
 def _tick(dt):
     try:
         gw = _world()
@@ -535,6 +598,8 @@ def _tick(dt):
             _st['world'] = gw
             _st['rig'] = _find_rig(gw)
             _log('session start; rig=%s' % (_st['rig'].get_name() if _st['rig'] else None))
+            _focus_game(pc)
+            _st['cam_prev'] = None
         rig = _st['rig']
         if rig is None:
             return
@@ -544,6 +609,8 @@ def _tick(dt):
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
+        if not edges['LeftMouseButton']:
+            _st['cam_prev'] = _cam_snapshot(rig)
         # Keep the rig's SelectedParcel mirrored to the Python selection EVERY
         # tick (2026-09-04, owner: "when I click on a built building it
         # deselects it before I can press U"): the rig's own graph still
@@ -581,6 +648,9 @@ def _tick(dt):
             _hover(gw, gi, pc)
         else:
             _ghost_hide()
+        if edges['LeftMouseButton']:
+            _cam_hold_on_click(rig)
+            _focus_game(pc)
         if edges['LeftMouseButton'] and road_mode:
             hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)
             if hit is not None:

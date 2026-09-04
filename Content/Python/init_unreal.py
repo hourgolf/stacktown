@@ -256,7 +256,21 @@ def _state_path_source():
 
 
 def _state_path_for():
-    return _state_path_source()[0]
+    """The session's state file, RESOLVED ONCE per session and cached in
+    the driver state (2026-09-04): resolving on every call let a marker
+    that appeared mid-session flip the OWNER'S RUNNING STANDALONE GAME to
+    the test file for a few ticks and back - both files ended up carrying
+    the owner's layout four seconds apart and a coordinator's test road
+    vanished under it. The session-start block sets the cache; PIE end
+    clears it; a game process keeps its first answer for its lifetime."""
+    st = getattr(unreal, '_stacktown_driver_state', None)
+    if st is not None and st.get('state_path'):
+        return st['state_path']
+    path, _src = _state_path_source()
+    if st is not None:
+        st['state_path'] = path
+        st['state_source'] = _src
+    return path
 
 
 def _read_state(gi):
@@ -271,26 +285,99 @@ def _write_state(gi, state):
 
 
 
-def _lot_transform(lot):
+def _lot_transform(lot, state=None):
     """World placement for a lot dict from placement.resolve_click:
-    (x, y, yaw). The convention every mesh on a lot relies on (see
-    _apply_lot_offset): the actor sits on the pad's centre line, local +x
-    runs ALONG the road from the lot's near corner, local +y points AWAY
-    from the road. Arterial (axis x): north (x0, +1880, 0), south
-    (x1, -1880, 180) - unchanged from v0. Cross street (axis y, road at
-    x=0, PLACEMENT_GRID.md section 2.1b): x0/x1 are the lot's Y span;
-    west (x<0) sits at (-1880, y0, yaw 90) so local +x is +y and local +y
-    is -x; east (x>0) at (+1880, y1, yaw -90) so local +x is -y and local
-    +y is +x. Derived from the rotation, then MEASURED (2026-09-03)."""
+    (x, y, yaw), for ANY road (2026-09-04: drawn roads landed a lot on
+    the arterial's transform - a P9 on R1 was activated at (3110, -1880)).
+    The convention every mesh on a lot relies on (_apply_lot_offset): the
+    actor sits on the pad's centre line, local +x runs ALONG the road from
+    the lot's near corner, local +y points AWAY from the road. The road
+    is looked up by the lot's road_id in placement's dynamic list (state
+    roads + built-ins); its axis and position give the frame:
+      axis x at y=cy: plus side (north) (x0, cy+1880, 0), minus (x1, cy-1880, 180)
+      axis y at x=cx: plus side (west) (cx-1880, y0, 90), minus (cx+1880, y1, -90)
+    - identical to the old hard-coded arterial/cross cases at cx=cy=0."""
+    roads = {r['id']: r for r in _placement._all_roads(state if state is not None else {'parcels': {}, 'roads': {}})}
+    road = roads.get(_placement.lot_road_id(lot)) or roads.get('arterial')
     side = lot['side']
-    if _placement.lot_road_id(lot) == 'cross':
-        if side == 'west':
-            return -_PAD_CENTER_Y, float(lot['x0']), 90.0
-        return _PAD_CENTER_Y, float(lot['x1']), -90.0
-    if side == 'north':
-        return float(lot['x0']), _PAD_CENTER_Y, 0.0
-    return float(lot['x1']), -_PAD_CENTER_Y, 180.0
+    if road['axis'] == 'y':
+        cx = float(road['start'][0])
+        if side == road['side_plus']:
+            return cx - _PAD_CENTER_Y, float(lot['x0']), 90.0
+        return cx + _PAD_CENTER_Y, float(lot['x1']), -90.0
+    cy = float(road['start'][1])
+    if side == road['side_plus']:
+        return float(lot['x0']), cy + _PAD_CENTER_Y, 0.0
+    return float(lot['x1']), cy - _PAD_CENTER_Y, 180.0
 
+
+
+
+_ROAD_POOL_PREFIX = 'POOL_ROAD_'
+_ROAD_Z = 4.0
+_ROAD_HEIGHT_SCALE = 0.08          # 8 uu thick: a road is not a building
+
+
+def _road_transform(seg):
+    """ROAD_BUILD_CONTRACT.md section 5, one yaw per segment: centre of
+    the chord, yaw from start to end, scale x = length / 100 (the stock
+    cube's edge), scale y = CORRIDOR / 100, thin z."""
+    import math
+    (sx, sy), (ex, ey) = seg['start'], seg['end']
+    length = math.hypot(ex - sx, ey - sy)
+    yaw = math.degrees(math.atan2(ey - sy, ex - sx))
+    return (unreal.Vector((sx + ex) / 2.0, (sy + ey) / 2.0, _ROAD_Z),
+            unreal.Rotator(0.0, 0.0, yaw),
+            unreal.Vector(max(length, 1.0) / 100.0, _citylayout.CORRIDOR / 100.0, _ROAD_HEIGHT_SCALE))
+
+
+def _road_pool_actors(gw):
+    out = {}
+    for a in unreal.GameplayStatics.get_all_actors_of_class(gw, unreal.StaticMeshActor):
+        lab = a.get_actor_label()
+        if lab.startswith(_ROAD_POOL_PREFIX):
+            out[lab] = a
+    return out
+
+
+def _show_road(gw, seg):
+    """Claim the lowest free POOL_ROAD_ actor for a segment - location,
+    label, hidden off, collision on, the parcel activation order. Returns
+    the actor or None when no pool exists yet (the road still exists in
+    state and for placement; only its visual waits for the pool)."""
+    pool = _road_pool_actors(gw)
+    free = sorted(k for k in pool)
+    if not free:
+        return None
+    a = pool[free[0]]
+    loc, rot, scale = _road_transform(seg)
+    a.set_actor_location_and_rotation(loc, rot, False, False)
+    a.set_actor_scale3d(scale)
+    a.set_actor_label(seg['id'])
+    a.set_actor_hidden_in_game(False)
+    a.set_actor_enable_collision(True)
+    return a
+
+
+def _reactivate_drawn_roads(gw, gi):
+    """Session start: every road in state gets its pool actor back, same
+    as placed lots. Roads whose actor already stands (label == id) are
+    left alone."""
+    try:
+        state = _read_state(gi)
+        roads = state.get('roads', {}) or {}
+        if not roads:
+            return
+        standing = {a.get_actor_label() for a in unreal.GameplayStatics.get_all_actors_of_class(gw, unreal.StaticMeshActor)}
+        n = 0
+        for rid in sorted(roads):
+            if rid in standing:
+                continue
+            if _show_road(gw, roads[rid]) is not None:
+                n += 1
+        unreal.log('CITY ROADS: %d of %d drawn roads restored' % (n, len(roads)))
+    except Exception as e:
+        unreal.log_warning('CITY ROADS: reactivation skipped - %s' % e)
 
 
 def _apply_lot_offset(actor, width):
@@ -549,7 +636,7 @@ def _reactivate_placed_parcels(gw, gi):
         p = state['parcels'][pid]
         lot = p['placement']
         pool_actor = pool_actors[label]
-        spawn_x, face_y, yaw = _lot_transform(lot)
+        spawn_x, face_y, yaw = _lot_transform(lot, state)
         # IDENTICAL sequence to the click-driven activation, including
         # restoring the ACTUAL current Tier/Owned - unlike a fresh
         # placement (always Tier=0/Owned=False), a reactivated lot may
@@ -609,6 +696,7 @@ def _city_driver_tick(delta_seconds):
                 # owner could ever reach it, not just in the clean-exit
                 # case.
                 unreal._stacktown_state_override = None
+                state.pop('state_path', None); state.pop('state_source', None)
                 if os.path.exists(_LANE_MARKER_PATH):
                     os.remove(_LANE_MARKER_PATH)
             state['pie_was_running'] = False
@@ -626,7 +714,9 @@ def _city_driver_tick(delta_seconds):
         just_started = state.pop('pie_just_started', False)
         if just_started:
             _path, _source = _state_path_source()
+            state.pop('state_path', None)
             _path, _src = _state_path_source()
+            state['state_path'] = _path; state['state_source'] = _src
             if _src == 'standalone-lock':
                 unreal.SystemLibrary.print_string(
                     gi, 'A standalone game is running - this session uses the TEST save',
@@ -733,6 +823,36 @@ def _city_driver_tick(delta_seconds):
                         unreal.LinearColor(1.0, 0.4, 0.0, 1.0), 3.0, 'CityVerb')
                 _write_state(gi, new_state)
                 _push_economy_fields(gi, new_state)
+
+        # Road channel (ROAD_BUILD_CONTRACT.md, 2026-09-04): clickdriver's
+        # road mode writes (x0, y0, x1, y1); consume-and-clear, draw_road is
+        # the one authority, a POOL_ROAD_ actor shows it when one exists.
+        road_req = getattr(unreal, '_stacktown_road_request', None)
+        if road_req:
+            unreal._stacktown_road_request = None
+            city_state = _read_state(gi)
+            try:
+                pins_active = not bool(gi.get_editor_property('EmptyStart'))
+            except Exception:
+                pins_active = True
+            new_state, rid, ok, reason = _placement.draw_road(
+                city_state, float(road_req[0]), float(road_req[1]),
+                float(road_req[2]), float(road_req[3]), pins_active=pins_active)
+            if ok:
+                seg = new_state['roads'][rid]
+                shown = _show_road(gw, seg)
+                unreal.log('CITY ROAD: %s drawn %s -> %s (%s)' % (
+                    rid, seg['start'], seg['end'], 'shown' if shown else 'no pool actor yet'))
+                unreal.SystemLibrary.print_string(
+                    gi, 'Road %s laid%s' % (rid, '' if shown else ' (invisible until the road pool exists)'),
+                    True, False, unreal.LinearColor(0.7, 1.0, 0.8, 1.0), 3.0, 'CityRoad')
+                _citytick.save_state(new_state, _state_path_for())
+            else:
+                unreal.log_warning('CITY ROAD: refused - %s' % reason)
+                unreal.SystemLibrary.print_string(
+                    gi, "Can't lay a road there: %s" % reason.split(':')[0], True, False,
+                    unreal.LinearColor(1.0, 0.4, 0.0, 1.0), 3.0, 'CityRoad')
+            _write_state(gi, new_state)
 
         # Placement channel: PLACEMENT_GRID.md section 8's v0. BP's whole
         # job is writing a world-space (x, y) hit location; this is the
@@ -850,7 +970,7 @@ def _city_driver_tick(delta_seconds):
                         unreal.LinearColor(1.0, 0.4, 0.0, 1.0),
                         3.0, 'CityPlace')
                 else:
-                    spawn_x, face_y, yaw = _lot_transform(lot)
+                    spawn_x, face_y, yaw = _lot_transform(lot, new_state)
                     # ORDER MATTERS (the owner's own instruction): location
                     # -> identity -> label -> hidden off -> collision on,
                     # so the actor is never momentarily visible or solid
@@ -899,6 +1019,7 @@ def _city_driver_tick(delta_seconds):
                 # needed there.
                 _reactivate_pinned_parcels(gw, gi)
                 _reactivate_placed_parcels(gw, gi)
+                _reactivate_drawn_roads(gw, gi)
             _sync_parcels(gw, gi)
     except Exception as e:
         # ONE log per incident CLASS, not every tick — an exception here

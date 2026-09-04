@@ -59,7 +59,7 @@ def _make_key(name):
         return k
 
 
-for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'MouseScrollUp', 'MouseScrollDown'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'MouseScrollUp', 'MouseScrollDown'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -230,15 +230,19 @@ def _cycle_width(step, gw):
                                       unreal.LinearColor(0.8, 0.9, 1.0, 1.0), 1.2, 'widthmsg')
 
 
-def _lot_box(lot, iu, placement):
-    """(cx, cy, hx, hy) of a lot's pad in world space, both roads."""
+def _lot_box(lot, iu, placement, state=None):
+    """(cx, cy, hx, hy) of a lot's pad in world space, for ANY road: the
+    lot's own road (by id, from placement's dynamic list) gives the axis
+    and the centreline; the pad sits at +/-1880 from it on the lot's side."""
     half_w = (lot['x1'] - lot['x0']) / 2.0
     mid = (lot['x0'] + lot['x1']) / 2.0
     depth_h = placement.BLOCK_DEPTH / 2.0
-    if placement.lot_road_id(lot) == 'cross':
-        cx = -iu._PAD_CENTER_Y if lot['side'] == 'west' else iu._PAD_CENTER_Y
+    roads = {r['id']: r for r in placement._all_roads(state if state is not None else {'parcels': {}, 'roads': {}})}
+    road = roads.get(placement.lot_road_id(lot)) or roads.get('arterial')
+    if road['axis'] == 'y':
+        cx = float(road['start'][0]) + (-iu._PAD_CENTER_Y if lot['side'] == road['side_plus'] else iu._PAD_CENTER_Y)
         return (cx, mid, depth_h, half_w)
-    cy = iu._PAD_CENTER_Y if lot['side'] == 'north' else -iu._PAD_CENTER_Y
+    cy = float(road['start'][1]) + (iu._PAD_CENTER_Y if lot['side'] == road['side_plus'] else -iu._PAD_CENTER_Y)
     return (mid, cy, half_w, depth_h)
 
 
@@ -286,7 +290,8 @@ def _ghost_show(gw, ok, box, lot):
     if g is None or box is None:
         return False
     import init_unreal as iu
-    x, y, yaw = iu._lot_transform(lot)
+    gi = unreal.GameplayStatics.get_game_instance(gw)
+    x, y, yaw = iu._lot_transform(lot, iu._read_state(gi) if gi is not None else None)
     width = abs(lot['x1'] - lot['x0'])
     try:
         g.set_actor_location_and_rotation(unreal.Vector(x, y, 2.0), unreal.Rotator(0.0, 0.0, yaw), False, False)
@@ -351,15 +356,15 @@ def _preview(gi, x, y):
     ok, reason, lot = placement.resolve_click(state, x, y, pins_active=pins_active, width=width)
     box = None
     if lot is not None:
-        box = _lot_box(lot, iu, placement)
+        box = _lot_box(lot, iu, placement, state)
     elif reason.startswith('overlap'):
         # resolve_click gives no lot on overlap; show the refused span anyway,
         # in the winning road's frame.
-        road, local = placement.resolve_road(placement.ROADS, x, y)
+        road, local = placement.resolve_road(placement._all_roads(state), x, y)
         if road is not None:
             axis = 0 if road['axis'] == 'x' else 1
             a0 = placement._snap(road['start'][axis] + local['along'] - width / 2.0)
-            box = _lot_box({'x0': a0, 'x1': a0 + width, 'side': local['side'], 'road_id': road['id']}, iu, placement)
+            box = _lot_box({'x0': a0, 'x1': a0 + width, 'side': local['side'], 'road_id': road['id']}, iu, placement, state)
     short = iu._place_refusal_message(reason) if not ok else 'click to place  (width %d, scroll to change)' % int(width)
     ghost_lot = lot
     if ghost_lot is None and box is not None:
@@ -420,12 +425,76 @@ def _hover(gw, gi, pc):
 # Consequence: REPAIR moved from R (the rig's pedestal-up) to H.
 
 
+# ---- Road mode (ROAD_BUILD_CONTRACT.md section 4, 2026-09-04) ----
+# G toggles road mode (not a rig key). First click = start, second click =
+# end; the chord is previewed through placement.resolve_road_draw - the
+# same pure function draw_road uses - so the ghost cannot disagree with
+# the verb. Axis-aligned segments only in v0 (the module's own rule).
+ROAD_COLOR_OK = unreal.LinearColor(0.85, 0.85, 0.7, 1.0)
+ROAD_COLOR_NO = unreal.LinearColor(1.0, 0.35, 0.3, 1.0)
+
+
+def _road_mode_toggle(gw):
+    _st['road_mode'] = not _st.get('road_mode', False)
+    _st['road_start'] = None
+    unreal.SystemLibrary.print_string(gw, 'ROAD MODE %s' % ('ON - click start, click end (G to leave)' if _st['road_mode'] else 'off'),
+                                      True, False, ROAD_COLOR_OK, 3.0, 'roadmode')
+    _log('road mode %s' % ('on' if _st['road_mode'] else 'off'))
+
+
+def _road_preview(gi, x0, y0, x1, y1):
+    import init_unreal as iu
+    import placement
+    state = iu._read_state(gi)
+    try:
+        pins_active = not bool(gi.get_editor_property('EmptyStart'))
+    except Exception:
+        pins_active = True
+    ok, reason, road = placement.resolve_road_draw(state, x0, y0, x1, y1, pins_active=pins_active)
+    return ok, reason, road
+
+
+def _road_hover(gw, gi, pc):
+    """In road mode with a start set: draw the chord to the cursor."""
+    start = _st.get('road_start')
+    if start is None:
+        return
+    hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)
+    if hit is None:
+        return
+    d = hit.to_dict()
+    if not d.get('blocking_hit'):
+        return
+    loc = d['location']
+    ok, reason, road = _road_preview(gi, start[0], start[1], loc.x, loc.y)
+    color = ROAD_COLOR_OK if ok else ROAD_COLOR_NO
+    if road is not None:
+        (sx, sy), (ex, ey) = road['start'], road['end']
+    else:
+        sx, sy, ex, ey = start[0], start[1], loc.x, loc.y
+    unreal.SystemLibrary.draw_debug_line(gw, unreal.Vector(sx, sy, GHOST_Z + 20.0), unreal.Vector(ex, ey, GHOST_Z + 20.0), color, 0.05, 40.0)
+    text = 'click to lay the road' if ok else reason.split(':')[0]
+    unreal.SystemLibrary.draw_debug_string(gw, unreal.Vector((sx + ex) / 2.0, (sy + ey) / 2.0, GHOST_Z + 120.0), text, None, color, 0.05)
+
+
+def _road_click(gw, gi, x, y):
+    start = _st.get('road_start')
+    if start is None:
+        _st['road_start'] = (x, y)
+        unreal.SystemLibrary.print_string(gw, 'Road start set - click the end', True, False, ROAD_COLOR_OK, 2.0, 'roadmode')
+        _log('road start (%.0f, %.0f)' % (x, y))
+        return
+    unreal._stacktown_road_request = (start[0], start[1], x, y)
+    _log('road request (%.0f, %.0f) -> (%.0f, %.0f)' % (start[0], start[1], x, y))
+    _st['road_start'] = None
+
+
 def _tick(dt):
     try:
         gw = _world()
         if gw is None:
             if _st['world'] is not None:
-                _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None, ghost_cache=None, ghost=None, ghost_shown=False, ghost_lot=None)
+                _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None, ghost_cache=None, ghost=None, ghost_shown=False, ghost_lot=None, road_mode=False, road_start=None)
             return
         pc = unreal.GameplayStatics.get_player_controller(gw, 0)
         gi = unreal.GameplayStatics.get_game_instance(gw)
@@ -444,11 +513,24 @@ def _tick(dt):
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
-        if not _st['down'].get('LeftMouseButton', False):
+        if edges['G']:
+            _road_mode_toggle(gw)
+            _ghost_hide()
+        road_mode = _st.get('road_mode', False)
+        if road_mode:
+            _ghost_hide()
+            _road_hover(gw, gi, pc)
+        elif not _st['down'].get('LeftMouseButton', False):
             _hover(gw, gi, pc)
         else:
             _ghost_hide()
-        if edges['LeftMouseButton']:
+        if edges['LeftMouseButton'] and road_mode:
+            hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)
+            if hit is not None:
+                d = hit.to_dict()
+                if d.get('blocking_hit'):
+                    _road_click(gw, gi, d['location'].x, d['location'].y)
+        elif edges['LeftMouseButton']:
             hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)
             if hit is None:
                 _log('click hit nothing')
@@ -532,6 +614,7 @@ def register():
     unreal._stacktown_clickdriver_handle = unreal.register_slate_post_tick_callback(_tick)
     unreal._stacktown_click_at = _click_at
     unreal._stacktown_press = _press
+    unreal._stacktown_draw_road = lambda x0, y0, x1, y1: setattr(unreal, '_stacktown_road_request', (x0, y0, x1, y1)) or 'road requested'
     unreal._stacktown_ghost_at = lambda x, y: (_preview(unreal.GameplayStatics.get_game_instance(_world()), x, y), _ghost_show(_world(), _st['ghost_cache'][1] if _st.get('ghost_cache') else True, _preview(unreal.GameplayStatics.get_game_instance(_world()), x, y)[2], _st.get('ghost_lot')))[1]
     unreal._stacktown_set_width_index = lambda i: _st.__setitem__('width_index', int(i)) or _st.__setitem__('ghost_cache', None)
     unreal._stacktown_preview = lambda x, y: _preview(unreal.GameplayStatics.get_game_instance(_world()), x, y)

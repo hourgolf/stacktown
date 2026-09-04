@@ -1412,3 +1412,34 @@ into the wrong project. It has already caught it happening.
   not dead input. Lesson: the rig's doc existed the whole time; read
   the owning doc before probing a live object.
 
+- **ROADS, WIRED END TO END, UNTESTED LIVE (2026-09-04 01:4x).** Beta
+  lane: road state in citystate, placement.ROADS dynamic (state roads
+  + the two built-ins), lot_rect by the lot's own road axis,
+  resolve_road_draw/draw_road with the pinned-lot gap closed,
+  axis-aligned segments only in v0 (39/39). Coordinator: the driver
+  consumes unreal._stacktown_road_request like place, draw_road is the
+  authority, a dormant POOL_ROAD_NN StaticMeshActor shows the segment
+  (section-5 transform: chord centre, one yaw, scale length/100 x
+  CORRIDOR/100 x thin), drawn roads restore at session start; the click
+  driver's G key toggles road mode (first click start, second end, the
+  chord previewed through resolve_road_draw). No pool actors exist yet -
+  a road drawn now exists for placement and says so on screen but is
+  invisible until mk_testcity_builds.py places the pool (an editor window
+  plus the owner's word for saving TestCity).
+
+- **THE MARKER FLIPPED A RUNNING GAME'S SAVE FILE (2026-09-04 01:5x).**
+  _state_path_for() resolved the file on EVERY call, so when the
+  coordinator wrote lane_pie.marker for an editor test while the owner's
+  standalone game was running, the game's next ticks wrote the owner's
+  state into citystate_test.json, then back into citystate.json when the
+  marker went (both files identical, four seconds apart) - and the test
+  road R1 / lot P9 drawn in the editor session vanished under it. The
+  owner's save was never wrong, only mirrored. Fix: the path is resolved
+  ONCE at session start and cached in the driver state (cleared at PIE
+  end; a game process keeps its first answer for life). Until the owner
+  relaunches, the running game still carries the old resolver, so NO
+  MARKERS while it runs - an editor PIE under the standalone lock lands
+  on the test file without one. Rule: anything that steers a running
+  process by a file on disk must be read once, at a boundary, never per
+  call.
+

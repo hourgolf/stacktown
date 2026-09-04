@@ -2009,6 +2009,50 @@ proven, the seven species curves are written with walnut running backwards as
 D16 requires, and the material can age a whole species at a time today. What
 it cannot do is age ONE BUILDING.
 
+### ALL FOUR CHANNELS BUILT AND MEASURED. 2026-09-03.
+
+D16 has described this ladder since 2026-09-01 and none of it rendered until
+the mask was fixed. All four now do.
+
+| channel | what it does | measured |
+|---|---|---|
+| Age | oxidises along the species' own curve | walnut **+4.89** while oak **−5.23**, 10.12 levels apart from one value |
+| Attention | burnishes the arris | **22 levels** on the chamfer columns, 32x drift |
+| Failure | weathers cold, then chars | weather half **12.86 levels**, char to −24.48 |
+| Scorch | blackens top-down | crown **−16.5** at 0.25 with the base at **+0.4** |
+
+Every one is inert at 0 by construction rather than by a default that happens
+to be zero, and every one was judged on a frame as well as a number.
+
+**Failure took three versions and the arc is the lesson.** v1 lerped the wood
+to a flat grey: **145x drift**, and bleached plaster with the grain gone and
+the oak no longer oak. v2 desaturated and tinted cold — right shape, **2.4x**,
+invisible. v3 kept that shape and pushed the tints. The number went 145x to
+2.4x to useful while the look went unusable to nearly-right to right.
+
+**And the lift in v3 came from HUE, not value.** v2 dropped brightness about
+10% and read as *shadow*. Pushing red well below blue makes the surface read
+cold against a warm board, which is what carries at distance. **A value-only
+weathering is indistinguishable from a building standing in shade** — the one
+thing a health signal must never be.
+
+**Scorch reuses CharBlack deliberately** and must keep doing so. D16: "Partial
+and top-down reads as ACCIDENT; total and uniform reads as FAILURE. Same
+colour, different shape." If the two were told apart by hue the player would
+learn a colour code instead of reading the building. Height is taken from the
+object's own bounds, not world Z, so a flat and a tower both burn their top
+third at 0.33; world Z would burn a fixed altitude and leave short buildings
+untouched, which is a different mechanic.
+
+**The instrument failure of the hour, kept because it was nearly a finding.**
+The first Scorch ladder used the close camera from the Failure work, **which
+cuts the tower off below its crown.** Scorch 0.25 and 0.5 read +0.06 and +0.09
+— two clean nulls from a camera that could not see the effect — and only 1.0
+registered, because its burn line reaches far enough down to enter frame. The
+report would have been "scorch only fires at 1.0". **A top-down effect needs a
+camera that can see the top**, which is obvious written down and was not
+obvious while reading a plausible null.
+
 ### SOLVED 2026-09-03: the mask was reading VERTEX COLOUR
 
 Everything below this heading is superseded as to CAUSE. The symptom was

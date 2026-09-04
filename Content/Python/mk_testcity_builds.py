@@ -302,4 +302,101 @@ def build():
     return made
 
 
+# ROAD POOL (2026-09-04, Docs/ROAD_BUILD_CONTRACT.md section 5). The
+# road-drawing verb's own counterpart to the parcel pool above: no
+# Python API in this build spawns an actor into the GAME/PIE world (the
+# same wall the parcel pool's own comment already names, exhausted
+# 2026-09-02), so a drawn road can only ever ACTIVATE one of these,
+# never create one fresh.
+ROAD_POOL_SIZE = 10
+
+# NOT `import mk_testcity` for these two, though that file is what
+# actually built TC_Road_Arterial/TC_Road_Cross and is the real source
+# of truth for them - mk_testcity.py ends with its OWN unconditional
+# `build()` call at module scope, exactly like this file's own tail
+# below, and it destroys/rebuilds the ENTIRE road/board/mass layout on
+# every import. Importing it here to read two string constants would
+# have silently rebuilt the whole city as a side effect of adding a
+# road pool - found by reading that file's own tail before importing
+# it, not after. Copied by hand instead, cited to their real origin:
+# mk_testcity.py's own CUBE and M_ROAD, confirmed there as the literal
+# arguments TC_Road_Arterial/TC_Road_Cross were built with (its own
+# `_box(eas, cube, mats['road'], 'TC_Road_Arterial', ...)` call) - not
+# queried from the live actor, since this was written with no editor
+# access at all. If mk_testcity.py's own M_ROAD is ever retuned, this
+# copy needs updating by hand; there is no automatic check standing in
+# for that, the same accepted gap PLATE_X_MIN/MAX already lives with.
+_ROAD_CUBE = '/Engine/BasicShapes/Cube.Cube'
+_ROAD_MATERIAL = '/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey'
+
+
+def build_road_pool():
+    """Place ROAD_POOL_SIZE dormant road-segment actors, labelled
+    POOL_ROAD_00..09 - the driver claims one on a successful draw_road,
+    sets its transform from ROAD_BUILD_CONTRACT.md section 5's own
+    math, and relabels it with the road's own id, the identical shape
+    the parcel pool above already uses for a placed lot.
+
+    STANDALONE - NOT called from build() and NOT called at this file's
+    own bottom-of-file line, deliberately. build() already runs
+    unconditionally on any import of this module (this file's own
+    long-standing convention: "RUN THROUGH rung.sh - it mutates").
+    Folding this in there too would mean a fresh import either
+    duplicates the road pool (if not idempotent) or destroys/rebuilds
+    the ENTIRE existing city just to add ten actors (if swept into
+    build()'s own destroy-then-rebuild pass). Call this explicitly,
+    once, from a live reflected call against an already-imported
+    module. NAMED PLAINLY, not silently worked around: re-importing
+    this FILE fresh (a rung.sh run purges and reloads every project
+    module) still re-runs build() at the bottom regardless of whether
+    this function is also called - that is this file's own existing
+    behaviour, unchanged by this addition.
+
+    IDEMPOTENT on its own: destroys any existing POOL_ROAD_* actors
+    first, the same discipline build() already holds for its own OWNED
+    prefixes, so re-running this never accumulates duplicates.
+
+    NOT VERIFIED BY EXECUTION - this file requires a loaded TestCity
+    editor world just to import (the module-level guard a few lines up
+    raises SystemExit otherwise), so it cannot be run headless the way
+    econrules.py/citytick.py/placement.py are. Written by close pattern
+    match against build()'s own proven parcel-pool loop and mk_testcity
+    .py's own proven _box() (get_editor_property('static_mesh') is
+    directly proven elsewhere in this project, e.g. init_unreal.py's
+    _apply_lot_offset; get_editor_property('override_materials') for
+    the material read-back below is standard UE, not personally
+    confirmed working in THIS project's own Python binding - the one
+    real point of uncertainty in this function, named rather than
+    hidden, worth a first look when this actually runs."""
+    for a in list(eas.get_all_level_actors()):
+        if a.get_actor_label().startswith('POOL_ROAD_'):
+            eas.destroy_actor(a)
+    cube = unreal.load_asset(_ROAD_CUBE)
+    mat = unreal.load_asset(_ROAD_MATERIAL)
+    readback = []
+    for i in range(ROAD_POOL_SIZE):
+        a = eas.spawn_actor_from_object(
+            cube, _POOL_GRAVEYARD, unreal.Rotator(0.0, 0.0, 0.0))
+        label = 'POOL_ROAD_%02d' % i
+        a.set_actor_label(label)
+        a.set_actor_hidden_in_game(True)
+        a.set_actor_enable_collision(False)
+        mesh_path = mat_path = None
+        for c in a.get_components_by_class(unreal.StaticMeshComponent):
+            c.set_material(0, mat)
+            sm = c.get_editor_property('static_mesh')
+            mesh_path = sm.get_path_name() if sm else None
+            overrides = c.get_editor_property('override_materials')
+            mat_path = overrides[0].get_path_name() if overrides else None
+        readback.append((label, mesh_path, mat_path))
+
+    for label, mesh_path, mat_path in readback:
+        print('%s  mesh=%s  material=%s' % (label, mesh_path, mat_path))
+    print('road pool: %d dormant POOL_ROAD_NN actors staged at '
+          '_POOL_GRAVEYARD, hidden, non-colliding - activation, '
+          'transform and reactivation are the driver\'s own job '
+          '(Docs/ROAD_BUILD_CONTRACT.md section 5)' % len(readback))
+    return readback
+
+
 build()

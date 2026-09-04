@@ -766,3 +766,35 @@ directly for one it structurally can't, on its own, ever reach. If the
 owner wants the tenth lot to feel further away than 8.3 minutes, that
 needs the price-escalation change named above, not a smaller R.
 
+## What a trade is - the owner's definition (2026-09-04, verbatim)
+
+"a trade will be an actual paper trade made through our brokerage
+Alpaca. The strategy will come from a translated Trading View Pine
+script that we will turn into a python script that can monitor the
+appropriate ticker and make trades when its script is alerted. We can
+assign ways for those trades to also add value to the player so they
+can upgrade regardless of the success of those trades (for instance, 10
+closed trades gains credits, each successful trade earns bonuses toward
+upgrades/modifications, etc). Lot prices and upgrades escalate depending
+on factors we will still need to work out..."
+
+Consequences and boundaries:
+
+- The trading system is a SEPARATE Python service outside the editor
+  (the "trade adapter"): it runs the translated strategy against live
+  market data for the chosen ticker, places PAPER orders through Alpaca's
+  paper-trading API, and writes a trade ledger (closed trades, outcome,
+  size, timestamps) that the game driver reads. The game never places
+  orders; it consumes outcomes.
+- Credentials (Alpaca key id / secret) are the owner's alone: read from
+  the owner's environment by the adapter, never stored in the repo,
+  never typed or handled by the coordinator or a lane, never in chat.
+- Game value from trades, per the owner: a count reward (every N closed
+  trades -> credits, regardless of outcome) and an outcome reward (each
+  successful trade -> bonus toward upgrades/modifications); per-lot
+  performance and the escalation factors for lot prices and upgrades
+  are still to be worked out with the owner.
+- The Pine script arrives from the owner; its translation to Python is
+  the beta lane's, with the strategy's own self-tests against recorded
+  bars before it ever touches the paper account.
+

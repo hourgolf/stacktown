@@ -1337,3 +1337,23 @@ into the wrong project. It has already caught it happening.
   columns - D16's burnished arris renders for the first time; the fork
   save waits on the owner's word IN THE DESIGN SESSION (their rule).
 
+- **THE GAME RUNS OUTSIDE THE EDITOR (2026-09-04 00:17).** The owner asked
+  for a way to play as a user while the lanes edit, without leaving PIE
+  on. Found: the uncooked editor binary with `-game` on TestCity loads
+  the Python plugin (its main module is UncookedOnly, so it loads in
+  -game), runs init_unreal.py, registers both drivers, restores the city
+  from citystate.json and takes clicks - Tools/play.sh launches it.
+  Three things had to change: a world lookup that works without editor
+  subsystems (_find_game_world: find_object on the map's world path),
+  FKey construction via import_text (set_editor_property('key_name') is
+  editor-only), and pie_just_started True at registration (a game
+  process never sees the no-world tick). TRAPS: (1) the game process
+  answers the SAME remote-exec multicast as the editor and uepy.py
+  connected to it first - rung.sh would have re-registered drivers in
+  the game; uepy now waits for every node and probes for the editor
+  (UEPY_WANT_GAME=1 to target the game); (2) the game ticks rent into
+  the owner's save for as long as it runs, even with nobody playing -
+  a test launch left running is a session; (3) the game shows what was
+  on disk at launch - relaunch to see new work; (4) the marker file is
+  read once at the game's start and never deleted by it.
+

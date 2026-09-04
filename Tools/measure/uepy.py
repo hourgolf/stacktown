@@ -21,9 +21,16 @@ def run(code, mode=None, timeout=25):
         # meant the other agent's editor could win the race and this would
         # report "no node for project" while ours was simply still answering.
         t0 = time.time()
+        first_seen = None
         while time.time() - t0 < timeout:
             if any(_proot(n) == want for n in rem.remote_nodes):
-                break
+                if first_seen is None:
+                    first_seen = time.time()
+                # A standalone -game process of the SAME project answers the
+                # same multicast (2026-09-04); give the other process 1.5 s
+                # to answer too, then pick by kind below.
+                if time.time() - first_seen > 1.5:
+                    break
             time.sleep(0.4)
         nodes = list(rem.remote_nodes)          # snapshot: the property rebuilds
         if not nodes:
@@ -37,8 +44,32 @@ def run(code, mode=None, timeout=25):
         if not matches:
             return None, ('NO NODE FOR %r (saw: %s)'
                           % (want, ', '.join(proot(n) or '?' for n in nodes)))
+        pin = os.environ.get('UEPY_NODE_ID')
+        if pin:
+            matches = [nd for nd in matches if (nd.get('node_id') if isinstance(nd, dict) else nd) == pin]
+            if not matches:
+                return None, 'NO NODE WITH ID %r' % pin
         if len(matches) > 1:
-            return None, 'AMBIGUOUS: %d editors report %r' % (len(matches), want)
+            # Probe each candidate: is it the editor or a -game process?
+            want_game = os.environ.get('UEPY_WANT_GAME') == '1'
+            chosen = None
+            for nd in matches:
+                nid = nd['node_id'] if isinstance(nd, dict) else nd
+                try:
+                    rem.open_command_connection(nid)
+                    r = rem.run_command('import unreal; print("UEPY_IS_EDITOR=%s" % (unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem) is not None))', exec_mode=rx.MODE_EXEC_STATEMENT)
+                    rem.close_command_connection()
+                    is_editor = 'UEPY_IS_EDITOR=True' in str(r)
+                except Exception:
+                    is_editor = False
+                if is_editor != want_game:
+                    chosen = nd
+                    break
+            if chosen is None:
+                ids = ', '.join(str(nd.get('node_id')) for nd in matches)
+                return None, 'AMBIGUOUS: %d processes report %r and none is the %s (ids: %s)' % (len(matches), want, 'game' if want_game else 'editor', ids)
+            sys.stderr.write('[uepy] %d processes on this project; using the %s\n' % (len(matches), 'game' if want_game else 'editor'))
+            matches = [chosen]
         node = matches[0]
         if len(nodes) > 1:
             others = [proot(n) for n in nodes if n.get('node_id') != node.get('node_id')]

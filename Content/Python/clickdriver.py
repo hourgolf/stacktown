@@ -43,11 +43,34 @@ import unreal, time
 
 RESET_HOLD_S = 2.0
 _KEY = {}
+
+
+def _make_key(name):
+    """An FKey by name in BOTH the editor and a standalone -game process:
+    import_text is the struct's own text importer and works everywhere;
+    set_editor_property('key_name') is editor-only (2026-09-04, found when
+    the click driver failed to import in the standalone game)."""
+    k = unreal.Key()
+    try:
+        k.import_text(name)
+        return k
+    except Exception:
+        k.set_editor_property('key_name', name)
+        return k
+
+
 for _name in ('LeftMouseButton', 'B', 'N', 'U', 'R', 'MouseScrollUp', 'MouseScrollDown'):
-    _k = unreal.Key(); _k.set_editor_property('key_name', _name); _KEY[_name] = _k
+    _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
        'errs': set(), 'selected': None, 'rig_mirror_failed': False, 'width_index': 0}
+
+
+def _world():
+    """The playing world in the editor (PIE) or in a standalone -game
+    process - delegated to init_unreal's lookup so the two drivers agree."""
+    import init_unreal as iu
+    return iu._find_game_world()
 
 
 def _log(msg):
@@ -390,7 +413,7 @@ def _hover(gw, gi, pc):
 
 def _tick(dt):
     try:
-        gw = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
+        gw = _world()
         if gw is None:
             if _st['world'] is not None:
                 _st.update(world=None, rig=None, down={}, n_acc=0.0, n_fired=False, selected=None, ghost_cache=None, ghost=None, ghost_shown=False, ghost_lot=None)
@@ -457,7 +480,7 @@ def _tick(dt):
 
 def _click_at(x, y):
     """Self-test: run the left-click decision for a world point (no mouse)."""
-    gw = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
+    gw = _world()
     if gw is None:
         return 'no PIE world'
     gi = unreal.GameplayStatics.get_game_instance(gw)
@@ -472,7 +495,7 @@ def _click_at(x, y):
 
 
 def _press(name):
-    gw = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
+    gw = _world()
     if gw is None:
         return 'no PIE world'
     gi = unreal.GameplayStatics.get_game_instance(gw)
@@ -499,9 +522,9 @@ def register():
     unreal._stacktown_clickdriver_handle = unreal.register_slate_post_tick_callback(_tick)
     unreal._stacktown_click_at = _click_at
     unreal._stacktown_press = _press
-    unreal._stacktown_ghost_at = lambda x, y: (_preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y), _ghost_show(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world(), _st['ghost_cache'][1] if _st.get('ghost_cache') else True, _preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y)[2], _st.get('ghost_lot')))[1]
+    unreal._stacktown_ghost_at = lambda x, y: (_preview(unreal.GameplayStatics.get_game_instance(_world()), x, y), _ghost_show(_world(), _st['ghost_cache'][1] if _st.get('ghost_cache') else True, _preview(unreal.GameplayStatics.get_game_instance(_world()), x, y)[2], _st.get('ghost_lot')))[1]
     unreal._stacktown_set_width_index = lambda i: _st.__setitem__('width_index', int(i)) or _st.__setitem__('ghost_cache', None)
-    unreal._stacktown_preview = lambda x, y: _preview(unreal.GameplayStatics.get_game_instance(unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()), x, y)
+    unreal._stacktown_preview = lambda x, y: _preview(unreal.GameplayStatics.get_game_instance(_world()), x, y)
     unreal.log('CLICK DRIVER: registered (hold N %.1fs to reset)' % RESET_HOLD_S)
 
 

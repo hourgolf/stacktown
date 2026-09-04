@@ -237,6 +237,101 @@ def repair(state, pid):
     return s, True, ''
 
 
+# TRADE LEDGER REWARDS (2026-09-04, Docs/TRADE_ADAPTER.md - the owner's
+# own definition of a trade, ECONOMY_TICK_CONTRACT.md "What a trade
+# is"). This module NEVER places an order and NEVER touches Alpaca,
+# credentials, or market data - it only reads an already-written ledger
+# of CLOSED trades (the trade adapter's own output, a separate process
+# entirely) and converts new entries into game value. "The game never
+# places orders; it consumes outcomes" - that boundary is the whole
+# reason this lives here rather than anywhere near the adapter.
+#
+# A ledger entry is {'trade_id', 'ticker', 'side', 'entry_time',
+# 'entry_price', 'exit_time', 'exit_price', 'size', 'pnl'} -
+# TRADE_ADAPTER.md's own schema, this module only ever reads 'pnl'.
+#
+# TWO of the owner's own three unknowns are placeholder constants below
+# (trade_credits_per_n, trade_credit_amount, trade_bonus_per_win) -
+# scaffolding, same discipline as every other number in this file. The
+# THIRD - what "successful" means - is a CHOICE this module makes
+# explicit and overridable (is_win below), not a constant, because the
+# owner's own question ("closed profit?") is about the DEFINITION, not
+# a tunable number: closed-profit (pnl > 0) is the proposed default,
+# named as a default, not asserted as final.
+def is_win(trade):
+    """A trade counts as a WIN if it closed with pnl > 0 - the proposed
+    default for the owner's own open question ("what does 'successful'
+    mean - closed profit?"), not a final answer. Breakeven (pnl == 0)
+    does NOT count - deliberately, so a string of scratch trades can't
+    farm bonuses; the owner may want a different bar (net of
+    commissions, some minimum size) once the adapter is real."""
+    return float(trade['pnl']) > 0.0
+
+
+def trade_count_reward(trades_before, new_trade_count, credits_per_n, credit_amount):
+    """Total credits earned by new_trade_count MORE closed trades
+    landing on top of trades_before already counted - regardless of
+    outcome (the owner's own word). Counts N-trade MILESTONES crossed,
+    not trades individually, so a credits_per_n=10 lot pays out once at
+    the 10th, 20th, 30th... closed trade, never per-trade. Pure
+    arithmetic, no state - the caller (apply_trade_ledger below) owns
+    what "trades_before" means."""
+    before_milestones = trades_before // credits_per_n
+    after_milestones = (trades_before + new_trade_count) // credits_per_n
+    return (after_milestones - before_milestones) * credit_amount
+
+
+def trade_outcome_bonus(new_trades, bonus_per_win):
+    """Total bonus across new_trades for whichever ones is_win() calls a
+    win - every winning trade pays the same flat bonus (escalating it
+    by size/P&L is exactly the "factors we will still need to work out"
+    the owner's own words left open, not decided here)."""
+    return sum(bonus_per_win for t in new_trades if is_win(t))
+
+
+def apply_trade_ledger(state, ledger_entries, r=None):
+    """(new_state, events). The ONLY function in this module that reads
+    a trade ledger. IDEMPOTENT BY CONSTRUCTION: state['trades_processed']
+    (new top-level field, default 0, NOT per-parcel) is how many leading
+    ledger_entries have already been counted - only entries beyond that
+    index are ever read, so calling this again with the same or a
+    longer ledger never double-counts a trade, even across a session
+    restart (trades_processed persists in citystate.json like every
+    other field). Awards land as MONEY today - both a count reward
+    (every credits_per_n closed trades) and an outcome bonus (every
+    is_win() trade) - the simplest concrete thing that is definitely
+    correct given the owner's own "so they can upgrade regardless of
+    the success of those trades" framing. Whether "bonus toward
+    upgrades" should instead move a lot's own 'performance' value, or
+    something else "escalation factors... still to be worked out" might
+    want, is the owner's own open question (ECONOMY_TICK_CONTRACT.md,
+    "What a trade is") - not decided here; this function computes the
+    reward, it does not commit to its final application.
+
+    events is a list of ('TRADE_CREDITS', amount) / ('TRADE_BONUS',
+    amount) tuples, present only when the respective amount is nonzero
+    - mirrors tick()'s own event shape (a list of tuples, empty when
+    nothing happened) rather than inventing a new return convention."""
+    r = r or rules()
+    s = json.loads(json.dumps(state))
+    processed = s.get('trades_processed', 0)
+    new_trades = ledger_entries[processed:]
+    if not new_trades:
+        return s, []
+    credits = trade_count_reward(
+        processed, len(new_trades),
+        r['trade_credits_per_n'], r['trade_credit_amount'])
+    bonus = trade_outcome_bonus(new_trades, r['trade_bonus_per_win'])
+    s['money'] += credits + bonus
+    s['trades_processed'] = processed + len(new_trades)
+    events = []
+    if credits:
+        events.append(('TRADE_CREDITS', credits))
+    if bonus:
+        events.append(('TRADE_BONUS', bonus))
+    return s, events
+
+
 if __name__ == '__main__':
     # KNOWN ANSWERS, hand-computed from econrules.json's shipped values:
     # price_base 50, price_per_100uu 2, price_per_tier 25,
@@ -422,7 +517,54 @@ if __name__ == '__main__':
     _, ok, why = repair(sr, 'POOR')
     assert not ok and 'insufficient funds' in why, why
 
-    print('econrules self-check: 13/13 pass (SCAFFOLDING values; growth '
+    # 14. is_win: closed profit only - the proposed default for the
+    #     owner's own open question. Breakeven does NOT count.
+    assert is_win({'pnl': 5.0}) is True
+    assert is_win({'pnl': -3.0}) is False
+    assert is_win({'pnl': 0.0}) is False
+
+    # 15. trade_count_reward: milestone arithmetic, not per-trade -
+    #     crossing exactly one N=10 milestone pays once regardless of
+    #     how the count got there (0->10 in one call, or 9->10 in one
+    #     trade), and NOT crossing one pays nothing.
+    assert trade_count_reward(0, 10, 10, 20) == 20    # exactly to the line
+    assert trade_count_reward(9, 1, 10, 20) == 20     # 9 -> 10, one trade
+    assert trade_count_reward(5, 10, 10, 20) == 20    # 5 -> 15, crosses only 10
+    assert trade_count_reward(0, 25, 10, 20) == 40    # 25 -> 2 milestones
+    assert trade_count_reward(10, 0, 10, 20) == 0     # no new trades, no credit
+
+    # 16. trade_outcome_bonus: sums bonus_per_win only across WINS.
+    three = [{'pnl': 5.0}, {'pnl': -2.0}, {'pnl': 10.0}]
+    assert trade_outcome_bonus(three, 5) == 10.0  # 2 of 3 win
+
+    # 17. apply_trade_ledger, the full path, IDEMPOTENT BY CONSTRUCTION.
+    #     12 closed trades, 6 wins (positions 1,3,5,8,10,12 - hand-
+    #     counted, not assumed): crosses the credits_per_n=10 milestone
+    #     once (20) plus 6 wins * bonus_per_win(5) = 30 -> 50.0 total,
+    #     trades_processed becomes 12.
+    ledger = [{'pnl': p} for p in
+              (10, -5, 3, -1, 8, -2, 0, 15, -3, 6, -4, 9)]
+    st17 = {'money': 0.0, 'demand': 1.0, 'parcels': {}}
+    st17, evs17 = apply_trade_ledger(st17, ledger)
+    assert abs(st17['money'] - 50.0) < 1e-9, st17['money']
+    assert st17['trades_processed'] == 12, st17['trades_processed']
+    assert sorted(evs17) == [('TRADE_BONUS', 30.0), ('TRADE_CREDITS', 20)], evs17
+    # Called AGAIN with the SAME ledger: no new entries beyond
+    # trades_processed, so this is a true no-op - proves idempotency,
+    # not just "it worked once".
+    st17b, evs17b = apply_trade_ledger(st17, ledger)
+    assert st17b == st17, (st17b, st17)
+    assert evs17b == [], evs17b
+    # A LONGER ledger (3 more trades, 2 wins, no new milestone - 12->15
+    # stays under the next multiple of 10 at 20): only the new entries
+    # are read, money grows by the bonus alone (2*5=10), no credits.
+    ledger += [{'pnl': p} for p in (2, -1, 7)]
+    st17c, evs17c = apply_trade_ledger(st17, ledger)
+    assert abs(st17c['money'] - 60.0) < 1e-9, st17c['money']  # 50 + 10
+    assert st17c['trades_processed'] == 15, st17c['trades_processed']
+    assert evs17c == [('TRADE_BONUS', 10.0)], evs17c
+
+    print('econrules self-check: 17/17 pass (SCAFFOLDING values; growth '
           'retired from tick() 2026-09-03 - rent still accrues, tier '
           'never moves on its own, proven at both a handful of ticks and '
           '1000; upgrade() is the only path a tier still climbs, priced '
@@ -430,4 +572,8 @@ if __name__ == '__main__':
           'failure/ladder-top/unbaked-asset/affordability but NEVER on '
           'performance alone; repair() clears a failed lot for money, '
           'itself unreachable in real play until a trading system sets '
-          'the flag it clears)')
+          'the flag it clears; apply_trade_ledger converts an already-'
+          'written trade ledger into count-milestone credits and per-win '
+          'bonuses, idempotent by construction - this module never '
+          'places an order or touches Alpaca, it only ever reads pnl '
+          'off entries a separate adapter already closed)')

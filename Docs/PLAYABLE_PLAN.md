@@ -180,3 +180,12 @@ the owner's save; the wooden look's edge wear finally rendering.
 prices climb with count; when to port (recommendation: after step 4).
 Everything else is the lanes' and the coordinator's to build and prove.
 
+### 4.1 The owner plays outside the editor (2026-09-04)
+
+`Tools/play.sh` launches the game as its own window from the same
+project files, with the Python drivers running and the owner's real
+save. The lanes keep the editor; the owner relaunches to see new work.
+This is not the packaged beta (nothing can be handed to a tester yet),
+but it removes the "I left PIE on" hazard and gives the owner a user's
+seat immediately. Step 5's port is unchanged in scope.
+

@@ -148,6 +148,40 @@ _TEST_STATE_PATH = os.path.join(_citytick.HERE, 'citystate_test.json')
 _LANE_MARKER_PATH = os.path.join(_citytick.HERE, 'lane_pie.marker')
 
 
+
+_GAME_MAP_WORLD = '/Game/Maps/TestCity.TestCity'
+
+
+def _is_game_process():
+    """True in a standalone -game process (the uncooked editor binary run
+    with -game, or a cooked build with Python): editor subsystems do not
+    exist there. Cached after the first answer."""
+    cached = getattr(unreal, '_stacktown_is_game_process', None)
+    if cached is None:
+        try:
+            cached = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem) is None
+        except Exception:
+            cached = True
+        unreal._stacktown_is_game_process = cached
+    return cached
+
+
+def _find_game_world():
+    """The world the game is playing in, or None. Editor: the PIE world via
+    UnrealEditorSubsystem (None when PIE is off). Standalone -game (found
+    2026-09-04: the uncooked editor binary with -game loads the Python
+    plugin, runs init_unreal.py and registers this driver - the owner can
+    play in a second process while the lanes edit): the loaded map's own
+    world object."""
+    if not _is_game_process():
+        try:
+            return unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world()
+        except Exception:
+            return None
+    w = unreal.find_object(None, _GAME_MAP_WORLD)
+    return w
+
+
 def _state_path_source():
     """Isolation, 2026-09-03, twice-corrected same day: multiple lanes
     share this one editor and driver, and the owner's citystate.json is
@@ -539,8 +573,7 @@ def _city_driver_tick(delta_seconds):
     warning to anyone)."""
     state = unreal._stacktown_driver_state
     try:
-        ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-        gw = ues.get_game_world()
+        gw = _find_game_world()
         if gw is None:
             if state.get('pie_was_running', False):
                 # PIE just ended (this is the FIRST no-world tick after a
@@ -866,7 +899,9 @@ def _ensure_screen_messages_enabled():
     if getattr(unreal, '_stacktown_screen_messages_enabled', False):
         return
     ues = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem)
-    world = ues.get_editor_world()
+    world = ues.get_editor_world() if ues is not None else _find_game_world()
+    if world is None:
+        return
     unreal.SystemLibrary.execute_console_command(world, 'EnableAllScreenMessages')
     unreal._stacktown_screen_messages_enabled = True
     unreal.log('CITY DRIVER: EnableAllScreenMessages applied for this editor session')
@@ -884,7 +919,9 @@ def _register_city_driver():
     if getattr(unreal, '_stacktown_driver_registered', False):
         unreal.log('CITY DRIVER: already registered this session, skipping')
         return
-    unreal._stacktown_driver_state = {'last_tick': 0.0, 'seen_errors': set()}
+    # pie_just_started True from the outset: a -game process has a world on
+    # its very first tick and never sees the no-world tick that sets it.
+    unreal._stacktown_driver_state = {'last_tick': 0.0, 'seen_errors': set(), 'pie_just_started': True}
     unreal._stacktown_driver_handle = unreal.register_slate_post_tick_callback(
         _city_driver_tick)
     unreal._stacktown_driver_registered = True

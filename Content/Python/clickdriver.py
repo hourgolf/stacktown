@@ -107,6 +107,52 @@ def _selected(rig):
     return sel
 
 
+def _hold_selection(gw, gi, rig):
+    """Every tick while a lot is selected: keep it highlighted and keep its
+    line on screen (2026-09-04, owner: "when I select a lot it is only
+    selected for a second"). Any driver write to a BP_Parcel re-runs its
+    construction script, which resets its Highlighted flag; the parcel's own
+    tick then swaps the highlight material back off. Re-asserting here makes
+    the Python selection the one that shows."""
+    sel = _selected(rig)
+    if sel is None:
+        _st['sel_line'] = None
+        return
+    try:
+        if not sel.get_editor_property('Highlighted'):
+            sel.call_method('SetHighlighted', args=(True,))
+    except Exception:
+        pass
+    line = _st.get('sel_line')
+    if line:
+        n = _st.get('sel_line_tick', 0) + 1
+        _st['sel_line_tick'] = n
+        if n % 60 == 0:
+            line = _selection_line(gi, sel) or line
+            _st['sel_line'] = line
+        unreal.SystemLibrary.print_string(gw, line, True, False, unreal.LinearColor(0.7, 1.0, 0.8, 1.0), 0.6, 'selline')
+
+
+def _selection_line(gi, actor):
+    try:
+        label = actor.get_actor_label()
+        owned = actor.get_editor_property('Owned'); tier = actor.get_editor_property('Tier')
+        status = 'owned, level %d' % tier if owned else 'for sale'
+        if owned:
+            import init_unreal as iu, econrules
+            st = iu._read_state(gi); p = st['parcels'].get(label, {})
+            try:
+                price = econrules.upgrade_price(p.get('rid', 'vernacular'), int(p.get('tier', tier)), float(p.get('performance', 0.0) or 0.0))
+                hint = '[U] upgrade $%.0f   [H] repair' % price
+            except Exception:
+                hint = '[U] upgrade   [H] repair'
+        else:
+            hint = '[B] buy $%.0f' % float(actor.get_editor_property('Price'))
+        return '%s  %s   %s' % (label, status, hint)
+    except Exception:
+        return None
+
+
 def _set_selected(rig, actor):
     prev = _selected(rig)
     if prev is not None and prev != actor:
@@ -120,12 +166,9 @@ def _set_selected(rig, actor):
         except Exception as e:
             _log('SetHighlighted(True) failed on %s: %s' % (actor.get_actor_label(), e))
     _st['selected'] = actor
-    if not _st.get('rig_mirror_failed'):
-        try:
-            rig.set_editor_property('SelectedParcel', actor)
-        except Exception:
-            _st['rig_mirror_failed'] = True
-            _log('rig.SelectedParcel is not writable; selection held in Python (HUD cluster stays collapsed until the variable is made instance-editable)')
+    if actor is None:
+        _st['sel_line'] = None
+    # never mirrored into the rig - see the tick's note on the rig's writes
 
 
 def click_at_hit(gw, gi, rig, actor, x, y):
@@ -148,8 +191,8 @@ def click_at_hit(gw, gi, rig, actor, x, y):
                 hint = '[B] buy $%.0f' % float(actor.get_editor_property('Price'))
         except Exception:
             status = ''; hint = ''
-        unreal.SystemLibrary.print_string(gw, '%s  %s   %s' % (label, status, hint), True, False,
-                                          unreal.LinearColor(0.7, 1.0, 0.8, 1.0), 2.5, 'clickmsg')
+        _st['sel_line'] = '%s  %s   %s' % (label, status, hint)
+        _st['sel_line_tick'] = 0
         _log('selected %s (%s)' % (label, status))
         return 'select'
     unreal._stacktown_place_width = _current_width()
@@ -525,28 +568,48 @@ def _ladder_tables(rig):
     return (LADDER_FALLBACK['focal'], LADDER_FALLBACK['standoff'], LADDER_FALLBACK['height'], LADDER_FALLBACK['tilt'])
 
 
-def _ladder_assist(rig):
-    """Q/E ladder assist (2026-09-04, owner: "q/e still doesn't work both
-    ways"). The rig's own graph steps StopIndex on Q/E and writes the four
-    targets from its ladder arrays; whatever that graph does in its own
-    tick, this runs AFTER it (slate post-tick) on the same press and
-    re-writes TgtFocal/TgtReach/TgtHeight/TgtTilt from the rig's own
-    LadderFocal/LadderStandoff/LadderHeight/LadderTilt at the fresh
-    StopIndex, so the rendered pose can never lag the index. Reads only
-    the rig's own tables - no numbers of ours."""
+def _nearest_stop(reach):
+    st = LADDER_FALLBACK['standoff']
+    return min(range(len(st)), key=lambda i: abs(st[i] - reach))
+
+
+def _ladder_step(rig, delta):
+    """Q/E, with the stop OWNED HERE (2026-09-04). Read from the owner's game
+    log: the rig's ladder arrays are empty at runtime and its StopIndex is
+    reset to 0 by every reflected write we make to the rig (a write re-runs
+    the construction script, which resets the rig's non-instance-editable
+    variables to their class defaults - empty arrays, index 0). So the rig's
+    own Q/E branch always reads Ladder[idx] of an empty array (four engine
+    warnings per press) and writes 0 into all four targets, and any index it
+    keeps is gone by the next frame. Neither can be trusted; this steps from
+    the rung nearest the current reach (so W/S free zoom composes with the
+    ladder) and writes the pose itself, after the rig's branch, on the same
+    frame."""
     try:
-        idx = int(rig.get_editor_property('StopIndex'))
-        focal, stand, height, tilt = _ladder_tables(rig)
-        idx = max(0, min(idx, 4))
-        rig.set_editor_property('TgtFocal', float(focal[idx]))
-        rig.set_editor_property('TgtReach', float(stand[idx]))
-        rig.set_editor_property('TgtHeight', float(height[idx]))
-        rig.set_editor_property('TgtTilt', float(tilt[idx]))
-        _log('ladder stop %d -> reach %.0f height %.0f tilt %.1f focal %.0f' % (idx, stand[idx], height[idx], tilt[idx], focal[idx]))
+        prev = _st.get('cam_prev')
+        stop = _cam_state.get('stop', 0)
+        if prev is not None and prev.get('TgtReach', 0.0) >= 300.0:
+            stop = _nearest_stop(prev['TgtReach'])
+        idx = max(0, min(int(stop) + int(delta), 4))
+        _cam_state['stop'] = idx
+        # the rig eased its live values one step toward the origin this frame
+        # (its targets read 0 for the whole world tick): put them back first,
+        # then aim at the new rung so the move eases from where the view was
+        if prev is not None and prev.get('live'):
+            for k, v in prev['live'].items():
+                rig.set_editor_property(k, float(v))
+        L = LADDER_FALLBACK
+        rig.set_editor_property('TgtFocal', float(L['focal'][idx]))
+        rig.set_editor_property('TgtReach', float(L['standoff'][idx]))
+        rig.set_editor_property('TgtHeight', float(L['height'][idx]))
+        rig.set_editor_property('TgtTilt', float(L['tilt'][idx]))
+        _st['cam_prev'] = _cam_snapshot(rig)
+        _log('ladder %s -> stop %d: reach %.0f height %.0f tilt %.1f focal %.0f' % (
+            'E' if delta > 0 else 'Q', idx, L['standoff'][idx], L['height'][idx], L['tilt'][idx], L['focal'][idx]))
     except Exception as e:
         if not _cam_state.get('ladder_warned'):
             _cam_state['ladder_warned'] = True
-            _log('ladder assist unavailable: %s' % str(e)[:80])
+            _log('ladder step unavailable: %s' % str(e)[:80])
 
 
 # ---- Clicks never move the camera; keys never lose the game (2026-09-04,
@@ -564,6 +627,9 @@ def _ladder_assist(rig):
 _CAM_KEYS = ('TgtReach', 'TgtHeight', 'TgtTilt', 'TgtFocal', 'TgtAzimuth', 'TgtPan')
 
 
+_LIVE_KEYS = ('Reach', 'Height', 'Tilt', 'Focal')
+
+
 def _cam_snapshot(rig):
     snap = {}
     try:
@@ -571,6 +637,7 @@ def _cam_snapshot(rig):
             snap[k] = float(rig.get_editor_property(k))
         c = rig.get_editor_property('BoardCentre')
         snap['BoardCentre'] = (c.x, c.y, c.z)
+        snap['live'] = dict((k, float(rig.get_editor_property(k))) for k in _LIVE_KEYS)
     except Exception:
         return None
     return snap
@@ -613,13 +680,11 @@ def _focus_game(pc):
 
 
 def _cam_sanity(rig):
-    """The rig's leftover click chain ZEROES the boom targets after a click
-    (read live in the owner's game, 2026-09-04: TgtReach/TgtHeight/TgtTilt/
-    TgtFocal all 0.0, actor at the origin - dangling Set nodes with default
-    0.0 pins, firing on a frame the mouse-down hold does not cover). A
-    reach under the rig's own W clamp (300) or a focal under 1 can never
-    be a real pose, so whenever the targets read that way they are
-    rebuilt from the rig's own ladder tables at its current StopIndex."""
+    """Guard for a frame where the targets read impossible (reach under the
+    rig's own W clamp of 300, or focal under 1) outside a Q/E frame: restore
+    the whole pose from the previous frame's snapshot. Never snaps to a rung
+    (the old rebuild did, and every rebuild write reset the rig's StopIndex,
+    which is what relocked the wide pose on each E press)."""
     try:
         reach = float(rig.get_editor_property('TgtReach')); focal = float(rig.get_editor_property('TgtFocal'))
     except Exception:
@@ -627,25 +692,26 @@ def _cam_sanity(rig):
     if reach >= 300.0 and focal >= 1.0:
         return
     try:
-        idx = int(rig.get_editor_property('StopIndex'))
-        foc, stand, height, tilt = _ladder_tables(rig)
-        idx = max(0, min(idx, 4))
-        rig.set_editor_property('TgtReach', float(stand[idx])); rig.set_editor_property('TgtHeight', float(height[idx]))
-        rig.set_editor_property('TgtTilt', float(tilt[idx])); rig.set_editor_property('TgtFocal', float(foc[idx]))
-        # the live values ease toward the targets; nudge them too so the
-        # recovery is immediate rather than a slow climb from the origin
-        for live, tgt in (('Reach', stand[idx]), ('Height', height[idx]), ('Tilt', tilt[idx]), ('Focal', foc[idx])):
-            try:
-                rig.set_editor_property(live, float(tgt))
-            except Exception:
-                pass
-        _st['cam_prev'] = None
-        _log('rig zeroed the camera targets - rebuilt from ladder stop %d' % idx)
+        prev = _st.get('cam_prev')
+        if prev is not None:
+            for k in _CAM_KEYS:
+                rig.set_editor_property(k, float(prev[k]))
+            for k, v in (prev.get('live') or {}).items():
+                rig.set_editor_property(k, float(v))
+            how = 'restored the previous frame'
+        else:
+            L = LADDER_FALLBACK; idx = int(_cam_state.get('stop', 0))
+            rig.set_editor_property('TgtFocal', float(L['focal'][idx])); rig.set_editor_property('TgtReach', float(L['standoff'][idx]))
+            rig.set_editor_property('TgtHeight', float(L['height'][idx])); rig.set_editor_property('TgtTilt', float(L['tilt'][idx]))
+            how = 'rebuilt rung %d' % idx
+        import time
+        if time.time() - _cam_state.get('sanity_logged', 0.0) > 2.0:
+            _cam_state['sanity_logged'] = time.time()
+            _log('camera targets read zero outside Q/E - %s' % how)
     except Exception as e:
         if not _cam_state.get('sanity_warned'):
             _cam_state['sanity_warned'] = True
             _log('camera sanity unavailable: %s' % str(e)[:80])
-
 
 def _tick(dt):
     try:
@@ -664,6 +730,7 @@ def _tick(dt):
             _log('session start; rig=%s' % (_st['rig'].get_name() if _st['rig'] else None))
             _focus_game(pc)
             _st['cam_prev'] = None
+            _cam_state['stop'] = 0
             # Interim key legend until HUD v1 carries it (owner never found road
             # mode; the legend is the cheapest discoverability there is).
             unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   scroll: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
@@ -677,28 +744,23 @@ def _tick(dt):
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
-        _cam_sanity(rig)
-        if not edges['LeftMouseButton']:
+        if edges.get('E'):
+            _ladder_step(rig, +1)
+        elif edges.get('Q'):
+            _ladder_step(rig, -1)
+        else:
+            _cam_sanity(rig)
+        if not edges['LeftMouseButton'] and not (edges.get('E') or edges.get('Q')):
             _st['cam_prev'] = _cam_snapshot(rig)
-        # Keep the rig's SelectedParcel mirrored to the Python selection EVERY
-        # tick (2026-09-04, owner: "when I click on a built building it
-        # deselects it before I can press U"): the rig's own graph still
-        # carries remnants of its old click chain and clears its variable
-        # after a click; the HUD reads that variable, so the cluster
-        # collapsed while the Python selection stood. Re-asserting per tick
-        # makes the Python selection the one source of truth.
-        sel = _selected(rig)
-        try:
-            cur = rig.get_editor_property('SelectedParcel')
-            if (sel is not None and cur != sel) or (sel is None and cur is not None):
-                rig.set_editor_property('SelectedParcel', sel)
-        except Exception:
-            pass
+        # The rig's SelectedParcel is never written from here (2026-09-04): a
+        # reflected write to the rig re-runs its construction script and resets
+        # its non-instance-editable variables (StopIndex, the ladder arrays).
+        # The selection lives in Python; the rig's variable stays None and its
+        # HUD cluster collapsed until HUD v1 reads the selection from here.
+        _hold_selection(gw, gi, rig)
         if edges['G']:
             _road_mode_toggle(gw)
             _ghost_hide()
-        if edges.get('Q') or edges.get('E'):
-            _ladder_assist(rig)
         if edges['L']:
             import init_unreal as iu
             night = 0.0 if getattr(unreal, '_stacktown_night', 0.0) >= 0.5 else 1.0

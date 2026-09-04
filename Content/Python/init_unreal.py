@@ -152,6 +152,7 @@ def _place_refusal_message(reason):
 
 
 _TEST_STATE_PATH = os.path.join(_citytick.HERE, 'citystate_test.json')
+_WRITE_ACCUM_TO_PARCEL = False
 _LANE_MARKER_PATH = os.path.join(_citytick.HERE, 'lane_pie.marker')
 # A standalone -game process (Tools/play.sh) writes its pid here at driver
 # registration; an editor PIE that finds a LIVE pid in it steers itself to
@@ -500,9 +501,24 @@ def _sync_parcels(gw, gi):
             a.set_editor_property('Owned', bool(p['owned']))
         if int(a.get_editor_property('Tier')) != int(p['tier']):
             a.set_editor_property('Tier', int(p['tier']))
-        a.set_editor_property(
-            'Price', float(_econrules.price(p['rid'], p['tier'], p['width'])))
-        a.set_editor_property('Accum', float(p['accum']))
+        # Write-on-change only (2026-09-04): every reflected write to a
+        # BP_Parcel re-runs its construction script, which resets its
+        # non-instance-editable variables (Highlighted, LastOwned, LastTier...)
+        # - the parcel's own tick then drops the highlight and re-resolves its
+        # mesh. Unconditional Price/Accum writes did that to every lot every
+        # sync; the owner saw it as "selected for a second".
+        _price = float(_econrules.price(p['rid'], p['tier'], p['width']))
+        if abs(float(a.get_editor_property('Price')) - _price) > 1e-6:
+            a.set_editor_property('Price', _price)
+        # Accum changes every sync on an owned lot (rent), so writing it was a
+        # construction-script reset per owned parcel per tick: highlight
+        # dropped, LastOwned flipped, ResolveMesh re-ran. Nothing in the
+        # parcel's graphs reads Accum (checked 2026-09-04); HUD v1 reads the
+        # ledger from Python. Off until something on the actor needs it.
+        if _WRITE_ACCUM_TO_PARCEL:
+            _accum = float(p['accum'])
+            if abs(float(a.get_editor_property('Accum')) - _accum) > 1e-6:
+                a.set_editor_property('Accum', _accum)
         # Species is a pure function of RecipeId alone (D3: "a building does
         # not repaint itself when it gains a storey") so this is pushed
         # unconditionally, same as Price/Accum - ResolveMesh itself decides

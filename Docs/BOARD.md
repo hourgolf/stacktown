@@ -25,7 +25,7 @@ mid-conversation. Messages are a courtesy; THIS FILE is the record.
 STATUS 2026-09-04 (later): orbit direction flipped on the owner's word
 (two literal pins, read back, compiled, saved - f45ff59); click-camera
 hold + game focus in the driver (d831c11); Q/E ladder assist (2349b8c);
-selection re-mirror (0d1bcfb). Hot-reload into the running game works (Tools/reload_game.sh); key legend, prices on the selection line and ghost-material pads pushed live. HUD_V1.md has both halves (beta lane CONTENT 1-7, design lane LOOK 1-9) - the BUILD is the next beta-lane window. Awaiting the owner's play report.
+selection re-mirror (0d1bcfb). ROOT CAUSE of the camera relock + vanishing selection found (a changed reflected write re-runs the construction script and resets non-instance-editable BP vars) and fixed driver-side, verified in a test game; owner to relaunch. Hot-reload into the running game works (Tools/reload_game.sh); key legend, prices on the selection line and ghost-material pads pushed live. HUD_V1.md has both halves (beta lane CONTENT 1-7, design lane LOOK 1-9) - the BUILD is the next beta-lane window. Awaiting the owner's play report.
 Editor: no window held. Cannot send messages since ~05:30; reads all
 incoming ones.
 

@@ -1612,3 +1612,34 @@ into the wrong project. It has already caught it happening.
   Nothing else on the frozen rig touched. If the owner says it is now
   backwards the other way, the same two pins go back.
 
+
+- **CAMERA RELOCK AND VANISHING SELECTION: ROOT CAUSE FOUND AND FIXED
+  (2026-09-04, coordinator, verified in a test game on the test save).**
+  The engine's own log named it: "Attempted to access index 1 from array
+  'LadderTilt' of length 0" on every Q/E press. Experiment in a fresh
+  -game: the rig's ladder arrays read 5/5/5/5 after BeginPlay, still 5
+  after a same-value reflected write, 0/0/0/0 with StopIndex 0 after the
+  first CHANGED write from Python. A changed set_editor_property re-runs
+  the actor's construction script, which resets every non-instance-
+  editable Blueprint variable to its class default. So: the rig's own
+  Q/E read empty arrays and wrote 0 into all four targets; the driver's
+  sanity rebuild wrote targets (reset again, StopIndex back to 0); the
+  assist then re-applied rung 0 = the wide pose the owner saw it "lock"
+  to. Same mechanism on BP_Parcel: the per-tick rent (Accum) write reset
+  Highlighted/LastOwned on every owned lot every sync, so its own tick
+  dropped the highlight ("selected for a second") and re-ran ResolveMesh.
+  FIX (Python only, commit on proof): clickdriver owns the ladder stop
+  (steps from the rung nearest the current reach, writes the pose after
+  the rig's branch on the same frame, restores last frame's live values
+  first so the move eases); the sanity guard restores the previous frame
+  instead of snapping to a rung; the rig's SelectedParcel is never
+  written; the selected lot is re-highlighted and its line re-printed
+  every tick; init_unreal writes Price on change only and no longer
+  writes Accum to the actor (nothing in the parcel's graphs reads it).
+  Verified live: selection + highlight held 8 s through economy syncs,
+  camera eased to rung 3 and stayed, guard never fired. Residuals: the
+  rig's HUD cluster stays collapsed (HUD v1 reads from Python); four
+  harmless engine warnings per Q/E press until StopIndex and the four
+  Ladder arrays are made instance-editable on the frozen rig - a
+  variable-flag change, owner's word required. Memory:
+  reflected-write-resets-blueprint-vars.

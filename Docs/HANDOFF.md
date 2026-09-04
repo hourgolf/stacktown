@@ -1482,3 +1482,20 @@ into the wrong project. It has already caught it happening.
   The override dict was cleared after the session - its keys are pids,
   and the owner's save has a P2 and a P3 too.
 
+- **NIGHT GLOW: MATERIAL WIRED, TWO GAPS FOUND BY THE FRAME (2026-09-04
+  04:xx).** Design lane: emissive = GlowTint(GlowState) x GlowLevel x
+  NightAmount on the fork (252 expressions, unsaved), NightAmount a
+  scalar on MPC_WoodCity (deliberately not "Stacktown" - only the wood
+  master reads it); coordinator: the sync pushes GlowLevel/GlowState per
+  lot (for sale 0.35/0.5, owned 0.15/0.5 - for sale brighter, D23) and L
+  toggles NightAmount through MaterialLibrary.set_scalar_parameter_value
+  (set and read True). The acceptance frames (glow_D1/D2/N1/D3.png,
+  in-session HighResShot) then showed: (1) a FOR-SALE lot is the
+  placeholder pad - engine cube, BasicShapeMaterial - so the for-sale
+  glow has no fork material to render on; (2) NightAmount only gates the
+  emissive; nothing dims the world lights, so "night" is a daylit board
+  with an invisible 0.15 emissive. Both go back to the design lane as
+  declarations: a fork material for the pad (the ghost slabs already
+  live on the fork) and the night lighting STATE (per-light intensities)
+  the L toggle will apply. Per-lot glow remains unproven until then.
+

@@ -73,6 +73,13 @@ _CPD_AGE = _cpdmap.index('Age')
 _CPD_ATTENTION = _cpdmap.index('Attention')
 _CPD_FAILURE = _cpdmap.index('Failure')
 _CPD_SCORCH = _cpdmap.index('Scorch')
+_CPD_GLOW_LEVEL = _cpdmap.index('GlowLevel')
+_CPD_GLOW_STATE = _cpdmap.index('GlowState')
+# D23 (2026-09-04): for sale glows MORE than owned - attention belongs on
+# what can still be acted on; a finished city goes quiet. GlowState 0.5 is
+# neutral warm; its range is held for ACTIVITY once the economy can say it.
+_GLOW_FOR_SALE = (0.35, 0.50)
+_GLOW_OWNED = (0.15, 0.50)
 # ECONOMY_TICK_CONTRACT.md, "Patina's Age channel" - tunable, not measured.
 _AGE_MATURE_TICKS = 150.0
 
@@ -536,6 +543,9 @@ def _sync_parcels(gw, gi):
         building.set_custom_primitive_data_float(_CPD_ATTENTION, ov.get((pid, 'Attention'), 0.0))
         building.set_custom_primitive_data_float(_CPD_FAILURE, ov.get((pid, 'Failure'), 0.0))
         building.set_custom_primitive_data_float(_CPD_SCORCH, ov.get((pid, 'Scorch'), 0.0))
+        glow_level, glow_state = _GLOW_OWNED if bool(p.get('owned')) else _GLOW_FOR_SALE
+        building.set_custom_primitive_data_float(_CPD_GLOW_LEVEL, ov.get((pid, 'GlowLevel'), glow_level))
+        building.set_custom_primitive_data_float(_CPD_GLOW_STATE, ov.get((pid, 'GlowState'), glow_state))
     if changed:
         _write_state(gi, state)
 
@@ -1092,6 +1102,29 @@ def _register_city_driver():
         except Exception as e:
             unreal.log_warning('CITY DRIVER: standalone lock not written - %s' % e)
     unreal.log('CITY DRIVER: registered')
+
+
+_NIGHT_MPC = '/Game/Stacktown/Materials/MPC_WoodCity'
+_NIGHT_PARAM = 'NightAmount'
+
+
+def _set_night(gw, amount):
+    """B4's glow is a night language: NightAmount 0 = day, 1 = night, on the
+    design lane's parameter collection. Tolerates the collection not
+    existing yet (returns False) so the driver never depends on it."""
+    mpc = unreal.load_asset(_NIGHT_MPC)
+    if mpc is None or gw is None:
+        return False
+    try:
+        unreal.MaterialLibrary.set_scalar_parameter_value(gw, mpc, _NIGHT_PARAM, float(amount))
+        unreal._stacktown_night = float(amount)
+        return True
+    except Exception as e:
+        unreal.log_warning('CITY NIGHT: %s' % e)
+        return False
+
+
+unreal._stacktown_set_night = _set_night
 
 
 def _set_cpd(pid, channel, value):

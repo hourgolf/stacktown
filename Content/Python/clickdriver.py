@@ -59,7 +59,7 @@ def _make_key(name):
         return k
 
 
-for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'MouseScrollUp', 'MouseScrollDown'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'L', 'MouseScrollUp', 'MouseScrollDown'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -516,6 +516,16 @@ def _tick(dt):
         if edges['G']:
             _road_mode_toggle(gw)
             _ghost_hide()
+        if edges['L']:
+            import init_unreal as iu
+            night = 0.0 if getattr(unreal, '_stacktown_night', 0.0) >= 0.5 else 1.0
+            if iu._set_night(gw, night):
+                unreal.SystemLibrary.print_string(gw, 'NIGHT' if night >= 0.5 else 'DAY', True, False,
+                                                  unreal.LinearColor(0.8, 0.85, 1.0, 1.0), 1.5, 'daynight')
+                _log('night -> %.0f' % night)
+            else:
+                unreal.SystemLibrary.print_string(gw, 'No night yet (parameter collection missing)', True, False,
+                                                  unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 2.0, 'daynight')
         road_mode = _st.get('road_mode', False)
         if road_mode:
             _ghost_hide()

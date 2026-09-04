@@ -59,8 +59,7 @@ def _make_key(name):
         return k
 
 
-for _name in ('LeftMouseButton', 'B', 'N', 'U', 'R', 'MouseScrollUp', 'MouseScrollDown',
-              'W', 'A', 'S', 'D', 'Up', 'Down', 'Left', 'Right'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'MouseScrollUp', 'MouseScrollDown'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -137,7 +136,7 @@ def click_at_hit(gw, gi, rig, actor, x, y):
         try:
             owned = actor.get_editor_property('Owned'); tier = actor.get_editor_property('Tier')
             status = 'owned, tier %d' % tier if owned else 'for sale'
-            hint = '[U] upgrade  [R] repair' if owned else '[B] buy'
+            hint = '[U] upgrade  [H] repair' if owned else '[B] buy'
         except Exception:
             status = ''; hint = ''
         unreal.SystemLibrary.print_string(gw, '%s  %s   %s' % (label, status, hint), True, False,
@@ -180,7 +179,8 @@ def press_u(gw, gi, rig):
 
 
 def press_r(gw, gi, rig):
-    """REPAIR the selected lot (pay to repair, owner's ruling 4)."""
+    """REPAIR the selected lot (pay to repair, owner's ruling 4). Bound to H:
+    R is the rig's pedestal-up key (Docs/LENSRIG_P0.md)."""
     sel = _selected(rig)
     if sel is None:
         unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
@@ -412,76 +412,12 @@ def _hover(gw, gi, pc):
     _draw_ghost(gw, ok, text, box, loc.x, loc.y)
 
 
-# ---- Camera (2026-09-04): the rig re-applies its pose from its own
-# variables every tick, so the driver writes the VARIABLES and the rig
-# renders them. Same architecture as selection: Python owns input.
-# A/D orbit (Azimuth), W/S reel (Reach, continuous), arrows pan BoardCentre
-# in the camera frame. Q/E stay with the rig's own graph (its zoom ladder
-# is alive - the one part of its input that survived).
-CAM_LADDER = (19000.0, 3500.0, 1350.0, 800.0)
-CAM_ORBIT_DEG_S = 60.0
-CAM_REEL_PER_S = 0.9          # fraction of reach per second, W in / S out
-CAM_PAN_UU_S = 2500.0
-_cam_state = {'warned': False}
-
-
-def _rig_get(rig, name, default=None):
-    for n in ('Tgt' + name, name):
-        try:
-            return rig.get_editor_property(n)
-        except Exception:
-            continue
-    return default
-
-
-def _rig_set(rig, name, value):
-    """Write a pose value. The rig carries a TARGET twin of each pose
-    variable (TgtAzimuth beside Azimuth, ...) and eases the live value
-    toward it every tick, so the target is what input must move; the
-    live variable is written too so a rig without easing still follows."""
-    ok = False
-    for n in ('Tgt' + name, name):
-        try:
-            rig.set_editor_property(n, value)
-            ok = True
-        except Exception as e:
-            if not _cam_state['warned']:
-                _cam_state['warned'] = True
-                _log('camera: rig.%s is not writable (%s) - needs the instance-editable flag' % (n, str(e)[:60]))
-    return ok
-
-
-def _camera_tick(rig, pc, dt):
-    down = _st['down']
-    az = _rig_get(rig, 'Azimuth'); reach = _rig_get(rig, 'Reach')
-    if az is None or reach is None:
-        return
-    d_az = (CAM_ORBIT_DEG_S * dt) * ((1 if down.get('D') else 0) - (1 if down.get('A') else 0))
-    if d_az:
-        _rig_set(rig, 'Azimuth', (float(az) + d_az) % 360.0)
-    reel = (1 if down.get('S') else 0) - (1 if down.get('W') else 0)
-    if reel:
-        new_reach = float(reach) * (1.0 + reel * CAM_REEL_PER_S * dt)
-        _rig_set(rig, 'Reach', max(400.0, min(30000.0, new_reach)))
-    # Q/E deliberately NOT handled here (2026-09-04, owner: "starts fighting
-    # itself once zoomed in with the Q/E buttons"): the rig's own graph still
-    # runs the zoom ladder on Q/E, so a second writer made two targets
-    # alternate. The graph keeps the ladder; Python owns orbit, reel and pan.
-    px = (1 if down.get('Right') else 0) - (1 if down.get('Left') else 0)
-    py = (1 if down.get('Up') else 0) - (1 if down.get('Down') else 0)
-    if px or py:
-        import math
-        a = math.radians(float(_rig_get(rig, 'Azimuth', az)))
-        # camera-frame pan: forward is toward the board centre from the camera
-        fwd = (-math.cos(a), -math.sin(a)); right = (-fwd[1], fwd[0])
-        step = CAM_PAN_UU_S * dt
-        c = _rig_get(rig, 'BoardCentre')
-        if c is not None:
-            nx = c.x + step * (px * right[0] + py * fwd[0]); ny = c.y + step * (px * right[1] + py * fwd[1])
-            try:
-                rig.set_editor_property('BoardCentre', unreal.Vector(nx, ny, c.z))
-            except Exception:
-                pass
+# ---- Camera: NOT here (2026-09-04). BP_LensRig's own boom-space input is
+# alive and complete (Docs/LENSRIG_P0.md: A/D arc, W/S reach, R/F pedestal,
+# arrows head pan/tilt, E tighter, Q wider) - a Python camera on the same
+# keys gave every pose variable two writers, which the owner felt as
+# "wonky" and "can't zoom out". The driver owns clicks and verbs only.
+# Consequence: REPAIR moved from R (the rig's pedestal-up) to H.
 
 
 def _tick(dt):
@@ -508,7 +444,6 @@ def _tick(dt):
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
-        _camera_tick(rig, pc, dt)
         if not _st['down'].get('LeftMouseButton', False):
             _hover(gw, gi, pc)
         else:
@@ -532,7 +467,7 @@ def _tick(dt):
             press_b(gw, gi, rig)
         if edges['U']:
             press_u(gw, gi, rig)
-        if edges['R']:
+        if edges['H']:
             press_r(gw, gi, rig)
         if _st['down'].get('N', False):
             _st['n_acc'] += dt
@@ -579,7 +514,7 @@ def _press(name):
         return 'buy requested' if press_b(gw, gi, rig) else 'no selection'
     if name == 'U':
         return 'upgrade requested' if press_u(gw, gi, rig) else 'no selection'
-    if name == 'R':
+    if name in ('R', 'H'):
         return 'repair requested' if press_r(gw, gi, rig) else 'no selection'
     if name == 'N':
         press_n_reset(gw, gi, rig); return 'reset requested'

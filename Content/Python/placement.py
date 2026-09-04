@@ -552,7 +552,8 @@ def _next_road_id(state):
     return 'R%d' % n
 
 
-def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue'):
+def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
+                       pins_active=True):
     """(ok, reason, road) - the click-click -> road decision, the same
     role resolve_click plays for a lot: the ONE place a drawn road is
     accepted or refused, called by both the ghost preview and draw_road
@@ -560,6 +561,17 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue'):
     chord and refuses crossings/overlaps" needs exactly this shared
     authority - the same discipline the lot ghost already uses against
     resolve_click).
+
+    PINNED LOTS ARE CHECKED TOO, found while writing this function's own
+    self-tests, not assumed from resolve_click's shape: a pin is
+    registered into state['parcels'] with no 'placement' key at all
+    (ensure_parcel never adds one - only place() does, for a
+    player-created lot), so the placed-lot loop below silently skips
+    every pin by construction. Without a SEPARATE check a drawn road
+    could cross straight through an existing pinned building - the same
+    reason resolve_click keeps PINNED_SPANS as its own check, not folded
+    into the placed-lot scan. `pins_active` mirrors resolve_click's own
+    mode gate exactly, for the same empty-mode reason.
 
     AXIS-ALIGNED ONLY in this pass - a named v0 limit, not an oversight.
     resolve_click's own world-coordinate recovery (`road['start']
@@ -615,16 +627,25 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue'):
                 'overlap: the drawn road would cross an existing lot at '
                 '[%.1f, %.1f] on the %s'
                 % (lot['x0'], lot['x1'], lot_road_id(lot))), None
+    if pins_active:
+        for pin_x0, pin_x1, pin_side in PINNED_SPANS:
+            pin_lot = {'x0': pin_x0, 'x1': pin_x1, 'side': pin_side,
+                       'road_id': 'arterial'}
+            if rects_overlap(mine, lot_rect(pin_lot, roads)):
+                return False, (
+                    'overlap: the drawn road would cross a pinned lot at '
+                    '[%.1f, %.1f]' % (pin_x0, pin_x1)), None
     return True, '', candidate
 
 
-def draw_road(state, x0, y0, x1, y1, width_class='avenue'):
+def draw_road(state, x0, y0, x1, y1, width_class='avenue', pins_active=True):
     """One road-drawing attempt. (state, road_id, ok, reason) - road_id
     is None on refusal, mirroring place()'s own return shape exactly.
     On success, state['roads'][road_id] is the SAME dict
     resolve_road_draw already validated, inserted unchanged - not
     re-derived, the same discipline place() already holds for a lot."""
-    ok, reason, road = resolve_road_draw(state, x0, y0, x1, y1, width_class)
+    ok, reason, road = resolve_road_draw(state, x0, y0, x1, y1, width_class,
+                                          pins_active=pins_active)
     if not ok:
         return state, None, False, reason
     state.setdefault('roads', {})[road['id']] = road
@@ -1125,24 +1146,179 @@ if __name__ == '__main__':
         ok27b, reason27b, lot27b)
     assert lot_rect(s27['parcels']['A']['placement']) == (1640.0, 2460.0, -2630.0, -1130.0)
     assert lot_rect(s27b['parcels']['C']['placement']) == (1130.0, 2630.0, -2460.0, -1640.0)
-    print('placement self-check: 27/27 pass (pure-Python click->lot->state '
-          'contract, plate bounds measured off the real board mesh and '
-          'contain citylayout\'s block union, session-start reactivation '
-          'planning for both placed and pinned lots, pinned-span overlap '
-          'refusal mode-gated on pins_active, resolve_road MULTI-ROAD '
-          'FRONTAGE NOW WIRED INTO resolve_click per RESOLVE_ROAD_NOTES.md '
-          '- reduces to today\'s math on either road alone, nearest-road '
-          'disambiguation, crossing refusal (reachable both directly and '
-          'through resolve_click), point-to-segment not point-to-line, the '
-          'owner\'s own logged off-board click, cross-street placement on '
-          'both sides, in-the-road refused on whichever road actually won, '
-          'lot_road_id\'s backward-compat default now the single source, '
-          'CORNER overlap refused across roads by world footprint '
-          'three call sites share, a cross-street lot AND a legacy '
-          'road_id-less lot both surviving a real save_state/load_state '
-          'round-trip intact; live cursor-trace coordinates, actor '
-          'spawn/resolve, and the feel itself are NOT provable here - see '
-          'module docstring, and PLACEMENT_GRID.md section 8 - the '
-          'owner\'s own click on empty board is the real acceptance test)')
+    # ---- DRAWN ROADS, 2026-09-04 (Docs/ROAD_BUILD_CONTRACT.md task a/b)
+    # every number below verified against a real interpreter run before
+    # being written here, not hand-derived - the wall-to-wall pinned
+    # frontage this session already measured (north/south pins fill
+    # x 1130..6050 both signs, no gap) makes several of these points
+    # genuinely easy to get wrong by a quick estimate.
+
+    # 28. lot_rect REDUCES TO TODAY'S MATH, checked directly - both
+    #     built-ins have centreline 0 in the relevant axis, so the
+    #     generalized axis-lookup below must reproduce exactly the
+    #     hard-coded constants this function used to return.
+    assert lot_rect({'x0': 100.0, 'x1': 500.0, 'side': 'north',
+                      'road_id': 'arterial'}) == (100.0, 500.0, 1130.0, 2630.0)
+    assert lot_rect({'x0': 200.0, 'x1': 600.0, 'side': 'west',
+                      'road_id': 'cross'}) == (-2630.0, -1130.0, 200.0, 600.0)
+
+    # 29. _road_dict reads orientation off the segment's own geometry -
+    #     horizontal (same Y) gets the arterial's north/south
+    #     convention, vertical (same X) gets the cross street's
+    #     west/east convention, neither stored a second time.
+    horiz = {'id': 'H', 'start': (0.0, 100.0), 'end': (500.0, 100.0),
+             'width_class': 'avenue'}
+    vert = {'id': 'V', 'start': (300.0, 0.0), 'end': (300.0, 900.0),
+            'width_class': 'avenue'}
+    assert _road_dict(horiz)['side_plus'] == 'north'
+    assert _road_dict(horiz)['side_minus'] == 'south'
+    assert _road_dict(horiz)['axis'] == 'x'
+    assert _road_dict(vert)['side_plus'] == 'west'
+    assert _road_dict(vert)['side_minus'] == 'east'
+    assert _road_dict(vert)['axis'] == 'y'
+
+    # 30. _all_roads: the two built-ins alone on a fresh state, PLUS a
+    #     drawn segment once one exists - a fresh tuple each call, not
+    #     a cached list that could go stale between draws. Own fixture
+    #     with id='R1' matching its own dict key, the same invariant
+    #     draw_road always holds (state['roads'][road['id']] = road) -
+    #     not the id='H' fixture above, which would prove nothing about
+    #     key/id agreement.
+    s30 = citytick.seed_state()
+    assert [r['id'] for r in _all_roads(s30)] == ['arterial', 'cross']
+    s30['roads']['R1'] = {'id': 'R1', 'start': (0.0, 100.0),
+                           'end': (500.0, 100.0), 'width_class': 'avenue'}
+    assert [r['id'] for r in _all_roads(s30)] == ['arterial', 'cross', 'R1']
+
+    # 31. resolve_road_draw, HAPPY PATH: a horizontal road on the east
+    #     edge margin, y=3000 (clear of the arterial's own corridor -
+    #     its far edge is y=1130, and this road's OWN corridor only
+    #     reaches down to y=1870, no overlap) and x 6200..7600 (clear
+    #     of the north-pin frontage's own wall-to-wall span, which ends
+    #     at 6050, and clear of the cross street's corridor at x=0).
+    s31 = citytick.seed_state()
+    ok31, reason31, road31 = resolve_road_draw(s31, 6200.0, 3000.0, 7600.0, 3000.0)
+    assert ok31 and reason31 == '', (ok31, reason31)
+    assert road31 == {'id': 'R1', 'start': (6200.0, 3000.0),
+                       'end': (7600.0, 3000.0), 'width_class': 'avenue'}, road31
+
+    # 32. TOO DIAGONAL: dx=1000, dy=800 - neither delta reaches 3x the
+    #     other (1000 < 3*800=2400; 800 < 3*1000=3000), so this refuses
+    #     rather than silently picking an axis the player did not draw.
+    ok32, reason32, road32 = resolve_road_draw(s31, 0.0, 3000.0, 1000.0, 3800.0)
+    assert not ok32 and road32 is None and 'too diagonal' in reason32, (
+        ok32, reason32)
+
+    # 33. TOO SHORT: a valid horizontal orientation, but only 500 uu -
+    #     under MIN_ROAD_LENGTH (820, one lot's own narrowest width).
+    ok33, reason33, road33 = resolve_road_draw(s31, 6200.0, 3000.0, 6700.0, 3000.0)
+    assert not ok33 and road33 is None and 'too short' in reason33, (
+        ok33, reason33)
+
+    # 34. OFF-BOARD: past PLATE_X_MAX (7650).
+    ok34, reason34, road34 = resolve_road_draw(s31, 7000.0, 3000.0, 8000.0, 3000.0)
+    assert not ok34 and road34 is None and 'off-board' in reason34, (
+        ok34, reason34)
+
+    # 35. CROSSES AN EXISTING (BUILT-IN) ROAD: a horizontal candidate
+    #     directly on the arterial's own centreline, y=0.
+    ok35, reason35, road35 = resolve_road_draw(s31, 6200.0, 0.0, 7600.0, 0.0)
+    assert not ok35 and road35 is None and 'crosses' in reason35 \
+        and 'arterial' in reason35, (ok35, reason35)
+
+    # 36. CROSSES A PINNED LOT - the real gap found WHILE writing this
+    #     function's own self-tests, not assumed from resolve_click's
+    #     shape (its own docstring explains why): y=2900 is clear of
+    #     the arterial's corridor (far edge 1130, this candidate's own
+    #     near edge is 2900-1130=1770) but squarely inside a north
+    #     pin's own Y-band (1130..2630), and x 2000..3000 sits inside
+    #     the wall-to-wall pinned frontage. Refuses with pins_active=
+    #     True (the default); pins_active=False accepts the SAME
+    #     coordinates - the same mode-gate resolve_click already has,
+    #     extended here rather than reinvented.
+    ok36, reason36, road36 = resolve_road_draw(s31, 2000.0, 2900.0, 3000.0, 2900.0)
+    assert not ok36 and road36 is None and 'pinned lot' in reason36, (
+        ok36, reason36)
+    ok36b, reason36b, road36b = resolve_road_draw(
+        s31, 2000.0, 2900.0, 3000.0, 2900.0, pins_active=False)
+    assert ok36b and reason36b == '', (ok36b, reason36b)
+    assert road36b == {'id': 'R1', 'start': (2000.0, 2900.0),
+                        'end': (3000.0, 2900.0), 'width_class': 'avenue'}, road36b
+
+    # 37. VERTICAL HAPPY PATH: x=3000 (clear of the cross street's own
+    #     corridor at x=0 and of the north-pin frontage's own span, both
+    #     nowhere near 3000 in the RELEVANT sense here since this is a
+    #     vertical candidate), y 3400..4230 (=PLATE_Y_MAX exactly, length
+    #     830, over the 820 minimum) - proves the SAME function handles
+    #     the other axis, not just horizontal.
+    ok37, reason37, road37 = resolve_road_draw(s31, 3000.0, 3400.0, 3000.0, 4230.0)
+    assert ok37 and reason37 == '', (ok37, reason37)
+    assert road37 == {'id': 'R1', 'start': (3000.0, 3400.0),
+                       'end': (3000.0, 4230.0), 'width_class': 'avenue'}, road37
+
+    # 38. draw_road END TO END: R1 lands in state['roads'] unchanged from
+    #     what resolve_road_draw validated; a SECOND, non-crossing road
+    #     gets R2 (sequencing mirrors _next_pid exactly); a candidate
+    #     that would cross R1 SPECIFICALLY (not a built-in - isolated by
+    #     staying clear of both corridors: x=6900 is inside R1's own
+    #     x-span 6200..7600, y 2000..4230 stays clear of the arterial's
+    #     far edge at 1130) is refused by name.
+    s38 = citytick.seed_state()
+    s38, rid38, ok38, reason38 = draw_road(s38, 6200.0, 3000.0, 7600.0, 3000.0)
+    assert ok38 and rid38 == 'R1' and reason38 == '', (rid38, ok38, reason38)
+    assert s38['roads']['R1'] == {
+        'id': 'R1', 'start': (6200.0, 3000.0), 'end': (7600.0, 3000.0),
+        'width_class': 'avenue'}, s38['roads']['R1']
+    ok38x, reason38x, _ = resolve_road_draw(s38, 6900.0, 2000.0, 6900.0, 4230.0)
+    assert not ok38x and 'crosses' in reason38x and 'R1' in reason38x, (
+        ok38x, reason38x)
+    s38, rid38b, ok38b, reason38b = draw_road(s38, 3000.0, 3400.0, 3000.0, 4230.0)
+    assert ok38b and rid38b == 'R2' and reason38b == '', (
+        rid38b, ok38b, reason38b)
+    assert set(s38['roads'].keys()) == {'R1', 'R2'}, s38['roads'].keys()
+
+    # 39. FULL INTEGRATION: a lot placed AGAINST a drawn road, through
+    #     place() itself (task b's own point - resolve_click must
+    #     resolve against a drawn road exactly as it does the built-ins).
+    #     Click at (6900, 1700): 1700 is on R1's SOUTH frontage (across=
+    #     -1300, |across| > ROAD_HALF=1130, within block-depth reach),
+    #     nearer to R1 (1300) than to the arterial (1700) or anything
+    #     else. x0/x1 snap around 6900 exactly as they would on the
+    #     arterial; road_id is 'R1', not a built-in string. lot_rect
+    #     (via _all_roads, since R1 is not in the default ROADS-only
+    #     lookup) proves the axis-generalization end to end, not just in
+    #     isolation: south of a horizontal road with centre y=3000 means
+    #     y in [3000-2630, 3000-1130] = [370, 1870], read off R1's own
+    #     'start' the same way it is for the arterial.
+    s39 = citytick.seed_state()
+    s39, _, _, _ = draw_road(s39, 6200.0, 3000.0, 7600.0, 3000.0)
+    s39, pid39, ok39, reason39 = place(s39, 6900.0, 1700.0)
+    assert ok39 and pid39 == 'P1' and reason39 == '', (pid39, ok39, reason39)
+    assert s39['parcels']['P1']['placement'] == {
+        'x0': 6490.0, 'x1': 7310.0, 'side': 'south', 'road_id': 'R1'
+    }, s39['parcels']['P1']['placement']
+    assert lot_rect(s39['parcels']['P1']['placement'], _all_roads(s39)) == (
+        6490.0, 7310.0, 370.0, 1870.0)
+
+    print('placement self-check: 39/39 pass (pure-Python click->lot->state '
+          'contract; resolve_road multi-road frontage; cross-street and '
+          'corner-overlap coverage; save/load round-trip; free placement '
+          'along the road (1-27, prior sessions) PLUS drawn roads, '
+          '2026-09-04 (28-39): lot_rect generalized off any road\'s own '
+          'axis and reduces to today\'s math for both built-ins; '
+          '_road_dict/_all_roads make placement.ROADS dynamic per state '
+          '(task b); resolve_road_draw refuses off-board, too-diagonal, '
+          'too-short, crossing any existing road (built-in or drawn) and '
+          'crossing a pinned lot (mode-gated, the gap found while writing '
+          'these tests, not assumed from resolve_click\'s own shape); '
+          'draw_road persists unchanged and sequences R1/R2 like _next_pid; '
+          'a lot placed against a drawn road resolves, snaps and computes '
+          'its world footprint through the exact same path a built-in '
+          'road lot does, proven end to end; live cursor-trace '
+          'coordinates, actor spawn/resolve, and the feel itself are NOT '
+          'provable here - see module docstring, and PLACEMENT_GRID.md '
+          'section 8 - the owner\'s own click on empty board is the real '
+          'acceptance test)')
+
     if os.path.exists(_SELFTEST_PATH):
         os.remove(_SELFTEST_PATH)

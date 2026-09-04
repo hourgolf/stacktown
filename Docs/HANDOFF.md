@@ -1400,4 +1400,15 @@ into the wrong project. It has already caught it happening.
   two targets alternate. Python dropped Q/E; the graph keeps the ladder,
   Python owns orbit, reel and pan. A fight on a key is the tell that
   the graph side of that key is alive.
+  RESOLVED BY READING THE RIG'S OWN DOC (01:2x): Docs/LENSRIG_P0.md has
+  the complete boom-space scheme - A/D arc, W/S proportional reach, R/F
+  pedestal, arrows head pan/tilt, E tighter, Q wider - and it is ALIVE;
+  the Python camera duplicated A/D, W/S and the arrows, so every pose
+  variable had two writers ("wonky", "can't zoom out"). The Python
+  camera is removed; the rig keeps its own controls; REPAIR moved from R
+  (the rig's pedestal) to H. The original "camera doesn't work" in the
+  standalone was most likely keyboard FOCUS - the doc's own first
+  instruction is "click into the viewport so it has keyboard focus" -
+  not dead input. Lesson: the rig's doc existed the whole time; read
+  the owning doc before probing a live object.
 

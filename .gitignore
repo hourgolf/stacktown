@@ -103,3 +103,6 @@ Content/Python/lane_pie.marker
 
 # Wear A/B captures (design lane, 2026-09-03): ~1 GB of PNGs, local only.
 Saved/DirectionB/wear/
+
+# Runtime pid lock written by the standalone game (Tools/play.sh); never tracked.
+Saved/standalone.lock

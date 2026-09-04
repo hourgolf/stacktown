@@ -501,6 +501,30 @@ def _road_click(gw, gi, x, y):
 _cam_state = {}
 
 
+# The rig's own ladder, copied from its EventBeginPlay arrays (beta lane's
+# read, 2026-09-04) as a FALLBACK: the leftover click chain empties those
+# arrays along with the targets, so a rebuild cannot rely on reading them.
+LADDER_FALLBACK = {
+    'focal': [24.0, 50.0, 85.0, 135.0, 200.0],
+    'standoff': [19000.0, 11168.0, 3500.0, 1350.0, 800.0],
+    'height': [9000.0, 3400.0, 700.0, 1000.0, 900.0],
+    'tilt': [-25.0, -10.0, -5.0, -5.0, -2.0],
+}
+
+
+def _ladder_tables(rig):
+    """(focal, standoff, height, tilt) from the rig, or the fallback when
+    the rig's arrays read empty or short."""
+    try:
+        f = list(rig.get_editor_property('LadderFocal')); st = list(rig.get_editor_property('LadderStandoff'))
+        h = list(rig.get_editor_property('LadderHeight')); t = list(rig.get_editor_property('LadderTilt'))
+        if min(len(f), len(st), len(h), len(t)) >= 5:
+            return f, st, h, t
+    except Exception:
+        pass
+    return (LADDER_FALLBACK['focal'], LADDER_FALLBACK['standoff'], LADDER_FALLBACK['height'], LADDER_FALLBACK['tilt'])
+
+
 def _ladder_assist(rig):
     """Q/E ladder assist (2026-09-04, owner: "q/e still doesn't work both
     ways"). The rig's own graph steps StopIndex on Q/E and writes the four
@@ -512,12 +536,8 @@ def _ladder_assist(rig):
     the rig's own tables - no numbers of ours."""
     try:
         idx = int(rig.get_editor_property('StopIndex'))
-        focal = list(rig.get_editor_property('LadderFocal'))
-        stand = list(rig.get_editor_property('LadderStandoff'))
-        height = list(rig.get_editor_property('LadderHeight'))
-        tilt = list(rig.get_editor_property('LadderTilt'))
-        if not (0 <= idx < min(len(focal), len(stand), len(height), len(tilt))):
-            return
+        focal, stand, height, tilt = _ladder_tables(rig)
+        idx = max(0, min(idx, 4))
         rig.set_editor_property('TgtFocal', float(focal[idx]))
         rig.set_editor_property('TgtReach', float(stand[idx]))
         rig.set_editor_property('TgtHeight', float(height[idx]))
@@ -592,6 +612,41 @@ def _focus_game(pc):
         pass
 
 
+def _cam_sanity(rig):
+    """The rig's leftover click chain ZEROES the boom targets after a click
+    (read live in the owner's game, 2026-09-04: TgtReach/TgtHeight/TgtTilt/
+    TgtFocal all 0.0, actor at the origin - dangling Set nodes with default
+    0.0 pins, firing on a frame the mouse-down hold does not cover). A
+    reach under the rig's own W clamp (300) or a focal under 1 can never
+    be a real pose, so whenever the targets read that way they are
+    rebuilt from the rig's own ladder tables at its current StopIndex."""
+    try:
+        reach = float(rig.get_editor_property('TgtReach')); focal = float(rig.get_editor_property('TgtFocal'))
+    except Exception:
+        return
+    if reach >= 300.0 and focal >= 1.0:
+        return
+    try:
+        idx = int(rig.get_editor_property('StopIndex'))
+        foc, stand, height, tilt = _ladder_tables(rig)
+        idx = max(0, min(idx, 4))
+        rig.set_editor_property('TgtReach', float(stand[idx])); rig.set_editor_property('TgtHeight', float(height[idx]))
+        rig.set_editor_property('TgtTilt', float(tilt[idx])); rig.set_editor_property('TgtFocal', float(foc[idx]))
+        # the live values ease toward the targets; nudge them too so the
+        # recovery is immediate rather than a slow climb from the origin
+        for live, tgt in (('Reach', stand[idx]), ('Height', height[idx]), ('Tilt', tilt[idx]), ('Focal', foc[idx])):
+            try:
+                rig.set_editor_property(live, float(tgt))
+            except Exception:
+                pass
+        _st['cam_prev'] = None
+        _log('rig zeroed the camera targets - rebuilt from ladder stop %d' % idx)
+    except Exception as e:
+        if not _cam_state.get('sanity_warned'):
+            _cam_state['sanity_warned'] = True
+            _log('camera sanity unavailable: %s' % str(e)[:80])
+
+
 def _tick(dt):
     try:
         gw = _world()
@@ -622,6 +677,7 @@ def _tick(dt):
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
+        _cam_sanity(rig)
         if not edges['LeftMouseButton']:
             _st['cam_prev'] = _cam_snapshot(rig)
         # Keep the rig's SelectedParcel mirrored to the Python selection EVERY

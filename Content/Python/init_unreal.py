@@ -667,7 +667,7 @@ def _reactivate_placed_parcels(gw, gi):
     # need no pool actor and must not be paired again (2026-09-04: "no
     # dormant pool actor left" warnings on every reload).
     standing = {a.get_actor_label() for a in unreal.GameplayStatics.get_all_actors_of_class(gw, parcel_class)}
-    placed = [pid for pid in placed if pid not in standing]
+    placed_pids = [pid for pid in placed_pids if pid not in standing]
     pairs, unmatched = _placement.plan_reactivation(
         placed_pids, pool_actors.keys())
     for pid, label in pairs:

@@ -78,7 +78,7 @@ _CPD_GLOW_STATE = _cpdmap.index('GlowState')
 # D23 (2026-09-04): for sale glows MORE than owned - attention belongs on
 # what can still be acted on; a finished city goes quiet. GlowState 0.5 is
 # neutral warm; its range is held for ACTIVITY once the economy can say it.
-_GLOW_FOR_SALE = (0.35, 0.50)
+_GLOW_FOR_SALE = (0.00, 0.50)   # D20: an unbought lot is bare board - it reads by ABSENCE, it does not glow
 _GLOW_OWNED = (0.15, 0.50)
 # ECONOMY_TICK_CONTRACT.md, "Patina's Age channel" - tunable, not measured.
 _AGE_MATURE_TICKS = 150.0
@@ -1104,6 +1104,51 @@ def _register_city_driver():
     unreal.log('CITY DRIVER: registered')
 
 
+# Night = the studio going down (design lane, 2026-09-04): fractions of each
+# light's DAY value, remembered at the first night and restored by day. The
+# unlit studio walls are a separate material question (referencer check).
+_NIGHT_FACTORS = {
+    'CITY_Sun': 0.00, 'CITY_Key': 0.10, 'CITY_Fill': 0.04,
+    'CITY_StreetKey_A': 0.04, 'CITY_StreetKey_C': 0.04, 'CITY_Sky': 0.15,
+    'LIGHT_BoardKey': 0.00,
+}
+_NIGHT_SKY_COLOR = unreal.LinearColor(0.55, 0.68, 0.95, 1.0)   # cooled ambient so a warm window reads warm
+
+
+def _apply_night_lights(gw, night):
+    """Dim (night) or restore (day) the rig's lights by actor label, in the
+    playing world. Day values are captured once per session from the
+    actors themselves, never hard-coded."""
+    st = getattr(unreal, '_stacktown_driver_state', None)
+    if st is None or gw is None:
+        return 0
+    day = st.setdefault('day_lights', {})
+    n = 0
+    for a in unreal.GameplayStatics.get_all_actors_of_class(gw, unreal.Actor):
+        label = a.get_actor_label()
+        if label not in _NIGHT_FACTORS:
+            continue
+        for c in a.get_components_by_class(unreal.LightComponentBase):
+            key = label
+            if key not in day:
+                try:
+                    day[key] = (float(c.get_editor_property('intensity')), c.get_editor_property('light_color'))
+                except Exception:
+                    day[key] = (float(c.get_editor_property('intensity')), None)
+            inten, color = day[key]
+            try:
+                c.set_intensity(inten * _NIGHT_FACTORS[label] if night else inten)
+                if label == 'CITY_Sky':
+                    if night:
+                        c.set_light_color(_NIGHT_SKY_COLOR)
+                    elif color is not None:
+                        c.set_light_color(unreal.LinearColor(color.r / 255.0, color.g / 255.0, color.b / 255.0, 1.0))
+                n += 1
+            except Exception as e:
+                unreal.log_warning('CITY NIGHT: %s - %s' % (label, e))
+    return n
+
+
 _NIGHT_MPC = '/Game/Stacktown/Materials/MPC_WoodCity'
 _NIGHT_PARAM = 'NightAmount'
 
@@ -1118,6 +1163,8 @@ def _set_night(gw, amount):
     try:
         unreal.MaterialLibrary.set_scalar_parameter_value(gw, mpc, _NIGHT_PARAM, float(amount))
         unreal._stacktown_night = float(amount)
+        lit = _apply_night_lights(gw, float(amount) >= 0.5)
+        unreal.log('CITY NIGHT: amount %.0f, %d lights %s' % (amount, lit, 'dimmed' if amount >= 0.5 else 'restored'))
         return True
     except Exception as e:
         unreal.log_warning('CITY NIGHT: %s' % e)

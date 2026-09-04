@@ -1498,4 +1498,16 @@ into the wrong project. It has already caught it happening.
   declarations: a fork material for the pad (the ghost slabs already
   live on the fork) and the night lighting STATE (per-light intensities)
   the L toggle will apply. Per-lot glow remains unproven until then.
+  NIGHT MECHANISM (04:xx): L applies NightAmount on MPC_WoodCity AND dims
+  the rig by the design lane's fractions (Sun 0, Key 0.10, Fill and
+  StreetKeys 0.04, Sky 0.15 and cooled, BoardKey 0), day values captured
+  from the actors at first use and restored by day. CITY_Sky is a
+  SPECIFIED CUBEMAP (GrayLightTextureCube), not a scene capture, so
+  intensity is the right dial. The studio wall: M_StudioWall is SHARED
+  (Sandbox_Bench renders it) while MI_studio_wall_city is ours - and an
+  instance cannot read a parameter collection, so the wall gets a
+  second fork (M_WoodStudioWall, NightWallDim 0.12 from the same
+  collection), our one instance re-parented, the flagship master
+  untouched and named in woodmaster.py's guard. For-sale glow dropped:
+  D20 says an unbought lot is bare board and reads by absence.
 

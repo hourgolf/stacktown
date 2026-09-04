@@ -25,6 +25,16 @@ import wood_board as wb  # noqa: E402
 
 MATD = wb.MATD
 SHARED = wb.MASTER                                  # the flagship's. read-only.
+# Every master this lane may NOT write to. M_StudioWall joined the list on
+# 2026-09-03: its only referencers are Sandbox_Bench (flagship) and our own
+# MI_studio_wall_city, so it is shared, and the night dim goes in a fork.
+# Named here rather than remembered, because the first fork proved that a
+# boundary hardcoded in a second place is how it quietly stops holding.
+SHARED_MASTERS = (
+    wb.MASTER,
+    '%s/M_StudioWall.M_StudioWall' % wb.MATD,
+)
+WALL_FORK = '%s/M_WoodStudioWall.M_WoodStudioWall' % wb.MATD
 FORK = '%s/M_WoodMaster.M_WoodMaster' % MATD        # direction B's own
 TARGET = FORK                                       # everything wear writes to
 
@@ -39,8 +49,11 @@ CANDIDATE_SHARED = ('MI_board_plot', 'MI_board_road', 'MI_model_board',
 
 
 def assert_not_shared(path):
-    """Refuse any write aimed at the flagship's master. Called by wear.py."""
-    if path.split('.')[0] == SHARED.split('.')[0]:
-        raise AssertionError(
-            'direction B may not edit the shared master (%s). The owner put '
-            'the flagship out of this lane on 2026-09-02; use FORK.' % SHARED)
+    """Refuse any write aimed at a master the flagship also renders."""
+    target = path.split('.')[0]
+    for m in SHARED_MASTERS:
+        if target == m.split('.')[0]:
+            raise AssertionError(
+                'direction B may not edit %s - the flagship renders it too. '
+                'The owner put the flagship out of this lane on 2026-09-02; '
+                'duplicate and re-parent instead.' % m.split('/')[-1])

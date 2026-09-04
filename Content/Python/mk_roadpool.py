@@ -43,6 +43,12 @@ def build_road_pool():
         a.set_actor_label(label)
         a.set_actor_hidden_in_game(True)
         a.set_actor_enable_collision(False)
+        # MOVABLE, or the driver cannot move it at runtime (2026-09-04: the
+        # first pool's pieces stayed at the graveyard - a placed
+        # StaticMeshActor is Static by default and SetActorLocation is a
+        # no-op on it in play).
+        for c in a.get_components_by_class(unreal.StaticMeshComponent):
+            c.set_mobility(unreal.ComponentMobility.MOVABLE)
         mesh_path = mat_path = None
         for c in a.get_components_by_class(unreal.StaticMeshComponent):
             c.set_material(0, mat)
@@ -50,7 +56,8 @@ def build_road_pool():
             mesh_path = sm.get_path_name() if sm else None
             m0 = c.get_material(0)
             mat_path = m0.get_path_name() if m0 else None
-        readback.append((label, mesh_path, mat_path, a.get_class().get_name()))
+        mob = [str(c.get_editor_property('mobility')) for c in a.get_components_by_class(unreal.StaticMeshComponent)]
+        readback.append((label, mesh_path, mat_path, a.get_class().get_name() + ' ' + ','.join(mob)))
     for label, mesh_path, mat_path, cls in readback:
         print('%s  %s  mesh=%s  material=%s' % (label, cls, mesh_path, mat_path))
     print('road pool: %d dormant POOL_ROAD_NN actors staged at the graveyard, hidden, '

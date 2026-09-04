@@ -61,6 +61,23 @@ HUD, and PIE play sessions for the owner. NOT in scope: phase F
    The owner never writes the marker. Full reasoning and the two
    named failure modes: HANDOFF §5.
 
+   **Found live, 2026-09-04**: `_state_path_source()` used to resolve
+   on EVERY call, not once. Writing `lane_pie.marker` for an editor
+   test while the owner's own standalone game (`Tools/play.sh`) was
+   already running let the game's own next ticks read the marker
+   mid-session and mirror the owner's real state into
+   `citystate_test.json`, then mirror it BACK the moment the marker
+   was removed — both files identical four seconds apart. No damage:
+   the owner's save was only ever mirrored, never overwritten with
+   test content — but the lane's OWN test road/lot vanished
+   underneath it, read as a bug in the test rather than in the
+   isolation. Fixed: the path is resolved ONCE at session start and
+   cached in the driver's own state (cleared at PIE end; a game
+   process keeps its first answer for life). **The rule this
+   generalizes to, worth carrying past this one case: anything that
+   steers a running process by a file on disk is read once, at a
+   boundary, never per call.**
+
 ## Opening prompt for the session that staffs this lane
 
 "You are the BETA GAMEPLAY session for Stacktown Alpha, running the

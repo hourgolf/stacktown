@@ -351,6 +351,11 @@ def _show_road(gw, seg):
         return None
     a = pool[free[0]]
     loc, rot, scale = _road_transform(seg)
+    for c in a.get_components_by_class(unreal.StaticMeshComponent):
+        try:
+            c.set_mobility(unreal.ComponentMobility.MOVABLE)
+        except Exception:
+            pass
     a.set_actor_location_and_rotation(loc, rot, False, False)
     a.set_actor_scale3d(scale)
     a.set_actor_label(seg['id'])

@@ -1443,3 +1443,22 @@ into the wrong project. It has already caught it happening.
   process by a file on disk must be read once, at a boundary, never per
   call.
 
+- **ROAD POOL IN TESTCITY, ROADS VISIBLE (2026-09-04 02:2x, owner's word
+  "save the testcity for road pool").** mk_roadpool.py placed ten
+  POOL_ROAD_NN StaticMeshActors (stock cube, MI_studio_grey, hidden, no
+  collision) at the parcel pool's graveyard; save_current_level saved
+  TestCity only (the dirty wooden master untouched, checked by mtime).
+  First proof failed the useful way: the piece took the label, scale
+  and visibility but stayed at the graveyard - a placed StaticMeshActor
+  is STATIC mobility and SetActorLocation is a no-op on it in play.
+  Pieces are now Movable at build time and the driver sets mobility
+  again before moving. Proven: R1 drawn (6500,1500)->(6500,4000) put
+  POOL_ROAD_00 at (6500, 2750, 4), yaw 90, scale (25, 22.6, 0.08),
+  visible, on the test file. INCIDENT, cleaned: the owner had closed
+  their standalone game, so the lock no longer steered my proof PIE
+  and it ran on the owner's save - a test road R1 was drawn into it
+  and removed by hand (backup in the scratchpad; their eight lots
+  untouched). Rule: before any coordinator PIE, write the marker
+  unless a game with the OLD resolver is running - never rely on the
+  lock alone, it depends on a process the owner can close at any time.
+

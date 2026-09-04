@@ -513,6 +513,20 @@ def _tick(dt):
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
+        # Keep the rig's SelectedParcel mirrored to the Python selection EVERY
+        # tick (2026-09-04, owner: "when I click on a built building it
+        # deselects it before I can press U"): the rig's own graph still
+        # carries remnants of its old click chain and clears its variable
+        # after a click; the HUD reads that variable, so the cluster
+        # collapsed while the Python selection stood. Re-asserting per tick
+        # makes the Python selection the one source of truth.
+        sel = _selected(rig)
+        try:
+            cur = rig.get_editor_property('SelectedParcel')
+            if (sel is not None and cur != sel) or (sel is None and cur is not None):
+                rig.set_editor_property('SelectedParcel', sel)
+        except Exception:
+            pass
         if edges['G']:
             _road_mode_toggle(gw)
             _ghost_hide()

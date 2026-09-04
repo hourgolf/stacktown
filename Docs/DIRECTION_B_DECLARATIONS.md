@@ -1983,7 +1983,21 @@ Age moves the frame seventy-six times the drift. Attention does not move it
 at all. **Attention's mechanism is confirmed dead, and Age's graph is
 confirmed live**, both now on evidence that could have come out either way.
 
-### AND THE ONE THAT BLOCKS EVERYTHING: CPD NEVER ARRIVES
+### RESOLVED 2026-09-03: CPD arrives when something actually pushes it
+
+The section below is correct about the DIAGNOSIS and wrong about the
+prognosis. The component property really is the editor-set defaults array and
+the shader really does read the runtime values — but the runtime values are
+reachable, by a `SetCustomPrimitiveDataFloat` call from the driver's sync
+rather than a property write. The beta lane built that, and four oak lots in
+one row now carry four different states (D23's proof table).
+
+**What was never wrong: "a read-back proves the write landed, never that the
+thing the write was for now works."** The CPD property write read back
+perfectly throughout and drew nothing. That remains the lesson; only the
+"cannot be built" conclusion is retired.
+
+### ~~AND THE ONE THAT BLOCKS EVERYTHING: CPD NEVER ARRIVES~~ — the diagnosis stands, the blocker does not
 
 Age works when driven from the instance and does nothing when driven through
 Custom Primitive Data. Writing `CustomPrimitiveData.data` on the component
@@ -2955,7 +2969,40 @@ something is possible, not where something exists.
 **Growing pulses and nothing else does.** Motion is the scarcest signal on a
 static board; spend it on the one state that is genuinely transient.
 
-### The mechanism is BLOCKED and this is a declaration, not a plan
+### UNBLOCKED AND PROVEN, 2026-09-03. The section below is superseded.
+
+The runtime push landed — a real `SetCustomPrimitiveDataFloat` on each lot's
+Building component, held by the sync every tick — and the acceptance test this
+declaration specified was run against it.
+
+**The framing was the one written here: two adjacent lots of THE SAME SPECIES
+in different states, with same-species controls.** Four oak towers, same
+recipe, same tier, one row:
+
+| lot | set to | delta top / mid / base | verdict |
+|---|---|---|---|
+| P4 | control | +0.4 / −0.0 / −0.1 | unchanged |
+| P3 | Scorch 0.5 | **−30.3** / −9.0 / −0.1 | gradient, top-down |
+| P2 | Failure 0.85 | −26.6 / −27.4 / −28.0 | uniform, spread 1.4 |
+| P1 | control | −0.3 / −0.7 / −0.4 | unchanged |
+
+Drift floor 0.55. **A per-species mechanism cannot produce that frame** — two
+lots of one species differ while two others of the same species do not. That
+was the single thing the same-species condition existed to exclude, and it is
+excluded.
+
+**Two controls, not one, and they earn their place.** Bracketing the treated
+pair is what makes the frame readable without arithmetic: the eye sees two
+warm blocks unchanged at the ends and two altered in the middle. One control
+would have left "the light falls off across the row" open.
+
+**D16's shape distinction also rendered**: P2 uniform to within 1.4 levels,
+P3 losing 30.3 at the crown and 0.1 at the base. Same colour, different
+distribution, accident told from failure with nothing in the HUD.
+
+**So the glow is buildable.** What follows below described why it was not.
+
+### ~~The mechanism is BLOCKED~~ — superseded, kept for the reasoning
 
 `GlowLevel` and `GlowState` are CPD channels 1 and 2, reserved for these in
 `cpdmap.py`. **CPD does not reach the shader** — measured: Age driven through

@@ -2009,6 +2009,67 @@ proven, the seven species curves are written with walnut running backwards as
 D16 requires, and the material can age a whole species at a time today. What
 it cannot do is age ONE BUILDING.
 
+### SOLVED 2026-09-03: the mask was reading VERTEX COLOUR
+
+Everything below this heading is superseded as to CAUSE. The symptom was
+recorded correctly from the beginning; every explanation of it was wrong,
+including two of this lane's own corrections.
+
+**The curvature mask is `saturate((1 - X) / EdgeWearWidth)`, and X was
+`ComponentMask_13` -> `VertexColor_0`, the RED CHANNEL OF VERTEX COLOUR.**
+These meshes carry no vertex colours. Unset vertex colour is white, so R = 1,
+`1 - 1 = 0`, and **the mask has been exactly zero on every board this lane has
+ever made.**
+
+**And the real computation was orphaned.** `Abs_0` -> `ComponentMask_1/2/3` ->
+`Max_0` -> `Max_1` is the max|n| the whole design rests on. Every consumer in
+the graph was checked: **`Max_1` is consumed by nothing.** It has been computed
+every frame and discarded.
+
+**The fix is one wire:** `Max_1` -> `OneMinus_0`.
+
+| measurement, fork, subject in frame | |
+|---|---|
+| whole frame | 0.22 levels — the chamfer is a few pixels wide |
+| column profile peak | **9.29**, narrow, at the chamfer columns |
+| drift floor | 0.478 |
+| signal / drift | **~19x, localised** |
+
+And the frame was LOOKED at: the corner carries a lit strip that the before
+frame does not.
+
+### What this lane got wrong, twice, and why the errors were invisible
+
+**D16's original cause was wrong.** It said the mask "scored 0.00 on every
+board this lane ever made, because `add_cube` leaves `max|n|` at 1 on every
+face", and predicted the 14 uu chamfer would give it a surface "for the first
+time". **The symptom line is exactly right and stays.** The cause was not the
+chamfer, and `max|n|` was never consulted at all.
+
+**The normals correction was also wrong, and it was correct.** `PixelNormalWS`
+-> `VertexNormalWS` is a real defect really fixed — the proxy asks a geometric
+question and was reading a shaded normal. It changed nothing because **it
+landed at the head of the dead branch.** Two true fixes, neither of which could
+ever have worked, because both were upstream of a wire that went nowhere.
+
+**Why four sessions of measurement missed it.** Every experiment drove an
+INPUT and inferred the mask from a frame: `EdgeWearLift` to 12, then to 100,
+`Attention` to 8, the CPD flag off, the normals swapped. All of them multiply a
+mask that is zero, so **all of them correctly produced nothing** — and each
+null result sent the search to the next input. The nulls were not evidence of
+absence; they were the same evidence five times.
+
+**What found it was reading the VALUE, not driving an input.** Wire the mask
+to `MP_EmissiveColor` and look at it. One window. It should have been the first
+move, and the reason it was not is that driving an input feels like an
+experiment while reading a value feels like a detour.
+
+**The rule, general:** when a chain produces nothing and every input you drive
+changes nothing, stop driving inputs and read an intermediate value directly.
+A null result from a driven input cannot distinguish "the mechanism is weak"
+from "the mechanism is multiplied by zero somewhere downstream", and no number
+of additional inputs will separate them.
+
 ### THE NORMALS HYPOTHESIS IS WRONG. Counted 2026-09-02.
 
 The section below names welded or averaged bevel normals as the first suspect,

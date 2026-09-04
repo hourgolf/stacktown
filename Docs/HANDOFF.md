@@ -1297,3 +1297,43 @@ into the wrong project. It has already caught it happening.
   was in the INSTRUMENT (a reader blind to an enum; a trace asking for
   complex geometry) and both times the SUBJECT was changed first.
 
+- **GROWTH DECIDED BY THE OWNER (2026-09-03 late):** climbing upgrade
+  price; performance from PLAYER TRADES ONLY (no automatic score); poor
+  performance charges a premium, never blocks; pay to repair; nothing
+  changes by itself. econrules.tick() stops tiering up; UPGRADE and
+  REPAIR verbs join buy on the request-and-clear pattern; a neutral
+  per-lot performance value waits for the trading system, which is the
+  next design question for the owner (what a trade is).
+  ECONOMY_TICK_CONTRACT.md carries the answers verbatim.
+
+- **EDGE WEAR: FOUR SESSIONS OF NULLS EXPLAINED BY ONE WIRE (2026-09-04
+  00:xx, design lane).** The curvature mask on the wood master read
+  VERTEX COLOUR RED (unset = 1, so 1 - 1 = 0) while the real max|n|
+  branch (Abs -> masks -> Max_1) was computed every frame and consumed by
+  nothing. Every experiment for four sessions drove an INPUT that
+  multiplied a mask that was zero - EdgeWearLift 12 and 100, Attention 8,
+  the CPD flag, the chamfer, the PixelNormalWS -> VertexNormalWS
+  correction - and every null was correct. Found in one window by wiring
+  the mask to emissive and LOOKING at the value. Fix: Max_1 -> OneMinus_0
+  on the FORK; proven 19x signal over drift on the chamfer columns. D16's
+  cause is being corrected by its author; its symptom stood. Rule, in
+  the coordinator's words: when a chain of nulls grows past two, stop
+  driving inputs and read the intermediate value directly. Fork fix is
+  IN MEMORY awaiting the owner's save word.
+
+- **UPGRADE AND REPAIR LIVE (2026-09-04 00:xx).** The beta lane's
+  econrules.upgrade/repair (13/13) and citytick wrappers (9/9) are
+  consumed by the driver on Python-side channels
+  (unreal._stacktown_upgrade_request / _repair_request, consume-and-
+  clear next to buy - no GameInstance variables, Python-to-Python like
+  the width channel); clickdriver binds U and R with on-screen results.
+  Proven in an isolated PIE: select P3 -> B bought -> U "done", tier 0
+  -> 1 -> R refused "not failed"; no CITY TICK tier-ups in the session
+  (growth retired). Note: lots registered before the schema change lack
+  'failed'/'performance' keys (read as None; econrules treats missing as
+  neutral/not failed) - new lots carry them. Rent cadence (part E) still
+  open; the test file's balance reads 60k. Edge wear: the design lane's
+  A/B shows Attention 0 vs 1 at 32x signal over drift on the chamfer
+  columns - D16's burnished arris renders for the first time; the fork
+  save waits on the owner's word IN THE DESIGN SESSION (their rule).
+

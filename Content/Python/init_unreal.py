@@ -649,6 +649,32 @@ def _city_driver_tick(delta_seconds):
             _write_state(gi, new_state)
             _push_economy_fields(gi, new_state)
 
+        # Upgrade / repair channels (2026-09-04, the owner's growth ruling):
+        # Python-side attributes set by clickdriver.py, consumed and cleared
+        # here exactly like buy - no GameInstance variable needed for
+        # Python-to-Python (same reasoning as the width channel). Age
+        # resets on upgrade for free: _sync_parcels keys its reset off the
+        # tier VALUE changing (age_last_tier != tier), not off tick().
+        for attr, verb, fn in (('_stacktown_upgrade_request', 'UPGRADE', _citytick.city_upgrade),
+                               ('_stacktown_repair_request', 'REPAIR', _citytick.city_repair)):
+            req = getattr(unreal, attr, None)
+            if req:
+                setattr(unreal, attr, None)
+                city_state = _read_state(gi)
+                new_state, ok, reason = fn(city_state, req, _state_path_for())
+                if ok:
+                    unreal.log('CITY %s: %s done' % (verb, req))
+                    unreal.SystemLibrary.print_string(
+                        gi, '%s %s' % (req, 'upgraded' if verb == 'UPGRADE' else 'repaired'),
+                        True, False, unreal.LinearColor(0.7, 1.0, 0.8, 1.0), 2.0, 'CityVerb')
+                else:
+                    unreal.log_warning('CITY %s: %s refused - %s' % (verb, req, reason))
+                    unreal.SystemLibrary.print_string(
+                        gi, "Can't %s: %s" % (verb.lower(), reason), True, False,
+                        unreal.LinearColor(1.0, 0.4, 0.0, 1.0), 3.0, 'CityVerb')
+                _write_state(gi, new_state)
+                _push_economy_fields(gi, new_state)
+
         # Placement channel: PLACEMENT_GRID.md section 8's v0. BP's whole
         # job is writing a world-space (x, y) hit location; this is the
         # ONLY place placement.place() ever gets called from, and the

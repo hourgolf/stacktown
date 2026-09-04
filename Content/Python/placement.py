@@ -51,8 +51,13 @@ as a sibling pure-Python dependency (for PINNED_SPANS below) - citylayout
 itself has zero unreal dependency either (city.py/parcelmeta, the same
 declare-first family), so this module's headless self-testability is
 unchanged, just its declared-geometry vocabulary grew by one import.
+2026-09-03 added `econrules` the same way, for PERFORMANCE_NEUTRAL alone
+- place()'s own 'performance' default reads it directly rather than
+carrying a second, hardcoded copy of the same neutral value that could
+drift from econrules.py's own choice.
 """
 import citylayout
+import econrules
 
 WIDTH_QUANTUM = 410.0
 
@@ -412,12 +417,15 @@ def place(state, x, y, pins_active=True, width=V0_WIDTH):
     """One placement attempt. (state, pid, ok, reason) - pid is None on
     refusal. On success, state['parcels'][pid] has EXACTLY the shape
     citytick.ensure_parcel() already produces for a pinned parcel
-    ({rid, tier, width, owned, accum}) PLUS one new key, 'placement',
-    that pinned parcels never carry. This is deliberate: _sync_parcels
-    and econrules.py read the five original keys and were never written
-    to care about extra ones, so this is additive by construction, not
-    a schema migration - proven in self-test 6 below, not just asserted
-    here.
+    ({rid, tier, width, owned, accum, failed, performance}) PLUS one new
+    key, 'placement', that pinned parcels never carry. This is
+    deliberate: _sync_parcels and econrules.py read the seven original
+    keys and were never written to care about extra ones, so this is
+    additive by construction, not a schema migration - proven in
+    self-test 6 below, not just asserted here. 'failed'/'performance'
+    (task C/D, 2026-09-03) come from econrules.py's own defaults, not a
+    second hardcoded copy of the same neutral value - kept in sync with
+    ensure_parcel's identical choice by construction, not by convention.
 
     `pins_active` passes straight through to resolve_click - see its
     docstring for why this is mode-gated, not a permanent board fact."""
@@ -432,7 +440,8 @@ def place(state, x, y, pins_active=True, width=V0_WIDTH):
     pid = _next_pid(state)
     state['parcels'][pid] = {
         'rid': V0_RECIPE, 'tier': 0, 'width': width,
-        'owned': False, 'accum': 0.0,
+        'owned': False, 'accum': 0.0, 'failed': False,
+        'performance': econrules.PERFORMANCE_NEUTRAL,
         'placement': {'x0': lot['x0'], 'x1': lot['x1'], 'side': lot['side'],
                       'road_id': lot['road_id']},
     }
@@ -529,7 +538,8 @@ if __name__ == '__main__':
     assert ok and pid == 'P1' and reason == '', (pid, ok, reason)
     assert s['parcels']['P1'] == {
         'rid': 'vernacular', 'tier': 0, 'width': 820.0,
-        'owned': False, 'accum': 0.0,
+        'owned': False, 'accum': 0.0, 'failed': False,
+        'performance': econrules.PERFORMANCE_NEUTRAL,
         'placement': {'x0': -7410.0, 'x1': -6590.0, 'side': 'north',
                        'road_id': 'arterial'},
     }, s['parcels']['P1']

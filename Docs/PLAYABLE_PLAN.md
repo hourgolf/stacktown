@@ -121,3 +121,62 @@ work slows; that is the trade.
 - Lanes run PIE only on the test file (lane_pie.marker); the owner's save
   is theirs alone.
 - One owner run per feature, then commit on proof.
+
+## 4. Where we are, and the road home (2026-09-04, after the owner's "we still feel a long way from home")
+
+**Done and owner-verified (commits 0e35ee9, 8789d05, 4b410d2 + the set
+after):** from-scratch board; click to place with a ghost that shows
+the lot before the click, free along both roads; widths on the wheel;
+overlap and reach refusals with reasons; pads and masses on the facade
+line; cursor selection of pads AND buildings; the HUD bar with the live
+selection cluster; buy, upgrade, repair, hold-to-reset; growth retired
+from the timer; rent slowed 13x; state isolation so no lane can touch
+the owner's save; the wooden look's edge wear finally rendering.
+
+**Why it still feels far from home - the honest list:**
+
+1. **There is no game in the middle.** Performance is player trades
+   only (the owner's ruling), and there is no trading system. Today the
+   loop is place, buy, upgrade, watch rent - it has no decision that can
+   go wrong. Every other item on this list is polish around a hole.
+2. **Money is still a faucet.** Rent accrues with no cost, no risk and
+   flat lot prices, so the tenth lot arrives faster than the second.
+3. **The board reads as a rendering test, not a place.** Lots are pads
+   and towers on a bare plate; no roads drawn by the player, no lot
+   states in the night glow (blocked on the runtime CPD push), no life.
+4. **Everything runs only in the editor.** The economy, placement,
+   input and HUD are editor Python; nothing can be handed to a tester.
+5. **The tools bite.** Two editor stalls, an offline lane twice, a graph
+   writer that drops chains, readers blind to enums - every window
+   costs proofs that a normal project would not need.
+
+**The road, in order, each step with its proof:**
+
+- **Step 1 - the trade (this week).** The owner describes what a trade
+  is; the beta lane writes the trading contract (verbs, counterparty,
+  what is exchanged, how it moves per-lot performance); the coordinator
+  prototypes the simplest version in the Python driver (recommended
+  first shape: sign a tenant to a building at a negotiated rent - one
+  verb, one number, success/failure per lot). Proof: a 20-minute
+  session where a bad trade costs the owner something they notice.
+- **Step 2 - money that can be lost.** Lot prices climb with owned
+  count (the lane's table), rent depends on the tenant, repairs cost,
+  failure exists. Proof: a session where the owner has to choose
+  between two purchases.
+- **Step 3 - the board becomes a place.** Lot-state glow (needs the
+  runtime CPD push, proven by two adjacent lots in different states),
+  the ghost's baked rim in play, wear on aged buildings, the drawn-road
+  mechanic v0 (ROADS_AS_MECHANIC.md). Proof: the owner's cold read.
+- **Step 4 - fun before port.** Three owner sessions with a written
+  goal each (e.g. "reach 5,000 with no failed lot"), rated; tune
+  numbers between sessions; nothing new until the rating moves.
+- **Step 5 - the packaged beta.** Only once step 4 holds: the port per
+  PACKAGED_BETA.md - HUD as a normal widget first (lowest risk), then
+  input via Enhanced Input, then economy and placement into Blueprint or
+  a first C++ module (the owner's call). Proof: a build on a second
+  machine, played by someone who is not the owner.
+
+**What the owner decides, in order:** what a trade is; whether lot
+prices climb with count; when to port (recommendation: after step 4).
+Everything else is the lanes' and the coordinator's to build and prove.
+

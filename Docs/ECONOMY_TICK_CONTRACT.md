@@ -534,3 +534,235 @@ C++ is a hard stop in this project (`AGENTS.md`). A dynamic demand model
 (`demand` is a flat input today, not simulated). Anything that changes
 `econrules.py` itself — this contract is about how it gets called, not
 what it says.
+
+## Growth contract - the owner's answers (2026-09-03, coordinator's session)
+
+Asked as five structured questions; the owner's picks, verbatim from the
+options offered:
+
+1. **Upgrade cost:** "Price climbs with each level" - each level costs
+   more than the last.
+2. **Performance:** "Player trades only" - no automatic score; a
+   building's performance changes only when the player makes a trade or
+   deal in a future trading system.
+3. **Poor performance and upgrades:** "Makes the upgrade cost more" -
+   never blocks, charges a premium.
+4. **Failure recovery:** "Pay to repair" - a repair action costs money and
+   restores the building.
+5. **Passive change:** "Never" - buildings change only through the
+   player's trades, upgrades and repairs; patina still ages on its own.
+
+Consequences, binding on the implementation:
+
+- `econrules.tick()` no longer advances tiers. Income (rent) still
+  accrues, but its cadence must be re-declared for a game where nothing
+  grows by itself (the 2 s tick that ran the owner's balance to 312k in
+  one session is not that cadence).
+- Two new verbs on the request-and-clear pattern: UPGRADE (a key + HUD
+  prompt, price = base x f(level) x performance premium) and REPAIR
+  (money, restores a failed building). Both live in the Python click
+  driver until the packaged port, like buy.
+- A per-lot PERFORMANCE value exists from day one, initialised neutral
+  and changed by NOTHING until the trading system exists; the premium
+  formula reads it so the trading system plugs in without touching the
+  upgrade verb.
+- Age (patina) resets on upgrade per B3 and otherwise runs uninterrupted.
+
+Open for the owner, not yet asked: what a TRADE is in this game - the
+verbs, the counterparty, what is exchanged - since performance now hangs
+entirely on it.
+
+## Upgrade/repair channels — WIRED live (2026-09-03; see correction below)
+
+Parts B/C/D of the coordinator's task. Self-tested, headless, both green:
+`econrules.py` 13/13, `citytick.py` 9/9.
+
+**Formula**, matching "Consequences" above exactly: `upgrade_price =
+price_base * climb(tier) * premium(performance)`. `climb(tier) = tier +
+1` — CLIMBS with level, the owner's own word. `premium(performance) =
+1.0 + max(0.0, -performance)` — always >= 1.0, exactly 1.0 at neutral-
+or-better, never a discount for good performance (the owner named only
+a penalty for poor performance, ruling 3). `repair_price(tier) =
+price_base * (tier + 1)`.
+
+**Performance** (task D): `-1.0..+1.0`, `0.0` neutral —
+`econrules.PERFORMANCE_NEUTRAL`, cpdmap.py's own `Attention` convention
+reused for the same shape of value rather than inventing a second one.
+Field name is literally `'performance'`. Read by `premium()`; written
+by nothing until the trading system in "Open for the owner" above
+exists (ruling 2).
+
+**Schema**: every fresh parcel — `citytick.ensure_parcel` AND
+`placement.place()`, kept in sync by construction (`place()` imports
+`econrules.PERFORMANCE_NEUTRAL` directly rather than carrying a second,
+hardcoded copy that could drift) — now carries `'failed'` (bool,
+default `False`) and `'performance'` (float, default
+`PERFORMANCE_NEUTRAL`) alongside the original five keys. `repair()`
+clears `'failed'`; nothing sets it yet (same ruling 2 — unreachable in
+real play until the trading system exists, built and tested ahead of
+what will drive it, same as this file's own constants always have
+been).
+
+**WIRED 2026-09-03 — CORRECTING THE PLAN BELOW.** The GameInstance-
+property channel this section originally proposed (`UpgradeRequestPID`/
+`RepairRequestPID`, mirrored on `BuyRequestPID`) was NOT what actually
+shipped. The coordinator wired `city_upgrade`/`city_repair` the same way
+`PlaceRequestX/Y`'s own width already rides — Python-side attributes on
+the `unreal` module (`unreal._stacktown_upgrade_request` /
+`_repair_request`), consumed and cleared next to buy, U/R bound in the
+click driver. Both drivers are already in-process Python, so a
+Blueprint-property round trip was never actually needed for this
+channel, the same reasoning `PlaceRequestX/Y`'s own width channel
+already established. Proven in an isolated PIE: select P3 → B "bought"
+→ U "CITY UPGRADE: P3 done" (tier 0 → 1) → R "refused - not failed";
+zero `CITY TICK` tier-ups across the whole session, confirming part A's
+retirement holds live, not just headless.
+
+The GameInstance-property design below is KEPT, not deleted, as the
+PACKAGED-PORT shape (Docs/PACKAGED_BETA.md's own click-driver item
+already names Enhanced Input replacing this whole Python-polling
+approach at that point) — a real design, just not the one this session
+needed:
+
+- `UpgradeRequestPID` (String)
+- `RepairRequestPID` (String)
+
+```python
+        # Upgrade channel - same request-and-clear shape as buy, same
+        # local-try/except guard as PlaceRequestX/Y (the property does
+        # not exist on GameInstance until the beta lane's own editor
+        # window adds it).
+        try:
+            up_pid = gi.get_editor_property('UpgradeRequestPID')
+        except Exception:
+            up_pid = ''
+        if up_pid:
+            gi.set_editor_property('UpgradeRequestPID', '')
+            city_state = _read_state(gi)
+            new_state, ok, reason = _citytick.city_upgrade(
+                city_state, up_pid, _state_path_for())
+            if ok:
+                unreal.log('CITY UPGRADE: %s upgraded' % up_pid)
+            else:
+                unreal.log_warning('CITY UPGRADE: %s refused - %s' % (up_pid, reason))
+            _write_state(gi, new_state)
+            _push_economy_fields(gi, new_state)
+
+        # Repair channel - identical shape.
+        try:
+            rp_pid = gi.get_editor_property('RepairRequestPID')
+        except Exception:
+            rp_pid = ''
+        if rp_pid:
+            gi.set_editor_property('RepairRequestPID', '')
+            city_state = _read_state(gi)
+            new_state, ok, reason = _citytick.city_repair(
+                city_state, rp_pid, _state_path_for())
+            if ok:
+                unreal.log('CITY REPAIR: %s repaired' % rp_pid)
+            else:
+                unreal.log_warning('CITY REPAIR: %s refused - %s' % (rp_pid, reason))
+            _write_state(gi, new_state)
+            _push_economy_fields(gi, new_state)
+```
+
+**Age reset per B3 — CONFIRMED live, 2026-09-03.** The open question
+below is closed: `_sync_parcels` resets age when `age_last_tier !=
+tier` — generic, keyed off any tier change, not specifically off
+`tick()` — so an upgrade-driven tier change resets it for free, no
+driver update needed. (Original flag, kept for the record: `age_ticks`
+lives entirely outside `econrules.py`'s own state schema — tracked by
+`init_unreal._sync_parcels` alone, the same boundary that lets `tick()`
+assert exact state equality in its own self-tests without a side field
+breaking them.)
+
+**Open, from the same window: should `ensure_parcel` backfill
+`failed`/`performance` onto parcels registered BEFORE this schema
+change?** Today it does not — `ensure_parcel` is a no-op for any pid
+already present, by design (PARCELIZATION_CONTRACT.md §2: a pin's
+declared identity is only ever a starting seed, never re-applied over
+live state), so an old entry simply lacks the two keys. Every reader
+already treats a missing key as neutral/not-failed via `.get()`
+defaults, which is the CORRECT value either way — this is not a
+correctness bug. It IS a schema-tidiness question the owner or
+coordinator should settle: leave old entries key-less forever (fine,
+since nothing reads them incorrectly), or have `ensure_parcel` — or a
+one-time migration pass — backfill the two keys onto pre-existing
+entries the first time they're seen again. Not decided here.
+
+## Rent cadence proposal — numbers only, NOT applied (2026-09-03)
+
+The coordinator's ask, answering PLAYABLE_PLAN's own pacing brief now
+that growth no longer sets the pace: the owner's balance hit **312,000
+in one session** at today's 2 s-tick `rent_per_tier=10` — propose an
+income rate per real minute per tier that makes **the second lot a
+decision and the tenth an achievement**. Simulated, not hand-algebra —
+see the working below.
+
+### The model, and its one stated assumption
+
+A player who spends every spare coin the moment they can afford the
+NEXT lot — the fastest anyone could possibly reach N lots, a lower
+bound useful for calibration, not a claim about how anyone actually
+plays. All lots held at tier 0 (upgrades are a separate cost, part
+B/C's own concern, not this one) and PRICE STAYS FLAT (today's
+`price_base=50, price_per_100uu=2`, unchanged by this proposal — task E
+asked for the income side only): a fresh 820uu lot (V0_WIDTH) costs
+66.4 regardless of how many the player already owns. `demand` held at
+today's static 1.0 (ECONOMY_TICK_CONTRACT.md's own "Growth contract"
+finding: nothing drives it yet). `R` below is a proposed replacement
+for `rent_per_tier`; income/min at tier T = `R * (T+1) * 30` (30 ticks/
+minute at the unchanged 2.0 s interval).
+
+### A structural finding, not just a table
+
+With N lots owned, combined tier-0 income is `N * R * 30`/min, so the
+time to afford lot N+1 is `66.4 / (N*R*30)`. Summed from N=1 to 9, total
+time to the 10th lot (from the moment the 1st is bought) is `(66.4 /
+(30*R)) * H(9)` where `H(9) = 1 + 1/2 + ... + 1/9 ≈ 2.829` — **the ratio
+between the 10th-lot time and the 2nd-lot time is exactly H(9),
+independent of R.** No choice of income rate can make the second lot a
+few minutes' decision AND the tenth an hour-long achievement at once
+under flat pricing — the two targets are structurally locked together
+at roughly a 2.8x ratio, not the 15-20x a "decision" vs. "achievement"
+framing would suggest. Worse for the "achievement" framing specifically:
+under flat pricing each SUCCESSIVE lot is FASTER to reach than the last
+(more owned lots earning combined income against the same flat price),
+so the 9th→10th step is the quickest of the run, not the hardest-won —
+backwards from what "achievement" usually implies. Hitting both targets
+as stated would need purchase price to escalate with owned-lot-count,
+not just an income-rate change — outside this task's own scope (income
+per minute, not price), named here so it isn't silently absorbed into a
+number that can't actually deliver it.
+
+### Candidates, verified by simulation
+
+    R (replaces rent_per_tier=10)   2nd-lot decision   10th-lot total (both from 1st purchase)
+    0.25                             8.9 min            25.0 min
+    0.5                              4.4 min            12.5 min
+    0.75                             3.0 min             8.3 min
+    1.0                              2.2 min             6.3 min
+    1.5                              1.5 min             4.2 min
+    2.0                              1.1 min             3.1 min
+
+Income/minute per tier (vernacular's 6 tiers) at the two candidates
+worth the owner's attention:
+
+    R=0.5:  tier 0..5 = 15.0 / 30.0 / 45.0 / 60.0 / 75.0 / 90.0 per minute
+    R=0.75: tier 0..5 = 22.5 / 45.0 / 67.5 / 90.0 / 112.5 / 135.0 per minute
+
+Both are roughly 15-20x slower than today's `R=10` (300/min at tier 0)
+— the order-of-magnitude cut the 312k-in-one-session number calls for.
+
+### Recommendation
+
+**R=0.75** — second lot lands at 3.0 minutes, squarely "a decision," the
+target income-rate alone can actually deliver. The tenth lot lands at
+8.3 minutes total under this simplified model, not an hour-long
+achievement — naming that gap honestly rather than picking a much
+smaller R to chase it, since a much smaller R (say 0.25, pushing the
+2nd lot to 8.9 minutes) trades away the target this task COULD hit
+directly for one it structurally can't, on its own, ever reach. If the
+owner wants the tenth lot to feel further away than 8.3 minutes, that
+needs the price-escalation change named above, not a smaller R.
+

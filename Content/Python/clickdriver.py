@@ -43,7 +43,7 @@ import unreal, time
 
 RESET_HOLD_S = 2.0
 _KEY = {}
-for _name in ('LeftMouseButton', 'B', 'N', 'MouseScrollUp', 'MouseScrollDown'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'R', 'MouseScrollUp', 'MouseScrollDown'):
     _k = unreal.Key(); _k.set_editor_property('key_name', _name); _KEY[_name] = _k
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -113,9 +113,10 @@ def click_at_hit(gw, gi, rig, actor, x, y):
         try:
             owned = actor.get_editor_property('Owned'); tier = actor.get_editor_property('Tier')
             status = 'owned, tier %d' % tier if owned else 'for sale'
+            hint = '[U] upgrade  [R] repair' if owned else '[B] buy'
         except Exception:
-            status = ''
-        unreal.SystemLibrary.print_string(gw, '%s  %s   [B] buy' % (label, status), True, False,
+            status = ''; hint = ''
+        unreal.SystemLibrary.print_string(gw, '%s  %s   %s' % (label, status, hint), True, False,
                                           unreal.LinearColor(0.7, 1.0, 0.8, 1.0), 2.5, 'clickmsg')
         _log('selected %s (%s)' % (label, status))
         return 'select'
@@ -136,6 +137,33 @@ def press_b(gw, gi, rig):
     pid = sel.get_actor_label()
     gi.set_editor_property('BuyRequestPID', pid)
     _log('buy request %s' % pid)
+    return True
+
+
+def press_u(gw, gi, rig):
+    """UPGRADE the selected lot (owner's growth ruling 2026-09-03: growth is
+    player-initiated, price climbs per level, poor performance charges a
+    premium). Request rides a Python-side attribute consumed by the
+    economy driver, like the width channel."""
+    sel = _selected(rig)
+    if sel is None:
+        unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
+                                          unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
+        return False
+    unreal._stacktown_upgrade_request = sel.get_actor_label()
+    _log('upgrade request %s' % sel.get_actor_label())
+    return True
+
+
+def press_r(gw, gi, rig):
+    """REPAIR the selected lot (pay to repair, owner's ruling 4)."""
+    sel = _selected(rig)
+    if sel is None:
+        unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
+                                          unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
+        return False
+    unreal._stacktown_repair_request = sel.get_actor_label()
+    _log('repair request %s' % sel.get_actor_label())
     return True
 
 
@@ -404,6 +432,10 @@ def _tick(dt):
             _cycle_width(-1, gw)
         if edges['B']:
             press_b(gw, gi, rig)
+        if edges['U']:
+            press_u(gw, gi, rig)
+        if edges['R']:
+            press_r(gw, gi, rig)
         if _st['down'].get('N', False):
             _st['n_acc'] += dt
             if not _st['n_fired']:
@@ -447,6 +479,10 @@ def _press(name):
     rig = _st['rig'] or _find_rig(gw)
     if name == 'B':
         return 'buy requested' if press_b(gw, gi, rig) else 'no selection'
+    if name == 'U':
+        return 'upgrade requested' if press_u(gw, gi, rig) else 'no selection'
+    if name == 'R':
+        return 'repair requested' if press_r(gw, gi, rig) else 'no selection'
     if name == 'N':
         press_n_reset(gw, gi, rig); return 'reset requested'
     return 'unknown key'

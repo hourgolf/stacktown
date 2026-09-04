@@ -1511,3 +1511,20 @@ into the wrong project. It has already caught it happening.
   untouched and named in woodmaster.py's guard. For-sale glow dropped:
   D20 says an unbought lot is bare board and reads by absence.
 
+- **NIGHT, FIRST FRAMES (2026-09-04 05:xx).** Studio-down proven: the
+  backdrop fell to 18.6% of day through the wall fork reading the
+  collection, the plate to 9%, form legible under the tenth-key, pads
+  gone into bare board, day restored within drift - "I would not move a
+  light" (design lane). The glow push is proven PER LOT on ch1: one
+  owned tower held at GlowLevel 1.0 rose +4.38 while its same-species
+  neighbour at 0.15 moved -0.88 and the road -0.40. But 6.7x the level
+  bought 4 displayed levels: the emissive is an order of magnitude too
+  weak for this exposure (a lit surface sits well above linear 1.0
+  under the key; an emissive of 1.0 is a dim emitter here). Decision:
+  a GlowScale in the material, CPD stays 0..1 - but NOT set yet: the
+  window-slot mask (B4: windows exist only as night light through
+  etched slots) changes the required scale by the inverse of slot
+  coverage and a flat facade reads as a lit box at any brightness, so
+  the mask is declared and built first and the scale tuned once against
+  the masked look. Overrides cleared after the session.
+

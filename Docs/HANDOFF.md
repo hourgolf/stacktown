@@ -1365,3 +1365,32 @@ into the wrong project. It has already caught it happening.
   Python override still outranks it. The owner's editor PIE was the one
   session the lane-isolation rule never covered (beta lane's catch).
 
+- **COORDINATOR'S OWN COLLISION (2026-09-04 00:4x).** Inside a granted
+  design-lane window I started a two-minute isolated PIE to probe the
+  camera rig, without telling the lane; the engine refused their actor
+  cleanup ("Cannot remove actors while PIE is active") and left their
+  Failure A/B subject (FAILAB_mass at the origin) stranded until PIE
+  ended. The rule I set for lanes applies to me: no PIE inside another
+  lane's window without saying so first. Same hour, design lane: a
+  Failure wiring that lerped base colour to a flat grey measured +65
+  levels at 145x noise and was WRONG - bleached plaster, grain gone; a
+  large delta praised a wrong look. Rebuilt as desaturation x cold tint
+  so luminance and figure survive; D16's "species legible to the end"
+  outranks any number. And: the one script written in a hurry was the
+  one without a PIE guard.
+
+- **CAMERA MOVES INTO THE PYTHON DRIVER (2026-09-04 00:5x).** The owner's
+  first report from the standalone: "the camera controls don't seem to
+  work". The rig re-applies its pose from its own variables every tick
+  (a direct transform write reverted within a frame) and eases each live
+  value (Azimuth, Reach, Height, Tilt, Pan, Focal) toward a Tgt* twin;
+  all twelve were read-only from Python until the beta lane made them
+  instance-editable (flags only, two scoped passes). clickdriver now
+  drives them: A/D orbit, W/S reel, Q/E the camera study's four stops,
+  arrows pan BoardCentre in the camera frame, writing Tgt* first and the
+  live value second. Proven in an isolated PIE: TgtAzimuth 250 -> 290
+  turned the rig to yaw 110 and TgtReach 19000 -> 9000 moved it, within
+  two seconds. Whether the rig's own TickBody still handles keys is
+  unverified (beta lane: honest non-answer); if the owner sees double
+  motion, the graph side is alive and must be found - no rewrite.
+

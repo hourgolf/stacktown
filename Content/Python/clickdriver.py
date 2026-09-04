@@ -59,7 +59,8 @@ def _make_key(name):
         return k
 
 
-for _name in ('LeftMouseButton', 'B', 'N', 'U', 'R', 'MouseScrollUp', 'MouseScrollDown'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'R', 'MouseScrollUp', 'MouseScrollDown',
+              'W', 'A', 'S', 'D', 'Q', 'E', 'Up', 'Down', 'Left', 'Right'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -411,6 +412,81 @@ def _hover(gw, gi, pc):
     _draw_ghost(gw, ok, text, box, loc.x, loc.y)
 
 
+# ---- Camera (2026-09-04): the rig re-applies its pose from its own
+# variables every tick, so the driver writes the VARIABLES and the rig
+# renders them. Same architecture as selection: Python owns input.
+# A/D orbit (Azimuth), W/S reel (Reach, continuous), Q/E the reach ladder
+# (the camera study's stops), arrows pan BoardCentre in the camera frame.
+CAM_LADDER = (19000.0, 3500.0, 1350.0, 800.0)
+CAM_ORBIT_DEG_S = 60.0
+CAM_REEL_PER_S = 0.9          # fraction of reach per second, W in / S out
+CAM_PAN_UU_S = 2500.0
+_cam_state = {'warned': False}
+
+
+def _rig_get(rig, name, default=None):
+    for n in ('Tgt' + name, name):
+        try:
+            return rig.get_editor_property(n)
+        except Exception:
+            continue
+    return default
+
+
+def _rig_set(rig, name, value):
+    """Write a pose value. The rig carries a TARGET twin of each pose
+    variable (TgtAzimuth beside Azimuth, ...) and eases the live value
+    toward it every tick, so the target is what input must move; the
+    live variable is written too so a rig without easing still follows."""
+    ok = False
+    for n in ('Tgt' + name, name):
+        try:
+            rig.set_editor_property(n, value)
+            ok = True
+        except Exception as e:
+            if not _cam_state['warned']:
+                _cam_state['warned'] = True
+                _log('camera: rig.%s is not writable (%s) - needs the instance-editable flag' % (n, str(e)[:60]))
+    return ok
+
+
+def _camera_tick(rig, pc, dt):
+    down = _st['down']
+    az = _rig_get(rig, 'Azimuth'); reach = _rig_get(rig, 'Reach')
+    if az is None or reach is None:
+        return
+    d_az = (CAM_ORBIT_DEG_S * dt) * ((1 if down.get('D') else 0) - (1 if down.get('A') else 0))
+    if d_az:
+        _rig_set(rig, 'Azimuth', (float(az) + d_az) % 360.0)
+    reel = (1 if down.get('S') else 0) - (1 if down.get('W') else 0)
+    if reel:
+        new_reach = float(reach) * (1.0 + reel * CAM_REEL_PER_S * dt)
+        _rig_set(rig, 'Reach', max(400.0, min(30000.0, new_reach)))
+    edges = _st.get('edges', {})
+    if edges.get('Q') or edges.get('E'):
+        # step the ladder: Q closer, E farther, from the nearest stop
+        r = float(_rig_get(rig, 'Reach', reach))
+        idx = min(range(len(CAM_LADDER)), key=lambda i: abs(CAM_LADDER[i] - r))
+        idx = idx + (1 if edges.get('Q') else -1)
+        idx = max(0, min(len(CAM_LADDER) - 1, idx))
+        _rig_set(rig, 'Reach', CAM_LADDER[idx])
+    px = (1 if down.get('Right') else 0) - (1 if down.get('Left') else 0)
+    py = (1 if down.get('Up') else 0) - (1 if down.get('Down') else 0)
+    if px or py:
+        import math
+        a = math.radians(float(_rig_get(rig, 'Azimuth', az)))
+        # camera-frame pan: forward is toward the board centre from the camera
+        fwd = (-math.cos(a), -math.sin(a)); right = (-fwd[1], fwd[0])
+        step = CAM_PAN_UU_S * dt
+        c = _rig_get(rig, 'BoardCentre')
+        if c is not None:
+            nx = c.x + step * (px * right[0] + py * fwd[0]); ny = c.y + step * (px * right[1] + py * fwd[1])
+            try:
+                rig.set_editor_property('BoardCentre', unreal.Vector(nx, ny, c.z))
+            except Exception:
+                pass
+
+
 def _tick(dt):
     try:
         gw = _world()
@@ -434,6 +510,8 @@ def _tick(dt):
             down = pc.is_input_key_down(key)
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
+        _st['edges'] = edges
+        _camera_tick(rig, pc, dt)
         if not _st['down'].get('LeftMouseButton', False):
             _hover(gw, gi, pc)
         else:

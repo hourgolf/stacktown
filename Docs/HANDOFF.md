@@ -1528,3 +1528,17 @@ into the wrong project. It has already caught it happening.
   the mask is declared and built first and the scale tuned once against
   the masked look. Overrides cleared after the session.
 
+- **D24 WINDOWS PROVEN (2026-09-04 05:xx).** Day frame after the mask:
+  no trace (facade variance unchanged vs the pre-mask day frame). Night
+  ladder GlowScale 12/40/120: window p98 24/42/89 against a road at ~23,
+  facade mean 10-13 throughout, ROOF 14.6/14.3/14.6 - flat across a
+  tenfold scale, so the vertical-faces term holds and the boom never
+  sees slots on a roof. Verdict: lit windows, not a lit box. Value set:
+  GlowScale 40 with owned GlowLevel 0.45 (product 18 - same look as
+  120 x 0.15 but the 0..1 channel keeps headroom for activity); the
+  driver's owned push is 0.45. Unexplained and logged: both towers read
+  3.2 levels darker by day than before the mask, road unchanged -
+  Lumen convergence across recompiles is the candidate; not a window.
+  Frames: Saved/DirectionB/wear/win_*.png. Night set unsaved on the
+  forks until the owner's word in the design session.
+

@@ -79,7 +79,7 @@ _CPD_GLOW_STATE = _cpdmap.index('GlowState')
 # what can still be acted on; a finished city goes quiet. GlowState 0.5 is
 # neutral warm; its range is held for ACTIVITY once the economy can say it.
 _GLOW_FOR_SALE = (0.00, 0.50)   # D20: an unbought lot is bare board - it reads by ABSENCE, it does not glow
-_GLOW_OWNED = (0.15, 0.50)
+_GLOW_OWNED = (0.45, 0.50)   # with GlowScale 40 on the fork: product 18, level 1.0 keeps real headroom (design lane, D24 ladder)
 # ECONOMY_TICK_CONTRACT.md, "Patina's Age channel" - tunable, not measured.
 _AGE_MATURE_TICKS = 150.0
 

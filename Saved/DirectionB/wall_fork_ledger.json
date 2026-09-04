@@ -1,0 +1,25 @@
+{
+ "added": [
+  {
+   "role": "One",
+   "refPath": "/Game/Stacktown/Materials/M_WoodStudioWall.M_WoodStudioWall:MaterialExpressionConstant_0"
+  },
+  {
+   "role": "NightWallDim",
+   "refPath": "/Game/Stacktown/Materials/M_WoodStudioWall.M_WoodStudioWall:MaterialExpressionConstant_1"
+  },
+  {
+   "role": "NightAmount",
+   "refPath": "/Game/Stacktown/Materials/M_WoodStudioWall.M_WoodStudioWall:MaterialExpressionCollectionParameter_0"
+  },
+  {
+   "role": "lerp",
+   "refPath": "/Game/Stacktown/Materials/M_WoodStudioWall.M_WoodStudioWall:MaterialExpressionLinearInterpolate_0"
+  },
+  {
+   "role": "emissive*dim",
+   "refPath": "/Game/Stacktown/Materials/M_WoodStudioWall.M_WoodStudioWall:MaterialExpressionMultiply_1"
+  }
+ ],
+ "emissive_driver": "/Game/Stacktown/Materials/M_WoodStudioWall.M_WoodStudioWall:MaterialExpressionMultiply_0"
+}

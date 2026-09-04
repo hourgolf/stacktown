@@ -1541,4 +1541,10 @@ into the wrong project. It has already caught it happening.
   Lumen convergence across recompiles is the candidate; not a window.
   Frames: Saved/DirectionB/wear/win_*.png. Night set unsaved on the
   forks until the owner's word in the design session.
+  THE 3.2 LEVELS, RESOLVED FROM STATE (design lane's inference, checked
+  headless): the two owned towers carry age_ticks in the test save
+  (read below in the same hour), the road carries none, and oak's Age
+  curve darkens - so the day frames darkened by exactly the set of
+  things the Age channel reaches. Not an anomaly: the age ladder
+  rendering unprompted on a live board for the first time.
 

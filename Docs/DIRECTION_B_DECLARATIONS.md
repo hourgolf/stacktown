@@ -3024,3 +3024,83 @@ MEASURED FRAME showing two adjacent lots in different states, or it is not
 proven.** A read-back proves the write landed, never that the thing the write
 was for now works — four instances of that this week, every one with the same
 tell: nothing failed.
+
+---
+
+## D24 — what a window IS in the wooden city. 2026-09-03.
+
+B1: **"windowless masses BY DAY."** B4: **"windows exist only as night light
+through etched slots."** Both are already declared; this is what they mean in
+a material.
+
+### The rule that makes it work: the window is not a thing, it is a LIGHT
+
+A window here is not a hole, a pane, a frame, or a darker rectangle. **By day
+there is nothing there at all** — the mass is solid carved timber, which is
+the entire premise of this direction and the thing that separates it from the
+flagship's articulated elevations. At night, light comes through slots that
+were never visible.
+
+**This is satisfied by construction, not by tuning.** The emissive term is
+multiplied by `NightAmount`, which is 0 by day, so at noon the slot mask is
+multiplied by zero and the windows do not exist — not "are subtle", do not
+exist. No daylight frame can ever show them, and the mask cannot leak into the
+daytime look through a value someone sets wrongly.
+
+### Why a flat glowing facade is not an option
+
+The first night frames lit whole facades uniformly. **No value of `GlowScale`
+makes that read as a building** — a uniformly emitting block is a lamp, and
+brightening it makes it a brighter lamp. The number cannot buy the thing.
+
+Slots also fix the magnitude problem rather than fighting it: light through
+narrow openings can be **far brighter per pixel** without the building
+becoming a lamp, because most of the facade stays dark. Coverage around 12%
+means roughly eight times the per-pixel emissive for the same total light, and
+that is the difference between a lit box and lit windows.
+
+### The slots, procedurally, with no new geometry
+
+Parts are the budget in this direction (4–10 per block against a flagship
+model's 130–800), so the slots are a material mask off local position — the
+same machinery Scorch already uses:
+
+    floors  = frac(localZ / FLOOR)          FLOOR 320 uu
+    band    = a narrow lit stripe within each floor, ~70 of 320  (22%)
+    bays    = frac(localX / BAY)            BAY 200 uu
+    lights  = a lit portion of each bay, ~110 of 200               (55%)
+    window  = band * lights * verticalFaces
+    coverage ~= 0.22 x 0.55 ~= 12% of a facade
+
+**Bays as well as bands, and that is the whole difference between a building
+and a striped box.** A horizontal band alone reads as a fluorescent tube
+running through the block. Breaking it along the facade gives a rhythm of
+separate lights, which is what a window grid is.
+
+**`verticalFaces` suppresses the roof.** A window on a roof is wrong, and the
+top face would otherwise carry the brightest slots because it faces the
+camera's boom most directly. Taken from the same normal the wear mask already
+computes — which now works, so the term is available.
+
+### What this deliberately does NOT do
+
+- **No per-building variation yet.** Every mass of a given height gets the same
+  rhythm. Varying it per lot wants a CPD channel and there is one free (ch7);
+  worth doing only if the repetition reads at board range, which is a frame
+  question and not an assumption.
+- **No warm/cool variation between windows.** One tint per lot, from
+  `GlowState`. Individual window colour is a level of detail below what a
+  board-range camera resolves.
+- **No lit interiors, no visible glazing, no mullions.** Those are the
+  flagship's language and their absence is the point.
+
+### Acceptance
+
+**`GlowScale` is set ONCE, against the masked look, and not before.** Tuning it
+against a flat facade would fix a number that the mask moves by roughly an
+order of magnitude — and would tune it against a look B4 rejects.
+
+The frame: two adjacent same-species owned lots at night, slots lit, plus the
+same row by day showing **no trace of any window**. The daylight frame is not
+a formality — it is the proof that the mask is multiplied by zero rather than
+merely faint.

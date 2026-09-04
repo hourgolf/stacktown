@@ -175,6 +175,29 @@ tick, on a ledger that's mostly unchanged since the last tick, costs
 nothing extra and never double-counts — proven by self-test 17's own
 idempotency case (calling twice on the same ledger is a true no-op).
 
+**Two-process fact, 2026-09-04 (`Tools/play.sh`, `PACKAGED_BETA.md`'s
+own "Interim" section): the ledger can now have MORE THAN ONE reader.**
+What self-test 17 actually proves is narrower than "safe across
+processes" — it proves `apply_trade_ledger` is a pure function of
+(state, ledger) that never mutates the ledger and never re-reads an
+entry once that STATE's own `trades_processed` has passed it. That
+property holds per state file, unconditionally, regardless of how many
+processes are reading the ledger — the adapter only ever APPENDS to it
+and nothing else ever writes to it, so there is no read/write race on
+the ledger itself, full stop.
+
+The real question is a different one, and this design does not answer
+it: if the owner's main-editor PIE and their own `Tools/play.sh` `-game`
+session are BOTH running against the SAME `citystate.json` (both true
+by default — the owner's own PIE was never subject to the lane-
+isolation override, and `play.sh` opens the real save with no override
+of its own), the two processes' drivers tick that ONE file concurrently
+— trade rewards included, but no more or less exposed than rent, buy,
+upgrade, or repair already are under that same condition. This is a
+state-file concurrency question, not a ledger-idempotency one, and it
+is `PACKAGED_BETA.md`'s own new finding, not solved here or there —
+named in both places so it is not lost between them.
+
 ## 6. Fake broker, for tests
 
 A module that replays a RECORDED session — historical bars plus a

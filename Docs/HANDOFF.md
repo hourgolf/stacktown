@@ -1356,4 +1356,12 @@ into the wrong project. It has already caught it happening.
   a test launch left running is a session; (3) the game shows what was
   on disk at launch - relaunch to see new work; (4) the marker file is
   read once at the game's start and never deleted by it.
+  TWO DRIVERS, ONE SAVE - CLOSED (00:3x): the standalone game writes
+  Saved/standalone.lock (its pid) at driver registration; an editor PIE
+  whose resolver finds a LIVE pid there uses the test file and says so
+  on screen ("A standalone game is running - this session uses the TEST
+  save"), source 'standalone-lock' in the log line. Liveness by
+  os.kill(pid, 0), proven on a live and a dead process; the explicit
+  Python override still outranks it. The owner's editor PIE was the one
+  session the lane-isolation rule never covered (beta lane's catch).
 

@@ -192,6 +192,51 @@ BP_LensRig's `EventBeginPlay`.
   like a HUD" is a human/PIE judgment call, the same way the ghost pad's
   own feel was — not headlessly provable.
 
+## 3.6 Interim: `-game` exists today — it is not the port
+
+New fact, 2026-09-04, worth this document's own section because it
+touches the schedule this charter is written against, not because it
+changes anything section 1-3 concluded. `Tools/play.sh` launches the
+UNCOOKED editor binary with `-game` on `TestCity`: the Python plugin
+loads (its main module ships as `UncookedOnly` — a real UE module type,
+distinct from `Editor`, that loads in uncooked/development targets
+including `-game`, but NOT in a cooked/Shipping build), `init_unreal.py`
+runs, both drivers register, and the city restores from `Content/
+Python/citystate.json` — the owner's real save. The owner can now play
+as a standalone user in a second process while lanes keep editing in
+the main editor window.
+
+**This does not contradict section 1.** `-game` here is still the full
+uncooked engine binary on the same machine with the whole project
+checked out — not a packaged/cooked build, nothing a tester could run
+without the engine and the source tree. Every conclusion in sections
+1-3 (Python is absent from an actual cooked/Shipping build; each
+system's home and proof) is unchanged.
+
+**What it DOES change: schedule pressure, not scope.** The owner
+playing live, in real time, in a process none of the lanes control,
+while headless work continues in the editor is a new fact this
+charter's own timeline should account for — work that assumed "the
+owner tests when a lane hands off a checkpoint" now has to reckon with
+the owner potentially playing continuously, on their own schedule,
+against whatever is on disk at launch time (`-game` reads state once,
+at startup — it does not hot-reload a lane's later save; the owner
+relaunches to see new work, per `play.sh`'s own comment).
+
+**One real risk this surfaces, not yet solved:** the owner's own
+EDITOR session is not subject to the lane-isolation rule (that rule is
+about lanes never running PIE against the owner's real save — the
+owner's own PIE was always the exception, by definition). If the owner
+presses Play in the main editor WHILE `Tools/play.sh`'s `-game` process
+is also running, and neither has an override set, BOTH processes' own
+drivers tick against the SAME `citystate.json` concurrently — a
+last-writer-wins race on the owner's real save, not a lane-isolation
+question at all. Not observed, not reproduced, just named as a real
+possibility the two-process world creates that the one-process world
+never could. `Docs/TRADE_ADAPTER.md`'s own ledger-consumption design
+has the same shape of risk from a different angle — see its own note,
+added the same day this fact was found.
+
 ## 4. What this charter deliberately does not decide
 
 - **WHEN to port** — still the owner's call (PLAYABLE_PLAN.md section

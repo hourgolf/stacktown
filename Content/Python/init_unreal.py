@@ -146,6 +146,23 @@ def _place_refusal_message(reason):
 
 _TEST_STATE_PATH = os.path.join(_citytick.HERE, 'citystate_test.json')
 _LANE_MARKER_PATH = os.path.join(_citytick.HERE, 'lane_pie.marker')
+# A standalone -game process (Tools/play.sh) writes its pid here at driver
+# registration; an editor PIE that finds a LIVE pid in it steers itself to
+# the test file, because two drivers on one save is the one thing the
+# two-process world could do that the old one could not (beta lane, 2026-09-04).
+_STANDALONE_LOCK = os.path.join(os.path.dirname(os.path.dirname(_citytick.HERE)), 'Saved', 'standalone.lock')
+
+
+def _standalone_pid_alive():
+    try:
+        with open(_STANDALONE_LOCK) as f:
+            pid = int(f.read().strip() or '0')
+        if pid <= 0 or pid == os.getpid():
+            return None
+        os.kill(pid, 0)
+        return pid
+    except Exception:
+        return None
 
 
 
@@ -227,6 +244,10 @@ def _state_path_source():
     override = getattr(unreal, '_stacktown_state_override', None)
     if override:
         return override, 'override'
+    if not _is_game_process() and _standalone_pid_alive():
+        # Tools/play.sh is running: an editor PIE must not share the
+        # owner's save with it. Loud on screen at session start.
+        return _TEST_STATE_PATH, 'standalone-lock'
     if os.path.exists(_LANE_MARKER_PATH):
         with open(_LANE_MARKER_PATH) as f:
             content = f.read().strip()
@@ -605,6 +626,11 @@ def _city_driver_tick(delta_seconds):
         just_started = state.pop('pie_just_started', False)
         if just_started:
             _path, _source = _state_path_source()
+            _path, _src = _state_path_source()
+            if _src == 'standalone-lock':
+                unreal.SystemLibrary.print_string(
+                    gi, 'A standalone game is running - this session uses the TEST save',
+                    True, False, unreal.LinearColor(1.0, 0.6, 0.2, 1.0), 8.0, 'StateLock')
             unreal.log('CITY DRIVER: session state file -> %s (%s)'
                        % (_path, _source))
 
@@ -925,6 +951,14 @@ def _register_city_driver():
     unreal._stacktown_driver_handle = unreal.register_slate_post_tick_callback(
         _city_driver_tick)
     unreal._stacktown_driver_registered = True
+    if _is_game_process():
+        try:
+            os.makedirs(os.path.dirname(_STANDALONE_LOCK), exist_ok=True)
+            with open(_STANDALONE_LOCK, 'w') as f:
+                f.write(str(os.getpid()))
+            unreal.log('CITY DRIVER: standalone game, lock written (%s)' % _STANDALONE_LOCK)
+        except Exception as e:
+            unreal.log_warning('CITY DRIVER: standalone lock not written - %s' % e)
     unreal.log('CITY DRIVER: registered')
 
 

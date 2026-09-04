@@ -24,10 +24,18 @@ STATE_PATH = os.path.join(HERE, 'citystate.json')
 
 
 def seed_state():
-    """A fresh city, straight from econrules.json's declared start."""
+    """A fresh city, straight from econrules.json's declared start.
+    'roads' (2026-09-04, Docs/ROAD_BUILD_CONTRACT.md) holds PLAYER-DRAWN
+    segments only - the two built-in roads (arterial, cross street) are
+    placement.py's own module-level constants, never state, same as
+    they always have been. Empty by default: draw_road is the only
+    writer. Any state predating this key (the owner's real save) simply
+    lacks it - every reader uses state.get('roads', {}), the same
+    backward-compat discipline lot_road_id already established for a
+    different missing key, not a migration this function performs."""
     r = econrules.rules()
     return {'money': r['money_start'], 'demand': r['demand_default'],
-            'parcels': {}}
+            'parcels': {}, 'roads': {}}
 
 
 def load_state(state_path=STATE_PATH):
@@ -155,7 +163,7 @@ if __name__ == '__main__':
 
         # 1. No file yet -> load_state seeds from econrules.json exactly.
         s = load_state(TEST_PATH)
-        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}}, s
+        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}, 'roads': {}}, s
 
         # 2. city_buy matches econrules.buy() exactly and persists on
         #    success (same known-answer parcel as econrules.py's own #3).
@@ -213,7 +221,7 @@ if __name__ == '__main__':
         # 6. Reset wipes to a fresh seed regardless of what came before,
         #    and the file on disk matches what was returned.
         s = city_reset(TEST_PATH)
-        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}}, s
+        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}, 'roads': {}}, s
         with open(TEST_PATH) as f:
             assert json.load(f) == s
 

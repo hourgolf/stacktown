@@ -60,7 +60,7 @@ def _make_key(name):
 
 
 for _name in ('LeftMouseButton', 'B', 'N', 'U', 'R', 'MouseScrollUp', 'MouseScrollDown',
-              'W', 'A', 'S', 'D', 'Q', 'E', 'Up', 'Down', 'Left', 'Right'):
+              'W', 'A', 'S', 'D', 'Up', 'Down', 'Left', 'Right'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -415,8 +415,9 @@ def _hover(gw, gi, pc):
 # ---- Camera (2026-09-04): the rig re-applies its pose from its own
 # variables every tick, so the driver writes the VARIABLES and the rig
 # renders them. Same architecture as selection: Python owns input.
-# A/D orbit (Azimuth), W/S reel (Reach, continuous), Q/E the reach ladder
-# (the camera study's stops), arrows pan BoardCentre in the camera frame.
+# A/D orbit (Azimuth), W/S reel (Reach, continuous), arrows pan BoardCentre
+# in the camera frame. Q/E stay with the rig's own graph (its zoom ladder
+# is alive - the one part of its input that survived).
 CAM_LADDER = (19000.0, 3500.0, 1350.0, 800.0)
 CAM_ORBIT_DEG_S = 60.0
 CAM_REEL_PER_S = 0.9          # fraction of reach per second, W in / S out
@@ -462,14 +463,10 @@ def _camera_tick(rig, pc, dt):
     if reel:
         new_reach = float(reach) * (1.0 + reel * CAM_REEL_PER_S * dt)
         _rig_set(rig, 'Reach', max(400.0, min(30000.0, new_reach)))
-    edges = _st.get('edges', {})
-    if edges.get('Q') or edges.get('E'):
-        # step the ladder: Q closer, E farther, from the nearest stop
-        r = float(_rig_get(rig, 'Reach', reach))
-        idx = min(range(len(CAM_LADDER)), key=lambda i: abs(CAM_LADDER[i] - r))
-        idx = idx + (1 if edges.get('Q') else -1)
-        idx = max(0, min(len(CAM_LADDER) - 1, idx))
-        _rig_set(rig, 'Reach', CAM_LADDER[idx])
+    # Q/E deliberately NOT handled here (2026-09-04, owner: "starts fighting
+    # itself once zoomed in with the Q/E buttons"): the rig's own graph still
+    # runs the zoom ladder on Q/E, so a second writer made two targets
+    # alternate. The graph keeps the ladder; Python owns orbit, reel and pan.
     px = (1 if down.get('Right') else 0) - (1 if down.get('Left') else 0)
     py = (1 if down.get('Up') else 0) - (1 if down.get('Down') else 0)
     if px or py:

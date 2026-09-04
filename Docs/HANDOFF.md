@@ -1393,4 +1393,11 @@ into the wrong project. It has already caught it happening.
   two seconds. Whether the rig's own TickBody still handles keys is
   unverified (beta lane: honest non-answer); if the owner sees double
   motion, the graph side is alive and must be found - no rewrite.
+  ANSWERED BY THE OWNER'S NEXT RELAUNCH (01:0x): "camera rig seems to
+  work better but starts fighting itself once zoomed in with the Q/E
+  buttons" - so the rig's graph still runs its Q/E zoom ladder (that
+  part of TickBody's input survived the rewrites) and two writers made
+  two targets alternate. Python dropped Q/E; the graph keeps the ladder,
+  Python owns orbit, reel and pan. A fight on a key is the tell that
+  the graph side of that key is alive.
 

@@ -194,6 +194,41 @@ ROADS = (ARTERIAL, CROSS_STREET)
 ROAD_MAX_REACH = ROAD_HALF + BLOCK_DEPTH + REACH_SLACK
 
 
+def _road_dict(seg):
+    """A citystate road-segment dict ({'id','start','end','width_class'},
+    Docs/ROAD_BUILD_CONTRACT.md) converted into resolve_road's own
+    expected shape - +side_plus/side_minus/axis, read off the segment's
+    own geometry rather than stored a second time in state (one more
+    place a stored copy could drift from the geometry it describes).
+    ORIENTATION IS AXIS-ALIGNED ONLY in this pass (a segment's start/end
+    share either their X or their Y - draw_road below is what actually
+    enforces this before a segment ever reaches state; this function
+    trusts that already holds, it does not re-check it) - a horizontal
+    segment (same Y) gets the arterial's own north/south convention, a
+    vertical one (same X) gets the cross street's own west/east
+    convention: NOT two conventions this function invents, the same two
+    every self-test already exercises against the two built-ins,
+    extended to whichever road a segment's own shape says it matches."""
+    sx, sy = seg['start']
+    ex, ey = seg['end']
+    if sy == ey:
+        return dict(seg, side_plus='north', side_minus='south', axis='x')
+    return dict(seg, side_plus='west', side_minus='east', axis='y')
+
+
+def _all_roads(state):
+    """Every road resolve_click (and draw_road below) should consider:
+    the two built-ins PLUS whatever the player has drawn (Docs/
+    ROAD_BUILD_CONTRACT.md task b, 2026-09-04). state.get('roads', {})
+    is defensive - a state predating this key (the owner's real save)
+    simply has none, same backward-compat discipline lot_road_id
+    already established for a different missing key. A FRESH tuple
+    every call, never cached: roads can be drawn between calls, and
+    this module holds no state of its own to go stale."""
+    drawn = tuple(_road_dict(seg) for seg in state.get('roads', {}).values())
+    return ROADS + drawn
+
+
 def _project_to_road(road, x, y):
     """(along, across, length) in `road`'s own frame -
     RESOLVE_ROAD_NOTES.md section 4. `along` is distance from `start`
@@ -290,21 +325,50 @@ def resolve_road(roads, x, y):
 
 
 
-def lot_rect(lot):
+def _find_road(roads, road_id):
+    """The road dict named road_id within `roads` - KeyError if absent,
+    loud rather than a silent None a caller might not check. `roads` is
+    always a full candidate list (ROADS, or ROADS + drawn segments via
+    _all_roads below) - never searched by identity, always by the same
+    'id' string every lot's own road_id already carries."""
+    for road in roads:
+        if road['id'] == road_id:
+            return road
+    raise KeyError(road_id)
+
+
+def lot_rect(lot, roads=ROADS):
     """World-space footprint (xmin, xmax, ymin, ymax) of a lot's PAD from
-    its placement dict, both roads: the span along the road's axis, and
-    facade line to block back edge across it, on the lot's side. The ONLY
-    geometry the overlap scan compares - spans within one road miss the
-    corner, where a cross-street lot and an arterial lot share ground."""
+    its placement dict, ANY axis-aligned road (generalized 2026-09-04,
+    Docs/ROAD_BUILD_CONTRACT.md - drawn roads are no longer just 'cross
+    vs everything else'): the span along the road's own axis, and
+    facade line to block back edge across it, on the lot's side. Looks
+    the lot's own road up in `roads` by id (_find_road) to read its
+    axis and centreline, rather than special-casing the id string
+    'cross' the way this function used to - 'cross' is simply whichever
+    road happens to be vertical, no longer structurally different from
+    any OTHER vertical road a player might draw.
+
+    `roads=ROADS` (the two built-ins only) is the default so every
+    EXISTING caller/self-test that never passed one keeps working
+    unchanged; a caller with drawn roads in play passes _all_roads
+    (state) explicitly. REDUCES TO TODAY'S MATH for both built-ins,
+    checked not assumed (self-test): ARTERIAL's centreline is Y=0 and
+    CROSS_STREET's is X=0, so the offset below is exactly the constant
+    this function used to hard-code, recovered from the road's own
+    'start' instead of restated as a literal."""
+    road = _find_road(roads, lot_road_id(lot))
     near, far = ROAD_HALF, ROAD_HALF + BLOCK_DEPTH
     x0, x1 = float(lot['x0']), float(lot['x1'])
-    if lot_road_id(lot) == 'cross':
+    if road['axis'] == 'y':
+        cx = road['start'][0]
         if lot['side'] == 'west':
-            return (-far, -near, x0, x1)
-        return (near, far, x0, x1)
+            return (cx - far, cx - near, x0, x1)
+        return (cx + near, cx + far, x0, x1)
+    cy = road['start'][1]
     if lot['side'] == 'north':
-        return (x0, x1, near, far)
-    return (x0, x1, -far, -near)
+        return (x0, x1, cy + near, cy + far)
+    return (x0, x1, cy - far, cy - near)
 
 
 def rects_overlap(a, b):
@@ -347,10 +411,18 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
 
     `pins_active` gates the PINNED_SPANS check only, unchanged from
     before multi-road - see empty-mode's own caller for why this is
-    mode-gated, not a permanent board fact."""
-    road, local = resolve_road(ROADS, x, y)
+    mode-gated, not a permanent board fact.
+
+    ROADS BECAME DYNAMIC 2026-09-04 (Docs/ROAD_BUILD_CONTRACT.md task
+    b): every call below that used to read the module-level ROADS
+    constant now calls _all_roads(state) instead - the two built-ins
+    plus whatever the player has drawn. resolve_road/_in_crossing/
+    lot_rect all already took a roads argument generically; nothing in
+    THEIR code changed, only what this function passes them did."""
+    roads = _all_roads(state)
+    road, local = resolve_road(roads, x, y)
     if road is None:
-        if _in_crossing(ROADS, x, y):
+        if _in_crossing(roads, x, y):
             return False, (
                 'in the crossing: (%.1f, %.1f) is pavement shared by '
                 'more than one road' % (x, y)), None
@@ -382,7 +454,7 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
                     'overlap: [%.1f, %.1f] crosses a pinned lot at '
                     '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
     candidate = {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
-    mine = lot_rect(candidate)
+    mine = lot_rect(candidate, roads)
     for p in state['parcels'].values():
         lot = p.get('placement')
         if not lot:
@@ -393,7 +465,7 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
         # onto a standing building there. The rectangle test contains the
         # old same-road same-side span test, so nothing it refused is
         # allowed now.
-        if rects_overlap(mine, lot_rect(lot)):
+        if rects_overlap(mine, lot_rect(lot, roads)):
             return False, (
                 'overlap: [%.1f, %.1f] on the %s crosses an existing lot at '
                 '[%.1f, %.1f] on the %s' % (x0, x1, road['id'], lot['x0'],
@@ -446,6 +518,117 @@ def place(state, x, y, pins_active=True, width=V0_WIDTH):
                       'road_id': lot['road_id']},
     }
     return state, pid, True, ''
+
+
+# DRAWN ROADS (2026-09-04, Docs/ROAD_BUILD_CONTRACT.md task a/b). A
+# road's own "lot" for reach/reuse purposes: it must be long enough to
+# hold at least one lot, or drawing it answers no question a player
+# would ask it to.
+MIN_ROAD_LENGTH = V0_WIDTH
+
+
+def road_rect(road):
+    """World-space footprint (xmin, xmax, ymin, ymax) of a road's OWN
+    corridor - ROAD_HALF either side of its centreline, for its full
+    length. Same rectangle shape lot_rect returns, so rects_overlap
+    compares a candidate road against an existing road OR an existing
+    lot with the one comparison function, nothing road-specific in
+    rects_overlap itself."""
+    sx, sy = road['start']
+    ex, ey = road['end']
+    if sy == ey:
+        return (min(sx, ex), max(sx, ex), sy - ROAD_HALF, sy + ROAD_HALF)
+    return (sx - ROAD_HALF, sx + ROAD_HALF, min(sy, ey), max(sy, ey))
+
+
+def _next_road_id(state):
+    """R1, R2, ... - the first not already in state['roads'], mirroring
+    _next_pid exactly: deterministic, and a namespace ('R' + digits)
+    distinct by construction from 'arterial'/'cross' (the built-ins),
+    'P' + digits (placed lots), and letters (pins)."""
+    n = 1
+    while 'R%d' % n in state.get('roads', {}):
+        n += 1
+    return 'R%d' % n
+
+
+def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue'):
+    """(ok, reason, road) - the click-click -> road decision, the same
+    role resolve_click plays for a lot: the ONE place a drawn road is
+    accepted or refused, called by both the ghost preview and draw_road
+    below so they can never disagree (task c's own "the ghost shows the
+    chord and refuses crossings/overlaps" needs exactly this shared
+    authority - the same discipline the lot ghost already uses against
+    resolve_click).
+
+    AXIS-ALIGNED ONLY in this pass - a named v0 limit, not an oversight.
+    resolve_click's own world-coordinate recovery (`road['start']
+    [axis_idx] + along`) only recovers a correct WORLD POINT when a
+    road's direction actually IS one world axis; a true diagonal road
+    would need `along` recovered as a full 2D point, along the road's
+    own direction vector, which nothing in resolve_click does today.
+    Solving that is real, separate work (Docs/ROAD_BUILD_CONTRACT.md
+    names it) - not attempted here, so this function does not accept
+    input that would need it. Orientation is decided from whichever
+    delta dominates (>= 3x the other, a deadzone roughly 18-72 degrees
+    off each axis where neither wins): a click-pair close to horizontal
+    or vertical SNAPS to exactly that (the minor coordinate set equal
+    to the start point's own, then both endpoints rounded to
+    POSITION_QUANTUM same as a lot's own snap); a click-pair with
+    neither axis dominant REFUSES rather than silently reinterpreting a
+    genuinely diagonal gesture as a straight one the player did not
+    draw."""
+    dx, dy = x1 - x0, y1 - y0
+    if abs(dx) >= 3.0 * abs(dy):
+        sx0, sy0, sx1, sy1 = _snap(x0), _snap(y0), _snap(x1), _snap(y0)
+    elif abs(dy) >= 3.0 * abs(dx):
+        sx0, sy0, sx1, sy1 = _snap(x0), _snap(y0), _snap(x0), _snap(y1)
+    else:
+        return False, (
+            'too diagonal: roads must run close to north-south or '
+            'east-west in this version'), None
+    length = abs(sx1 - sx0) + abs(sy1 - sy0)  # axis-aligned: one term is 0
+    if length < MIN_ROAD_LENGTH:
+        return False, (
+            'too short: %.0f uu is under the %.0f uu a single lot needs'
+            % (length, MIN_ROAD_LENGTH)), None
+    if not (PLATE_X_MIN <= sx0 <= PLATE_X_MAX and
+            PLATE_X_MIN <= sx1 <= PLATE_X_MAX and
+            PLATE_Y_MIN <= sy0 <= PLATE_Y_MAX and
+            PLATE_Y_MIN <= sy1 <= PLATE_Y_MAX):
+        return False, 'off-board: the drawn road would leave the plate', None
+    candidate = {'id': _next_road_id(state), 'start': (sx0, sy0),
+                 'end': (sx1, sy1), 'width_class': width_class}
+    roads = _all_roads(state)
+    mine = road_rect(_road_dict(candidate))
+    for road in roads:
+        if rects_overlap(mine, road_rect(road)):
+            return False, (
+                'crosses: the drawn road would cross the %s road'
+                % road['id']), None
+    for p in state['parcels'].values():
+        lot = p.get('placement')
+        if not lot:
+            continue
+        if rects_overlap(mine, lot_rect(lot, roads)):
+            return False, (
+                'overlap: the drawn road would cross an existing lot at '
+                '[%.1f, %.1f] on the %s'
+                % (lot['x0'], lot['x1'], lot_road_id(lot))), None
+    return True, '', candidate
+
+
+def draw_road(state, x0, y0, x1, y1, width_class='avenue'):
+    """One road-drawing attempt. (state, road_id, ok, reason) - road_id
+    is None on refusal, mirroring place()'s own return shape exactly.
+    On success, state['roads'][road_id] is the SAME dict
+    resolve_road_draw already validated, inserted unchanged - not
+    re-derived, the same discipline place() already holds for a lot."""
+    ok, reason, road = resolve_road_draw(state, x0, y0, x1, y1, width_class)
+    if not ok:
+        return state, None, False, reason
+    state.setdefault('roads', {})[road['id']] = road
+    return state, road['id'], True, ''
 
 
 def plan_reactivation(pids, pool_labels):

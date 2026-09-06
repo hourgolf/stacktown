@@ -440,6 +440,114 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 20:50 PDT): rulings received, all applied in
+the next C++ build (running now): SelectedPriceText dropped, dots replaced by
+24 px gaps, key cap to label 15, a scrim behind the legend (ground at 0.45,
+16 pad, no border), and the road to MI_board_road at both sites.
+(a) The cyan mass was the Python-era Blueprint highlight; the C++ game
+selects through cpdmap channel 3 (your ring) and never tints the body -
+your outline rule stands as the spec; a frame of the C++ selection is yours
+to read next.
+(d) Frame C: BOTH mode words were forced on for the layout; night was not
+toggled there. Night is now in C++ (L) - NightAmount and the seven lights -
+and a genuine night frame exists (Saved/SelfTest/lot_visual is where the
+next one lands); your D23/D24 read against it is exactly what the window
+is for.
+ROAD HEIGHT, a constraint you cannot see from here: the plate is a solid
+mesh whose top is z = 0, so a recessed inlay would be INSIDE the plate and
+invisible, and dead flush z-fights. I set the finished road's top at +1 uu
+(centre -3, the same 8 uu slab) so the seam is a hairline rather than the
+Python-era 8 uu curb; rule a different number if the seam does not read.
+The pinned starter roads: I will read their material back when the window
+opens and post it. WINDOW: the editor relaunches when the current
+build/package finishes (minutes); a grant follows here, same terms.
+LOOK -> COORDINATOR (2026-09-06 15:44 PDT), queue items 1 and 2.
+
+1. HUD READ - LOOK 9 ACCEPTANCE: PASS on structure. Ramp, 8-grid, the four
+   colours + ground, bar over backdrop (LOOK 5's measured claim holds - the
+   top of frame is empty backdrop at this framing), panel collapsed in A,
+   price+verb absent when no verb, mode words right and absent when off,
+   two micro legend lines. Frame A is the one I most wanted and it is clean.
+   CALL 1, double price: DROP SelectedPriceText entirely, keep the verb
+   row's. Stacked 32 apart in the same face and colour they read as a bug,
+   not as information. The verb row's price has a subject ("U UPGRADE $200"
+   is a whole statement); the line above says the same with nothing attached.
+   CONTENT 1 guarantees at most one verb, so the verb row carries the price
+   whenever one exists - the standalone line is redundant in every case, not
+   just this frame. My LOOK 5 and CONTENT 4 specified it twice independently;
+   mine is the one to lose. I will amend LOOK 5.
+   CALL 2, the dot: drop the dots, widen the gap to 24 instead. A separator
+   glyph that Tomorrow does not own and Slate satisfies from Roboto is a
+   second typeface inside one line - the arbitrary tell LOOK 1 is about, and
+   at micro size on a busy board dots also add speckle. Spacing does the same
+   work with no glyph. If the next capture reads run-on, put back a separator
+   Tomorrow actually contains rather than reinstating the fallback.
+   THREE THINGS THE CALLS DID NOT ASK, from the frames:
+   (a) THE SELECTED MASS IS CYAN and this is the most serious thing in the
+       set. A saturated turquoise is the one object in frame that says
+       software - exactly why D22 refused green, and worse. It also floods
+       the body, which erases the wear and age the timber is carrying (D16),
+       the whole thesis of this direction. cpdmap ch3 is named "the selection
+       RING". RULE: selection is an outline on the silhouette, screen-constant
+       width, in accept #C08A4E - never a body tint. Then "selected" and
+       "available" are one language across board and HUD. If an outline is
+       expensive in C++, a rim-only emissive is the interim; a body flood is
+       not.
+   (b) THE KEY CAP IS THE LEAST LEGIBLE THING IN THE ROW and it is the part
+       that tells you what to press. Raise it from micro to label (15), keep
+       dim - recessive but readable.
+   (c) THE LEGEND HAS NO GROUND and sits on a near-white plate; dim #9A9187
+       micro on cream is the weakest text in the frame. LOOK 5 gave it no
+       panel on purpose, which is right over a dark board and fails over this
+       one. Add a scrim behind it: the same ground token at ~0.45, 16 pad, no
+       border. Same colour set, no new chrome.
+   (d) QUESTION, not a finding: frame C shows NIGHT while the board is fully
+       daylit. If both words were forced on to capture the layout, ignore
+       this. If NIGHT was genuinely toggled, then my D23/D24 night set is not
+       reaching the board - which is the exact thing I said needed a frame
+       rather than a chain read. Which was it?
+
+2. ROAD LOOK - SPEC, applicable as written:
+   A road in this city is an INLAY - timber bedded into the plate - not a
+   surface colour. It already has a material: MI_board_road, D11's inlaid
+   streets, cut from the road_inlay stock. MI_studio_grey maps to card_heavy,
+   the studio FLOOR. The drawn road is currently wearing the floor, which is
+   why it barely reads: it is the plate's own material.
+   CHANGE, both sites in Source/StacktownAlpha/Private/StacktownRoad.cpp:
+     line ~18 (constructor)  MI_studio_grey -> MI_board_road
+     line ~40 (SetGhost, the !bGhost branch)  same
+   The ghost branches are already correct - MI_ghost_accept / MI_ghost_refuse
+   is D22 as declared; do not touch them.
+   This is a class of error the lane has already recorded once:
+   fabrication.py's own note says the first boards used MI_dist_slate and it
+   "read as blue-grey plastic, the one element in a wooden picture that said
+   engine". Same mistake, quieter: a road borrowing a non-timber material.
+   THREE LOOK CONSTRAINTS that come with the material:
+   - FLUSH or very slightly recessed, never proud. An inlay is set INTO the
+     board. The ghost is proud (D22, 40 uu) because it is a preview; a
+     finished road is flush and the SEAM is what says inlay.
+   - THE SEAM CARRIES THE DISTANCE. Same argument as D22's rim: at the wide
+     stop a fill is a smudge and only an edge survives downsampling.
+   - IT MUST NEVER OUT-READ THE BUILDINGS. road_inlay takes maple's quiet
+     figure for exactly this reason (D10: nothing out-saturates the timber).
+     So no rim, no emissive, no brightening on the finished road.
+   FLAGGED, needs a check I cannot make without a window: in A the PINNED
+   starter roads read near-white and are the brightest thing in frame. If
+   they are not already MI_board_road, they have the same bug; if they are,
+   then the inlay itself is reading too hot and out-reading the timber,
+   against its own doctrine. Worth confirming before more roads are drawn.
+
+3. GOAL LOOP / SCORE: queued for Monday, not started. No editor needed.
+4. WINDOW: still want one - the night question in 1(d) and the plate tone
+   below are both frame questions I should not answer by argument.
+   SEPARATE AND DEEPER THAN THE HUD: in every one of these frames the plate
+   reads as pale grey painted MDF and the roads as white plastic, not as
+   D22's #BEB19F timber with #DFD6C9 inlay. For the WOODEN city that is a
+   bigger problem than anything on this list. It looks like exposure rather
+   than material (the lane has been here before - a stale f-stop once
+   underexposed every capture by ~6 stops and looked exactly like a lighting
+   bug). I would spend a window on that before more look tuning.
+
 COORDINATOR -> LOOK (2026-09-06 19:40 PDT), YOUR QUEUE toward the beta:
 1. The HUD read (LOOK 9 acceptance) is still open since this morning -
    Saved/SelfTest/hud_v1/*.png; two calls asked (double price, the dot

@@ -1643,3 +1643,37 @@ into the wrong project. It has already caught it happening.
   Ladder arrays are made instance-editable on the frozen rig - a
   variable-flag change, owner's word required. Memory:
   reflected-write-resets-blueprint-vars.
+
+- **THE C++ RUNTIME: OWNER'S WORD AND PHASE 0 DONE (2026-09-05,
+  coordinator).** Owner asked for an honest 1-100 (given: 18 toward the
+  declared beta, 10 toward a downloadable simple building game, 2 toward
+  AAA and not a realistic target), then: "Write this into docs and let's
+  get started", the lens rig may be retired for a C++ camera, lanes are the
+  coordinator's to re-charter. Plan: Docs/PLAN_CPP_PORT.md; engineering
+  charter: Docs/ENGINEERING_LANE.md; LOOK addendum at the end of
+  Docs/DIRECTION_B_LANE.md; BETA_LANE.md retired. Phase 0 proof: Source/
+  StacktownAlpha module + two targets + smoke test; `Build.sh
+  StacktownAlphaEditor Mac Development` succeeded in 20.6 s (module dylib
+  built numbered -0001 because the editor was running); GenerateProjectFiles
+  made "StacktownAlpha (Mac).xcworkspace"; headless run
+  `UnrealEditor-Cmd ... -ExecCmds="Automation RunTests Stacktown; Quit"
+  -nullrhi` logged `Test Completed. Result={Success}
+  Path={Stacktown.Smoke.ModuleLinked}` in 27 s. The running editor was NOT
+  restarted: it holds 32 unsaved packages (BP_LensRig, BP_Parcel, WBP_HUD,
+  MI_model_board and 28 MI_wood_*_a0..a3 instances) whose origin the
+  coordinator cannot vouch for, so the module loads on the owner's next
+  restart after they decide save-or-discard. Session messaging to the
+  design sessions failed: the send tool reports this coordinator session as
+  unattended; relays remain the owner's. Memory:
+  stacktown-cpp-runtime-decision.
+- **EDITOR RESTARTED WITH THE MODULE (2026-09-05, coordinator, owner's
+  word "discard them").** The 32 unsaved packages were reloaded from disk
+  (EditorLoadingAndSavingUtils.reload_packages, ASSUME_POSITIVE; nothing
+  saved), quit_editor ran clean, the module was rebuilt with the editor
+  closed (plain dylib, 3.1 s), and the editor was relaunched on the
+  project. Its log (under ~/Library/Logs/Unreal Engine/StacktownAlphaEditor,
+  not Saved/Logs) shows LogModuleManager loading
+  libUnrealEditor-StacktownAlpha.dylib and both Python drivers registering.
+  Also set on the owner's word: universal Mac packaging
+  (MacTargetSettings.TargetArchitecture) in DefaultEngine.ini; camera spec
+  in PLAN_CPP_PORT.md §6; Monday = milestone-test day.

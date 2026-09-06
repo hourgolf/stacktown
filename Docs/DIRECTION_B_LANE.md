@@ -86,3 +86,17 @@ per-instance age scalar on the wooden shader, no geometry change,
 which keeps the byte-identical proof trivially clean and makes aging
 a runtime parameter the tick can drive. Decide it declaration-first,
 before any wooden mesh exists.
+
+## Addendum 2026-09-05: the LOOK seat under the C++ plan
+
+Read Docs/PLAN_CPP_PORT.md. Your charter stands: the wooden city, wear,
+night, windows, the miniature gate. What changes:
+- The Blueprint lens rig is retired; the camera will be C++. Camera
+  intent (Docs/LENSRIG_P0.md ladder, boom space, f-stop) stays the spec;
+  send corrections to the coordinator, not to the rig.
+- HUD LOOK 1-9 in Docs/HUD_V1.md is now the spec for a C++-built HUD.
+  Do not build HUD in Blueprint.
+- Open look items remain yours: window-grid regularity, char depth at
+  full Failure, activity glow later. Same rules: explicit-path saves,
+  never the flagship assets, never a PIE inside another seat's window.
+- Status on Docs/BOARD.md under LOOK, ten lines, every working day.

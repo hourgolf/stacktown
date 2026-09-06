@@ -48,3 +48,36 @@ STATUS: (write here)
 - "flip it" for A/D orbit direction (two literal pins, coordinator's edit).
 - Pine script + ticker + five adapter answers for the trade side.
 - HUD v1 build go, once both halves are in the file.
+
+## 2026-09-05: the C++ plan (owner's word) — seats and open questions
+
+Plan: Docs/PLAN_CPP_PORT.md. Runtime moves to a C++ game module; the
+Blueprint lens rig is retired for a C++ camera; lanes re-chartered.
+
+Seats:
+- COORDINATOR (this session): Phase 0 done - Source/StacktownAlpha module,
+  editor target builds from the command line (20.6 s), Xcode workspace
+  generated, smoke test Stacktown.Smoke.ModuleLinked runs headless.
+  Verifies, grants windows, keeps this board and HANDOFF §5.
+- ENGINEERING (to be opened by the owner, stronger model): charter
+  Docs/ENGINEERING_LANE.md. First tasks: economy + state (17 + 9 tests),
+  then placement (27 tests). Not yet staffed.
+- LOOK (the direction-B design session): continues under the addendum at
+  the end of Docs/DIRECTION_B_LANE.md. No editor window granted.
+- BETA gameplay lane: RETIRED (Docs/BETA_LANE.md, retired section). Its
+  knowledge is the Python spec the port is checked against.
+
+Editor: RESTARTED 2026-09-05 22:56 local on the owner's word (the 32
+unsaved packages were discarded by reloading them from disk, nothing
+saved). The relaunched editor loaded libUnrealEditor-StacktownAlpha.dylib
+(LogModuleManager) and both Python drivers registered. No window is
+granted; the LOOK seat may request one.
+
+Session messaging: the send tool reports this coordinator session as
+unattended, so relays still go through the owner. Lanes read this board
+and their charter files.
+
+Owner's answers (2026-09-05): 1. camera = right-drag orbit, wheel zoom,
+edge/arrow pan (PLAN_CPP_PORT.md §6). 2. universal builds. 3. Mondays are
+the milestone-test day. 4. discard the 32 unsaved packages. 5. Phase 0
+committed on the owner's word.

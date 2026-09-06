@@ -95,3 +95,14 @@ flagship catalogue before any second catalogue exists, and bring the
 owner one working demonstration (a placed parcel resolving through the
 pointer) before building further. Announce your first editor window
 before taking it."
+
+## Retired 2026-09-05
+
+The beta gameplay lane is retired in favour of the ENGINEERING seat
+(Docs/ENGINEERING_LANE.md) under Docs/PLAN_CPP_PORT.md. Everything this
+lane proved lives in the Python drivers and their tests (placement.py,
+citytick.py, econrules.py, clickdriver.py, init_unreal.py) and in
+Docs/PLACEMENT_GRID.md, Docs/ROAD_BUILD_CONTRACT.md, Docs/HUD_V1.md
+(CONTENT 1-7). Those files are the specification the port is checked
+against. Any session reading this as the beta lane: stop, report to the
+coordinator, and do not edit.

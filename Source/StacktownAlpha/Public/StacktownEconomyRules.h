@@ -137,6 +137,19 @@ struct STACKTOWNALPHA_API FParcelState
 	TOptional<FLotPlacement> Placement;
 };
 
+/** One player-drawn road: a centreline segment and how wide a class it is.
+ *
+ *  ORIENTATION IS NOT STORED. Which side is north and which is south is READ
+ *  OFF the geometry (RoadDictFromSegment), because a stored copy is one more
+ *  thing that can disagree with the segment it describes. Axis-aligned only in
+ *  this version, and enforced at the point of drawing rather than assumed here. */
+struct STACKTOWNALPHA_API FRoadSegment
+{
+	double  StartX = 0.0, StartY = 0.0;
+	double  EndX   = 0.0, EndY   = 0.0;
+	FString WidthClass;
+};
+
 /** The live city. Mirrors the dict econrules.tick()/buy()/upgrade() operate on. */
 struct STACKTOWNALPHA_API FCityState
 {
@@ -147,11 +160,14 @@ struct STACKTOWNALPHA_API FCityState
 	 *  Top-level, not per-parcel: this is what makes the ledger idempotent. */
 	int32  TradesProcessed = 0;
 
-	/** Player-drawn road segments, verbatim JSON. Roads are step 4's to port;
-	 *  until then this port must not be the reason a road disappears from the
-	 *  owner's save, so it round-trips the object without interpreting it.
-	 *  "{}" is what seed_state() produces. */
-	FString RoadsJson = TEXT("{}");
+	/** PLAYER-DRAWN segments only, keyed by id. The two built-in roads (the
+	 *  arterial and the cross street) are constants of the board, never state -
+	 *  they have never been in this file and must not start being.
+	 *
+	 *  Was an opaque JSON string through steps 1-3, so a road could not be lost
+	 *  while roads were nobody's to interpret; step 4 parses it for real. Empty
+	 *  by default: drawing is the only thing that adds one. */
+	TMap<FString, FRoadSegment> Roads;
 };
 
 // NO UNKNOWN-FIELD PASSTHROUGH, AND THAT IS DELIBERATE. An earlier draft of this

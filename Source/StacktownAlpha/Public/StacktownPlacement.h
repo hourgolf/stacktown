@@ -88,10 +88,17 @@ struct STACKTOWNALPHA_API FPlacementBoard
 	 *  explicit instead of hiding it in a pointer comparison. */
 	FString PinnedRoadId = TEXT("arterial");
 
-	/** Every road a click should consider. Today: the built-ins. Player-drawn
-	 *  segments join this list in STEP 4, when FCityState::RoadsJson stops being
-	 *  opaque - the function exists now so step 4 changes one body rather than
-	 *  every call site, exactly as the Python's own _all_roads did. */
+	/** The plate: MEASURED off the board's own ground mesh in the editor, never
+	 *  derived. The procedural block union was tried as the authority and the
+	 *  owner's live clicks proved it wrong twice. Nothing here can re-derive
+	 *  them; if the mesh is resized they are re-measured and re-injected. */
+	double PlateXMin = -7650.0, PlateXMax = 7650.0;
+	double PlateYMin = -4230.0, PlateYMax = 4230.0;
+
+	/** Every road a click should consider: the two built-ins PLUS whatever the
+	 *  player has drawn. A FRESH array every call, never cached - roads can be
+	 *  drawn between calls and this struct holds no state of its own to go
+	 *  stale. Drawn segments come after the built-ins, in id order. */
 	TArray<FRoad> AllRoads(const FCityState& State) const;
 };
 
@@ -213,6 +220,67 @@ STACKTOWNALPHA_API FPlaceResult Place(const FPlacementBoard& Board, FCityState& 
  *  it is oblivious to road_id by construction rather than merely untested
  *  against it. OutUnmatched is any pid with no label left - a state/pool desync
  *  that must refuse loudly rather than silently drop a lot. */
+// --- drawn roads (Phase 1 step 4) ------------------------------------------------
+
+/** A stored segment as a road, with the side conventions READ OFF its geometry:
+ *  a horizontal segment (same Y) gets the arterial's north/south convention, a
+ *  vertical one (same X) gets the cross street's west/east. Not two conventions
+ *  invented here - the same two the built-ins already use, extended to whichever
+ *  a segment's own shape matches.
+ *
+ *  Trusts that the segment IS axis-aligned; DrawRoad is what enforces that
+ *  before one ever reaches state. */
+STACKTOWNALPHA_API FRoad RoadDictFromSegment(const FString& Id, const FRoadSegment& Seg);
+
+/** Drawn-road ids in creation order: R1, R2, ... R9, R10 - numerically, not
+ *  lexicographically, which would put R10 before R2. The Python gets this free
+ *  from dict insertion order; a C++ port that reloads from JSON cannot, and the
+ *  order decides WHICH road a crossing refusal names. */
+STACKTOWNALPHA_API void SortRoadIds(TArray<FString>& Ids);
+
+/** World footprint of a road's OWN corridor: RoadHalf either side of its
+ *  centreline, for its full length. Deliberately the same rectangle shape a lot
+ *  gets, so one overlap test compares a candidate road against a road OR a lot
+ *  with nothing road-specific in the comparison itself. */
+STACKTOWNALPHA_API FLotRect RoadRect(const FPlacementRules& R, const FRoad& Road);
+
+/** R1, R2, ... - the first not taken. A namespace distinct by construction from
+ *  the built-ins, from placed lots (P + digits) and from pins (letters). */
+STACKTOWNALPHA_API FString NextRoadId(const FCityState& State);
+
+struct STACKTOWNALPHA_API FRoadDrawResult
+{
+	bool         bOk = false;
+	FString      Reason;
+	FString      Id;
+	FRoadSegment Segment;
+};
+
+/** The click-click -> road decision: the ONE place a drawn road is accepted or
+ *  refused, so the ghost preview and the commit can never disagree.
+ *
+ *  AXIS-ALIGNED ONLY, and that is a named limit rather than an oversight:
+ *  ResolveClick recovers a world point as `road start on axis + along`, which is
+ *  only correct when a road's direction IS a world axis. A true diagonal would
+ *  need `along` recovered as a full 2D point along the road's own direction
+ *  vector, which nothing does today - so this refuses input that would need it
+ *  rather than quietly reinterpreting a diagonal gesture as a straight one.
+ *  Orientation goes to whichever delta dominates by 3x; neither dominant
+ *  refuses.
+ *
+ *  PINNED LOTS ARE CHECKED SEPARATELY, and that is not redundant with the lot
+ *  scan: a pin is registered with no placement at all, so the placed-lot loop
+ *  skips every pin by construction. Without this check a drawn road could run
+ *  straight through a standing pinned building. */
+STACKTOWNALPHA_API FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board,
+	const FCityState& State, double X0, double Y0, double X1, double Y1,
+	const FString& WidthClass, bool bPinsActive);
+
+/** One road-drawing attempt. On success the segment ResolveRoadDraw validated is
+ *  inserted UNCHANGED - not re-derived, the same discipline Place holds for a lot. */
+STACKTOWNALPHA_API FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityState& State,
+	double X0, double Y0, double X1, double Y1, const FString& WidthClass, bool bPinsActive);
+
 STACKTOWNALPHA_API void PlanReactivation(const TArray<FString>& Pids,
 	const TArray<FString>& PoolLabels,
 	TArray<TPair<FString, FString>>& OutPairs, TArray<FString>& OutUnmatched);

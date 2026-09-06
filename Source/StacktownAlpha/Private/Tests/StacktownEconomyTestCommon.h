@@ -112,6 +112,32 @@ inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCitySt
 		OutWhy = FString::Printf(TEXT("parcel count %d vs %d"), A.Parcels.Num(), B.Parcels.Num());
 		return false;
 	}
+	// Roads joined the schema in step 4. Compared here so a round-trip test
+	// cannot pass while silently losing a road the player drew.
+	if (A.Roads.Num() != B.Roads.Num())
+	{
+		OutWhy = FString::Printf(TEXT("road count %d vs %d"), A.Roads.Num(), B.Roads.Num());
+		return false;
+	}
+	for (const TPair<FString, Stacktown::FRoadSegment>& Pair : A.Roads)
+	{
+		const Stacktown::FRoadSegment* Other = B.Roads.Find(Pair.Key);
+		if (Other == nullptr)
+		{
+			OutWhy = FString::Printf(TEXT("road '%s' missing"), *Pair.Key);
+			return false;
+		}
+		const Stacktown::FRoadSegment& S = Pair.Value;
+		if (FMath::Abs(S.StartX - Other->StartX) > Tolerance
+			|| FMath::Abs(S.StartY - Other->StartY) > Tolerance
+			|| FMath::Abs(S.EndX - Other->EndX) > Tolerance
+			|| FMath::Abs(S.EndY - Other->EndY) > Tolerance
+			|| S.WidthClass != Other->WidthClass)
+		{
+			OutWhy = FString::Printf(TEXT("road '%s' differs"), *Pair.Key);
+			return false;
+		}
+	}
 	for (const TPair<FString, Stacktown::FParcelState>& Pair : A.Parcels)
 	{
 		const Stacktown::FParcelState* Other = B.Parcels.Find(Pair.Key);

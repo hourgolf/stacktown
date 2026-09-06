@@ -190,6 +190,60 @@ MUTATIONS = [
      'Facts.Price   = Price(R, P->Tier, P->Width);',
      'Facts.Price   = Price(R, 0, P->Width);', True, 'handover'),
 
+    # ---- drawn roads (Phase 1 step 4) ---------------------------------------
+    ('diagonal-gate-opens', 'a genuinely diagonal gesture becomes a straight road',
+     'if (FMath::Abs(Dx) >= 3.0 * FMath::Abs(Dy))', 'if (FMath::Abs(Dx) >= 0.0 * FMath::Abs(Dy))',
+     True, 'placement'),
+
+    ('minor-coordinate-from-the-end', 'a near-axis drag tilts to its end point',
+     'SX0 = Snap(R, X0); SY0 = Snap(R, Y0); SX1 = Snap(R, X1); SY1 = Snap(R, Y0);',
+     'SX0 = Snap(R, X0); SY0 = Snap(R, Y1); SX1 = Snap(R, X1); SY1 = Snap(R, Y1);',
+     True, 'placement'),
+
+    ('min-length-not-enforced', 'a road too short to hold a lot is accepted',
+     'if (Length < R.V0Width)', 'if (Length < 0.0)', True, 'placement'),
+
+    ('road-off-board-not-checked', 'a drawn road leaves the plate',
+     'if (!(Board.PlateXMin <= SX0 && SX0 <= Board.PlateXMax &&',
+     'if (false && !(Board.PlateXMin <= SX0 && SX0 <= Board.PlateXMax &&', True, 'placement'),
+
+    ('road-crossing-not-checked', 'a drawn road runs straight over another road',
+     'if (RectsOverlap(Mine, RoadRect(R, Road)))', 'if (false)', True, 'placement'),
+
+    ('road-pin-scan-not-mode-gated', 'empty mode still refuses on a dormant pin',
+     'if (bPinsActive)\n\t{\n\t\tconst FRoad* Arterial = FindRoad(Roads, Board.PinnedRoadId);',
+     'if (true)\n\t{\n\t\tconst FRoad* Arterial = FindRoad(Roads, Board.PinnedRoadId);',
+     True, 'placement'),
+
+    ('road-pin-scan-removed', 'a drawn road runs through a standing pinned building',
+     'if (RectsOverlap(Mine, LotRect(R, *Arterial, PinLot)))', 'if (false)', True, 'placement'),
+
+    ('road-corridor-full-width', 'a road corridor is measured at twice its half-width',
+     'Rect.YMin = Road.StartY - R.RoadHalf;\n\t\tRect.YMax = Road.StartY + R.RoadHalf;',
+     'Rect.YMin = Road.StartY - R.RoadHalf * 2.0;\n\t\tRect.YMax = Road.StartY + R.RoadHalf * 2.0;',
+     True, 'placement'),
+
+    ('road-ids-start-at-zero', 'the first drawn road is R0, not R1',
+     'int32 N = 1;\n\twhile (State.Roads.Contains(', 'int32 N = 0;\n\twhile (State.Roads.Contains(',
+     True, 'placement'),
+
+    ('horizontal-gets-the-vertical-convention', 'north and south become west and east',
+     'Road.bAxisX = true;\n\t\tRoad.SidePlus = TEXT("north");\n\t\tRoad.SideMinus = TEXT("south");',
+     'Road.bAxisX = true;\n\t\tRoad.SidePlus = TEXT("west");\n\t\tRoad.SideMinus = TEXT("east");',
+     True, 'placement'),
+
+    ('road-ids-sorted-lexicographically', 'R10 is treated as coming before R2',
+     'if (bNumA && bNumB)', 'if (false)', True, 'placement'),
+
+    ('drawn-roads-not-offered-to-clicks', 'a lot cannot be placed against a road just drawn',
+     'for (const FString& Id : Ids)\n\t{\n\t\tOut.Add(RoadDictFromSegment(Id, State.Roads[Id]));\n\t}',
+     '', True, 'placement'),
+
+    ('refused-draw-still-stores', 'a refused road is written into the state anyway',
+     'FRoadDrawResult Result = ResolveRoadDraw(Board, State, X0, Y0, X1, Y1, WidthClass, bPinsActive);\n\tif (!Result.bOk)\n\t{\n\t\treturn Result;\n\t}',
+     'FRoadDrawResult Result = ResolveRoadDraw(Board, State, X0, Y0, X1, Y1, WidthClass, bPinsActive);',
+     True, 'placement'),
+
     # ---- the honest negatives ------------------------------------------------
     # DECLARED SURVIVOR, and now for a PROVEN reason rather than a shim artifact.
     # The shim's TMap preserves insertion order (as UE's does), so this mutation

@@ -18,6 +18,7 @@
 #include "StacktownEconomyTestCommon.h"
 #include "StacktownPlacementTestCommon.h"
 #include "StacktownStateHandover.h"
+#include "RoadsOracleFixture.inl"
 
 #include <cstdio>
 #include <string>
@@ -725,6 +726,171 @@ int main()
 			const FParcelFacts Missing = FactsForLabel(R, S, TEXT("NOPE"));
 			CheckBool("absent not found", Missing.bFound, false);
 			CheckInt("absent carries no tier", Missing.Tier, 0);
+		}
+	}
+
+	// =====================================================================
+	// DRAWN ROADS (Phase 1 step 4) - placement.py self-tests 28-39, the pure
+	// resolver only. The road world side (POOL_ROAD actors, _road_transform)
+	// is the coordinator's engine work.
+	// =====================================================================
+	{
+		using namespace StacktownRoadsOracle;
+		const FPlacementBoard Board = OracleBoard();
+		auto RoadSeed = [&R]() { return SeedState(R); };
+
+		auto LotFrom2 = [](const FLotDef2& D) {
+			FLotPlacement L;
+			L.X0 = D.X0; L.X1 = D.X1; L.Side = FString(D.Side);
+			if (D.RoadId != nullptr) { L.RoadId = FString(D.RoadId); }
+			return L;
+		};
+		auto CheckSeg = [&](const char* What, const FString& GotId,
+		                    const FRoadSegment& Got, const FSegDef& Want) {
+			CheckStr(What, GotId, FString(Want.Id));
+			CheckNear("start x", Got.StartX, Want.StartX, Tol);
+			CheckNear("start y", Got.StartY, Want.StartY, Tol);
+			CheckNear("end x", Got.EndX, Want.EndX, Tol);
+			CheckNear("end y", Got.EndY, Want.EndY, Tol);
+			CheckStr("width class", Got.WidthClass, FString(Want.WidthClass));
+		};
+		auto CheckDraw = [&](const char* What, const FCityState& S, const FDrawCase& C) {
+			const FRoadDrawResult Res = ResolveRoadDraw(Board, S, C.X0, C.Y0, C.X1, C.Y1,
+				FString("avenue"), C.bPinsActive);
+			CheckBool(What, Res.bOk, C.bOk);
+			CheckStr("reason", Res.Reason, FString(C.Reason));
+			if (C.bOk && C.Road.Id != nullptr) { CheckSeg(What, Res.Id, Res.Segment, C.Road); }
+		};
+
+		CASE("Roads.LotRectReduces");
+		{
+			const FRoad* Art = FindRoad(Board.Roads, TEXT("arterial"));
+			const FRoad* Crs = FindRoad(Board.Roads, TEXT("cross"));
+			CheckBool("built-ins present", Art != nullptr && Crs != nullptr, true);
+			if (Art != nullptr && Crs != nullptr)
+			{
+				const FLotRect A = LotRect(Board.Rules, *Art, LotFrom2(T28_Lot0));
+				CheckNear("A xmin", A.XMin, T28_Rect0.XMin, Tol);
+				CheckNear("A xmax", A.XMax, T28_Rect0.XMax, Tol);
+				CheckNear("A ymin", A.YMin, T28_Rect0.YMin, Tol);
+				CheckNear("A ymax", A.YMax, T28_Rect0.YMax, Tol);
+				const FLotRect B = LotRect(Board.Rules, *Crs, LotFrom2(T28_Lot1));
+				CheckNear("B xmin", B.XMin, T28_Rect1.XMin, Tol);
+				CheckNear("B xmax", B.XMax, T28_Rect1.XMax, Tol);
+				CheckNear("B ymin", B.YMin, T28_Rect1.YMin, Tol);
+				CheckNear("B ymax", B.YMax, T28_Rect1.YMax, Tol);
+			}
+		}
+
+		CASE("Roads.Orientation");
+		for (int32 i = 0; i < T29OrientationNum; ++i)
+		{
+			const FOrientCase& C = T29Orientation[i];
+			FRoadSegment Seg;
+			Seg.StartX = C.Seg.StartX; Seg.StartY = C.Seg.StartY;
+			Seg.EndX = C.Seg.EndX;     Seg.EndY = C.Seg.EndY;
+			Seg.WidthClass = FString(C.Seg.WidthClass);
+			const FRoad Road = RoadDictFromSegment(FString(C.Seg.Id), Seg);
+			CheckStr("side_plus", Road.SidePlus, FString(C.SidePlus));
+			CheckStr("side_minus", Road.SideMinus, FString(C.SideMinus));
+			CheckBool("axis", Road.bAxisX, C.bAxisX);
+		}
+
+		CASE("Roads.AllRoads");
+		{
+			FCityState S = RoadSeed();
+			TArray<FRoad> Before = Board.AllRoads(S);
+			CheckInt("built-ins only", Before.Num(), T30_BeforeNum);
+			for (int32 i = 0; i < T30_BeforeNum && i < Before.Num(); ++i)
+			{
+				CheckStr("before", Before[i].Id, FString(T30_Before[i]));
+			}
+			FRoadSegment Seg;
+			Seg.StartX = T30_Drawn.StartX; Seg.StartY = T30_Drawn.StartY;
+			Seg.EndX = T30_Drawn.EndX;     Seg.EndY = T30_Drawn.EndY;
+			Seg.WidthClass = FString(T30_Drawn.WidthClass);
+			S.Roads.Add(FString(T30_Drawn.Id), Seg);
+			TArray<FRoad> After = Board.AllRoads(S);
+			CheckInt("drawn joins", After.Num(), T30_AfterNum);
+			for (int32 i = 0; i < T30_AfterNum && i < After.Num(); ++i)
+			{
+				CheckStr("after", After[i].Id, FString(T30_After[i]));
+			}
+		}
+
+		CASE("Roads.IdOrder");
+		{
+			TArray<FString> Ids;
+			Ids.Add(FString("R10")); Ids.Add(FString("R2"));
+			Ids.Add(FString("R1"));  Ids.Add(FString("R11"));
+			SortRoadIds(Ids);
+			CheckStr("R1", Ids[0], FString("R1"));
+			CheckStr("R2", Ids[1], FString("R2"));
+			CheckStr("R10", Ids[2], FString("R10"));
+			CheckStr("R11", Ids[3], FString("R11"));
+		}
+
+		CASE("Roads.DrawRules");
+		{
+			const FCityState S = RoadSeed();
+			CheckDraw("happy horizontal", S, T31);
+			CheckDraw("too diagonal", S, T32);
+			CheckDraw("too short", S, T33);
+			CheckDraw("off board", S, T34);
+			CheckDraw("crosses a built-in", S, T35);
+			CheckDraw("crosses a pin", S, T36);
+			CheckDraw("empty mode accepts", S, T36b);
+			CheckDraw("happy vertical", S, T37);
+			// The minor coordinate comes from the START point.
+			CheckDraw("near horizontal", S, NearHorizontal);
+			CheckDraw("near vertical", S, NearVertical);
+		}
+
+		CASE("Roads.DrawRoad");
+		{
+			FCityState S = RoadSeed();
+			const FRoadDrawResult First = DrawRoad(Board, S, T31.X0, T31.Y0, T31.X1, T31.Y1,
+				FString("avenue"), true);
+			CheckBool("first ok", First.bOk, true);
+			CheckStr("first id", First.Id, FString(T38_FirstId));
+			CheckSeg("stored R1", First.Id, S.Roads[First.Id], T38_FirstStored);
+			CheckDraw("crosses R1", S, T38_CrossesR1);
+			const FRoadDrawResult Second = DrawRoad(Board, S, T37.X0, T37.Y0, T37.X1, T37.Y1,
+				FString("avenue"), true);
+			CheckBool("second ok", Second.bOk, true);
+			CheckStr("second id", Second.Id, FString(T38_SecondId));
+			CheckSeg("stored R2", Second.Id, S.Roads[Second.Id], T38_SecondStored);
+			CheckInt("two roads", S.Roads.Num(), T38_IdsNum);
+			const int32 Before = S.Roads.Num();
+			DrawRoad(Board, S, T32.X0, T32.Y0, T32.X1, T32.Y1, FString("avenue"), true);
+			CheckInt("a refused draw stores nothing", S.Roads.Num(), Before);
+		}
+
+		CASE("Roads.PlaceAgainstDrawn");
+		{
+			FCityState S = RoadSeed();
+			const FRoadDrawResult Drawn = DrawRoad(Board, S, T31.X0, T31.Y0, T31.X1, T31.Y1,
+				FString("avenue"), true);
+			CheckBool("road drawn", Drawn.bOk, true);
+			const FPlaceResult P = Place(Board, S, T39_ClickX, T39_ClickY, true, Board.Rules.V0Width);
+			CheckBool("placed", P.bOk, T39_Ok);
+			CheckStr("pid", P.Pid, FString(T39_Pid));
+			const FLotPlacement& Lot = S.Parcels[FString(T39_Pid)].Placement.GetValue();
+			CheckNear("x0", Lot.X0, T39_Lot.X0, Tol);
+			CheckNear("x1", Lot.X1, T39_Lot.X1, Tol);
+			CheckStr("side", Lot.Side, FString(T39_Lot.Side));
+			CheckStr("road id", LotRoadId(Lot), FString(T39_Lot.RoadId));
+			const TArray<FRoad> Roads = Board.AllRoads(S);
+			const FRoad* R1 = FindRoad(Roads, LotRoadId(Lot));
+			CheckBool("drawn road is a candidate", R1 != nullptr, true);
+			if (R1 != nullptr)
+			{
+				const FLotRect Rect = LotRect(Board.Rules, *R1, Lot);
+				CheckNear("rect xmin", Rect.XMin, T39_Rect.XMin, Tol);
+				CheckNear("rect xmax", Rect.XMax, T39_Rect.XMax, Tol);
+				CheckNear("rect ymin", Rect.YMin, T39_Rect.YMin, Tol);
+				CheckNear("rect ymax", Rect.YMax, T39_Rect.YMax, Tol);
+			}
 		}
 	}
 

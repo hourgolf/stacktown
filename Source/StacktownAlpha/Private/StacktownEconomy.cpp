@@ -7,6 +7,7 @@
 #include "StacktownAlpha.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "StacktownPlacement.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformProcess.h"
@@ -121,7 +122,32 @@ bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutErr
 	const TSharedPtr<FJsonObject>* Roads = nullptr;
 	if (Root->TryGetObjectField(TEXT("roads"), Roads) && Roads != nullptr && Roads->IsValid())
 	{
-		S.RoadsJson = WriteJsonObject((*Roads).ToSharedRef());
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Roads)->Values)
+		{
+			const TSharedPtr<FJsonObject>* RObj = nullptr;
+			if (!Pair.Value.IsValid() || !Pair.Value->TryGetObject(RObj) || RObj == nullptr)
+			{
+				OutError = FString::Printf(TEXT("citystate: road '%s' is not an object"), *Pair.Key);
+				return false;
+			}
+			FRoadSegment Seg;
+			const TArray<TSharedPtr<FJsonValue>>* Start = nullptr;
+			const TArray<TSharedPtr<FJsonValue>>* End = nullptr;
+			// start/end are two-element arrays in the Python's own shape.
+			if (!(*RObj)->TryGetArrayField(TEXT("start"), Start) || Start->Num() != 2
+				|| !(*RObj)->TryGetArrayField(TEXT("end"), End) || End->Num() != 2)
+			{
+				OutError = FString::Printf(
+					TEXT("citystate: road '%s' needs two-element start and end"), *Pair.Key);
+				return false;
+			}
+			Seg.StartX = (*Start)[0]->AsNumber();
+			Seg.StartY = (*Start)[1]->AsNumber();
+			Seg.EndX   = (*End)[0]->AsNumber();
+			Seg.EndY   = (*End)[1]->AsNumber();
+			(*RObj)->TryGetStringField(TEXT("width_class"), Seg.WidthClass);
+			S.Roads.Add(Pair.Key, Seg);
+		}
 	}
 
 	const TSharedPtr<FJsonObject>* Parcels = nullptr;
@@ -219,17 +245,31 @@ FString CityStateToJson(const FCityState& State)
 	}
 	Root->SetObjectField(TEXT("parcels"), Parcels);
 
-	TSharedPtr<FJsonObject> Roads;
-	FString RoadsError;
-	if (ParseJsonObject(State.RoadsJson, Roads, RoadsError) && Roads.IsValid())
+	// The key is written even when empty: seed_state() declares it and readers
+	// use it, so dropping it would break the Python side's own expectations.
+	const TSharedRef<FJsonObject> Roads = MakeShared<FJsonObject>();
+	TArray<FString> RoadIds;
+	State.Roads.GetKeys(RoadIds);
+	SortRoadIds(RoadIds);
+	for (const FString& RoadId : RoadIds)
 	{
-		Root->SetObjectField(TEXT("roads"), Roads);
+		const FRoadSegment& Seg = State.Roads[RoadId];
+		const TSharedRef<FJsonObject> RObj = MakeShared<FJsonObject>();
+		// 'id' is written as well as being the key: the Python stores the road
+		// dict whole, id included, and the two must not disagree.
+		RObj->SetStringField(TEXT("id"), RoadId);
+		TArray<TSharedPtr<FJsonValue>> Start;
+		Start.Add(MakeShared<FJsonValueNumber>(Seg.StartX));
+		Start.Add(MakeShared<FJsonValueNumber>(Seg.StartY));
+		TArray<TSharedPtr<FJsonValue>> End;
+		End.Add(MakeShared<FJsonValueNumber>(Seg.EndX));
+		End.Add(MakeShared<FJsonValueNumber>(Seg.EndY));
+		RObj->SetArrayField(TEXT("start"), Start);
+		RObj->SetArrayField(TEXT("end"), End);
+		RObj->SetStringField(TEXT("width_class"), Seg.WidthClass);
+		Roads->SetObjectField(RoadId, RObj);
 	}
-	else
-	{
-		// Never drop the key: seed_state() declares it and readers use it.
-		Root->SetObjectField(TEXT("roads"), MakeShared<FJsonObject>());
-	}
+	Root->SetObjectField(TEXT("roads"), Roads);
 
 	return WriteJsonObject(Root);
 }

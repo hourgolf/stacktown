@@ -16,7 +16,7 @@ FCityState SeedState(const FEconRules& R)
 	S.Money = R.MoneyStart;
 	S.Demand = R.DemandDefault;
 	S.TradesProcessed = 0;
-	S.RoadsJson = TEXT("{}");
+	// Roads start empty: drawing is the only writer.
 	return S;
 }
 

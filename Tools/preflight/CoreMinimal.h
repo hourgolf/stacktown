@@ -53,6 +53,7 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstdint>
 #include <map>
 #include <set>
@@ -93,6 +94,12 @@ public:
 		const size_t E = S.find_last_not_of(WS);
 		return FString(S.substr(B, E - B + 1));
 	}
+
+	FString Mid(int32 Start) const
+	{
+		return Start >= Len() ? FString() : FString(S.substr(static_cast<size_t>(Start)));
+	}
+	char operator[](int32 i) const { return S[static_cast<size_t>(i)]; }
 
 	static FString Printf(const char* Fmt, ...)
 	{
@@ -219,6 +226,9 @@ struct FMath
 // ESearchCase exists so the call sites read the same in both worlds; the shim's
 // StartsWith is always case-sensitive, which is the only mode the port uses.
 struct ESearchCase { enum Type { CaseSensitive = 0, IgnoreCase = 1 }; };
+
+struct FChar { static bool IsDigit(char C) { return C >= '0' && C <= '9'; } };
+struct FCString { static int32 Atoi(const char* S) { return std::atoi(S); } };
 
 // The module export macro is meaningless outside a UE build.
 #define STACKTOWNALPHA_API

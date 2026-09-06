@@ -7,15 +7,95 @@
 namespace Stacktown
 {
 
+void SortRoadIds(TArray<FString>& Ids)
+{
+	// R1 < R2 < ... < R9 < R10. A plain string sort puts R10 before R2, which
+	// would silently change which road a crossing refusal names once ten have
+	// been drawn - the kind of thing that reads as a mystery months later.
+	Ids.Sort([](const FString& A, const FString& B)
+	{
+		const bool bNumA = A.StartsWith(TEXT("R"), ESearchCase::CaseSensitive) && A.Len() > 1 && FChar::IsDigit(A[1]);
+		const bool bNumB = B.StartsWith(TEXT("R"), ESearchCase::CaseSensitive) && B.Len() > 1 && FChar::IsDigit(B[1]);
+		if (bNumA && bNumB)
+		{
+			const int32 NA = FCString::Atoi(*A.Mid(1));
+			const int32 NB = FCString::Atoi(*B.Mid(1));
+			if (NA != NB)
+			{
+				return NA < NB;
+			}
+		}
+		return A < B;
+	});
+}
+
+FRoad RoadDictFromSegment(const FString& Id, const FRoadSegment& Seg)
+{
+	FRoad Road;
+	Road.Id = Id;
+	Road.StartX = Seg.StartX;
+	Road.StartY = Seg.StartY;
+	Road.EndX = Seg.EndX;
+	Road.EndY = Seg.EndY;
+	if (Seg.StartY == Seg.EndY)
+	{
+		// Horizontal: the arterial's own convention.
+		Road.bAxisX = true;
+		Road.SidePlus = TEXT("north");
+		Road.SideMinus = TEXT("south");
+	}
+	else
+	{
+		// Vertical: the cross street's.
+		Road.bAxisX = false;
+		Road.SidePlus = TEXT("west");
+		Road.SideMinus = TEXT("east");
+	}
+	return Road;
+}
+
 TArray<FRoad> FPlacementBoard::AllRoads(const FCityState& State) const
 {
-	// STEP 4 adds the player's drawn segments here, parsed out of
-	// State.RoadsJson. Deliberately not silently omitted: the parameter is
-	// taken now, and every caller already routes through this, so step 4
-	// changes one body instead of hunting call sites - which is exactly what
-	// the Python's own _all_roads did when roads became dynamic.
-	(void)State;
-	return Roads;
+	// The built-ins first, then the drawn segments in creation order. A FRESH
+	// array every call: roads can be drawn between calls and this struct holds
+	// no state of its own to go stale.
+	TArray<FRoad> Out = Roads;
+	TArray<FString> Ids;
+	State.Roads.GetKeys(Ids);
+	SortRoadIds(Ids);
+	for (const FString& Id : Ids)
+	{
+		Out.Add(RoadDictFromSegment(Id, State.Roads[Id]));
+	}
+	return Out;
+}
+
+FLotRect RoadRect(const FPlacementRules& R, const FRoad& Road)
+{
+	FLotRect Rect;
+	if (Road.StartY == Road.EndY)
+	{
+		Rect.XMin = FMath::Min(Road.StartX, Road.EndX);
+		Rect.XMax = FMath::Max(Road.StartX, Road.EndX);
+		Rect.YMin = Road.StartY - R.RoadHalf;
+		Rect.YMax = Road.StartY + R.RoadHalf;
+		return Rect;
+	}
+	Rect.XMin = Road.StartX - R.RoadHalf;
+	Rect.XMax = Road.StartX + R.RoadHalf;
+	Rect.YMin = FMath::Min(Road.StartY, Road.EndY);
+	Rect.YMax = FMath::Max(Road.StartY, Road.EndY);
+	return Rect;
+}
+
+FString NextRoadId(const FCityState& State)
+{
+	int32 N = 1;
+	while (State.Roads.Contains(FString::Printf(TEXT("R%d"), N)))
+	{
+		++N;
+	}
+	return FString::Printf(TEXT("R%d"), N);
 }
 
 double Snap(const FPlacementRules& R, double Value)
@@ -370,6 +450,147 @@ void PlanReactivation(const TArray<FString>& Pids, const TArray<FString>& PoolLa
 	{
 		OutUnmatched.Add(SortedPids[i]);
 	}
+}
+
+static FRoadDrawResult RefuseRoad(const FString& Reason)
+{
+	FRoadDrawResult Result;
+	Result.bOk = false;
+	Result.Reason = Reason;
+	return Result;
+}
+
+FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& State,
+	double X0, double Y0, double X1, double Y1, const FString& WidthClass, bool bPinsActive)
+{
+	const FPlacementRules& R = Board.Rules;
+	const double Dx = X1 - X0;
+	const double Dy = Y1 - Y0;
+
+	// Whichever delta dominates by 3x decides the axis; the minor coordinate is
+	// taken from the START point, then both ends snap to the position grid the
+	// same way a lot's own span does. Neither dominant is a genuinely diagonal
+	// gesture, and reinterpreting one as a straight road the player did not draw
+	// is worse than refusing it.
+	double SX0, SY0, SX1, SY1;
+	if (FMath::Abs(Dx) >= 3.0 * FMath::Abs(Dy))
+	{
+		SX0 = Snap(R, X0); SY0 = Snap(R, Y0); SX1 = Snap(R, X1); SY1 = Snap(R, Y0);
+	}
+	else if (FMath::Abs(Dy) >= 3.0 * FMath::Abs(Dx))
+	{
+		SX0 = Snap(R, X0); SY0 = Snap(R, Y0); SX1 = Snap(R, X0); SY1 = Snap(R, Y1);
+	}
+	else
+	{
+		return RefuseRoad(TEXT(
+			"too diagonal: roads must run close to north-south or east-west in this version"));
+	}
+
+	// Axis-aligned, so exactly one term is non-zero.
+	const double Length = FMath::Abs(SX1 - SX0) + FMath::Abs(SY1 - SY0);
+	if (Length < R.V0Width)
+	{
+		// A road shorter than one lot answers no question a player would ask it.
+		return RefuseRoad(FString::Printf(
+			TEXT("too short: %.0f uu is under the %.0f uu a single lot needs"), Length, R.V0Width));
+	}
+
+	if (!(Board.PlateXMin <= SX0 && SX0 <= Board.PlateXMax &&
+	      Board.PlateXMin <= SX1 && SX1 <= Board.PlateXMax &&
+	      Board.PlateYMin <= SY0 && SY0 <= Board.PlateYMax &&
+	      Board.PlateYMin <= SY1 && SY1 <= Board.PlateYMax))
+	{
+		return RefuseRoad(TEXT("off-board: the drawn road would leave the plate"));
+	}
+
+	FRoadDrawResult Result;
+	Result.Id = NextRoadId(State);
+	Result.Segment.StartX = SX0;
+	Result.Segment.StartY = SY0;
+	Result.Segment.EndX = SX1;
+	Result.Segment.EndY = SY1;
+	Result.Segment.WidthClass = WidthClass;
+
+	const TArray<FRoad> Roads = Board.AllRoads(State);
+	const FLotRect Mine = RoadRect(R, RoadDictFromSegment(Result.Id, Result.Segment));
+
+	for (const FRoad& Road : Roads)
+	{
+		if (RectsOverlap(Mine, RoadRect(R, Road)))
+		{
+			return RefuseRoad(FString::Printf(
+				TEXT("crosses: the drawn road would cross the %s road"), *Road.Id));
+		}
+	}
+
+	// Placed lots, in id order so the named lot does not depend on insertion.
+	TArray<FString> Pids;
+	State.Parcels.GetKeys(Pids);
+	Pids.Sort([](const FString& A, const FString& B) { return A < B; });
+	for (const FString& Pid : Pids)
+	{
+		const FParcelState& P = State.Parcels[Pid];
+		if (!P.Placement.IsSet())
+		{
+			continue;
+		}
+		const FLotPlacement& Lot = P.Placement.GetValue();
+		const FString LotRoad = LotRoadId(Lot);
+		const FRoad* Road = FindRoad(Roads, LotRoad);
+		if (Road == nullptr)
+		{
+			return RefuseRoad(FString::Printf(
+				TEXT("stale lot: '%s' names road '%s', which no longer exists"), *Pid, *LotRoad));
+		}
+		if (RectsOverlap(Mine, LotRect(R, *Road, Lot)))
+		{
+			return RefuseRoad(FString::Printf(
+				TEXT("overlap: the drawn road would cross an existing lot at [%.1f, %.1f] on the %s"),
+				Lot.X0, Lot.X1, *LotRoad));
+		}
+	}
+
+	// PINS ARE A SEPARATE SCAN. A pin carries no placement, so the loop above
+	// skips every one of them by construction - without this a drawn road could
+	// run through a standing building.
+	if (bPinsActive)
+	{
+		const FRoad* Arterial = FindRoad(Roads, Board.PinnedRoadId);
+		if (Arterial != nullptr)
+		{
+			for (const FPinnedSpan& Pin : Board.PinnedSpans)
+			{
+				FLotPlacement PinLot;
+				PinLot.X0 = Pin.X0;
+				PinLot.X1 = Pin.X1;
+				PinLot.Side = Pin.Side;
+				PinLot.RoadId = Board.PinnedRoadId;
+				if (RectsOverlap(Mine, LotRect(R, *Arterial, PinLot)))
+				{
+					return RefuseRoad(FString::Printf(
+						TEXT("overlap: the drawn road would cross a pinned lot at [%.1f, %.1f]"),
+						Pin.X0, Pin.X1));
+				}
+			}
+		}
+	}
+
+	Result.bOk = true;
+	return Result;
+}
+
+FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityState& State,
+	double X0, double Y0, double X1, double Y1, const FString& WidthClass, bool bPinsActive)
+{
+	FRoadDrawResult Result = ResolveRoadDraw(Board, State, X0, Y0, X1, Y1, WidthClass, bPinsActive);
+	if (!Result.bOk)
+	{
+		return Result;
+	}
+	// Inserted UNCHANGED, not re-derived.
+	State.Roads.Add(Result.Id, Result.Segment);
+	return Result;
 }
 
 } // namespace Stacktown

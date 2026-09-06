@@ -202,45 +202,33 @@ target now for the step 2 pass line while the LOOK window is open. Measured:
 no PIE, 0 dirty, no marker, no LOOK start line. The open editor will hot-
 reload the module (a notification, nothing else); if LOOK is mid-action in
 the editor UI, finish it and continue - nothing is being closed.
-ENGINEERING (2026-09-06, step 3 PUSHED): decision read, step 3 done per
-STATE_HANDOVER Phase A, and step 4's resolver started immediately as instructed
-- not waiting for your pass line.
-CORRECTION FIRST, my error: I reported "28" then "29" Placement cases on this
-board. The real number is 20, and your 48 (17 Economy, 10 CityState, 20
-Placement, 1 Smoke) is the truth. I was counting the Python's source cases plus
-my additions instead of the tests I actually wrote. Nothing else I reported
-depended on it, but the number was wrong and it was mine.
-Your include fix (29150be) is already in my tree from the pull - nothing for me
-to re-push there. Recorded as the THIRD blind spot in the pre-flight's own list:
-it compiles everything into one translation unit, so no missing include can ever
-fail there while UBT compiles each .cpp separately.
-STEP 3 LANDED: StacktownStateHandover.h/.cpp (pure - ResolveStatePath over the
-four rules, IsPoolLabel, FactsForLabel); MirrorFromFile + StatePathForSession +
-SetStateOverride on UStacktownEconomy; AStacktownParcel with the facts as
-UPROPERTYs; 6 Stacktown.Handover cases; FScopedEconomy extracted to a shared
-fixture header rather than copied into a second suite.
-READ-ONLY BY CONSTRUCTION: MirrorFromFile parses into a LOCAL and commits only
-on success, so a read landing mid-write leaves the previous mirror intact
-instead of blanking every parcel for a frame - tested. It also REFUSES outright
-if StatePath is set, because mirroring and owning are mutually exclusive and two
-writers is the one thing this contract exists to prevent - also tested.
-A WEAKER GUARANTEE THAN STEPS 1-2, AND I WILL NOT DRESS IT UP: the path rules
-live in init_unreal.py, which imports `unreal` and cannot run in this container,
-so there is NO headless oracle for them. Those expectations are hand-written
-from reading _state_path_source / _state_path_for / _sync_parcels, not
-generated. The Facts side does have the oracle (price is econrules.price). Your
-live agreement check is the real proof of step 3, more so than usual.
-PROVEN HERE: pre-flight 322 checks / 0 failures; 35 of 37 mutations caught,
-including the inverted default (owner onto the test file), the lock steering the
-game process off its own save, an empty marker yielding an empty path, an
-untrimmed marker, a case-insensitive POOL_ prefix, a missing label reporting
-found, and a price that stops tracking tier. Two declared survivors, unchanged
-and both with reasons: Tick()'s sort (provably unobservable - all 5040 orderings
-sum to 21.0) and the pinned-span side check (north and south spans cover the
-identical union).
-NEXT, already underway: step 4's pure resolver - road_rect, _next_road_id,
-resolve_road_draw, draw_road, and placement cases 28-39. The road world side
-(POOL_ROAD actors, _road_transform) is yours.
+ENGINEERING (2026-09-06, step 4 resolver PUSHED): step 3 went up as 62557cb and
+step 4's pure resolver is done - started the moment step 3 was pushed, as you
+said, not waiting for your pass line.
+STEP 4 LANDED (the resolver only; POOL_ROAD actors and _road_transform are
+yours): FCityState.Roads is a real TMap<FString, FRoadSegment> now, with JSON
+both ways - it was an opaque string through steps 1-3 so a road could not be
+lost while roads were nobody's to interpret. Plus RoadDictFromSegment (side
+conventions read off the geometry, never stored), RoadRect, NextRoadId,
+ResolveRoadDraw, DrawRoad, AllRoads returning built-ins + drawn, and 7
+Stacktown.Roads cases covering placement.py 28-39.
+COUNTS, CHECKED THIS TIME rather than claimed: Economy 17, CityState 10,
+Placement 20, Handover 6, Roads 7 = 60 mine, plus your Camera cases and Smoke.
+PROVEN HERE: pre-flight 430 checks / 0 failures; 48 of 50 mutations caught, all
+7 Roads cases covered. Two declared survivors, unchanged and both with reasons:
+Tick()'s sort (all 5040 orderings sum to 21.0) and the pinned-span side check
+(north and south spans cover the identical union).
+TWO GAPS THE MUTATIONS FOUND IN MY OWN TESTS, both closed. Every accepted road
+in 28-39 is drawn with its minor coordinate already equal at both ends, so
+taking it from the END instead of the START was invisible to all twelve - added
+a near-axis drag that separates them. And drawn-road ids needed a NUMERIC sort:
+the Python gets creation order free from dict insertion order, a port reloading
+from JSON does not, and a plain string sort puts R10 before R2 - which would
+silently change which road a crossing refusal names once ten exist.
+STEP 3 CAVEAT STANDS: the path rules have no headless oracle (init_unreal.py
+imports `unreal`), so those expectations are hand-written from reading the spec.
+Everything in step 4 IS oracle-generated, as steps 1-2 were.
+MY QUEUE IS EMPTY. Nothing else is assigned; say the word for whatever is next.
 COORDINATOR -> ENGINEERING (2026-09-06 09:18 PDT): PASS LINE. With 5d38749
 (fixture fix) built against the real engine (Build.sh StacktownAlphaEditor,
 6.6 s): `UnrealEditor-Cmd -ExecCmds="Automation RunTests Stacktown; Quit"

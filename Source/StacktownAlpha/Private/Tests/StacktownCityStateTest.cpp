@@ -44,10 +44,10 @@ STACKTOWN_CITY_TEST(FStacktownCitySeed, "Stacktown.CityState.Seed")
 	TestEqual(TEXT("demand"), S.Demand, StacktownOracle::Seed_Demand, Tol);
 	TestEqual(TEXT("no parcels"), S.Parcels.Num(), StacktownOracle::Seed_ParcelCount);
 	TestEqual(TEXT("trades_processed starts at zero"), S.TradesProcessed, 0);
-	// seed_state() declares 'roads' as an empty object and readers use it. A
-	// port that quietly dropped the key would break the road side before step 4
-	// ever started.
-	TestEqual(TEXT("roads is an empty object"), S.RoadsJson, FString(StacktownOracle::Seed_RoadsJson));
+	// seed_state() declares 'roads' and readers use it. Empty on a fresh city:
+	// drawing is the only writer, and the two built-in roads are constants of
+	// the board rather than state.
+	TestEqual(TEXT("no roads on a fresh city"), S.Roads.Num(), 0);
 	TestFalse(TEXT("loading wrote nothing"), E.FileExists());
 	return true;
 }
@@ -278,7 +278,10 @@ STACKTOWN_CITY_TEST(FStacktownCityRoundTrip, "Stacktown.CityState.RoundTrip")
 	S.Money = 1234.5;
 	S.Demand = 1.75;
 	S.TradesProcessed = 7;
-	S.RoadsJson = TEXT("{\"R1\":{\"a\":1}}");
+	Stacktown::FRoadSegment R1;
+	R1.StartX = 6200.0; R1.StartY = 3000.0; R1.EndX = 7600.0; R1.EndY = 3000.0;
+	R1.WidthClass = TEXT("avenue");
+	S.Roads.Add(TEXT("R1"), R1);
 	S.Parcels.Add(TEXT("A"), Parcel(TEXT("vernacular"), 3, 1230.0, true, 12.25, false, -0.5));
 	S.Parcels.Add(TEXT("B"), Parcel(TEXT("office"), 0, 2050.0, false, 0.0, true, 0.75));
 
@@ -289,11 +292,17 @@ STACKTOWN_CITY_TEST(FStacktownCityRoundTrip, "Stacktown.CityState.RoundTrip")
 	FString Why;
 	const bool bSame = StatesEqual(S, Back, Tol, Why);
 	TestTrue(FString::Printf(TEXT("every field survived (%s)"), *Why), bSame);
-	// Roads are step 4's to interpret; this port's only duty is not to lose
-	// them. Compared as a value, not a string, so key order cannot fail it.
+	// Roads survive a second trip too, field by field - a writer that dropped
+	// width_class or swapped a coordinate would pass a single round trip.
 	FCityState Roads;
 	TestTrue(TEXT("roads re-parse"), CityStateFromJson(CityStateToJson(Back), Roads, Err));
-	TestEqual(TEXT("roads survived two round trips"), Roads.RoadsJson, Back.RoadsJson);
+	TestEqual(TEXT("road count"), Roads.Roads.Num(), 1);
+	const Stacktown::FRoadSegment& Got = Roads.Roads[TEXT("R1")];
+	TestEqual(TEXT("start x"), Got.StartX, 6200.0, Tol);
+	TestEqual(TEXT("start y"), Got.StartY, 3000.0, Tol);
+	TestEqual(TEXT("end x"), Got.EndX, 7600.0, Tol);
+	TestEqual(TEXT("end y"), Got.EndY, 3000.0, Tol);
+	TestEqual(TEXT("width class"), Got.WidthClass, FString(TEXT("avenue")));
 
 	// A malformed ruleset or state must be refused, never half-read.
 	FCityState Junk;

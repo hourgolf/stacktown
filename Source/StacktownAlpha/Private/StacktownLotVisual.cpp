@@ -66,3 +66,24 @@ bool UStacktownLotVisual::ShowPad(double Width, FString& OutError)
 	ShownSpecies.Reset();
 	return true;
 }
+
+void UStacktownLotVisual::ApplyState(bool bOwned, float Age)
+{
+	// Written through the function, never the property: the shader reads the runtime
+	// per-instance array, which only SetCustomPrimitiveDataFloat sets (the Python
+	// driver's own hard-won note). Same-value writes are cheap; re-applied every reconcile
+	// so a mesh swap (ShowMass on a tier-up) can never leave the channels behind.
+	SetCustomPrimitiveDataFloat(0, FMath::Clamp(Age, 0.f, 1.f));
+	SetCustomPrimitiveDataFloat(1, bOwned ? 0.45f : 0.f);
+	SetCustomPrimitiveDataFloat(2, 0.5f);
+	SetCustomPrimitiveDataFloat(4, 0.f);
+	SetCustomPrimitiveDataFloat(5, 0.f);
+	SetCustomPrimitiveDataFloat(6, 0.f);
+}
+
+void UStacktownLotVisual::SetSelected(bool bSelected)
+{
+	SetCustomPrimitiveDataFloat(3, bSelected ? 1.f : 0.f);
+	SetRenderCustomDepth(bSelected);
+	SetCustomDepthStencilValue(bSelected ? 1 : 0);
+}

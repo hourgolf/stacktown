@@ -423,7 +423,7 @@ void AStacktownPlayerController::SetSelectionHighlight(const FString& Pid, bool 
 	AActor* A = Sync ? Sync->ActorForPid(Pid) : nullptr;
 	if (UStacktownLotVisual* V = A ? A->FindComponentByClass<UStacktownLotVisual>() : nullptr)
 	{
-		V->SetCustomPrimitiveDataFloat(3, bOn ? 1.f : 0.f);   // cpdmap channel 3: Selection
+		V->SetSelected(bOn);   // cpdmap channel 3 (reserved) + custom depth for the post-process outline
 	}
 }
 
@@ -624,6 +624,11 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 {
 	if (!CityOwned() || !HudModel) { return; }
 	UStacktownCitySync* Sync = GetWorld()->GetSubsystem<UStacktownCitySync>();
+	if (!Sync->LastTradeMessage.IsEmpty())
+	{
+		HudModel->BarMessage = Sync->LastTradeMessage;   // stays until the next input, like every bar message
+		Sync->LastTradeMessage.Reset();
+	}
 
 	// any key press clears a showing refusal (LOOK 6: cleared on the next input)
 	const bool bAnyKey = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::B) || WasInputKeyJustPressed(EKeys::U)

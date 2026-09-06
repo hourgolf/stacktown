@@ -19,6 +19,9 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "TimerManager.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 bool UStacktownCitySync::ShouldCreateSubsystem(UObject* Outer) const
 {
@@ -122,6 +125,7 @@ void UStacktownCitySync::OnTimer()
 	{
 		TickAccum = 0.f;
 		Econ->CityTick();
+		ReadTradeLedger();
 		Econ->SaveState();
 	}
 	Reconcile(false);
@@ -199,6 +203,13 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			if (Signatures.Contains(Pid)) { ++Updated; }
 			Signatures.Add(Pid, Sig);
 		}
+		if (UStacktownLotVisual* V = A->FindComponentByClass<UStacktownLotVisual>())
+		{
+			// Age has no home in the C++ state yet (the Python driver kept age_ticks
+			// beside the parcel, outside the economy's exact-equality oracles); 0 = pale,
+			// which is B3's own rule for a new building. Wired when age lands in state.
+			V->ApplyState(P.bOwned, 0.f);
+		}
 	}
 	for (auto It = Lots.CreateIterator(); It; ++It)
 	{
@@ -271,4 +282,53 @@ AActor* UStacktownCitySync::ActorForPid(const FString& Pid) const
 {
 	const TObjectPtr<AActor>* Found = Lots.Find(Pid);
 	return (Found && IsValid(*Found)) ? Found->Get() : nullptr;
+}
+
+FString UStacktownCitySync::TradeLedgerPath()
+{
+	return FPaths::ProjectSavedDir() / TEXT("Stacktown") / TEXT("trade_ledger.jsonl");
+}
+
+FString UStacktownCitySync::ReadTradeLedger()
+{
+	// The message is NOT cleared here: the controller consumes it on its next tick
+	// and clears it then. Found by the live probe 2026-09-06: two reads in one frame
+	// (before any tick) wiped the message before the bar ever saw it.
+	UStacktownEconomy* Econ = Economy();
+	if (!Econ || !bOwnsCity) { return TEXT("ledger: not owning"); }
+	const FString Path = TradeLedgerPath();
+	if (!FPaths::FileExists(Path)) { return TEXT("ledger: no file"); }
+	TArray<FString> Lines;
+	if (!FFileHelper::LoadFileToStringArray(Lines, *Path)) { return TEXT("ledger: unreadable"); }
+	// Every CLOSED trade's pnl, in file order; the economy's TradesProcessed makes
+	// re-reading the whole file each time a no-op for what it has already counted.
+	TArray<double> Pnls;
+	int32 Bad = 0;
+	for (const FString& Line : Lines)
+	{
+		if (Line.TrimStartAndEnd().IsEmpty()) { continue; }
+		TSharedPtr<FJsonObject> Obj;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Line);
+		double Pnl = 0.0;
+		if (FJsonSerializer::Deserialize(Reader, Obj) && Obj.IsValid() && Obj->TryGetNumberField(TEXT("pnl"), Pnl)) { Pnls.Add(Pnl); }
+		else { ++Bad; }   // a torn last line (append-only file, crash mid-write) is tolerated, never counted
+	}
+	const int32 Before = Econ->GetState().TradesProcessed;
+	TArray<Stacktown::FEconEvent> Events;
+	Econ->ApplyTradeLedger(Pnls, Events);
+	const int32 After = Econ->GetState().TradesProcessed;
+	if (Events.Num() > 0)
+	{
+		double Credits = 0.0, Bonus = 0.0;
+		for (const Stacktown::FEconEvent& E : Events)
+		{
+			if (E.Type == Stacktown::EEconEventType::TradeCredits) { Credits += E.Amount; } else { Bonus += E.Amount; }
+		}
+		if (Credits > 0.0 && Bonus > 0.0) { LastTradeMessage = FString::Printf(TEXT("trades: +$%.0f credits, +$%.0f win bonus"), Credits, Bonus); }
+		else if (Credits > 0.0) { LastTradeMessage = FString::Printf(TEXT("trades: +$%.0f credits"), Credits); }
+		else { LastTradeMessage = FString::Printf(TEXT("trades: +$%.0f win bonus"), Bonus); }
+		UE_LOG(LogStacktown, Log, TEXT("CitySync: %s (%d new closed trades)"), *LastTradeMessage, After - Before);
+	}
+	LedgerLinesSeen = Pnls.Num();
+	return FString::Printf(TEXT("ledger: %d closed trades on file (%d unreadable lines), %d newly counted, %d events, money %.2f"), Pnls.Num(), Bad, After - Before, Events.Num(), Econ->GetState().Money);
 }

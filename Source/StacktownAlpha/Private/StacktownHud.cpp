@@ -166,7 +166,7 @@ void UStacktownHud::Build(UWorld* InWorld)
 	// ---- the legend: bottom-right, two micro lines, dim, ending at -32
 	LegendBox = NewObject<UVerticalBox>(this);
 	UBorder* LegendScrim = NewObject<UBorder>(this);   // LOOK ruling: dim micro on a cream plate needs a ground
-	LegendScrim->SetBrushColor(FLinearColor(FLinearColor::FromSRGBColor(FColor(0x2A, 0x2A, 0x2E)).CopyWithNewOpacity(0.45f)));
+	LegendScrim->SetBrushColor(FLinearColor(FLinearColor::FromSRGBColor(FColor(0x2A, 0x2A, 0x2E)).CopyWithNewOpacity(0.88f)));   // LOOK 16:02: the SAME ground as the bar and panel; 0.45 was a second, arbitrary opacity and read as a muddy box over the day plate
 	LegendScrim->SetPadding(FMargin(Pad));
 	LegendScrim->SetContent(LegendBox);
 	LegendCameraText = MakeText(TomorrowMedium, SizeMicro, Dim, SpacingMicro);

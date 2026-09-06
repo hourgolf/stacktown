@@ -27,6 +27,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Lot")
 	bool ShowPad(double Width, FString& OutError);
 
+	/** The per-instance state channels the wood master reads (Content/Python/cpdmap.py is
+	 *  the one authority; the values are the Python driver's, init_unreal.py):
+	 *    0 Age        oxidation 0..1 along the species curve
+	 *    1 GlowLevel  night window emission - 0.45 owned (D24 ladder, GlowScale 40), 0 for sale (D20: bare board)
+	 *    2 GlowState  encoded hue, 0.5 neutral warm until the economy can say activity
+	 *    4 Attention, 5 Failure, 6 Scorch  0 today
+	 *  Found by the design lane's night frame (2026-09-06 16:02): channels 1 and 2 were
+	 *  READ by the material and WRITTEN by nothing in C++, so every window was black. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Lot")
+	void ApplyState(bool bOwned, float Age);
+
+	/** Selection: cpdmap channel 3 (reserved, the material does not draw it) plus custom
+	 *  depth for the renderer outline the design lane ruled (post-process, accept #C08A4E). */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Lot")
+	void SetSelected(bool bSelected);
+
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Stacktown|Lot")
 	FString ShownAsset;
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Stacktown|Lot")

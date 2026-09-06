@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/SceneComponent.h"
 #include "EngineUtils.h"
+#include "Materials/MaterialInterface.h"
 
 using namespace Stacktown::Camera;
 
@@ -53,6 +54,19 @@ void AStacktownCameraPawn::BeginPlay()
 			TargetFocus = FVector(Origin.X, Origin.Y, 0.0);
 			break;
 		}
+	}
+	// The selection outline belongs to the renderer (design lane, 2026-09-06 16:02): the
+	// selected lot writes custom depth, and this post-process material draws a
+	// screen-constant outline in accept #C08A4E from it. The material is the design
+	// lane's to author; until it exists the camera runs without it and says so once.
+	if (UMaterialInterface* Outline = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/M_PP_Outline.M_PP_Outline")))
+	{
+		Camera->PostProcessSettings.AddBlendable(Outline, 1.f);
+		UE_LOG(LogStacktown, Log, TEXT("StacktownCameraPawn: selection outline M_PP_Outline blended"));
+	}
+	else
+	{
+		UE_LOG(LogStacktown, Log, TEXT("StacktownCameraPawn: no M_PP_Outline yet - selection has no outline"));
 	}
 	SnapToTargets();
 	UE_LOG(LogStacktown, Log, TEXT("StacktownCameraPawn: focus (%.0f, %.0f) yaw %.1f pitch %.1f distance %.0f board x[%.0f..%.0f] y[%.0f..%.0f]"),

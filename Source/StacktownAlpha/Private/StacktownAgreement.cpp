@@ -189,3 +189,10 @@ FString UStacktownAgreementLibrary::ReconcileNow(const UObject* WorldContextObje
 	UStacktownCitySync* Sync = World ? World->GetSubsystem<UStacktownCitySync>() : nullptr;
 	return Sync ? Sync->Reconcile(bHideBlueprintLots) : FString(TEXT("no city sync in this world"));
 }
+
+FString UStacktownAgreementLibrary::ReadTradeLedgerNow(const UObject* WorldContextObject)
+{
+	UWorld* World = WorldContextObject ? WorldContextObject->GetWorld() : nullptr;
+	UStacktownCitySync* Sync = World ? World->GetSubsystem<UStacktownCitySync>() : nullptr;
+	return Sync ? Sync->ReadTradeLedger() : FString(TEXT("no city sync in this world"));
+}

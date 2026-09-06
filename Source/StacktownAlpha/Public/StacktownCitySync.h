@@ -40,6 +40,14 @@ public:
 	static constexpr float TickIntervalSeconds = 2.0f;
 
 	int32 NumLots() const { return Lots.Num(); }
+
+	/** Docs/TRADE_ADAPTER.md section 5: the adapter appends one JSON line per
+	 *  CLOSED trade here; the game reads it and applies rewards idempotently. */
+	static FString TradeLedgerPath();
+	/** Read the ledger now and apply any new trades; returns a report line. */
+	FString ReadTradeLedger();
+	/** The last reward line for the HUD bar (empty when nothing happened this read). */
+	FString LastTradeMessage;
 	int32 NumRoads() const { return RoadActors.Num(); }
 	/** The parcel id a spawned lot actor stands for, or empty. */
 	FString PidForActor(const AActor* Actor) const;
@@ -54,6 +62,7 @@ private:
 	TMap<FString, FString> RoadSignatures;
 	TMap<FString, FString> Signatures;
 	bool bBlueprintLotsHidden = false;
+	int32 LedgerLinesSeen = 0;
 
 	UStacktownEconomy* Economy() const;
 	void OnTimer();

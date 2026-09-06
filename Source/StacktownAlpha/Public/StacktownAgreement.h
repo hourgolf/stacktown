@@ -29,4 +29,8 @@ public:
 	/** Run the city sync's reconcile now (Phase A: after a mirror) and report. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Debug", meta = (WorldContext = "WorldContextObject"))
 	static FString ReconcileNow(const UObject* WorldContextObject, bool bHideBlueprintLots);
+
+	/** Read the trade ledger now (owning mode) and report. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Debug", meta = (WorldContext = "WorldContextObject"))
+	static FString ReadTradeLedgerNow(const UObject* WorldContextObject);
 };

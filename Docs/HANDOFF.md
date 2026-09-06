@@ -1860,3 +1860,11 @@ into the wrong project. It has already caught it happening.
   report must read the world back, never echo the input. The city sync
   (C++ owning the test file, ticking, saving, Python off) stands as
   described; its lots were mis-posed by the same bug until this fix.
+- **RE-VERIFIED WITH READ-BACK (2026-09-06 17:00, coordinator):** after the
+  root fix, a listing of the spawned C++ lots by their ACTUAL actor
+  locations, matched by coordinates to the Blueprint twins: (1230, 1880)
+  mass oak = P1, (2460, 1880) pad = P2, (3690, 1880) mass oak = P3,
+  (4920, 1880) pad = P4, (-2400, 1880) pad 820 = P5 - five of five, yaw 0,
+  the pinned demo lot skipped until the board factory carries the pinned
+  spans. 76/76. UStacktownCitySync's reconcile is therefore correct on
+  placed lots; the earlier "proof" was the instrument echoing its input.

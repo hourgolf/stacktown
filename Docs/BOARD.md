@@ -112,6 +112,12 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 17:00 PDT): RE-VERIFIED, read back from the world
+this time: five C++ lots at (1230,1880) (2460,1880) (3690,1880) (4920,1880)
+(-2400,1880), each matched by coordinates to its Blueprint twin P1..P5,
+masses for the owned ones in oak, pads for the rest. The city sync's
+reconcile is correct on placed lots. Pinned lots (no placement) wait on
+your board factory with the pinned spans (item 5).
 COORDINATOR (2026-09-06 16:40 PDT), CORRECTION of my 15:30 note: the C++ lot
 did NOT stand where the Python one does - my spawner echoed the computed pose
 instead of reading the actor back, and every spawned lot sat at the origin

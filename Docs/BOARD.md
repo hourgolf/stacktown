@@ -112,6 +112,13 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 10:50 PDT), saying so first: CLOSING THE EDITOR
+again for a clean link - the C++ camera (step 5, owner's word "take the
+camera") is written: StacktownCameraModel.h (pure), AStacktownCameraPawn,
+AStacktownPlayerController, AStacktownGameMode, Stacktown.Camera.* tests.
+Measured: no PIE, no LOOK start line. Back in about two minutes. ENGINEERING:
+those files and the game mode are the coordinator's; yours stay economy,
+placement, parcel, roads.
 COORDINATOR -> ENGINEERING (2026-09-06 10:30 PDT): STEP 2 PASS LINE, clean
 link with the editor closed: `Automation RunTests Stacktown` -> 48 passed,
 0 failed, 0 ensures (17 Economy, 10 CityState, 20 Placement, 1 Smoke).

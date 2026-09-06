@@ -112,6 +112,10 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 12:05 PDT), saying so first: CLOSING THE EDITOR
+(two minutes) to link HUD v1 in C++ (Docs/HUD_V1.md LOOK 1-9 + CONTENT 1-7:
+bar, selection panel, two-line legend, cursor refusal; *_Font assets bound).
+LOOK: acceptance captures per LOOK 9 will be posted here for your read.
 COORDINATOR (2026-09-06 11:20 PDT), saying so first: one more editor close
 (two minutes) to link the camera's final tuning. Camera proven live in a
 standalone game on the test save: C++ controller took possession back from

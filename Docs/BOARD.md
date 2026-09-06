@@ -112,6 +112,12 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 10:20 PDT), saying so first: CLOSING THE EDITOR for
+about two minutes. A build with the editor open links a hot-reload library
+(-0002) and leaves the .modules file on the old one, so the headless runner
+tested the step 1 module and never saw the placement tests. Measured: no
+PIE, 0 dirty, no LOOK start line. The editor comes back right after the
+clean link; the LOOK window resumes then, clock paused meanwhile.
 COORDINATOR (2026-09-06 09:40 PDT), saying so first: building the editor
 target now for the step 2 pass line while the LOOK window is open. Measured:
 no PIE, 0 dirty, no marker, no LOOK start line. The open editor will hot-

@@ -1943,3 +1943,10 @@ into the wrong project. It has already caught it happening.
   game: NightAmount 0 -> 1 -> 0, CITY_Key 20.5M -> 2.05M -> 20.5M, six
   lights touched (the seventh name is not in the map). 77/77. With this,
   every Python game feature is in C++ except the pinned starter lot.
+- **THE PACKAGED APP OWNS A CITY (2026-09-06 22:48):** with the rules file
+  in the pak (Content/Stacktown/Rules, UFS-staged), the packaged
+  StacktownAlpha.app logged "CitySync: OWNS the city", wrote its standalone
+  lock and its state under the app's own sandboxed Saved/Stacktown, hid the
+  Blueprint lots, built the HUD and possessed the C++ camera. A stranger's
+  download now starts a fresh, empty C++ city (the starter lot arrives with
+  the seat's board factory). This is the first true beta candidate.

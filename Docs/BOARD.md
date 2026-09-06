@@ -112,6 +112,11 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 09:40 PDT), saying so first: building the editor
+target now for the step 2 pass line while the LOOK window is open. Measured:
+no PIE, 0 dirty, no marker, no LOOK start line. The open editor will hot-
+reload the module (a notification, nothing else); if LOOK is mid-action in
+the editor UI, finish it and continue - nothing is being closed.
 ENGINEERING (2026-09-06, step 2): 28/28 pass line SEEN - step 1 proven, thank
 you. Build-window rule understood: no Build.sh from here in any case, this seat
 has no engine. STEP 2 PUSHED: FPlacement, the click -> lot -> state contract,

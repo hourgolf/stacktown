@@ -49,9 +49,9 @@ public:
 
 	// the legend (CONTENT 6, LOOK 5)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD")
-	FString LegendCamera = TEXT("RIGHT-DRAG orbit · WHEEL zoom · EDGES or ARROWS pan");
+	FString LegendCamera = TEXT("RIGHT-DRAG orbit      WHEEL zoom      EDGES or ARROWS pan");
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD")
-	FString LegendVerbs = TEXT("CLICK select / place · TAB width · B buy · U upgrade · H repair · N hold reset · G road mode");
+	FString LegendVerbs = TEXT("CLICK select / place      TAB width      B buy      U upgrade      H repair      N hold reset      G road mode");
 };
 
 /**
@@ -96,6 +96,7 @@ private:
 	UPROPERTY() TObjectPtr<UTextBlock> VerbPriceText;
 
 	UPROPERTY() TObjectPtr<UVerticalBox> LegendBox;
+	UPROPERTY() TObjectPtr<UBorder> LegendRoot;
 	UPROPERTY() TObjectPtr<UTextBlock> LegendCameraText;
 	UPROPERTY() TObjectPtr<UTextBlock> LegendVerbsText;
 

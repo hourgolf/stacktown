@@ -13,7 +13,7 @@ namespace Stacktown
 namespace RoadFrame
 {
 	static constexpr double Corridor = 2260.0;      // citylayout: 1400 carriageway + 2 * 430 footway
-	static constexpr double RoadZ = 4.0;
+	static constexpr double RoadZ = -3.0;   // LOOK ruling 2026-09-06: an inlay sits flush; the 8 uu slab's top at +1 uu is the seam (the plate is solid below z = 0)
 	static constexpr double HeightScale = 0.08;     // 8 uu thick: a road is not a building
 	static constexpr double CubeEdge = 100.0;       // /Engine/BasicShapes/Cube
 

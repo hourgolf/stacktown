@@ -15,7 +15,7 @@ AStacktownRoad::AStacktownRoad()
 	{
 		Mesh->SetStaticMesh(Cube);
 	}
-	if (UMaterialInterface* Grey = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey")))
+	if (UMaterialInterface* Grey = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_board_road.MI_board_road")))
 	{
 		Mesh->SetMaterial(0, Grey);
 	}
@@ -37,7 +37,7 @@ void AStacktownRoad::Show(const FString& InRoadId, double StartX, double StartY,
 
 void AStacktownRoad::SetGhost(bool bGhost, bool bAccept)
 {
-	const TCHAR* Path = !bGhost ? TEXT("/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey")
+	const TCHAR* Path = !bGhost ? TEXT("/Game/Stacktown/Materials/MI_board_road.MI_board_road")
 		: (bAccept ? TEXT("/Game/Stacktown/Materials/MI_ghost_accept.MI_ghost_accept") : TEXT("/Game/Stacktown/Materials/MI_ghost_refuse.MI_ghost_refuse"));
 	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, Path))
 	{

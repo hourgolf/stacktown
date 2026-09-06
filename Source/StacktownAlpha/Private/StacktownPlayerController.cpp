@@ -14,6 +14,7 @@
 #include "StacktownWoodCatalogue.h"
 #include "Components/SceneComponent.h"
 #include "StacktownRoad.h"
+#include "StacktownNight.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Widget.h"
@@ -611,6 +612,14 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 	return FString::Printf(TEXT("road %s drawn (%.0f, %.0f) -> (%.0f, %.0f); %s"), *R.Id, R.Segment.StartX, R.Segment.StartY, R.Segment.EndX, R.Segment.EndY, *Rep);
 }
 
+FString AStacktownPlayerController::CityNight(bool bOn)
+{
+	if (!Night) { Night = NewObject<UStacktownNight>(this, TEXT("Night")); }
+	const int32 N = Night->Apply(GetWorld(), bOn);
+	if (HudModel) { HudModel->bNight = bOn && N >= 0; }
+	return N < 0 ? TEXT("no night yet (parameter collection missing)") : FString::Printf(TEXT("%s, %d lights %s"), bOn ? TEXT("night") : TEXT("day"), N, bOn ? TEXT("dimmed") : TEXT("restored"));
+}
+
 void AStacktownPlayerController::DriveCity(float DeltaTime)
 {
 	if (!CityOwned() || !HudModel) { return; }
@@ -618,7 +627,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 
 	// any key press clears a showing refusal (LOOK 6: cleared on the next input)
 	const bool bAnyKey = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::B) || WasInputKeyJustPressed(EKeys::U)
-		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G);
+		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G) || WasInputKeyJustPressed(EKeys::L);
 	if (bAnyKey && bRefusalShowing) { HudModel->ActionRefusal.Reset(); bRefusalShowing = false; }
 
 	// hover: a lot actor under the cursor, or the board point for the ghost
@@ -629,6 +638,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	FVector Board;
 	const bool bBoard = BoardPointUnderCursor(Board);
 	if (WasInputKeyJustPressed(EKeys::G)) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadMode(!bRoadMode)); }
+	if (WasInputKeyJustPressed(EKeys::L)) { UE_LOG(LogStacktown, Log, TEXT("NIGHT: %s"), *CityNight(!(Night && Night->IsNight()))); }
 	if (bRoadMode)
 	{
 		HideGhost();

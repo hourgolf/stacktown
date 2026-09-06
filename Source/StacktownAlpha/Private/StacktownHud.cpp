@@ -138,13 +138,13 @@ void UStacktownHud::Build(UWorld* InWorld)
 	StateText = MakeText(TomorrowMedium, SizeBody, Ink);
 	if (UVerticalBoxSlot* S = Col->AddChildToVerticalBox(StateText)) { S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f)); }
 	PriceText = MakeText(SpaceMonoBold, SizeBody, Accept);
-	if (UVerticalBoxSlot* S = Col->AddChildToVerticalBox(PriceText)) { S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f)); }
+	PriceText->SetVisibility(ESlateVisibility::Collapsed);   // LOOK ruling 2026-09-06: the verb row carries the price; a standalone line read as a bug
 	VerbGap = NewObject<USpacer>(this);
 	VerbGap->SetSize(FVector2D(1.f, Pad));
 	Col->AddChildToVerticalBox(VerbGap);
 	VerbRow = NewObject<UHorizontalBox>(this);
 	Col->AddChildToVerticalBox(VerbRow);
-	VerbKeyText = MakeText(TomorrowMedium, SizeMicro, Dim, SpacingMicro);
+	VerbKeyText = MakeText(TomorrowMedium, SizeLabel, Dim, SpacingLabel);   // LOOK ruling: the cap tells you what to press
 	if (UHorizontalBoxSlot* S = VerbRow->AddChildToHorizontalBox(VerbKeyText)) { S->SetVerticalAlignment(VAlign_Center); }
 	VerbText = MakeText(TomorrowMedium, SizeBody, Ink);
 	if (UHorizontalBoxSlot* S = VerbRow->AddChildToHorizontalBox(VerbText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(16.f, 0.f, 0.f, 0.f)); }
@@ -165,6 +165,10 @@ void UStacktownHud::Build(UWorld* InWorld)
 
 	// ---- the legend: bottom-right, two micro lines, dim, ending at -32
 	LegendBox = NewObject<UVerticalBox>(this);
+	UBorder* LegendScrim = NewObject<UBorder>(this);   // LOOK ruling: dim micro on a cream plate needs a ground
+	LegendScrim->SetBrushColor(FLinearColor(FLinearColor::FromSRGBColor(FColor(0x2A, 0x2A, 0x2E)).CopyWithNewOpacity(0.45f)));
+	LegendScrim->SetPadding(FMargin(Pad));
+	LegendScrim->SetContent(LegendBox);
 	LegendCameraText = MakeText(TomorrowMedium, SizeMicro, Dim, SpacingMicro);
 	LegendCameraText->SetJustification(ETextJustify::Right);
 	if (UVerticalBoxSlot* S = LegendBox->AddChildToVerticalBox(LegendCameraText)) { S->SetHorizontalAlignment(HAlign_Right); }
@@ -177,9 +181,10 @@ void UStacktownHud::Build(UWorld* InWorld)
 		Slot.Offsets = FMargin(-Margin, -Margin, 0.f, 0.f);
 		Slot.Alignment = FVector2D(1.f, 1.f);
 		Slot.ZOrder = 10;
-		VS->AddWidget(LegendBox, Slot);
+		VS->AddWidget(LegendScrim, Slot);
 	}
-	LegendBox->SetVisibility(ESlateVisibility::HitTestInvisible);
+	LegendScrim->SetVisibility(ESlateVisibility::HitTestInvisible);
+	LegendRoot = LegendScrim;
 
 	// ---- the cursor refusal: body, refuse, next to the ghost
 	CursorText = MakeText(TomorrowMedium, SizeBody, Refuse);
@@ -226,13 +231,10 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 		const bool bVerb = !M->Verb.IsEmpty();
 		const bool bAffordable = M->Money >= M->VerbPrice;
 		const FLinearColor PriceColour = bAffordable ? Accept : Dim;
-		PriceText->SetVisibility(bVerb ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		VerbGap->SetVisibility(bVerb ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		VerbRow->SetVisibility(bVerb ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 		if (bVerb)
 		{
-			PriceText->SetColorAndOpacity(FSlateColor(PriceColour));
-			SetText(PriceText, MoneyString(M->VerbPrice));
 			SetText(VerbKeyText, M->VerbKey);
 			SetText(VerbText, M->Verb);
 			VerbPriceText->SetColorAndOpacity(FSlateColor(PriceColour));
@@ -268,7 +270,7 @@ void UStacktownHud::Teardown()
 {
 	if (UGameViewportSubsystem* VS = (World && GEngine) ? GEngine->GetEngineSubsystem<UGameViewportSubsystem>() : nullptr)
 	{
-		for (UWidget* W : TArray<UWidget*>{ Bar, PanelBox, LegendBox, CursorText })
+		for (UWidget* W : TArray<UWidget*>{ Bar, PanelBox, LegendRoot, CursorText })
 		{
 			if (W) { VS->RemoveWidget(W); }
 		}

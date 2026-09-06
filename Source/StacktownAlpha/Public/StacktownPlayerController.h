@@ -7,6 +7,7 @@
 class AStacktownCameraPawn;
 class UStacktownHudModel;
 class UStacktownHud;
+class UStacktownNight;
 
 /**
  * Drives AStacktownCameraPawn from raw input (right-drag orbit, wheel zoom
@@ -70,6 +71,9 @@ public:
 	/** A click in road mode: the first sets the start, the second draws; returns the outcome line. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityRoadClick(double X, double Y);
+	/** Night on/off (L). */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityNight(bool bOn);
 
 private:
 	void EnsureCameraPossessed();
@@ -96,6 +100,7 @@ private:
 	bool bRoadStartSet = false;
 	FVector2D RoadStart = FVector2D::ZeroVector;
 	UPROPERTY() TObjectPtr<AActor> RoadGhostActor;
+	UPROPERTY() TObjectPtr<UStacktownNight> Night;
 
 	int32 WidthIndex = 0;
 	FString SelectedPid;

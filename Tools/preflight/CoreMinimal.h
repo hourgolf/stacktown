@@ -121,46 +121,57 @@ public:
 	std::vector<T> V_;
 };
 
+// TMap, backed by a vector so it preserves INSERTION ORDER - which is what UE's
+// TMap actually does (coordinator, 2026-09-06), and what an earlier std::map
+// here did not. That difference was not academic: keyed order made BOTH sort
+// mutations unfalsifiable, because removing an explicit sort still left the
+// container sorted. Linear lookup is irrelevant at test sizes and buys back the
+// coverage.
 template <typename K, typename V>
 class TMap
 {
 public:
 	V* Find(const K& Key)
 	{
-		auto It = M_.find(Key);
-		return It == M_.end() ? nullptr : &It->second;
+		for (auto& P : Items) { if (P.first == Key) { return &P.second; } }
+		return nullptr;
 	}
 	const V* Find(const K& Key) const
 	{
-		auto It = M_.find(Key);
-		return It == M_.end() ? nullptr : &It->second;
+		for (const auto& P : Items) { if (P.first == Key) { return &P.second; } }
+		return nullptr;
 	}
-	V& Add(const K& Key, const V& Value) { M_[Key] = Value; return M_[Key]; }
-	bool Contains(const K& Key) const    { return M_.find(Key) != M_.end(); }
-	int32 Num() const                    { return static_cast<int32>(M_.size()); }
-	V& operator[](const K& Key)          { return M_[Key]; }
-	const V& operator[](const K& Key) const { return M_.at(Key); }
+	V& Add(const K& Key, const V& Value)
+	{
+		if (V* Existing = Find(Key)) { *Existing = Value; return *Existing; }
+		Items.push_back(std::make_pair(Key, Value));
+		return Items.back().second;
+	}
+	bool Contains(const K& Key) const { return Find(Key) != nullptr; }
+	int32 Num() const { return static_cast<int32>(Items.size()); }
+	V& operator[](const K& Key)
+	{
+		if (V* Existing = Find(Key)) { return *Existing; }
+		return Add(Key, V());
+	}
+	const V& operator[](const K& Key) const { return *Find(Key); }
 
 	void GetKeys(TArray<K>& Out) const
 	{
-		for (const auto& Pair : M_) { Out.Add(Pair.first); }
+		for (const auto& P : Items) { Out.Add(P.first); }
 	}
 
-	// Range-for yields TPair, matching UE. std::map is ordered and UE's TMap is
-	// not - which is precisely why StacktownEconomyRules.cpp sorts explicitly
-	// instead of relying on iteration order. This shim must never be the reason
-	// that sort looks unnecessary.
 	struct FIter
 	{
-		typename std::map<K, V>::const_iterator It;
+		typename std::vector<std::pair<K, V>>::const_iterator It;
 		bool operator!=(const FIter& O) const { return It != O.It; }
 		void operator++() { ++It; }
 		TPair<K, V> operator*() const { return TPair<K, V>{ It->first, It->second }; }
 	};
-	FIter begin() const { return FIter{ M_.begin() }; }
-	FIter end()   const { return FIter{ M_.end() }; }
+	FIter begin() const { return FIter{ Items.begin() }; }
+	FIter end()   const { return FIter{ Items.end() }; }
 
-	std::map<K, V> M_;
+	std::vector<std::pair<K, V>> Items;
 };
 
 template <typename T>

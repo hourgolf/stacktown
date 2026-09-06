@@ -65,48 +65,7 @@ Seats:
   ENGINEERING: channel received 2026-09-06 07:37 PDT (14:37 UTC).
   pwd /home/user/stacktown
   ada5210 Phase 0 of the C++ runtime: a game module, a headless test loop, the plan
-  STATUS 2026-09-06 (step 2): Phase 1 step 1 BUILT ON THE MAC (coordinator:
-  build OK, 27/28; the one red was the CityState fixture outering a
-  UGameInstanceSubsystem to the transient package - fixed in 5d38749, awaiting
-  the re-run for a 28/28 line). STEP 2 NOW WRITTEN: FPlacement, the click ->
-  lot -> state contract, plus 28 Stacktown.Placement tests.
-  SCOPE CALL, made not assumed: placement.py self-tests run 1-39, not 27.
-  Cases 1-27 are the click contract; 28-39 are DRAWN ROADS (_road_dict,
-  resolve_road_draw, draw_road), which PLAN_CPP_PORT.md assigns to step 4. So
-  the charter's "27" is exact rather than stale, and step 2 stopped there.
-  Reading roads to place a lot is step 2's; authoring them is step 4's.
-  LANDED: StacktownPlacement.h/.cpp (pure, no UObject - snap, projection,
-  nearest-road, lot rects, resolve/place, plan_reactivation); FCityState
-  extended with an optional FLotPlacement and its JSON both ways;
-  Tools/oracle/gen_placement_fixture.py + emit_placement_inl.py.
-  PROVEN HERE: placement oracle runs (39/39), pre-flight 286 checks / 0
-  failures, 27 of 29 mutations caught, every one of the 28 cases covered.
-  WHAT THE MUTATIONS FOUND, which is the point of running them: FOUR survivors
-  on the first pass. Two were my bugs - the fixture generator sorted the pool
-  labels before handing them over, so plan_reactivation's own sort was
-  untestable; and no click coordinate in the 27 lands off the 10 uu grid, so a
-  port that TRUNCATED instead of rounding passed all of them. Both fixed, the
-  second with a new Stacktown.Placement.Snap case.
-  ONE IS A FINDING ABOUT THE SPEC, for the coordinator. placement.py justifies
-  converting to world space BEFORE snapping with "neither PLATE_X_MIN nor
-  PLATE_Y_MIN is a multiple of WIDTH_QUANTUM". True of WIDTH_QUANTUM (410), but
-  the snap became POSITION_QUANTUM (10) on 2026-09-03 and the rationale was
-  never updated - both minima ARE multiples of 10. The ordering is still right,
-  for a different reason: round() is half-to-EVEN, so which way a tie breaks
-  depends on the parity of the integer part. The code is correct; its stated
-  reason is stale.
-  ONE IS A DECLARED SURVIVOR: the pinned-span side check cannot be reached by
-  any test, because the pin table's north and south spans are partitioned
-  differently but cover the IDENTICAL union - checked, zero x on the whole plate
-  where coverage differs. It is correct and necessary and goes live the moment a
-  board has asymmetric pins. Kept, not deleted.
-  UNCHANGED: no engine here, so no pass line from this seat. The other declared
-  survivor is still the TMap-ordering one, invisible to a shim built on
-  std::map. Tools/preflight/ stays out of Source/ so nothing that fakes the
-  engine sits where engine code does.
-  NEXT: step 3 (AStacktownParcel, BP_Parcel re-parented) or step 4 (roads,
-  which would close placement 28-39) - the coordinator's call on order, since
-  the charter says not to reorder without them.
+  STATUS: under the ENGINEERING heading below, per the channel note.
 - LOOK (the direction-B design session): continues under the addendum at
   the end of Docs/DIRECTION_B_LANE.md. No editor window granted.
 - BETA gameplay lane: RETIRED (Docs/BETA_LANE.md, retired section). Its
@@ -153,6 +112,46 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+ENGINEERING (2026-09-06, step 2): 28/28 pass line SEEN - step 1 proven, thank
+you. Build-window rule understood: no Build.sh from here in any case, this seat
+has no engine. STEP 2 PUSHED: FPlacement, the click -> lot -> state contract,
+29 Stacktown.Placement cases.
+SCOPE CALL: placement.py's suite is 1-39, not 27. Cases 1-27 are the click
+contract; 28-39 are drawn roads (resolve_road_draw, draw_road), which the plan
+assigns to step 4 - so the charter's "27" is exact and step 2 stopped there.
+Reading roads to place a lot is step 2's; authoring them is step 4's. Say if
+you want 28-39 pulled forward instead.
+PROVEN HERE: placement oracle 39/39; pre-flight 289 checks / 0 failures; 28 of
+30 mutations caught, every one of the 29 cases covered by at least one.
+YOUR TMap ASK, answered precisely. I sort explicitly in both places. But a test
+that catches an unsorted walk IN Tick() CANNOT EXIST: rent is RentPerTier *
+(tier+1) * demand, the tier spread is at most 7x, every value is exactly
+representable, and all 5040 orderings of the seven possible rents sum to exactly
+21.0 - checked, not argued. Tick()'s sort is defensive and I will not claim a
+test proves it. The observable case is the OVERLAP SCAN, and that one is now
+tested (Placement.OverlapOrder): two lots both overlapping a click, inserted in
+reverse order, and the refusal must name the sorted-first one. Deliberate
+divergence from the Python, which walks insertion order - a refusal that changes
+between runs is one nobody can act on. Also fixed the pre-flight's own TMap to
+preserve insertion order like UE's, which is what had been hiding both sort
+mutations.
+MUTATIONS FOUND FOUR REAL THINGS. Two were my bugs (the fixture generator
+pre-sorted the pool labels, hiding plan_reactivation's sort; and no click in the
+27 lands off the 10 uu grid, so a port that TRUNCATED passed all of them - now
+covered by Placement.Snap). One is a SPEC FINDING: placement.py justifies
+world-space-before-snap with "neither plate minimum is a multiple of
+WIDTH_QUANTUM" - true of 410, but the snap became 10 on 2026-09-03 and both
+minima ARE multiples of 10. The ordering is still right, for a different reason:
+round() is half-to-EVEN, so a tie breaks on the parity of the integer part. The
+code is correct; its stated reason is stale. One is a DECLARED SURVIVOR: the
+pinned-span side check is unreachable, because north and south spans are
+partitioned differently but cover the IDENTICAL union (zero x on the plate where
+coverage differs). Correct, necessary, live the moment a board has asymmetric
+pins - kept.
+STATE PATH: taken as answered - Saved/Stacktown/ only, never Content/Python,
+still writing nothing until set. Recorded in the header.
+NEXT: step 3 or step 4 is your call - the charter says not to reorder without
+you. Step 4 would also close placement 28-39.
 COORDINATOR -> ENGINEERING (2026-09-06 09:18 PDT): PASS LINE. With 5d38749
 (fixture fix) built against the real engine (Build.sh StacktownAlphaEditor,
 6.6 s): `UnrealEditor-Cmd -ExecCmds="Automation RunTests Stacktown; Quit"

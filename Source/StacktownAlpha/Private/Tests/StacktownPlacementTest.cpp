@@ -517,6 +517,38 @@ STACKTOWN_PLACE_TEST(FStacktownPlaceSnap, "Stacktown.Placement.Snap")
 	return true;
 }
 
+// --- ADDED BY THE PORT, not one of the 27 -----------------------------------------
+// OVERLAP-SCAN DETERMINISM. The coordinator asked for a test that would catch an
+// unsorted walk. In Tick() no such test can exist: rent is
+// RentPerTier * (tier + 1) * Demand, the tier spread is at most 7x, every value
+// is exactly representable, and all 5040 orderings of the seven possible rents
+// sum to exactly 21.0 - checked, not assumed. Tick()'s sort is defensive, and
+// saying a test proves it would be false.
+//
+// The overlap scan IS observable. When two existing lots both overlap a click,
+// whichever is visited first is the one the refusal names. UE's TMap iterates in
+// INSERTION order, so an unsorted walk names whichever lot happened to be added
+// first; this port sorts, so it always names the same one. Deliberate divergence
+// from the Python, which walks insertion order: a refusal that changes between
+// runs is one nobody can act on.
+STACKTOWN_PLACE_TEST(FStacktownPlaceOverlapOrder, "Stacktown.Placement.OverlapOrder")
+{
+	const FPlacementBoard Board = OracleBoard();
+	FCityState S = Seed();
+	// Inserted B FIRST, so insertion order and sorted order disagree.
+	S.Parcels.Add(TEXT("B"), PlacedParcel(Board, OverlapLotB));
+	S.Parcels.Add(TEXT("A"), PlacedParcel(Board, OverlapLotA));
+
+	const FClickResult R = ResolveClick(Board, S, OverlapAOnly.X, OverlapAOnly.Y,
+		OverlapAOnly.bPinsActive, V0Width);
+	TestEqual(TEXT("refused"), BoolStr(R.bOk), BoolStr(OverlapAOnly.bOk));
+	// A sorts before B, so A is named - even though B was added first. Both
+	// reasons are the oracle's own, captured one lot at a time.
+	TestEqual(TEXT("names the sorted-first lot"), R.Reason, FString(OverlapAOnly.Reason));
+	TestNotEqual(TEXT("and not the insertion-first one"), R.Reason, FString(OverlapBOnly.Reason));
+	return true;
+}
+
 #undef STACKTOWN_PLACE_TEST
 
 #endif // WITH_DEV_AUTOMATION_TESTS

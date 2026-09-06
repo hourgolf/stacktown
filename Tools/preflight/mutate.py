@@ -152,10 +152,19 @@ MUTATIONS = [
      'const double X0 = Snap(R, WorldCoord - Width / 2.0);',
      'const double X0 = RoadStartOnAxis + Snap(R, Local.Along - Width / 2.0);', True, 'placement'),
 
+    ('overlap-scan-unsorted', 'a refusal names whichever lot was added first',
+     'TArray<FString> Ids;\n\tState.Parcels.GetKeys(Ids);\n\tIds.Sort([](const FString& A, const FString& B) { return A < B; });',
+     'TArray<FString> Ids;\n\tState.Parcels.GetKeys(Ids);', True, 'placement'),
+
     # ---- the honest negatives ------------------------------------------------
-    # The shim's TMap is std::map, which is ORDERED, so deleting the explicit
-    # sort changes nothing here. Only a real UE build can catch this one - which
-    # is exactly why a green pre-flight is not the proof.
+    # DECLARED SURVIVOR, and now for a PROVEN reason rather than a shim artifact.
+    # The shim's TMap preserves insertion order (as UE's does), so this mutation
+    # really does change the walk order - and the sum still cannot move: rent is
+    # RentPerTier * (tier + 1) * Demand, the spread is at most 7x, every value is
+    # exactly representable, and all 5040 orderings of the seven possible rents
+    # sum to exactly 21.0. Tick()'s sort is DEFENSIVE - correct to keep, and not
+    # something any test can prove. The observable ordering case is the overlap
+    # scan, covered by Placement.OverlapOrder above.
     ('tick-iteration-order-unsorted', 'parcels summed in map order instead of sorted',
      'OutIds.Sort([](const FString& A, const FString& B) { return A < B; });', '',
      False, 'rules'),

@@ -38,13 +38,14 @@ namespace Stacktown
  * disk - the owner's word, on the condition of a loud way out of it, which is
  * ResetCity() below.
  *
- * TWO SAVE PATHS EXIST RIGHT NOW AND THAT IS A COORDINATION ITEM, NOT A
- * DECISION THIS PORT MADE. citytick.py persists to Content/Python/citystate.json;
- * PLAN_CPP_PORT.md step 1 says the C++ state is "FCityState JSON in Saved/".
- * While both sides run - which the plan requires until the oracle comparison
- * passes - they are two files that will drift apart the moment both are live.
- * This subsystem therefore DOES NOT WRITE ANYTHING until StatePath is set
- * explicitly. It never guesses at the owner's save.
+ * TWO SAVE PATHS, RESOLVED (coordinator, 2026-09-06). citytick.py persists to
+ * Content/Python/citystate.json and that file stays LIVE AND AUTHORITATIVE for
+ * the whole overlap; the oracle comparison reads it read-only. This subsystem
+ * writes only to an explicit StatePath under Saved/Stacktown/, never under
+ * Content/Python, and DOES NOT WRITE ANYTHING AT ALL until that path is set.
+ * The default of writing nothing was confirmed as the right one: while both
+ * sides run, a C++ writer that guessed at a path would give the owner two saves
+ * drifting apart.
  */
 UCLASS()
 class STACKTOWNALPHA_API UStacktownEconomy : public UGameInstanceSubsystem

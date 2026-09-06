@@ -243,6 +243,36 @@ def main():
         'p2_road_id': P.lot_road_id(loaded26['parcels']['P2']['placement']),
     }
 
+    # --- overlap-scan determinism (ADDED BY THE PORT) -----------------------
+    # The coordinator asked for a test that would catch an unsorted walk. In
+    # tick() it cannot exist: rent is RentPerTier * (tier+1) * demand, the tier
+    # spread is at most 7x, every value is exactly representable, and all 5040
+    # orderings of the seven possible rents sum to exactly 21.0 - checked. So
+    # tick()'s sort is defensive, not observable, and claiming a test proves it
+    # would be false.
+    #
+    # The overlap scan IS observable: when TWO existing lots both overlap a
+    # click, whichever is visited first is the one the refusal names. The Python
+    # walks a dict in insertion order, so its message depends on the order lots
+    # were added; the C++ sorts, so it always names the same one. That is a
+    # deliberate divergence - a message that changes between runs is a message
+    # nobody can act on. Captured here one lot at a time, so the expected
+    # message is the oracle's own for whichever lot sorts first.
+    def one_lot_state(pid, l):
+        st = citytick.seed_state()
+        st['parcels'][pid] = {
+            'rid': P.V0_RECIPE, 'tier': 0, 'width': P.V0_WIDTH, 'owned': False,
+            'placement': l}
+        return st
+
+    lot_a = {'x0': 1640.0, 'x1': 2460.0, 'side': 'north', 'road_id': 'arterial'}
+    lot_b = {'x0': 1700.0, 'x1': 2520.0, 'side': 'north', 'road_id': 'arterial'}
+    fx['overlap_order'] = {
+        'lot_a': lot_a, 'lot_b': lot_b,
+        'a_only': cap_click(one_lot_state('A', lot_a), 2000.0, 1500.0, pins_active=False),
+        'b_only': cap_click(one_lot_state('B', lot_b), 2000.0, 1500.0, pins_active=False),
+    }
+
     # --- 27: THE CORNER - world footprints, not per-road spans -------------
     s27 = citytick.seed_state()
     s27['parcels']['A'] = {

@@ -266,6 +266,14 @@ inline const TCHAR* const T26_P1_RoadId = TEXT("cross");
 inline constexpr bool T26_P2_HasRoadIdKey = false;
 inline const TCHAR* const T26_P2_RoadId = TEXT("arterial");
 
+// ADDED BY THE PORT: overlap-scan determinism. When two lots both overlap
+// a click, the C++ SORTS and always names the same one; the Python walks
+// insertion order. A refusal that changes between runs is unactionable.
+inline const FLotDef OverlapLotA = { 1640.0, 2460.0, TEXT("north"), TEXT("arterial") };
+inline const FLotDef OverlapLotB = { 1700.0, 2520.0, TEXT("north"), TEXT("arterial") };
+inline const FClickCase OverlapAOnly = { 2000.0, 1500.0, false, false, TEXT("overlap: [1590.0, 2410.0] on the arterial crosses an existing lot at [1640.0, 2460.0] on the arterial"), { 0.0, 0.0, nullptr, nullptr } };
+inline const FClickCase OverlapBOnly = { 2000.0, 1500.0, false, false, TEXT("overlap: [1590.0, 2410.0] on the arterial crosses an existing lot at [1700.0, 2520.0] on the arterial"), { 0.0, 0.0, nullptr, nullptr } };
+
 // Test 27: the corner - world footprints, not per-road spans.
 inline const FLotDef T27_Lot0 = { 1640.0, 2460.0, TEXT("south"), TEXT("arterial") };
 inline const FRect T27_Rect0 = { 1640.0, 2460.0, -2630.0, -1130.0 };

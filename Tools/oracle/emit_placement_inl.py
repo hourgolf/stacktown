@@ -239,6 +239,18 @@ def main():
     w('inline const TCHAR* const T26_P2_RoadId = %s;' % q(rt['p2_road_id']))
     w('')
 
+    w('// ADDED BY THE PORT: overlap-scan determinism. When two lots both overlap')
+    w('// a click, the C++ SORTS and always names the same one; the Python walks')
+    w('// insertion order. A refusal that changes between runs is unactionable.')
+    oo = fx['overlap_order']
+    w('inline const FLotDef OverlapLotA = %s;' % lot(oo['lot_a']))
+    w('inline const FLotDef OverlapLotB = %s;' % lot(oo['lot_b']))
+    for key, name in (('a_only', 'OverlapAOnly'), ('b_only', 'OverlapBOnly')):
+        v = oo[key]
+        w('inline const FClickCase %s = { %s, %s, %s, %s, %s, %s };' % (
+            name, n(v['x']), n(v['y']), b(v['pins_active']), b(v['ok']),
+            q(v['reason']), lot(v['lot'])))
+    w('')
     w('// Test 27: the corner - world footprints, not per-road spans.')
     for i, c27 in enumerate(fx['t27_lot_rects']):
         w('inline const FLotDef T27_Lot%d = %s;' % (i, lot(c27['lot'])))

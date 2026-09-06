@@ -573,6 +573,19 @@ int main()
 			CheckStr("road id", LotRoadId(LotFrom(T25_Lots[i])), FString(T25_Expected[i]));
 		}
 
+		CASE("Placement.OverlapOrder");
+		{
+			FCityState S = Seed();
+			S.Parcels.Add(TEXT("B"), PlacedParcel(Board, OverlapLotB));
+			S.Parcels.Add(TEXT("A"), PlacedParcel(Board, OverlapLotA));
+			const FClickResult Res = ResolveClick(Board, S, OverlapAOnly.X, OverlapAOnly.Y,
+				OverlapAOnly.bPinsActive, V0Width);
+			CheckBool("refused", Res.bOk, OverlapAOnly.bOk);
+			CheckStr("names the sorted-first lot", Res.Reason, FString(OverlapAOnly.Reason));
+			CheckBool("not the insertion-first one",
+				Res.Reason == FString(OverlapBOnly.Reason), false);
+		}
+
 		CASE("Placement.Corner");
 		{
 			FCityState S = Seed();

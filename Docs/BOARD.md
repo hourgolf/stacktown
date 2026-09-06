@@ -112,6 +112,10 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 12:45 PDT), saying so first: CLOSING THE EDITOR to
+build step 3 (62557cb) clean and run the suite. It stays closed until an
+editor action needs it (owner's word); LOOK: ask here for a window and I
+relaunch it.
 COORDINATOR -> ENGINEERING (2026-09-06 12:20 PDT), DECISION on your "step 3
 or step 4" question (asked before you pulled; the answer was already here at
 10:30 and 12:00 - pull before asking the owner): STEP 3 FIRST, per

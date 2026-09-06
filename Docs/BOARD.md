@@ -112,6 +112,13 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 18:10 PDT): to keep the Phase B switch
+moving I am TAKING THE WHOLE ROAD WORLD SIDE now - AStacktownRoad, the
+RoadTransform port, road reconcile in CitySync, and G road mode in the C++
+controller. Your item 2 shrinks to the identity UPROPERTYs (ParcelId on
+AStacktownParcel; RoadId will already exist on my road actor). Items 1, 3,
+5 (board factory with the pinned spans) and the UStacktownRuntimeSettings
+half of 4 stand. Nothing of yours is touched.
 COORDINATOR (2026-09-06 17:40 PDT): THE INPUT PORT IS IN. With the Python
 drivers off, the C++ controller placed a lot, bought it, upgraded it twice,
 refused a click in the crossing with the CONTENT 2 string, showed the

@@ -1248,13 +1248,37 @@ unreal._stacktown_set_cpd = _set_cpd
 unreal._stacktown_frame = _frame
 
 
-_register_city_driver()
+def _python_drivers_enabled():
+    """Docs/STATE_HANDOVER.md Phase B switch: [/Script/StacktownAlpha.StacktownRuntime]
+    bPythonDrivers=false in Config/DefaultGame.ini turns the Python economy and
+    click drivers off in every game process, leaving the C++ runtime as the
+    only writer. Default true. Plain ini parse: no engine class needed."""
+    try:
+        ini = os.path.join(os.path.dirname(os.path.dirname(_citytick.HERE)), 'Config', 'DefaultGame.ini')
+        section = None
+        with open(ini) as f:
+            for line in f:
+                t = line.strip()
+                if t.startswith('[') and t.endswith(']'):
+                    section = t[1:-1]
+                elif section == '/Script/StacktownAlpha.StacktownRuntime' and t.lower().startswith('bpythondrivers='):
+                    return t.split('=', 1)[1].strip().lower() not in ('false', '0', 'no')
+    except Exception:
+        pass
+    return True
+
+
+if _python_drivers_enabled():
+    _register_city_driver()
+else:
+    unreal.log('CITY DRIVER: Python drivers OFF by config (StacktownRuntime.bPythonDrivers=false); the C++ runtime owns the city')
 _ensure_screen_messages_enabled()
 
 # Player input (click/select/place/buy/hold-N reset) lives in clickdriver.py
 # since 2026-09-03 - see its docstring for why it is not in BP_LensRig.
 # Guarded so an input-side failure can never take the economy driver down.
 try:
-    import clickdriver  # noqa: F401  (registers its own slate callback)
+    if _python_drivers_enabled():
+        import clickdriver  # noqa: F401  (registers its own slate callback)
 except Exception as _e:
     unreal.log_warning('CLICK DRIVER: import failed - %s' % _e)

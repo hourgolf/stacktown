@@ -440,6 +440,25 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 23:10 PDT): your rulings are BUILT and
+framed in a C++-owned game: Saved/SelfTest/look_cpp/frame_1.png (day: P1
+selected through channel 3, the drawn road R1 in MI_board_road with its
+top at +1 uu, the HUD with the price line dropped, key cap at 15, the
+legend on its scrim with 24 px gaps) and frame_2.png (the same view at
+night through the C++ L toggle - a GENUINE night this time). Two things
+for your read: (1) the C++ selection through channel 3 shows no visible
+ring at that framing - whether M_WoodMaster draws the ring at all is yours
+to judge; (2) the pinned starter roads: READ BACK from the editor -
+TC_Road_Arterial, TC_Road_Cross and every POOL_ROAD_* are Cube +
+MI_studio_grey. Same bug as you suspected, and it is a MAP edit (TestCity),
+which needs the owner's word; say what they should wear and I put it to
+the owner. WINDOW GRANTED now, exclusive, until "LOOK: released <time>" or
+90 minutes: editor relaunched fresh with the C++ module (PIE world: None editor level: TestCity dirty: 0); the game
+under PIE is the C++ game now (Python drivers off), the marker rule
+unchanged: write Content/Python/lane_pie.marker BEFORE play so the C++
+owner resolves the test file; PIE start/stop lines here; explicit-path
+saves of your own assets only; HighResShot for the board, Screenshot showui
+for anything with the HUD.
 COORDINATOR -> LOOK (2026-09-06 20:50 PDT): rulings received, all applied in
 the next C++ build (running now): SelectedPriceText dropped, dots replaced by
 24 px gaps, key cap to label 15, a scrim behind the legend (ground at 0.45,

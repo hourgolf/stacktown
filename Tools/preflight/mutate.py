@@ -71,6 +71,21 @@ MUTATIONS = [
     ('is-win-counts-breakeven', 'a scratch trade farms a bonus',
      'return Pnl > 0.0;', 'return Pnl >= 0.0;', True),
 
+    # Added after inverting this table BY TEST rather than by mutation, which
+    # showed three cases catching nothing at all: AssetName, Repair and
+    # TradeArithmetic were passing without ever having been shown to fail. A
+    # test nothing can break is not yet a test, so each got a mutation aimed at
+    # it specifically.
+    ('asset-name-grammar-drift', 'the baked-mesh name stops matching recipes.asset_name',
+     'return FString::Printf(TEXT("SM_Bld_%s_t%d_w%d"), *Rid, Tier,',
+     'return FString::Printf(TEXT("SM_%s_t%d_w%d"), *Rid, Tier,', True),
+
+    ('repair-never-clears-the-flag', 'a paid-for repair leaves the lot still failed',
+     'State.Money -= Cost;\n\tP->bFailed = false;', 'State.Money -= Cost;', True),
+
+    ('outcome-bonus-double-pays', 'every winning trade pays twice the declared bonus',
+     'Total += BonusPerWin;', 'Total += BonusPerWin * 2.0;', True),
+
     # The honest negative. The shim's TMap is std::map, which is ORDERED, so
     # removing the explicit sort changes nothing here. Only a real UE build can
     # catch this one - which is exactly why a green harness is not the proof.

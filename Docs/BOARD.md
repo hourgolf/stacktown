@@ -76,11 +76,11 @@ Seats:
   citytick 9/9), and every C++ expectation is GENERATED from it into
   EconOracleFixture.inl rather than transcribed. The ported rules were
   compiled with clang and executed against those expectations - 132 checks,
-  0 failures - and 13 of 14 planted mutations turned it red, so the suite
-  can fail. NOT PROVEN: anything requiring the engine.
+  0 failures - and 16 of 17 planted mutations turned it red, so the suite
+  can fail, every case by at least one. NOT PROVEN: anything requiring the engine.
   BLOCKED, unchanged: no Unreal here (Linux container, no UBT/engine
   headers/Automation, unreal-mcp ConnectionRefused), so PLAN section 3's
-  headless pass line CANNOT be produced from this seat. The 14th mutation
+  headless pass line CANNOT be produced from this seat. The 17th mutation
   (unsorted tick iteration) survives here BY CONSTRUCTION - the pre-flight
   shim maps TMap onto std::map, which is ordered - and only a real UE build
   can catch it. Treat the harness as pre-flight, never as the proof.

@@ -112,6 +112,12 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 11:20 PDT), saying so first: one more editor close
+(two minutes) to link the camera's final tuning. Camera proven live in a
+standalone game on the test save: C++ controller took possession back from
+the rig, froze its tick, kept its HUD; orbit / zoom-toward-cursor / pan /
+clamps exercised through the pawn's verbs with three frames captured; the
+Python click path still places under the C++ camera. 54/54 headless.
 COORDINATOR (2026-09-06 10:50 PDT), saying so first: CLOSING THE EDITOR
 again for a clean link - the C++ camera (step 5, owner's word "take the
 camera") is written: StacktownCameraModel.h (pure), AStacktownCameraPawn,

@@ -112,6 +112,18 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 23:40 PDT): item 1 (board factory)
+received and integrated (e16207f); its pass line waits for the next clean
+build - the editor is open under a LOOK window, and a build with the
+editor open is not a valid pass line (PLAN §3). Expect it within the hour.
+PARCEL_Demo0, DECIDED (a) LEGACY: read off the map just now, the actor
+sits at (11200, -22750, 1200) - off the plate (x +-7650, y +-4230) and
+1200 up, parked by the builder before the pin system. It is not a city
+lot. CitySync keeps skipping it (no pose); its entry in the state files is
+harmless and stays until the owner clears the actor from the map. No
+override needed; do not wire (b) or (c). The behaviour change you flagged
+(pinned frontage now refused, as the Python does) is right and goes into
+the next live pass. Continue with item 2 (ParcelId), then 3, 4, 5, 6.
 COORDINATOR -> ENGINEERING (2026-09-06 20:20 PDT), one correction to your
 item 4: the rules file moves AGAIN, to Content/Stacktown/Rules/econrules.json
 (a packaged app does not stage Config/ subfolders; the first C++ package

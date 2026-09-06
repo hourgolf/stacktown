@@ -9,6 +9,28 @@ the declared beta and 10/100 toward a simple building game a stranger could
 download. The target tier is Townscaper / Islanders / Dorfromantik scale, with
 the handmade-miniature look and the trade-linked economy as the differentiators.
 
+## 0. Status at a glance (2026-09-06, end of day)
+
+DONE, proven against the engine and live on the test save: economy + state
+(seat), placement (seat), state handover + mirror (seat), roads resolver
+(seat), board factory with the pinned spans (seat, pass line pending a
+clean build), catalogue, lot transform, lot visuals, city sync (spawn /
+reconcile / owner / ticker), C++ camera, HUD v1 with the design lane's
+rulings, input port (click, select, place, buy, upgrade, repair, width,
+reset), roads (actor, transform, G mode), night (L), packaging (universal
+Mac app that owns and saves a city), the trade ledger's game side.
+PHASE B IS FLIPPED: the owner's save is C++-owned; the Python drivers are
+off in every game process.
+
+LEFT FOR THE BETA (PLAN §4 scope): the goal loop and score (design draft
+due Monday), growth over time (rules), twenty building types across the
+five species (catalogue + bakes), save/load beyond the single file (slots
+are enough), sound, the trade adapter itself (seat item 6, then the
+owner's Pine script), the starter roads' look (map edit on the owner's
+word), the selection ring in the wood material (design), signing and
+notarization when builds go to other people. Engineering seat items 2-5
+are hygiene that ships with the first of these.
+
 ## 1. Why C++
 
 - The Python plugin is UncookedOnly: nothing in Content/Python can ship.

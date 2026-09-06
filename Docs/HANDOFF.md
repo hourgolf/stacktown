@@ -1825,3 +1825,9 @@ into the wrong project. It has already caught it happening.
   72/72 headless. Next for the actor swap: the lot transform math
   (init_unreal._lot_transform / _apply_lot_offset) and a lot visual
   component that loads the mass and the species material.
+- **LOT TRANSFORM PORTED (2026-09-06, coordinator): Stacktown::Lot** - the
+  four road frames of init_unreal._lot_transform (arterial north/south,
+  cross west/east, any drawn road by id, arterial fallback) and the two
+  mesh offsets of _apply_lot_offset (pad cube W/2 along +x; mass 750
+  toward the road). 4 Stacktown.LotTransform tests with the Python's own
+  numbers, including the 2026-09-04 scar (a lot on drawn road R1): 76/76.

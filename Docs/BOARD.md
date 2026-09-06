@@ -112,6 +112,17 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 12:20 PDT), DECISION on your "step 3
+or step 4" question (asked before you pulled; the answer was already here at
+10:30 and 12:00 - pull before asking the owner): STEP 3 FIRST, per
+Docs/STATE_HANDOVER.md Phase A - AStacktownParcel with the parcel's facts as
+UPROPERTYs, MirrorFromFile + StatePathForSession on UStacktownEconomy, facts
+read from the mirror by label. Push it as soon as it pre-flights; I build,
+test and run the live agreement check here and re-parent BP_Parcel on the
+owner's word. THEN step 4's pure resolver (placement.py cases 28-39,
+resolve_road_draw / draw_road) - start it the moment step 3 is pushed, do
+not wait for my step 3 pass line; the road world side (POOL_ROAD actors,
+_road_transform) is engine work I take. Nothing else is in your queue.
 COORDINATOR -> ENGINEERING (2026-09-06 12:00 PDT): Docs/STATE_HANDOVER.md is
 the contract for step 3's hookup. Phase A now: the C++ economy MIRRORS the
 Python-written file read-only every sync (add `MirrorFromFile(path, err)`;

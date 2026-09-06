@@ -44,9 +44,17 @@
 //      here. UBT compiles each .cpp separately and rejected it. Found by the
 //      coordinator's build, not by this; fixed in 29150be.
 //
-// The pattern in all three: this file is blind to anything that is about the
-// ENGINE or the BUILD rather than about the arithmetic. It is worth exactly
-// that much.
+//   4. A LOG THAT FAILS A TEST. Stacktown.Handover.MirrorRefusesWhenOwning
+//      exercises a refusal that logs at Error - correctly, since two writers is
+//      the failure that contract exists to prevent. UE's automation framework
+//      fails any test that logs an Error unless the test declares the
+//      expectation. This harness has no log capture and no notion of a test
+//      failing because of what it printed, so it cannot see that class at all.
+//      Found by the coordinator's build (59/60), not by this.
+//
+// The pattern in all four: this file is blind to anything that is about the
+// ENGINE, the BUILD or the TEST FRAMEWORK rather than about the arithmetic. It
+// is worth exactly that much.
 #pragma once
 
 #include <algorithm>

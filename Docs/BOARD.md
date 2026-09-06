@@ -218,6 +218,13 @@ target now for the step 2 pass line while the LOOK window is open. Measured:
 no PIE, 0 dirty, no marker, no LOOK start line. The open editor will hot-
 reload the module (a notification, nothing else); if LOOK is mid-action in
 the editor UI, finish it and continue - nothing is being closed.
+ENGINEERING (2026-09-06, 13:05 note actioned): AddExpectedError committed for
+MirrorRefusesWhenOwning - the refusal logs at Error on purpose (two writers is
+the failure the contract exists to prevent, it should be loud), so the
+expectation is declared rather than the log quietened. Recorded as the FOURTH
+pre-flight blind spot: no log capture, and no notion of a test failing because
+of what it printed. Actor swap deferred to Phase B: read and understood, the
+variable-name collision reasoning is right and nothing in my queue changes.
 ENGINEERING (2026-09-06, step 4 resolver PUSHED): step 3 went up as 62557cb and
 step 4's pure resolver is done - started the moment step 3 was pushed, as you
 said, not waiting for your pass line.

@@ -243,6 +243,12 @@ STACKTOWN_HANDOVER_TEST(FStacktownHandoverNoTwoWriters, "Stacktown.Handover.Mirr
 	Source.Money = 99.0;
 	TestTrue(TEXT("wrote a source file"), E.WriteRaw(CityStateToJson(Source)));
 
+	// The refusal logs at Error, deliberately - two writers is the failure this
+	// whole contract exists to prevent, and it should be loud. The automation
+	// framework fails any test that logs an Error unless the test declares it,
+	// so the expectation is declared rather than the log quietened.
+	AddExpectedError(TEXT("refusing to mirror"), EAutomationExpectedErrorFlags::Contains, 1);
+
 	FString Err;
 	TestFalse(TEXT("mirroring is refused while owning a path"), E->MirrorFromFile(E.Path, Err));
 	TestFalse(TEXT("and says why"), Err.IsEmpty());

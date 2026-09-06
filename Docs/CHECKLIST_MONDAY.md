@@ -26,15 +26,31 @@ is a fine answer; so is "no".
 | 12 | Press G again, then click beside the new road | The ghost pad lands on the new road's own frontage; a click places the lot there |
 
 Known and expected: Q, E, W, S, A, D, R and F no longer move the camera;
-they belonged to the retired rig. The starter city's demo lot does not
-appear yet (it waits on the engineering seat's board factory). Press L for night and again for day: the lights dim, the windows glow, and
-NIGHT shows at the right of the bar. Drawn roads are the plate's own grey until the
-design lane rules their look.
+they belonged to the retired rig. Press L for night and again for day: the
+lights dim, every OWNED building's windows glow, and NIGHT shows at the
+right of the bar. Starter roads and drawn roads are the same pale timber
+inlay, flush with the plate (the design lane is still fixing the grain
+tiling: one big swirl per road is known).
 
-Optional, two minutes: double-click Saved/Packaged/Mac/StacktownAlpha.app
-(rebuild it first with Tools/package.sh if the date is old). It opens the
-board with the camera and the HUD and nothing else: no economy, no clicks,
-no roads yet. That is the pipeline a stranger's download will use.
+THE PACKAGED APP (Saved/Packaged/Mac/StacktownAlpha.app, universal, rebuilt
+2026-09-06 16:26 - rebuild with Tools/package.sh if the date is old) is the
+whole C++ game, not the camera-only shell it was on the 5th. It keeps its
+OWN city, separate from the editor's, so the first launch is the FRESH
+CITY the rules define: $100, DEMAND 1.00, the plate with its two roads and
+NO lots - there are no pinned lots in a fresh C++ city; the starter towers
+you see under the editor are the old test save. Proven 2026-09-06 16:40 in
+a test game from the same reset:
+  1. click the plate just north of the long road, near its middle - a pad
+     ghost follows the cursor beforehand; the click places lot P1 at 820
+     wide (TAB cycles the width first if you want a bigger one);
+  2. B buys it: $66.40, so money reads $33.60 and a small tier-0 mass
+     stands where the pad was; the panel reads "vernacular 820 / OWNED ·
+     TIER 0 / U UPGRADE $50";
+  3. wait: rent ticks every two seconds ($1 a tick at tier 0), so the
+     upgrade is affordable inside half a minute; U upgrades;
+  4. Cmd-Q and relaunch: the city is exactly where you left it (the app
+     saves every two seconds into its own folder, named in item 15).
+That is the pipeline a stranger's download will use.
 
 ## Added 2026-09-06 evening (all in the C++ game and the packaged app)
 

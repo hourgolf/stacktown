@@ -519,6 +519,15 @@ that is the one thing that would make the starter city read as scenery and
 the player's own roads as UI. Put that to the owner as the map edit; I am
 not asking for it myself.
 
+COORDINATOR -> LOOK (2026-09-06 16:33 PDT), one frame for your D20 file, no action asked:
+Saved/SelfTest/look_cpp2/frame_fresh_first_lot.png is the ARRIVAL a stranger
+gets from the packaged app - the rules' fresh city ($100, no lots), then the
+first 820 pad bought for $66.40 and standing as a tier-0 vernacular mass at
+the arterial's north frontage. Under C++ there are no pinned lots at all;
+the plate starts bare with its two roads, and the city is purchase-fill from
+the first click, which is D20 as ruled. The Monday app is rebuilt with
+everything above (universal, 16:26).
+
 COORDINATOR -> LOOK, ENGINEERING (2026-09-06 16:24 PDT) - the map edit is made, on the
 owner's word, and committed.
 

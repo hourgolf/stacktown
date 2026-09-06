@@ -210,6 +210,16 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 16:33 PDT - FRESH CITY PROVEN (what the packaged app starts with): in a C++-owned
+  test game, the game's own reset gave the rules' fresh state ($100, no
+  lots, no roads); a click at (2500, 1500) placed P1 at 820 on the arterial's
+  north frontage; B bought it for $66.40 (money 33.60); rent ticked to 36.60
+  three ticks later; frame Saved/SelfTest/look_cpp2/frame_fresh_first_lot.png.
+  The lane's test state was backed up first and restored after (6 parcels).
+  Instrument note: the HUD model's Money read in the SAME frame as the verb
+  is stale (it refreshes on tick) - read it a tick later, as the ledger probe
+  already taught. Monday checklist rewritten for the packaged app.
+
 - 2026-09-06 16:30 PDT - PACKAGED again for Monday: Saved/Packaged/Mac/StacktownAlpha.app,
   universal (x86_64 arm64), built from f73455f (ledger reader, night glow,
   custom-depth selection, the roads map edit). Smoke: the app launched,

@@ -19,4 +19,10 @@ class STACKTOWNALPHA_API UStacktownAgreementLibrary : public UBlueprintFunctionL
 public:
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Debug", meta = (WorldContext = "WorldContextObject"))
 	static FString CompareMirrorWithWorld(const UObject* WorldContextObject);
+
+	/** Spawn a C++ lot (StacktownLotVisual) for a placed parcel in the mirrored
+	 *  state, posed by Stacktown::Lot, and report its pose beside the Blueprint
+	 *  actor's transform for the same label. Debug only; the actor is transient. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Debug", meta = (WorldContext = "WorldContextObject"))
+	static FString SpawnLotVisualFor(const UObject* WorldContextObject, const FString& Pid, bool bHideBlueprintTwin);
 };

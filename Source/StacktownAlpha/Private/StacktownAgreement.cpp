@@ -2,6 +2,9 @@
 #include "StacktownAlpha.h"
 #include "StacktownEconomy.h"
 #include "StacktownStateHandover.h"
+#include "StacktownLotTransform.h"
+#include "StacktownLotVisual.h"
+#include "StacktownPlacement.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "EngineUtils.h"
@@ -116,5 +119,62 @@ FString UStacktownAgreementLibrary::CompareMirrorWithWorld(const UObject* WorldC
 	const bool bAllAgree = Compared > 0 && Agree == Compared;
 	Lines.Insert(FString::Printf(TEXT("VERDICT: %s - %d standing lots compared, %d agree, %d absent from the mirror"),
 		bAllAgree ? TEXT("AGREE") : TEXT("DISAGREE"), Compared, Agree, Missing), 0);
+	return FString::Join(Lines, TEXT("\n"));
+}
+
+FString UStacktownAgreementLibrary::SpawnLotVisualFor(const UObject* WorldContextObject, const FString& Pid, bool bHideBlueprintTwin)
+{
+	UWorld* World = WorldContextObject ? WorldContextObject->GetWorld() : nullptr;
+	UGameInstance* GI = World ? World->GetGameInstance() : nullptr;
+	UStacktownEconomy* Econ = GI ? GI->GetSubsystem<UStacktownEconomy>() : nullptr;
+	if (!Econ)
+	{
+		return TEXT("no economy subsystem");
+	}
+	const Stacktown::FCityState& State = Econ->GetState();
+	const Stacktown::FParcelState* P = State.Parcels.Find(Pid);
+	if (!P)
+	{
+		return FString::Printf(TEXT("%s is not in the mirror (run CompareMirrorWithWorld first)"), *Pid);
+	}
+	if (!P->Placement.IsSet())
+	{
+		return FString::Printf(TEXT("%s is a pinned lot with no placement; its transform is the builder's"), *Pid);
+	}
+	// TEMPORARY until the seat's runtime board factory (board item 5): the two
+	// built-in roads exactly as the oracle fixture declares them.
+	Stacktown::FPlacementBoard Board;
+	{ Stacktown::FRoad R; R.Id = TEXT("arterial"); R.StartX = -7650.0; R.StartY = 0.0; R.EndX = 7650.0; R.EndY = 0.0; R.SidePlus = TEXT("north"); R.SideMinus = TEXT("south"); R.bAxisX = true; Board.Roads.Add(R); }
+	{ Stacktown::FRoad R; R.Id = TEXT("cross"); R.StartX = 0.0; R.StartY = -4230.0; R.EndX = 0.0; R.EndY = 4230.0; R.SidePlus = TEXT("west"); R.SideMinus = TEXT("east"); R.bAxisX = false; Board.Roads.Add(R); }
+	Stacktown::LotFrame::FPose Pose;
+	if (!Stacktown::LotFrame::Pose(P->Placement.GetValue(), Board.AllRoads(State), Pose))
+	{
+		return TEXT("no road frame for the lot");
+	}
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AActor* A = World->SpawnActor<AActor>(AActor::StaticClass(), FVector(Pose.X, Pose.Y, 0.0), FRotator(0.0, Pose.Yaw, 0.0), Params);
+	if (!A)
+	{
+		return TEXT("spawn failed");
+	}
+	UStacktownLotVisual* V = NewObject<UStacktownLotVisual>(A, TEXT("Building"));
+	A->SetRootComponent(V);
+	V->RegisterComponent();
+	FString Err;
+	const bool bShown = P->bOwned ? V->ShowMass(P->Rid, P->Tier, P->Width, false, Err) : V->ShowPad(P->Width, Err);
+	TArray<FString> Lines;
+	Lines.Add(FString::Printf(TEXT("C++ lot %s: pose (%.0f, %.0f, yaw %.0f) shows %s%s%s"), *Pid, Pose.X, Pose.Y, Pose.Yaw,
+		bShown ? *V->ShownAsset : TEXT("NOTHING"), V->ShownSpecies.IsEmpty() ? TEXT("") : TEXT(" in "), *V->ShownSpecies));
+	if (!bShown) { Lines.Add(FString::Printf(TEXT("  visual error: %s"), *Err)); }
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		if (It->GetClass()->GetName().StartsWith(TEXT("BP_Parcel")) && It->GetActorNameOrLabel() == Pid)
+		{
+			const FVector L = It->GetActorLocation(); const FRotator R = It->GetActorRotation();
+			Lines.Add(FString::Printf(TEXT("BP  lot %s: actor (%.0f, %.0f, yaw %.0f)"), *Pid, L.X, L.Y, R.Yaw));
+			if (bHideBlueprintTwin) { It->SetActorHiddenInGame(true); Lines.Add(TEXT("  (Blueprint twin hidden for the capture)")); }
+		}
+	}
 	return FString::Join(Lines, TEXT("\n"));
 }

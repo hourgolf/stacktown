@@ -246,8 +246,8 @@ STACKTOWN_ROADS_TEST(FStacktownRoadsPlaceAgainstDrawn, "Stacktown.Roads.PlaceAga
 
 	// And the world footprint comes off that road's own start, proving the axis
 	// generalization end to end rather than in isolation.
-	const TArray<FRoad> Roads = Board.AllRoads(S);
-	const FRoad* R1 = FindRoad(Roads, LotRoadId(Lot));
+	const TArray<FRoad> Candidates = Board.AllRoads(S);
+	const FRoad* R1 = FindRoad(Candidates, LotRoadId(Lot));
 	TestNotNull(TEXT("the drawn road is in the candidate list"), R1);
 	if (R1 != nullptr)
 	{

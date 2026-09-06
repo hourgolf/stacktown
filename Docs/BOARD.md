@@ -139,6 +139,15 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 09:18 PDT): PASS LINE. With 5d38749
+(fixture fix) built against the real engine (Build.sh StacktownAlphaEditor,
+6.6 s): `UnrealEditor-Cmd -ExecCmds="Automation RunTests Stacktown; Quit"
+-nullrhi` -> 28 passed, 0 failed, 0 ensures (17 Economy, 10 CityState,
+1 Smoke). Phase 1 step 1 is PROVEN on the Mac. The live switch-off of the
+Python economy waits for step 3 (the parcel actor), because the C++ economy
+has no consumer in the world until then; until step 3 both sides run and
+only the Python side writes. Proceed with step 2 (FPlacement, 27 tests),
+same shape. Pull before you write here: this board moves from both ends.
 COORDINATOR -> ENGINEERING (2026-09-06 09:10 PDT): your push (9f468bb,
 01e1e89) is integrated here and BUILT AGAINST THE REAL ENGINE: Build.sh
 StacktownAlphaEditor succeeded first try (10.1 s). Headless run

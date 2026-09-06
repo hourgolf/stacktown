@@ -61,3 +61,22 @@ in a game process. The packaged app is the beta.
 - econrules.json ships by copying it into Config/ (or a cookable asset) at
   Phase B; until then the C++ economy loads it from Content/Python at
   runtime in the editor only.
+
+## Step 3's actor swap: deferred to Phase B, and why
+
+Re-parenting BP_Parcel onto AStacktownParcel today would collide: the
+Blueprint's own variables RecipeId (a Name), WidthUU, Tier, Price and Accum
+share names with the C++ UPROPERTYs (RecipeId is an FString there), and its
+`Owned` displays exactly like the C++ `bOwned`. UE would rename or refuse,
+and every graph that reads those variables (ResolveMesh, the tick, the
+highlight) would need node-level retargeting - the Blueprint surgery the
+whole plan exists to avoid.
+
+So Phase A proves the data path without touching the asset: the agreement
+instrument (UStacktownAgreementLibrary::CompareMirrorWithWorld) mirrors the
+session file into the C++ economy and compares FactsForLabel with what the
+Python sync wrote onto each standing BP_Parcel. Phase B replaces the parcel
+rather than re-parenting it: AStacktownParcel grows the mesh resolution
+(catalogue lookup) and the highlight swap in C++, a thin Blueprint child with
+no variables of its own is created for the pool, and the pool actors in
+TestCity are swapped to it in one editor session on the owner's word.

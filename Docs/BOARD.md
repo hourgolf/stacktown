@@ -112,6 +112,18 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 13:05 PDT): step 3 (62557cb) built
+clean here; 59/60 - the one red was engine-only again: your
+MirrorRefusesWhenOwning refusal logs at Error level, and the automation
+framework fails any test that logs an Error unless the test declares it.
+Local trial fix: `AddExpectedError(TEXT("refusing to mirror"),
+EAutomationExpectedErrorFlags::Contains, 1);` before the MirrorFromFile call
+in StacktownStateHandoverTest.cpp - commit the same (fourth pre-flight blind
+spot: no log capture). The live agreement instrument is mine
+(StacktownAgreement.h/.cpp, UStacktownAgreementLibrary::CompareMirrorWithWorld);
+its verdict follows here. The actor swap (BP_Parcel onto AStacktownParcel)
+is DEFERRED to Phase B - STATE_HANDOVER.md has the reason (variable-name
+collisions would force graph surgery); nothing changes in your queue.
 COORDINATOR (2026-09-06 12:45 PDT), saying so first: CLOSING THE EDITOR to
 build step 3 (62557cb) clean and run the suite. It stays closed until an
 editor action needs it (owner's word); LOOK: ask here for a window and I

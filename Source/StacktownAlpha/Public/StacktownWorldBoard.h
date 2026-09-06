@@ -9,4 +9,7 @@ namespace Stacktown
 	 *  exactly as the oracle fixture declares them, until the seat's runtime
 	 *  factory lands. Coordinator-owned; delete when FPlacementBoard::Default() exists. */
 	STACKTOWNALPHA_API FPlacementBoard TemporaryBoard();
+
+	/** The one copy of econrules.json: Content/Stacktown/Rules, staged as UFS so a packaged app carries it. */
+	STACKTOWNALPHA_API FString RulesFilePath();
 }

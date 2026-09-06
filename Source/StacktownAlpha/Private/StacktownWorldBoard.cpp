@@ -1,4 +1,5 @@
 #include "StacktownWorldBoard.h"
+#include "Misc/Paths.h"
 
 namespace Stacktown
 {
@@ -10,5 +11,13 @@ namespace Stacktown
 		// pick up the pinned spans without this seat editing their files. Safe
 		// to delete once those call Default() directly.
 		return FPlacementBoard::Default();
+	}
+}
+
+namespace Stacktown
+{
+	FString RulesFilePath()
+	{
+		return FPaths::ProjectContentDir() / TEXT("Stacktown/Rules/econrules.json");
 	}
 }

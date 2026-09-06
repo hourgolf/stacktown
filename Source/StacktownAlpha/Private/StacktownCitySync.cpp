@@ -80,7 +80,7 @@ bool UStacktownCitySync::BeginOwning(FString& OutWhy)
 	UStacktownEconomy* Econ = Economy();
 	if (!Econ) { OutWhy = TEXT("no economy subsystem"); return false; }
 	FString RulesText, Err;
-	const FString RulesPath = FPaths::ProjectConfigDir() / TEXT("Stacktown/econrules.json");
+	const FString RulesPath = Stacktown::RulesFilePath();
 	if (!FFileHelper::LoadFileToString(RulesText, *RulesPath)) { OutWhy = FString::Printf(TEXT("rules file missing: %s"), *RulesPath); return false; }
 	if (!Econ->LoadRules(RulesText, Err)) { OutWhy = Err; return false; }
 	Econ->SetCatalogue(MakeShared<Stacktown::FWoodCatalogue>());

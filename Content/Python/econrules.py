@@ -38,10 +38,10 @@ import json
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# 2026-09-06: the rules file lives under Config/ so a packaged app can ship it
-# (Content/Python is UncookedOnly). One copy, read by the Python oracle and by
-# the C++ economy (Docs/STATE_HANDOVER.md, Phase B prerequisite 3).
-RULES_PATH = os.path.normpath(os.path.join(HERE, '..', '..', 'Config', 'Stacktown', 'econrules.json'))
+# 2026-09-06: the rules file lives under Content/Stacktown/Rules, staged into a
+# packaged app as a UFS file (Config/ subfolders are not staged; Content/Python
+# cannot cook). One copy, read by the Python oracle and by the C++ economy.
+RULES_PATH = os.path.normpath(os.path.join(HERE, '..', 'Stacktown', 'Rules', 'econrules.json'))
 BAKED_DIR = os.path.normpath(os.path.join(
     HERE, '..', 'Stacktown', 'Baked'))
 

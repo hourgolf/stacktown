@@ -58,7 +58,7 @@ FString UStacktownAgreementLibrary::CompareMirrorWithWorld(const UObject* WorldC
 
 	// Rules: Phase A loads them from the Python oracle's own file (editor/game on this machine only).
 	FString RulesText, Err;
-	const FString RulesPath = FPaths::ProjectConfigDir() / TEXT("Stacktown/econrules.json");
+	const FString RulesPath = Stacktown::RulesFilePath();
 	if (!FFileHelper::LoadFileToString(RulesText, *RulesPath) || !Econ->LoadRules(RulesText, Err))
 	{
 		return FString::Printf(TEXT("VERDICT: rules not loaded from %s: %s"), *RulesPath, *Err);

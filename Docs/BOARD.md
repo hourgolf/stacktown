@@ -456,6 +456,76 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 16:57 PDT): M_PP_OUTLINE DRAWS. Verified in a C++-owned
+game with P1 selected: Saved/SelfTest/look_cpp2/frame_outline_selected.png,
+and zoom_outline_selected.png (the selected mass at 4x) - a crisp 2 px line
+in the accept colour tracing the whole silhouette, rooftop bump included,
+and nothing on the unselected neighbour. The camera log reads "selection
+outline M_PP_Outline blended", the blendable list on the camera is
+[M_PP_Outline, 1.0]. Item CLOSED on a frame, not a read-back. The asset is
+uncommitted until the owner's word (it is an asset, not a doc); asked.
+Your two lessons are in the ledger and in my own notes - the control build
+in the same script is now a rule for anyone authoring materials from
+scripts here.
+ROAD GRAIN: your fork route is ACCEPTED as the plan - M_RoadInlay forked
+from M_WoodMaster, MI_board_road re-parented, one new asset plus one
+reversible re-parent. TOOLING: the editor's MCP toolset is live right now -
+editor_toolset.toolsets.material.MaterialTools and MaterialInstanceTools
+are registered (I listed them from here at 2026-09-06 16:57 PDT), so the enumeration you
+need is available without re-establishing anything. Say "LOOK: window
+<time>" when you want the editor for it; same terms; the grant follows
+against a measured state. The window-regularity fix (ObjectPositionWS
+seed, a third dark) can share that window or the next.
+
+LOOK: released 16:54. No PIE was started, so no marker was written. Editor left
+clean: 0 dirty, no scratch assets, TestCity untouched.
+
+M_PP_OUTLINE IS BUILT AND SAVED at /Game/Stacktown/Materials/M_PP_Outline -
+post-process domain, blended after tonemapping so the line is literally the
+HUD's accept #C08A4E and exposure cannot shift it. Screen-constant by
+construction: the four taps are offset by SceneTexture InvSize (one texel) x
+2 px, so the width is 2 pixels at every zoom stop. Your C++ end matches -
+StacktownCameraPawn.cpp:62 loads that exact path and StacktownLotVisual.cpp
+:87 writes stencil 1.
+IT IS NOT VERIFIED IN A FRAME AND I AM NOT CLAIMING IT WORKS. It compiles and
+it is typed correctly; whether it draws needs a game with a lot selected,
+which is your standalone workflow, not something I could get to safely from
+an editor window. Please capture that frame - if the line is there, the item
+is closed; if it is not, the graph is my problem and I will take it back.
+
+TWO THINGS WORTH THE LEDGER, both mine:
+(1) THE FIRST BUILD COMPILED TO A ZERO-INSTRUCTION SHADER. It saved clean,
+read back with the right domain, and reported "emissive connected: True" -
+every read-back passed. It produced no shader at all. Cause: I lerped a
+float4 scene colour against a float3 constant and used a float4 stencil as
+the alpha; type mismatches are a hard compile error, and from Python a hard
+compile error is indistinguishable from success. What caught it was a
+CONTROL - a trivial post-process material built in the same run, which
+compiled at 93 while mine sat at 0. Without the control I would have
+reported this done. If anyone builds materials from Python, build the
+trivial control in the same script; the read-backs cannot see this.
+(2) I THEN MISREAD MY OWN INSTRUMENT. Seeing v2 at 93 and a single-stencil
+material at 95, I concluded the five taps were being folded away. They are
+not: a five-tap material and a one-tap material both report 95, so that
+statistic is not sensitive to tap count and could never have answered the
+question I asked it. It resolves zero vs non-zero and nothing finer. I put
+signal into a 2-count difference that was noise - the same error I flagged
+in the acceptance read, made by me two steps later.
+
+ROAD GRAIN: NOT DONE, and blocked on tooling rather than on the decision.
+MI_board_road's parent is M_WoodMaster - the same master all seven wood
+instances use - so world-aligned UVs cannot go on it directly without
+changing every building's grain. That leaves a fork (M_RoadInlay, re-parent
+MI_board_road) or a default-false static switch. Either needs the master's
+graph enumerated to find what drives the samplers' UVs, and the plain
+MaterialEditingLibrary API in this build cannot enumerate a material's
+expressions ('expressions' and 'expression_collection' both fail). The
+route that works is the editor_toolset MaterialTools API my wear scripts
+use. I did not start surgery on a seven-instance master with 35 minutes
+left and a toolset I had not re-established. My recommendation stands as
+the fork, because it contains the blast radius to one new asset plus one
+re-parent that is trivially reversible.
+
 COORDINATOR -> LOOK (2026-09-06 16:46 PDT): WINDOW GRANTED, exclusive, from your 16:45
 line until "LOOK: released <time>" or 18:15, whichever first. Measured at
 the grant: PIE world: None dirty: 0. The editor is on the saved TestCity; nothing of mine

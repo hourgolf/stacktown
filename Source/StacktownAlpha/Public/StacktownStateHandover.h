@@ -82,6 +82,30 @@ STACKTOWNALPHA_API FStatePathResolution ResolveStatePath(const FStatePathInputs&
 /** For a log line and the ledger. */
 STACKTOWNALPHA_API FString StateSourceName(EStateSource Source);
 
+/** Everything the Python-drivers switch depends on, gathered by the caller so
+ *  the RULE is testable without a plugin, an environment or an ini. */
+struct STACKTOWNALPHA_API FPythonDriversInputs
+{
+	/** False in a packaged app: the Python plugin is UncookedOnly and simply is
+	 *  not there. */
+	bool    bPluginLoaded = true;
+	/** STACKTOWN_PYTHON_DRIVERS, empty when unset. */
+	FString EnvValue;
+	bool    bFoundInNewSection = false;
+	bool    bNewSectionValue = true;
+	bool    bFoundInLegacySection = false;
+	bool    bLegacySectionValue = true;
+};
+
+/** Whether the editor-only Python drivers own the city.
+ *
+ *  Priority: no plugin wins over everything (a packaged app has no Python at
+ *  all, so no setting can claim otherwise), then the environment, then this
+ *  build's own ini section, then the legacy section the switch already ships
+ *  under, then true. The legacy fallback exists because Config/ is not this
+ *  seat's to edit and the shipped key must keep working. */
+STACKTOWNALPHA_API bool ResolvePythonDrivers(const FPythonDriversInputs& In);
+
 /** Dormant pool actors are not parcels. Skipping them is not tidiness: without
  *  it every one of the thirty got registered as a real, empty, zero-width
  *  entry every session - harmless in effect but thirty wasted registrations and

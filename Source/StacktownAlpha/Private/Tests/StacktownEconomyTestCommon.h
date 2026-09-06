@@ -54,9 +54,12 @@ inline TSharedRef<Stacktown::FStaticCatalogue> OracleCatalogue()
 }
 
 inline Stacktown::FParcelState Parcel(const TCHAR* Rid, int32 Tier, double Width,
-	bool bOwned = false, double Accum = 0.0, bool bFailed = false, double Performance = 0.0)
+	bool bOwned = false, double Accum = 0.0, bool bFailed = false, double Performance = 0.0,
+	double AgeTicks = 0.0, const int32* AgeLastTier = nullptr)
 {
 	Stacktown::FParcelState P;
+	P.AgeTicks = AgeTicks;
+	if (AgeLastTier != nullptr) { P.AgeLastTier = *AgeLastTier; }
 	P.Rid = Rid;
 	P.Tier = Tier;
 	P.Width = Width;
@@ -154,6 +157,16 @@ inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCitySt
 			|| FMath::Abs(P.Performance - Other->Performance) > Tolerance)
 		{
 			OutWhy = FString::Printf(TEXT("parcel '%s' differs"), *Pair.Key);
+			return false;
+		}
+		// Age joined the schema in queue item 7. Compared here, ABSENCE
+		// included: a round trip that quietly turned an unmeasured lot into one
+		// recorded at tier 0 would change when its patina starts.
+		if (FMath::Abs(P.AgeTicks - Other->AgeTicks) > Tolerance
+			|| P.AgeLastTier.IsSet() != Other->AgeLastTier.IsSet()
+			|| (P.AgeLastTier.IsSet() && P.AgeLastTier.GetValue() != Other->AgeLastTier.GetValue()))
+		{
+			OutWhy = FString::Printf(TEXT("parcel '%s': age differs"), *Pair.Key);
 			return false;
 		}
 		// Placement joined the schema in step 2. Compared here so a round-trip

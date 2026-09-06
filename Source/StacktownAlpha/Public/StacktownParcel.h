@@ -72,8 +72,20 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Stacktown|Parcel")
 	bool bSynced = false;
 
-	/** The label this parcel is known by in the city state. Defaults to the
-	 *  actor's label, which is what the Python sync keys on. */
+	/** The label this parcel is known by in the city state (queue item 3).
+	 *
+	 *  A UPROPERTY, not a derived string, because the two sources it used to
+	 *  fall back on are both unreliable in the places that matter: an actor
+	 *  LABEL does not exist in a cooked build at all, and a NAME is uniquified
+	 *  by the engine on spawn, so the second parcel spawned as "P1" quietly
+	 *  becomes "P1_2" and stops matching its own entry in the city state. The
+	 *  spawner sets this explicitly; the fallbacks stay only for actors placed
+	 *  by hand in the editor. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|Parcel")
+	FString ParcelId;
+
+	/** ParcelId when it is set, otherwise the actor's label (editor) or name
+	 *  (cooked). See ParcelId for why the fallbacks are the weaker answer. */
 	UFUNCTION(BlueprintPure, Category = "Stacktown|Parcel")
 	FString GetParcelId() const;
 

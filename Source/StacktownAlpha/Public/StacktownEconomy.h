@@ -71,6 +71,12 @@ public:
 	 *  if it were the ruleset. */
 	bool LoadRules(const FString& JsonText, FString& OutError);
 
+	/** Load the ruleset from Stacktown::RulesFilePath() - Content/Stacktown/Rules
+	 *  (queue item 4). The file moved there because a packaged build cannot stage
+	 *  Config subfolders. One loader, so every caller reads the same file from
+	 *  the same place instead of each spelling the path itself. */
+	bool LoadRulesFromFile(FString& OutError);
+
 	/** Set the ruleset directly, bypassing the JSON. LoadRules is the validating
 	 *  entry point and is what production uses; this exists so a test can state
 	 *  the ruleset it means without needing a file on disk. */
@@ -155,16 +161,28 @@ public:
 	/** The session's state file, by the four rules the Python driver uses
 	 *  (override, standalone lock, marker, default).
 	 *
-	 *  RESOLVED ONCE PER SESSION and cached. Resolving per call let a marker
-	 *  that appeared mid-session flip a running standalone game to the test file
-	 *  for a few ticks and back, leaving two files carrying the owner's layout
-	 *  four seconds apart. Pass bForceReresolve only when a session genuinely
-	 *  restarts. */
+	 *  RESOLVED AT Initialize TIME (queue item 2), not lazily on first read, and
+	 *  then cached for the session. Lazy resolution meant the answer depended on
+	 *  WHEN something first asked - a marker that appeared between startup and
+	 *  the first read would decide the session, which is the same hazard in
+	 *  slower motion that made the Python cache it: resolving per call once
+	 *  flipped a running standalone game onto the test file for a few ticks and
+	 *  back, leaving two files carrying the owner's layout four seconds apart.
+	 *
+	 *  Pass bForceReresolve only when a session genuinely restarts. */
 	FString StatePathForSession(Stacktown::EStateSource& OutSource, bool bForceReresolve = false);
 
-	/** Set before the session resolves its path. The override route, for a
-	 *  caller driving another lane's session. */
-	void SetStateOverride(const FString& InAbsolutePath) { StateOverride = InAbsolutePath; }
+	/** The path resolved at Initialize, without re-resolving. */
+	const FString& GetSessionStatePath() const { return CachedSessionPath; }
+	Stacktown::EStateSource GetSessionStateSource() const { return CachedSessionSource; }
+
+	/** The override route, for a caller driving another lane's session.
+	 *
+	 *  RE-RESOLVES IMMEDIATELY, because the path is already decided by the time
+	 *  anyone can call this. Setting an override that silently did nothing -
+	 *  which is what a resolve-once-at-Initialize cache would otherwise do -
+	 *  would put a lane on the owner's real save while its log said override. */
+	void SetStateOverride(const FString& InAbsolutePath);
 
 	/** Gather the real inputs (marker, lock, process kind) from disk. Exposed so
 	 *  the resolution can be logged or asserted without repeating the gathering. */

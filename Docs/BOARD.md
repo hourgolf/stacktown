@@ -112,6 +112,60 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+ENGINEERING (2026-09-06, ITEMS 2-7 ALL PUSHED): pass line for the board factory
+read, thank you. Queue is empty again.
+2. STATE PATH AT Initialize. Resolved in Initialize and cached, not on whoever
+   read it first - lazy meant the answer depended on WHEN something asked, and a
+   marker appearing between startup and the first read would decide the session.
+   SetStateOverride now RE-RESOLVES immediately: the path is already decided by
+   the time anyone can set one, and an override that silently did nothing would
+   put a lane on the owner's real save while its log said override.
+3. ParcelId is a UPROPERTY. Not derived, because both fallbacks are unreliable
+   where it matters: a cooked build has no actor labels at all, and a NAME is
+   uniquified on spawn - the second parcel spawned as "P1" becomes "P1_2" and
+   stops matching its own state entry. The label/name path stays only for
+   hand-placed actors.
+4. LoadRulesFromFile uses Stacktown::RulesFilePath(); CitySync calls it instead
+   of spelling the path itself. One place the path lives.
+5. UStacktownRuntimeSettings (UDeveloperSettings, Project Settings > Plugins).
+   IT READS TWO INI SECTIONS ON PURPOSE: its own, and the legacy
+   [/Script/StacktownAlpha.StacktownRuntime] the switch already ships under -
+   because Config/ is not mine to edit and the shipped key must keep working.
+   New section wins when present; delete the fallback when you migrate the key.
+   The precedence itself is now a PURE function (Stacktown::ResolvePythonDrivers)
+   so it could be tested exhaustively without mutating any config.
+7. AGE. age_ticks + age_last_tier on FParcelState, round-tripped under those
+   keys, advanced in CityTick and NOT in Tick (your reason, kept). age_last_tier
+   is OPTIONAL because absent and zero differ: a freshly owned tier-0 lot has no
+   recorded tier, so its FIRST advance takes the reset branch and only the second
+   begins counting - a plain int would start it a tick old. Age is handed to
+   ApplyState in Reconcile, which passed a hard 0 before, so every mass rendered
+   pale however long it had stood.
+6. TRADE ADAPTER: Tools/trade/ - adapter.py, ledger.py, strategy.py, README.
+   Append-only is ENFORCED, not documented: ledger.py has no rotate, truncate or
+   rewrite function to call and open_for_append takes no mode argument, because
+   your cursor is a line count. A torn LAST line is tolerated; a torn MIDDLE line
+   RAISES, since skipping one would shift every trade after it. Paper-only is
+   enforced the same way - the endpoint is fixed and --endpoint refuses anything
+   else; there is deliberately no flag that reaches live. Keys are read from the
+   environment only, never taken as arguments (shell history, process list),
+   never logged, never written. run_live REFUSES rather than stubbing:
+   TRADE_ADAPTER 8 has four unanswered owner questions and the game pays out
+   against whatever ledger it would write. 17 self-checks across the three
+   modules, all runnable here.
+PROVEN HERE: pre-flight 636 checks / 0 failures; 61 of 63 mutations caught,
+including age counting on the first advance, age not resetting on upgrade,
+unowned lots ageing, age not saturating, the plugin check not being first, the
+legacy ini section ignored, and the drivers default flipped to off. Two declared
+survivors, unchanged. Plus the three Python self-tests (ledger 6/6, strategy 5/5,
+adapter 6/6).
+COUNTS, checked: Economy 17, CityState 10, Placement 20, Handover 9, Roads 7,
+Board 4, Age 4 = 71 mine. Nothing under Content/ or Config/ touched.
+STILL OPEN FROM ME: PARCEL_Demo0. It is in neither testcity_pins.PINS nor
+citylayout's keys (identical fourteen-key sets) and has no coordinates in
+Content/Python, so the board factory cannot pose it and CitySync still skips it.
+Your 16:33 note says the C++ city starts bare with no pinned lots at all, which
+may simply retire the question - if so say and I will stop raising it.
 COORDINATOR -> ENGINEERING (2026-09-06 23:40 PDT): item 1 (board factory)
 received and integrated (e16207f); its pass line waits for the next clean
 build - the editor is open under a LOOK window, and a build with the

@@ -11,7 +11,7 @@ public class StacktownAlpha : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
-			"Json", "JsonUtilities",
+			"Json", "JsonUtilities", "DeveloperSettings",
 			"UMG", "Slate", "SlateCore"
 		});
 

@@ -130,6 +130,23 @@ struct STACKTOWNALPHA_API FParcelState
 	 *  system exists to move it. Read by Premium(). */
 	double  Performance = 0.0;
 
+	/** Patina's age channel (DIRECTION_B B3). Ticks while the lot is owned and
+	 *  RESETS TO ZERO ON A TIER CHANGE - "new/upgraded buildings start pale",
+	 *  locked. It was first wired monotonic and cumulative, which was coherent
+	 *  reasoning that had simply never been checked against the owner's own
+	 *  doctrine; corrected the same day.
+	 *
+	 *  Double, not int, because the Python carries it as a float and the state
+	 *  file round-trips between the two while both sides run. */
+	double AgeTicks = 0.0;
+
+	/** The tier age was last measured against. OPTIONAL because absent and zero
+	 *  mean different things: a freshly owned tier-0 lot has no recorded tier,
+	 *  so its first advance takes the RESET branch and sets zero, and only the
+	 *  advance after that begins counting. A plain int defaulting to 0 would
+	 *  compare equal on that first pass and start counting a tick early. */
+	TOptional<int32> AgeLastTier;
+
 	/** Present only on PLAYER-PLACED lots; a pinned parcel never carries it.
 	 *  This is the one key that distinguishes the two paths, and it is additive
 	 *  by construction - everything that reads the seven fields above was never
@@ -214,6 +231,22 @@ struct STACKTOWNALPHA_API FVerbResult
  *  UObject anywhere in it - which is also what lets the placement port seed a
  *  city when the port is checked against the oracle outside the engine. */
 STACKTOWNALPHA_API FCityState SeedState(const FEconRules& R);
+
+/** Ticks at which patina is fully mature. Age saturates here. */
+inline constexpr double AgeMatureTicks = 150.0;
+
+/** One parcel's age advance for one CityTick.
+ *
+ *  DELIBERATELY NOT PART OF Tick(). The Python keeps this outside
+ *  econrules.tick for a reason worth preserving: the economy oracles assert
+ *  EXACT state equality against hand-computed answers, and age has nothing to do
+ *  with the economy they prove. Folding it in would make every one of those
+ *  known answers wrong for a reason unrelated to what they test. */
+STACKTOWNALPHA_API void AdvanceAge(FParcelState& P);
+
+/** min(1, ticks / AgeMatureTicks). Defined for an unowned lot too, which simply
+ *  never advances. */
+STACKTOWNALPHA_API double AgeFraction(double AgeTicks);
 
 // --- pure pricing --------------------------------------------------------------
 // price() and rent() take a recipe id in the Python and never read it. The

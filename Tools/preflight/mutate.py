@@ -269,6 +269,32 @@ MUTATIONS = [
      '	}\n\treturn false;\n}\n\nvoid SortRoadIds', '	}\n\treturn true;\n}\n\nvoid SortRoadIds',
      True, 'placement'),
 
+    # ---- age, and the runtime switches (queue items 5 and 7) ----------------
+    ('age-counts-on-the-first-advance', 'every building starts a tick old instead of pale',
+     'if (!P.AgeLastTier.IsSet() || P.AgeLastTier.GetValue() != P.Tier)',
+     'if (P.AgeLastTier.IsSet() && P.AgeLastTier.GetValue() != P.Tier)', True, 'rules'),
+
+    ('age-does-not-reset-on-upgrade', 'an upgraded building keeps its patina',
+     'P.AgeTicks = 0.0;\n\t\tP.AgeLastTier = P.Tier;', 'P.AgeLastTier = P.Tier;', True, 'rules'),
+
+    ('unowned-lots-age', 'a lot nobody bought weathers on the shelf',
+     'if (!P.bOwned)\n\t{\n\t\t// An unowned lot does not age.',
+     'if (false)\n\t{\n\t\t// An unowned lot does not age.', True, 'rules'),
+
+    ('age-does-not-saturate', 'a long-standing lot reads as many times mature',
+     'return Fraction < 1.0 ? Fraction : 1.0;', 'return Fraction;', True, 'rules'),
+
+    ('drivers-plugin-check-is-not-first', 'a packaged app is told it still has Python',
+     'if (!In.bPluginLoaded)\n\t{\n\t\treturn false;\n\t}', '', True, 'handover'),
+
+    ('drivers-legacy-section-ignored', 'the shipped ini key stops being honoured',
+     'if (In.bFoundInLegacySection)\n\t{\n\t\treturn In.bLegacySectionValue;\n\t}', '',
+     True, 'handover'),
+
+    ('drivers-default-off', 'a missing key silently switches who owns the session',
+     '\t// Default ON: the Python drivers were the world before Phase B, and a\n\t// missing key must not silently switch a session\'s owner.\n\treturn true;',
+     '\treturn false;', True, 'handover'),
+
     # ---- the honest negatives ------------------------------------------------
     # DECLARED SURVIVOR, and now for a PROVEN reason rather than a shim artifact.
     # The shim's TMap preserves insertion order (as UE's does), so this mutation

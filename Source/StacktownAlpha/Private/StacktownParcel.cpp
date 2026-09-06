@@ -13,11 +13,20 @@ AStacktownParcel::AStacktownParcel()
 
 FString AStacktownParcel::GetParcelId() const
 {
+	// The explicit id wins whenever the spawner set one, which is every parcel
+	// the runtime creates.
+	if (!ParcelId.IsEmpty())
+	{
+		return ParcelId;
+	}
 #if WITH_EDITOR
+	// A hand-placed actor in the editor: its label is what a person typed, and
+	// it is what the Python sync keyed on.
 	return GetActorLabel();
 #else
-	// A cooked build has no actor labels. The name is what survives, and the
-	// builder sets it to the same id in both cases.
+	// A cooked build has no actor labels. The name is all that survives - and
+	// it may have been uniquified on spawn, which is exactly why ParcelId
+	// exists and why reaching this line is the unreliable path.
 	return GetName();
 #endif
 }

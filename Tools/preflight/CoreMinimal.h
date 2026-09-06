@@ -62,6 +62,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 #include <cstdint>
 #include <map>
 #include <set>
@@ -101,6 +102,20 @@ public:
 		if (B == std::string::npos) { return FString(); }
 		const size_t E = S.find_last_not_of(WS);
 		return FString(S.substr(B, E - B + 1));
+	}
+
+	/** Both modes, because the Python-drivers switch accepts "false" and "FALSE"
+	 *  from the environment and the shim must not quietly accept only one. */
+	bool Equals(const FString& O, int SearchCase = 0) const
+	{
+		if (SearchCase == 0) { return S == O.S; }
+		if (S.size() != O.S.size()) { return false; }
+		for (size_t i = 0; i < S.size(); ++i)
+		{
+			if (std::tolower(static_cast<unsigned char>(S[i]))
+				!= std::tolower(static_cast<unsigned char>(O.S[i]))) { return false; }
+		}
+		return true;
 	}
 
 	FString Mid(int32 Start) const

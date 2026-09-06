@@ -8,6 +8,7 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "StacktownPlacement.h"
+#include "StacktownWorldBoard.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformProcess.h"
@@ -172,6 +173,15 @@ bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutErr
 			// back to, so an old save reads identically on both sides.
 			(*PObj)->TryGetBoolField(TEXT("failed"), P.bFailed);
 			(*PObj)->TryGetNumberField(TEXT("performance"), P.Performance);
+			// Age. age_last_tier is read as OPTIONAL: absent means the lot has
+			// never been measured, which takes the reset branch on its next
+			// advance, and that is not the same as a recorded tier of 0.
+			(*PObj)->TryGetNumberField(TEXT("age_ticks"), P.AgeTicks);
+			int32 LastTier = 0;
+			if ((*PObj)->TryGetNumberField(TEXT("age_last_tier"), LastTier))
+			{
+				P.AgeLastTier = LastTier;
+			}
 
 			// 'placement' is present only on player-placed lots (step 2).
 			const TSharedPtr<FJsonObject>* PlacementObj = nullptr;
@@ -226,6 +236,13 @@ FString CityStateToJson(const FCityState& State)
 		PObj->SetNumberField(TEXT("accum"), P.Accum);
 		PObj->SetBoolField(TEXT("failed"), P.bFailed);
 		PObj->SetNumberField(TEXT("performance"), P.Performance);
+		PObj->SetNumberField(TEXT("age_ticks"), P.AgeTicks);
+		// Written only when recorded, so a never-aged lot round-trips as one
+		// rather than acquiring a tier it was never measured against.
+		if (P.AgeLastTier.IsSet())
+		{
+			PObj->SetNumberField(TEXT("age_last_tier"), P.AgeLastTier.GetValue());
+		}
 		if (P.Placement.IsSet())
 		{
 			const FLotPlacement& L = P.Placement.GetValue();
@@ -286,6 +303,11 @@ void UStacktownEconomy::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		Catalogue = MakeShared<Stacktown::FStaticCatalogue>();
 	}
+	// QUEUE ITEM 2: resolve the session's state file NOW, not on whoever reads
+	// it first. Lazy resolution made the answer depend on timing - a marker
+	// appearing between startup and the first read would decide the session.
+	Stacktown::EStateSource Source;
+	StatePathForSession(Source, true);
 }
 
 void UStacktownEconomy::Deinitialize()
@@ -301,6 +323,29 @@ void UStacktownEconomy::SetStatePath(const FString& InAbsolutePath)
 void UStacktownEconomy::SetCatalogue(const TSharedPtr<Stacktown::ICatalogue>& InCatalogue)
 {
 	Catalogue = InCatalogue;
+}
+
+void UStacktownEconomy::SetStateOverride(const FString& InAbsolutePath)
+{
+	StateOverride = InAbsolutePath;
+	// Re-resolve at once: the path was already decided at Initialize, and an
+	// override that quietly did nothing would leave a lane on the owner's real
+	// save while its own log line claimed otherwise.
+	Stacktown::EStateSource Source;
+	StatePathForSession(Source, true);
+}
+
+bool UStacktownEconomy::LoadRulesFromFile(FString& OutError)
+{
+	const FString Path = Stacktown::RulesFilePath();
+	FString Text;
+	if (!FFileHelper::LoadFileToString(Text, *Path))
+	{
+		OutError = FString::Printf(TEXT("rules file missing: %s"), *Path);
+		UE_LOG(LogStacktown, Error, TEXT("%s"), *OutError);
+		return false;
+	}
+	return LoadRules(Text, OutError);
 }
 
 bool UStacktownEconomy::LoadRules(const FString& JsonText, FString& OutError)
@@ -444,6 +489,18 @@ void UStacktownEconomy::CityTick()
 {
 	TArray<Stacktown::FEconEvent> Events;
 	Stacktown::Tick(Rules, State, Events);
+	// AGE ADVANCES HERE, not inside Tick (queue item 7). The economy oracles
+	// assert exact state equality against hand-computed answers and age sits
+	// outside them; folding it into Tick would make every one of those known
+	// answers wrong for a reason unrelated to what they test.
+	// By key, like every other parcel walk here: unambiguous about mutating the
+	// stored value rather than a copy, and deterministic besides.
+	TArray<FString> AgeIds;
+	State.Parcels.GetKeys(AgeIds);
+	for (const FString& Id : AgeIds)
+	{
+		Stacktown::AdvanceAge(State.Parcels[Id]);
+	}
 	SaveState();
 }
 

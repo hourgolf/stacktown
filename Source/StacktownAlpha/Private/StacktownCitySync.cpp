@@ -1,4 +1,5 @@
 #include "StacktownCitySync.h"
+#include "StacktownRuntimeSettings.h"
 #include "StacktownAlpha.h"
 #include "StacktownEconomy.h"
 #include "StacktownLotTransform.h"
@@ -31,23 +32,9 @@ bool UStacktownCitySync::ShouldCreateSubsystem(UObject* Outer) const
 
 bool UStacktownCitySync::PythonDriversEnabled()
 {
-	// A packaged app has no Python plugin at all (UncookedOnly): the C++ side
-	// owns the city there regardless of any setting.
-	if (!FModuleManager::Get().IsModuleLoaded(TEXT("PythonScriptPlugin")))
-	{
-		return false;
-	}
-	const FString Env = FPlatformMisc::GetEnvironmentVariable(TEXT("STACKTOWN_PYTHON_DRIVERS"));
-	if (!Env.IsEmpty())
-	{
-		return !(Env == TEXT("0") || Env.Equals(TEXT("false"), ESearchCase::IgnoreCase) || Env.Equals(TEXT("no"), ESearchCase::IgnoreCase));
-	}
-	bool bValue = true;
-	if (GConfig && GConfig->GetBool(TEXT("/Script/StacktownAlpha.StacktownRuntime"), TEXT("bPythonDrivers"), bValue, GGameIni))
-	{
-		return bValue;
-	}
-	return true;
+	// The rule itself lives on UStacktownRuntimeSettings now (queue item 5), so
+	// there is one place it can be read from and one place it can be wrong.
+	return UStacktownRuntimeSettings::PythonDriversEnabled();
 }
 
 UStacktownEconomy* UStacktownCitySync::Economy() const
@@ -82,10 +69,10 @@ bool UStacktownCitySync::BeginOwning(FString& OutWhy)
 {
 	UStacktownEconomy* Econ = Economy();
 	if (!Econ) { OutWhy = TEXT("no economy subsystem"); return false; }
-	FString RulesText, Err;
-	const FString RulesPath = Stacktown::RulesFilePath();
-	if (!FFileHelper::LoadFileToString(RulesText, *RulesPath)) { OutWhy = FString::Printf(TEXT("rules file missing: %s"), *RulesPath); return false; }
-	if (!Econ->LoadRules(RulesText, Err)) { OutWhy = Err; return false; }
+	FString Err;
+	// One loader (queue item 4): the path lives in Stacktown::RulesFilePath and
+	// is spelled in exactly one place.
+	if (!Econ->LoadRulesFromFile(Err)) { OutWhy = Err; return false; }
 	Econ->SetCatalogue(MakeShared<Stacktown::FWoodCatalogue>());
 	Stacktown::EStateSource Source;
 	const FString SessionPath = Econ->StatePathForSession(Source, false);
@@ -208,7 +195,9 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			// Age has no home in the C++ state yet (the Python driver kept age_ticks
 			// beside the parcel, outside the economy's exact-equality oracles); 0 = pale,
 			// which is B3's own rule for a new building. Wired when age lands in state.
-			V->ApplyState(P.bOwned, 0.f);
+			// Age from the state (queue item 7); this passed a hard 0 before,
+			// so every mass rendered pale no matter how long it had stood.
+			V->ApplyState(P.bOwned, static_cast<float>(Stacktown::AgeFraction(P.AgeTicks)));
 		}
 	}
 	for (auto It = Lots.CreateIterator(); It; ++It)

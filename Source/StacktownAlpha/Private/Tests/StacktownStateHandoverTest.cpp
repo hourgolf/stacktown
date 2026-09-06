@@ -15,6 +15,7 @@
 #include "StacktownStateHandover.h"
 #include "StacktownParcel.h"
 #include "StacktownEconomy.h"
+#include "StacktownRuntimeSettings.h"
 #include "StacktownEconomyTestCommon.h"
 #include "StacktownSubsystemTestFixture.h"
 
@@ -253,6 +254,114 @@ STACKTOWN_HANDOVER_TEST(FStacktownHandoverNoTwoWriters, "Stacktown.Handover.Mirr
 	TestFalse(TEXT("mirroring is refused while owning a path"), E->MirrorFromFile(E.Path, Err));
 	TestFalse(TEXT("and says why"), Err.IsEmpty());
 	TestEqual(TEXT("no sync counted"), E->GetMirrorSyncCount(), 0);
+	return true;
+}
+
+// --- the Python-drivers switch, precedence exhausted --------------------------------
+STACKTOWN_HANDOVER_TEST(FStacktownHandoverPythonDrivers, "Stacktown.Handover.PythonDrivers")
+{
+	// NO PLUGIN WINS OVER EVERYTHING. A packaged app has no Python at all, so no
+	// ini key and no environment variable may claim otherwise.
+	{
+		FPythonDriversInputs In;
+		In.bPluginLoaded = false;
+		In.EnvValue = TEXT("1");
+		In.bFoundInNewSection = true;
+		In.bNewSectionValue = true;
+		TestFalse(TEXT("no plugin, no drivers"), ResolvePythonDrivers(In));
+	}
+	// The environment beats both ini sections, in either direction.
+	for (const TCHAR* Off : { TEXT("0"), TEXT("false"), TEXT("FALSE"), TEXT("no") })
+	{
+		FPythonDriversInputs In;
+		In.EnvValue = Off;
+		In.bFoundInLegacySection = true;
+		In.bLegacySectionValue = true;
+		TestFalse(FString::Printf(TEXT("env '%s' turns them off"), Off), ResolvePythonDrivers(In));
+	}
+	{
+		FPythonDriversInputs In;
+		In.EnvValue = TEXT("1");
+		In.bFoundInNewSection = true;
+		In.bNewSectionValue = false;
+		TestTrue(TEXT("env beats the ini"), ResolvePythonDrivers(In));
+	}
+	// The new section beats the legacy one...
+	{
+		FPythonDriversInputs In;
+		In.bFoundInNewSection = true;
+		In.bNewSectionValue = false;
+		In.bFoundInLegacySection = true;
+		In.bLegacySectionValue = true;
+		TestFalse(TEXT("the new section wins"), ResolvePythonDrivers(In));
+	}
+	// ...and the legacy one is still honoured on its own, which is the whole
+	// point: Config/ is not this seat's to edit and the shipped key must work.
+	{
+		FPythonDriversInputs In;
+		In.bFoundInLegacySection = true;
+		In.bLegacySectionValue = false;
+		TestFalse(TEXT("the legacy section is honoured"), ResolvePythonDrivers(In));
+	}
+	// DEFAULT ON. The Python drivers were the world before Phase B; a missing
+	// key must not silently switch who owns a session.
+	{
+		FPythonDriversInputs In;
+		TestTrue(TEXT("nothing set means on"), ResolvePythonDrivers(In));
+	}
+	return true;
+}
+
+// --- the session path is decided once, and an override re-decides it ----------------
+STACKTOWN_HANDOVER_TEST(FStacktownHandoverSessionPathCached, "Stacktown.Handover.SessionPathCached")
+{
+	FScopedEconomy E(false, TEXT("_selftest_sessionpath_cpp.json"));
+
+	// Initialize resolves it (queue item 2); the fixture builds the subsystem
+	// without the engine lifecycle, so this stands in for that call. What is
+	// tested is the CONTRACT: resolved once, then read from the cache.
+	EStateSource Source = EStateSource::Override;
+	const FString First = E->StatePathForSession(Source, true);
+	TestFalse(TEXT("a path was resolved"), First.IsEmpty());
+	TestEqual(TEXT("the cache agrees"), E->GetSessionStatePath(), First);
+	TestEqual(TEXT("and so does the source"),
+		StateSourceName(E->GetSessionStateSource()), StateSourceName(Source));
+
+	// A second read does not re-resolve.
+	EStateSource Again = EStateSource::Override;
+	TestEqual(TEXT("second read is the cache"), E->StatePathForSession(Again, false), First);
+
+	// AN OVERRIDE MUST TAKE EFFECT IMMEDIATELY. The path is already decided by
+	// the time anyone can set one, so an override that waited for a re-resolve
+	// would leave a lane on the owner's real save while its log said override.
+	E->SetStateOverride(TEXT("/tmp/stacktown_override.json"));
+	TestEqual(TEXT("override applied at once"), E->GetSessionStatePath(),
+		FString(TEXT("/tmp/stacktown_override.json")));
+	TestEqual(TEXT("and is reported as the source"),
+		StateSourceName(E->GetSessionStateSource()), FString(TEXT("override")));
+	return true;
+}
+
+// --- ParcelId is explicit, not derived ----------------------------------------------
+STACKTOWN_HANDOVER_TEST(FStacktownHandoverParcelId, "Stacktown.Handover.ParcelId")
+{
+	TStrongObjectPtr<AStacktownParcel> P(NewObject<AStacktownParcel>(GetTransientPackage()));
+
+	// With nothing set it falls back - the weak path, kept only for actors a
+	// person placed by hand.
+	TestFalse(TEXT("a fallback id is still something"), P->GetParcelId().IsEmpty());
+
+	// Set explicitly, it wins. This is what the spawner does, and it is why a
+	// second parcel spawned as "P1" - which the engine uniquifies to "P1_2" -
+	// still matches its own entry in the city state.
+	P->ParcelId = TEXT("P7");
+	TestEqual(TEXT("the explicit id wins"), P->GetParcelId(), FString(TEXT("P7")));
+
+	// And it is what the pool check reads, so a dormant actor is still skipped.
+	P->ParcelId = TEXT("POOL_03");
+	TestTrue(TEXT("a pool id is recognised through ParcelId"), P->IsDormantPoolActor());
+	P->ParcelId = TEXT("NE0");
+	TestFalse(TEXT("a real parcel is not"), P->IsDormantPoolActor());
 	return true;
 }
 

@@ -20,6 +20,30 @@ FCityState SeedState(const FEconRules& R)
 	return S;
 }
 
+void AdvanceAge(FParcelState& P)
+{
+	if (!P.bOwned)
+	{
+		// An unowned lot does not age. Its recorded tier is left alone too, so
+		// buying a lot that has sat for a while still starts it pale.
+		return;
+	}
+	if (!P.AgeLastTier.IsSet() || P.AgeLastTier.GetValue() != P.Tier)
+	{
+		// The tier moved (or was never recorded): start pale.
+		P.AgeTicks = 0.0;
+		P.AgeLastTier = P.Tier;
+		return;
+	}
+	P.AgeTicks += 1.0;
+}
+
+double AgeFraction(double AgeTicks)
+{
+	const double Fraction = AgeTicks / AgeMatureTicks;
+	return Fraction < 1.0 ? Fraction : 1.0;
+}
+
 double Price(const FEconRules& R, int32 Tier, double Width)
 {
 	return R.PriceBase + R.PricePer100uu * (Width / 100.0) + R.PricePerTier * Tier;

@@ -48,6 +48,33 @@ FStatePathResolution ResolveStatePath(const FStatePathInputs& In)
 	return Out;
 }
 
+bool ResolvePythonDrivers(const FPythonDriversInputs& In)
+{
+	// No plugin, no drivers - checked FIRST so no ini or environment value can
+	// claim a packaged app still has Python in it.
+	if (!In.bPluginLoaded)
+	{
+		return false;
+	}
+	if (!In.EnvValue.IsEmpty())
+	{
+		return !(In.EnvValue == TEXT("0")
+			|| In.EnvValue.Equals(TEXT("false"), ESearchCase::IgnoreCase)
+			|| In.EnvValue.Equals(TEXT("no"), ESearchCase::IgnoreCase));
+	}
+	if (In.bFoundInNewSection)
+	{
+		return In.bNewSectionValue;
+	}
+	if (In.bFoundInLegacySection)
+	{
+		return In.bLegacySectionValue;
+	}
+	// Default ON: the Python drivers were the world before Phase B, and a
+	// missing key must not silently switch a session's owner.
+	return true;
+}
+
 FString StateSourceName(EStateSource Source)
 {
 	switch (Source)

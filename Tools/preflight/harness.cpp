@@ -708,6 +708,86 @@ int main()
 			CheckBool("pool_00 lowercase", IsPoolLabel(TEXT("pool_00")), false);
 		}
 
+		CASE("Handover.PythonDrivers");
+		{
+			{
+				FPythonDriversInputs In;
+				In.bPluginLoaded = false;
+				In.EnvValue = TEXT("1");
+				In.bFoundInNewSection = true; In.bNewSectionValue = true;
+				CheckBool("no plugin, no drivers", ResolvePythonDrivers(In), false);
+			}
+			const char* Offs[] = { "0", "false", "FALSE", "no" };
+			for (int i = 0; i < 4; ++i)
+			{
+				FPythonDriversInputs In;
+				In.EnvValue = FString(Offs[i]);
+				In.bFoundInLegacySection = true; In.bLegacySectionValue = true;
+				CheckBool("env turns them off", ResolvePythonDrivers(In), false);
+			}
+			{
+				FPythonDriversInputs In;
+				In.EnvValue = TEXT("1");
+				In.bFoundInNewSection = true; In.bNewSectionValue = false;
+				CheckBool("env beats the ini", ResolvePythonDrivers(In), true);
+			}
+			{
+				FPythonDriversInputs In;
+				In.bFoundInNewSection = true; In.bNewSectionValue = false;
+				In.bFoundInLegacySection = true; In.bLegacySectionValue = true;
+				CheckBool("new section wins", ResolvePythonDrivers(In), false);
+			}
+			{
+				FPythonDriversInputs In;
+				In.bFoundInLegacySection = true; In.bLegacySectionValue = false;
+				CheckBool("legacy honoured", ResolvePythonDrivers(In), false);
+			}
+			{
+				FPythonDriversInputs In;
+				CheckBool("default on", ResolvePythonDrivers(In), true);
+			}
+		}
+
+		CASE("Age.Advance");
+		{
+			{
+				FParcelState P = Parcel(TEXT("vernacular"), 0, 820.0, false);
+				AdvanceAge(P);
+				CheckNear("unowned does not age", P.AgeTicks, 0.0, Tol);
+				CheckBool("records no tier", P.AgeLastTier.IsSet(), false);
+			}
+			{
+				FParcelState P = Parcel(TEXT("vernacular"), 0, 820.0, true);
+				AdvanceAge(P);
+				CheckNear("first advance resets", P.AgeTicks, 0.0, Tol);
+				CheckBool("records the tier", P.AgeLastTier.IsSet(), true);
+				AdvanceAge(P);
+				CheckNear("second counts one", P.AgeTicks, 1.0, Tol);
+				AdvanceAge(P);
+				CheckNear("third counts two", P.AgeTicks, 2.0, Tol);
+			}
+			{
+				FParcelState P = Parcel(TEXT("vernacular"), 0, 820.0, true);
+				for (int32 i = 0; i < 40; ++i) { AdvanceAge(P); }
+				CheckNear("aged", P.AgeTicks, 39.0, Tol);
+				P.Tier = 1;
+				AdvanceAge(P);
+				CheckNear("a tier change resets", P.AgeTicks, 0.0, Tol);
+				CheckInt("and records the new tier", P.AgeLastTier.GetValue(), 1);
+				AdvanceAge(P);
+				CheckNear("then counts again", P.AgeTicks, 1.0, Tol);
+			}
+		}
+
+		CASE("Age.Fraction");
+		{
+			CheckNear("pale at zero", AgeFraction(0.0), 0.0, Tol);
+			CheckNear("halfway", AgeFraction(75.0), 0.5, Tol);
+			CheckNear("mature at the mark", AgeFraction(AgeMatureTicks), 1.0, Tol);
+			CheckNear("saturates above", AgeFraction(1000.0), 1.0, Tol);
+			CheckNear("the mark", AgeMatureTicks, 150.0, Tol);
+		}
+
 		CASE("Handover.FactsForLabel");
 		{
 			FCityState S = SeedState(R);

@@ -1888,3 +1888,23 @@ into the wrong project. It has already caught it happening.
   and the owned file persisted P6 as vernacular tier 2 owned. 76/76.
   Roads (G) are not in the port yet: the road actor class is the seat's
   item 2. With roads the Phase B switch for the owner's save is ready.
+- **ROADS IN C++ (2026-09-06 19:10, coordinator).** Stacktown::RoadFrame
+  (init_unreal._road_transform: chord centre, yaw from start to end, cube
+  scaled length/100 x 22.6 x 0.08 at z 4; 1 test), AStacktownRoad (the
+  pool road's look - stock cube in MI_studio_grey - with a RoadId
+  property, and ghost accept/refuse looks), road reconcile in CitySync
+  (one actor per segment in State.Roads), and G road mode in the C++
+  controller: click start, click end, DrawRoad, with a road ghost that
+  follows the cursor and the CONTENT 2 draw refusals ("Roads run
+  straight", "Too short for a road", "Roads can't cross yet"). Proven in
+  one fresh C++-owned game: R1 drawn (2000,-3000)->(6000,-3000), its actor
+  read back at (4000,-3000,4) yaw 0 scale (40, 22.6, 0.08); a diagonal
+  refused with "Roads run straight"; a click inside R1's corridor refused
+  with "That's the road"; a lot placed north of R1 read back at
+  (3590, -1120) yaw 0 - R1's own frame, the 2026-09-04 scar case, correct
+  in C++. The owned file persisted R1. 77/77. Packaged apps now default
+  to C++ ownership (no Python plugin loaded = C++ owns).
+  INSTRUMENT LESSON: killing a test game by the pid in standalone.lock
+  misses earlier games (the lock is rewritten by each launch); three
+  probes ran against a stale process and their captures showed its old
+  state. Test runs now sweep every -game process before and after.

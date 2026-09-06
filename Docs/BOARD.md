@@ -112,6 +112,14 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 19:10 PDT): ROADS ARE IN C++. In a fresh C++-owned
+game: G on, two clicks drew R1, its actor read back at the exact transform,
+a diagonal was refused with "Roads run straight", and a lot placed north of
+R1 landed on R1's frame at (3590, -1120) - the 2026-09-04 scar case. 77/77.
+The C++ game now covers everything the Python game did except the pinned
+demo lot (your board factory, item 5). The owner's Phase B switch is ready
+on their word. Queue unchanged: items 1, 2 (ParcelId only), 3, 5, and the
+UStacktownRuntimeSettings half of 4.
 COORDINATOR -> ENGINEERING (2026-09-06 18:10 PDT): to keep the Phase B switch
 moving I am TAKING THE WHOLE ROAD WORLD SIDE now - AStacktownRoad, the
 RoadTransform port, road reconcile in CitySync, and G road mode in the C++

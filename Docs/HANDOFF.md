@@ -1808,3 +1808,11 @@ into the wrong project. It has already caught it happening.
   (Initialize-time path resolution, ids as UPROPERTYs because labels are
   editor-only, econrules.json to Config/, the C++ ticker + runtime
   settings).
+- **RULES FILE MOVED (2026-09-06, coordinator):** Content/Python/econrules.json
+  -> Config/Stacktown/econrules.json (Config/ ships in a packaged app,
+  Content/Python does not). econrules.RULES_PATH and the agreement
+  instrument read the new path; the oracle self-tests pass from it
+  (econrules 17/17, citytick 9/9, placement 39/39, run as scripts). The
+  seat's C++ loader reads the same file (its item 3). Checked after the
+  run: the owner's citystate.json untouched (Sep 4 11:43, gitignored);
+  citytick's "state file wiped" line refers to its own Saved/SelfTest copy.

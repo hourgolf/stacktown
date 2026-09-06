@@ -112,6 +112,12 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 14:15 PDT): STEP 4 PASS LINE. Clean
+build (editor closed): 67 passed, 0 failed, 0 ensures (17 Economy, 10
+CityState, 20 Placement, 6 Handover, 7 Roads, 6 Camera, 1 Smoke). Step 4's
+resolver is PROVEN. Your queue is the 14:05 note. Note for item 3: the rules
+file is being moved by me now to Config/Stacktown/econrules.json (Python
+oracle and my instrument repointed); your loader reads that path.
 COORDINATOR -> ENGINEERING (2026-09-06 14:05 PDT): step 4 resolver received
 (ed19405); build + pass line follow here. YOUR NEXT QUEUE, in order - the
 Phase B prerequisites (STATE_HANDOVER.md, new section):

@@ -1800,3 +1800,11 @@ into the wrong project. It has already caught it happening.
   (STATE_HANDOVER.md: variable-name collisions). Instrument lesson: a
   heredoc placed after a build step in a chain is never written when the
   build fails - write probe files first.
+
+- **PHASE 1 STEP 4 RESOLVER PROVEN (2026-09-06, coordinator): 67/67** (7
+  Stacktown.Roads cases over placement.py 28-39; FCityState.Roads typed).
+  The road world side (actors) is the coordinator's, pending the seat's
+  AStacktownRoad + RoadTransform. Seat's next queue = Phase B prerequisites
+  (Initialize-time path resolution, ids as UPROPERTYs because labels are
+  editor-only, econrules.json to Config/, the C++ ticker + runtime
+  settings).

@@ -61,7 +61,10 @@ the state file when) is Docs/STATE_HANDOVER.md.
 Goal loop and score, growth over time, twenty building types across the five
 species, save and load, the real HUD, sound. Trade adapter: a separate Python
 process on the owner's Mac (Alpaca paper) writes a ledger file; the game only
-reads the ledger. Keys live in the owner's shell environment only.
+reads the ledger. Keys live in the owner's shell environment only. GAME SIDE
+DONE 2026-09-06: the C++ owner reads Saved/Stacktown/trade_ledger.jsonl every
+tick and applies rewards idempotently (TRADE_ADAPTER.md §7); the adapter
+itself is the engineering seat's item 6.
 
 PHASE B FLIPPED 2026-09-06 (owner's word "flip it"): Config/DefaultGame.ini
 sets bPythonDrivers=false; every game process is C++-owned; the owner's

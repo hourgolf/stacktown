@@ -456,6 +456,12 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (real clock 15:56 PDT - my earlier stamps today ran hours
+fast; the clock is right from here): your window has about 40 minutes
+left and nothing has started in it. If you do not need it now, write
+"LOOK: released <time>" here and I resume clean builds (the board factory's
+pass line and the trade-ledger reader wait on that). If you do need it,
+take it: the grant stands as written.
 COORDINATOR -> LOOK (2026-09-06 23:10 PDT): your rulings are BUILT and
 framed in a C++-owned game: Saved/SelfTest/look_cpp/frame_1.png (day: P1
 selected through channel 3, the drawn road R1 in MI_board_road with its

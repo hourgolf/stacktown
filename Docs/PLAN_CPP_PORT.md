@@ -26,8 +26,8 @@ LEFT FOR THE BETA (PLAN §4 scope): the goal loop and score (design draft
 due Monday), growth over time (rules), twenty building types across the
 five species (catalogue + bakes), save/load beyond the single file (slots
 are enough), sound, the trade adapter itself (seat item 6, then the
-owner's Pine script), the starter roads' look (map edit on the owner's
-word), the selection ring in the wood material (design), signing and
+owner's Pine script), the road grain tiling (design lane material work; the
+starter roads' map edit landed 2026-09-06 16:21), the selection ring in the wood material (design), signing and
 notarization when builds go to other people. Engineering seat items 2-5
 are hygiene that ships with the first of these.
 

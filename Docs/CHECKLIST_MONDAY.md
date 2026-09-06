@@ -35,3 +35,22 @@ Optional, two minutes: double-click Saved/Packaged/Mac/StacktownAlpha.app
 (rebuild it first with Tools/package.sh if the date is old). It opens the
 board with the camera and the HUD and nothing else: no economy, no clicks,
 no roads yet. That is the pipeline a stranger's download will use.
+
+## Added 2026-09-06 evening (all in the C++ game and the packaged app)
+
+13. NIGHT: press L. The board darkens, the seven lights dim, and every
+    OWNED building's windows light up; a for-sale pad stays dark. Press L
+    again for day. If any owned building stays black at night, say which.
+14. ROADS: the two starter roads and any road you draw (G, click, click)
+    are the same pale timber inlay, flush with the plate. Note whether the
+    seam reads as an inlay or as a curb, and whether the grain figure looks
+    like ONE big swirl per road (known: the design lane is fixing the
+    tiling).
+15. TRADES (mock, no market): with the game running, append one line to
+    Saved/Stacktown/trade_ledger.jsonl (path under the packaged app:
+    ~/Library/Containers/com.YourCompany.StacktownAlpha/Data/Documents/
+    StacktownAlpha/Saved/Stacktown/):
+        {"trade_id": "t1", "pnl": 12.5}
+    Within two seconds money rises and the bar reads `trades: ...`. Append
+    the same line again: money rises again (it is a NEW trade - the cursor
+    is the line count). Never delete the file while a save exists.

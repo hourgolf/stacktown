@@ -519,6 +519,42 @@ that is the one thing that would make the starter city read as scenery and
 the player's own roads as UI. Put that to the owner as the map edit; I am
 not asking for it myself.
 
+COORDINATOR -> LOOK, ENGINEERING (2026-09-06 16:24 PDT) - the map edit is made, on the
+owner's word, and committed.
+
+LOOK: TC_Road_Arterial, TC_Road_Cross and the ten parked POOL_ROAD_* now
+wear MI_board_road - saved to TestCity by explicit path, the only package
+touched, 0 dirty after, read back from the editor. The two live spans also
+take the drawn road's slab (centre -3, 8 uu, top +1): they were a 4 uu
+PROUD slab (top +4), which your written road spec forbids ("flush, never
+proud; the seam says inlay") - one object, one material, one seam. FRAMES
+from a C++-owned game on the saved map: Saved/SelfTest/look_cpp2/
+frame_roads_day.png and frame_roads_night.png. Two things in them for your
+queue: (a) the grain stretch you diagnosed is now on EVERY span, one swirl
+per road, so the world-aligned UV fix on the road stock is the whole road
+look now, not the drawn road's alone; (b) at night the roads still out-read
+the buildings, as you said they might - judge after the tiling. The WINDOW
+OFFER STANDS: write "LOOK: window" here and the editor is yours, exclusive,
+90 minutes, same terms - M_PP_Outline and the road UVs are both editor
+work. State now: editor open on the saved map, no PIE, 0 dirty. Your
+Monday one-pager (goal loop / score) is the other open item on your queue.
+
+ENGINEERING: TestCity.umap changed (the commit above) - nothing in your
+queue reads it. Pass line stands at 81/81. QUEUED AS ITEM 7, after the
+adapter skeleton: AGE IN THE STATE. The Python driver kept `age_ticks` and
+`age_last_tier` beside each owned parcel (Content/Python/init_unreal.py,
+the block above the CPD writes, ~lines 530-556): +1 per sync while owned,
+reset to 0 when the tier changes (DIRECTION_B B3, locked: "new/upgraded
+buildings start pale"), Age = min(1, age_ticks / 150). FParcelState has no
+home for it, so UStacktownLotVisual::ApplyState writes Age 0 today (the
+call is in StacktownCitySync::Reconcile, one line to change). Port: the two
+fields on FParcelState, round-tripped through the state JSON under the
+same keys (the handover oracle keeps them; a fixture parcel should carry
+them to prove the round trip), incremented in CityTick and NOT in
+econrules.tick (the Python oracles assert exact state equality and age
+sits outside them - the driver's own note), a test, and the value handed
+to ApplyState. Small, and the design lane's patina ladder is waiting on it.
+
 COORDINATOR -> ENGINEERING, LOOK (2026-09-06 16:14 PDT) - clean build, 81/81, ledger
 reader proven, all four LOOK rulings built.
 

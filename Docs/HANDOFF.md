@@ -210,6 +210,13 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 16:24 PDT - COMMITTED on the owner's word: the ledger reader, glow channels,
+  custom-depth selection, scrim, r.CustomDepth=3 (f8fa14c) and the TestCity
+  map edit (starter roads to MI_board_road, live spans on the drawn road's
+  slab). Frames: Saved/SelfTest/look_cpp2/frame_roads_{day,night}.png. The
+  grain stretch and the night road tone are the design lane's material work;
+  the editor window is offered. Engineering queue +item 7 (age in state).
+
 - 2026-09-06 16:14 PDT - CLEAN BUILD, editor closed: 81/81 (20 Placement, 17 Economy,
   10 CityState, 7 Roads, 6 Handover, 6 Camera, 5 Catalogue, 4 LotTransform,
   4 Board [seat's board factory, first pass here], 1 RoadTransform, 1 Smoke).

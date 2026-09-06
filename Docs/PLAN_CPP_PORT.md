@@ -63,6 +63,13 @@ species, save and load, the real HUD, sound. Trade adapter: a separate Python
 process on the owner's Mac (Alpaca paper) writes a ledger file; the game only
 reads the ledger. Keys live in the owner's shell environment only.
 
+PHASE B FLIPPED 2026-09-06 (owner's word "flip it"): Config/DefaultGame.ini
+sets bPythonDrivers=false; every game process is C++-owned; the owner's
+save migrated once into Saved/Stacktown/citystate.json; the Python drivers
+no longer register in games (editor tooling untouched). Remaining Phase 1
+items: the board factory with the pinned spans (starter lot), ParcelId,
+night (L) in C++, the design lane's road look.
+
 ### Phase 3 (from about week 6): packaged Mac builds
 UAT BuildCookRun produces a real universal .app (Apple Silicon + Intel, owner's word); the owner tests the app, not the editor.
 Signing and notarization only when builds go to other people.

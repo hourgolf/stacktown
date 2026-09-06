@@ -1908,3 +1908,19 @@ into the wrong project. It has already caught it happening.
   misses earlier games (the lock is rewritten by each launch); three
   probes ran against a stale process and their captures showed its old
   state. Test runs now sweep every -game process before and after.
+- **PHASE B FLIPPED (2026-09-06 19:55, owner's word "commit it, flip it and
+  continue").** Config/DefaultGame.ini: [/Script/StacktownAlpha.
+  StacktownRuntime] bPythonDrivers=false. UStacktownCitySync also writes
+  Saved/standalone.lock in a game process (the Python driver used to; the
+  C++ path rules read it, so an editor PIE started beside a running game
+  still lands on the test file). Verified on the OWNER'S REAL SAVE through
+  their own launch path (no marker): migrated Content/Python/citystate.json
+  (money 40.60, P1/P2/PARCEL_Demo0, road R1) once into
+  Saved/Stacktown/citystate.json; the C++ owner reconciled P1 (ash mass,
+  820, south side at (-1130, -1880) yaw 180), P2 (pad) and R1; the HUD read
+  money from C++ and rent accrued (49.60 after ~20 s); the Python file is
+  untouched (Sep 04 11:43) and stays as the pre-flip backup. 77/77. From
+  now on every game process is C++-owned; the Python economy and click
+  drivers no longer register in games. Missing in the C++ game: the
+  pinned starter lot (seat's board factory, now its item 1), night (L),
+  the road look (design). Monday's checklist rewritten for the C++ game.

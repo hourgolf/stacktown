@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformMisc.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Modules/ModuleManager.h"
 #include "Misc/FileHelper.h"
@@ -97,6 +98,16 @@ bool UStacktownCitySync::BeginOwning(FString& OutWhy)
 	}
 	Econ->SetStatePath(Owned);
 	if (!Econ->LoadState(Err)) { OutWhy = Err; return false; }
+	// The standalone lock the Python driver used to write at registration: a
+	// real game process records its pid so an editor PIE started meanwhile
+	// resolves to the test file instead of sharing this save (the C++ path
+	// rules already read it; nobody wrote it once Python was off).
+	if (!GIsEditor)
+	{
+		const FString LockPath = FPaths::ProjectSavedDir() / TEXT("standalone.lock");
+		FFileHelper::SaveStringToFile(FString::FromInt((int32)FPlatformProcess::GetCurrentProcessId()), *LockPath);
+		UE_LOG(LogStacktown, Log, TEXT("CitySync: standalone lock written (%s)"), *LockPath);
+	}
 	UE_LOG(LogStacktown, Log, TEXT("CitySync: OWNS the city - state %s (%s), money %.2f, %d parcels"), *Owned, *Stacktown::StateSourceName(Source), Econ->GetState().Money, Econ->GetState().Parcels.Num());
 	return true;
 }

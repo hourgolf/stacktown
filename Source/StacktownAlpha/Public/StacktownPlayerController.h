@@ -5,6 +5,8 @@
 #include "StacktownPlayerController.generated.h"
 
 class AStacktownCameraPawn;
+class UStacktownHudModel;
+class UStacktownHud;
 
 /**
  * Drives AStacktownCameraPawn from raw input (right-drag orbit, wheel zoom
@@ -35,6 +37,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stacktown|Camera")
 	AStacktownCameraPawn* GetCameraPawn() const;
 
+	/** The HUD's facts; the Python drivers write it today, C++ later. */
+	UFUNCTION(BlueprintPure, Category = "Stacktown|HUD")
+	UStacktownHudModel* GetHudModel() const { return HudModel; }
+
 	/** The board point under the cursor, or false when the cursor is off the board plane. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
 	bool BoardPointUnderCursor(FVector& OutPoint) const;
@@ -48,6 +54,14 @@ private:
 	void FreezeRigs();
 	void PumpRigHud(float DeltaTime);
 	void DriveCamera(float DeltaTime);
+	void BuildHud();
+	void ReadEconomyIntoModel();
+	void RetireRigBar(AActor* Rig);
+	void ApplyHud();
+
+	UPROPERTY() TObjectPtr<UStacktownHudModel> HudModel;
+	UPROPERTY() TObjectPtr<UStacktownHud> Hud;
+	bool bRigBarRetired = false;
 	void OnWheelUp();
 	void OnWheelDown();
 

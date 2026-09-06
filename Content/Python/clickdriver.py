@@ -107,6 +107,70 @@ def _selected(rig):
     return sel
 
 
+def _hud(gw):
+    """The C++ HUD's model (UStacktownHudModel) when the C++ controller owns
+    the player; None under the old rig. Cached per session."""
+    if 'hud' in _st and _st['hud'] is not None:
+        try:
+            if unreal.SystemLibrary.is_valid(_st['hud']):
+                return _st['hud']
+        except Exception:
+            pass
+    _st['hud'] = None
+    try:
+        pc = unreal.GameplayStatics.get_player_controller(gw, 0)
+        if pc is not None and pc.get_class().get_name() == 'StacktownPlayerController':
+            _st['hud'] = pc.call_method('GetHudModel')
+    except Exception as e:
+        if not _st.get('hud_warned'):
+            _st['hud_warned'] = True
+            _log('HUD model unavailable: %s' % str(e)[:80])
+    return _st['hud']
+
+
+def _hud_set(gw, **fields):
+    """Write HUD facts; returns False when there is no C++ HUD (callers fall
+    back to print_string so the old rig path still shows something)."""
+    m = _hud(gw)
+    if m is None:
+        return False
+    for k, v in fields.items():
+        try:
+            m.set_editor_property(k, v)
+        except Exception as e:
+            _log('HUD field %s refused: %s' % (k, str(e)[:60]))
+    return True
+
+
+def _selection_facts(gi, actor):
+    """Docs/HUD_V1.md CONTENT 1 + 4: name, state, and the ONE verb present."""
+    import init_unreal as iu, econrules
+    label = actor.get_actor_label()
+    st = iu._read_state(gi); p = st['parcels'].get(label, {})
+    rid = p.get('rid', str(actor.get_editor_property('RecipeId')))
+    width = int(p.get('width', float(actor.get_editor_property('WidthUU'))))
+    owned = bool(p.get('owned', actor.get_editor_property('Owned')))
+    tier = int(p.get('tier', actor.get_editor_property('Tier')))
+    failed = bool(p.get('failed', False))
+    perf = float(p.get('performance', 0.0) or 0.0)
+    name = '%s %d' % (rid, width)
+    if not owned:
+        state = 'FOR SALE'; verb, key, price = 'BUY', 'B', float(econrules.price(rid, tier, width))
+    elif failed:
+        state = 'NEEDS REPAIR'; verb, key, price = 'REPAIR', 'H', float(econrules.repair_price(tier))
+    else:
+        state = 'OWNED \u00b7 TIER %d' % tier
+        try:
+            allowed = bool(econrules.tier_up_allowed(rid, tier, width)[0])
+        except Exception:
+            allowed = False
+        if allowed:
+            verb, key, price = 'UPGRADE', 'U', float(econrules.upgrade_price(rid, tier, perf))
+        else:
+            verb, key, price = '', '', 0.0
+    return name, state, verb, key, price
+
+
 def _hold_selection(gw, gi, rig):
     """Every tick while a lot is selected: keep it highlighted and keep its
     line on screen (2026-09-04, owner: "when I select a lot it is only
@@ -117,16 +181,28 @@ def _hold_selection(gw, gi, rig):
     sel = _selected(rig)
     if sel is None:
         _st['sel_line'] = None
+        if _st.get('hud_had_selection'):
+            _st['hud_had_selection'] = False
+            _hud_set(gw, bHasSelection=False)
         return
+    _st['hud_had_selection'] = True
     try:
         if not sel.get_editor_property('Highlighted'):
             sel.call_method('SetHighlighted', args=(True,))
     except Exception:
         pass
+    n = _st.get('sel_line_tick', 0) + 1
+    _st['sel_line_tick'] = n
+    if _hud(gw) is not None:
+        if n % 20 == 1:
+            try:
+                name, state, verb, key, price = _selection_facts(gi, sel)
+                _hud_set(gw, bHasSelection=True, SelectedName=name, SelectedState=state, Verb=verb, VerbKey=key, VerbPrice=price)
+            except Exception as e:
+                _log('selection facts failed: %s' % str(e)[:80])
+        return
     line = _st.get('sel_line')
     if line:
-        n = _st.get('sel_line_tick', 0) + 1
-        _st['sel_line_tick'] = n
         if n % 60 == 0:
             line = _selection_line(gi, sel) or line
             _st['sel_line'] = line
@@ -205,8 +281,10 @@ def click_at_hit(gw, gi, rig, actor, x, y):
 def press_b(gw, gi, rig):
     sel = _selected(rig)
     if sel is None:
-        unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
-                                          unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
+        _st['hud_refusal'] = True
+        if not _hud_set(gw, ActionRefusal='Select a lot first'):
+            unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
+                                              unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
         _log('B with no selection')
         return False
     pid = sel.get_actor_label()
@@ -222,8 +300,10 @@ def press_u(gw, gi, rig):
     economy driver, like the width channel."""
     sel = _selected(rig)
     if sel is None:
-        unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
-                                          unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
+        _st['hud_refusal'] = True
+        if not _hud_set(gw, ActionRefusal='Select a lot first'):
+            unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
+                                              unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
         return False
     unreal._stacktown_upgrade_request = sel.get_actor_label()
     _log('upgrade request %s' % sel.get_actor_label())
@@ -235,8 +315,10 @@ def press_r(gw, gi, rig):
     R is the rig's pedestal-up key (Docs/LENSRIG_P0.md)."""
     sel = _selected(rig)
     if sel is None:
-        unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
-                                          unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
+        _st['hud_refusal'] = True
+        if not _hud_set(gw, ActionRefusal='Select a lot first'):
+            unreal.SystemLibrary.print_string(gw, 'Select a lot first', True, False,
+                                              unreal.LinearColor(1.0, 0.85, 0.3, 1.0), 1.5, 'clickmsg')
         return False
     unreal._stacktown_repair_request = sel.get_actor_label()
     _log('repair request %s' % sel.get_actor_label())
@@ -278,6 +360,9 @@ def _cycle_width(step, gw):
     ws = _widths()
     _st['width_index'] = (_st.get('width_index', 0) + step) % len(ws)
     _st['ghost_cache'] = None
+    if _hud_set(gw, BarMessage='lot width %d' % int(ws[_st['width_index']])):
+        _st['hud_transient'] = True
+        return
     unreal.SystemLibrary.print_string(gw, 'Lot width %d' % int(ws[_st['width_index']]), True, False,
                                       unreal.LinearColor(0.8, 0.9, 1.0, 1.0), 1.2, 'widthmsg')
 
@@ -385,6 +470,9 @@ def _ghost_show(gw, ok, box, lot):
 
 
 def _ghost_hide():
+    if _st.get('hud_place_refusal'):
+        _st['hud_place_refusal'] = ''
+        _hud_set(_st.get('world'), PlaceRefusal='')
     g = _st.get('ghost')
     if g is None or not _st.get('ghost_shown'):
         return
@@ -431,6 +519,8 @@ def _preview(gi, x, y):
 
 
 def _draw_ghost(gw, ok, text, box, x, y):
+    if _hud(gw) is not None:
+        text = ''  # the C++ HUD carries the refusal at the cursor; keep only the rim
     color = GHOST_COLOR_OK if ok else GHOST_COLOR_NO
     if box is not None:
         cx, cy, hx, hy = box
@@ -461,6 +551,11 @@ def _hover(gw, gi, pc):
     shown = _ghost_show(gw, ok, box, _st.get('ghost_lot')) if box is not None else False
     if not shown:
         _ghost_hide()
+    # HUD_V1 LOOK 6: a refusal about a PLACE reads at the cursor, next to the ghost
+    refusal = '' if (ok or box is None) else str(text)
+    if refusal != _st.get('hud_place_refusal', ''):
+        _st['hud_place_refusal'] = refusal
+        _hud_set(gw, PlaceRefusal=refusal)
     # The translucent pad carries the close stops; at the far stop D22's own
     # analysis says only a RIM survives downsampling (checked on a capture,
     # 2026-09-03: the 34% fill is a smudge at reach 19000). Until a mesh rim
@@ -489,6 +584,8 @@ ROAD_COLOR_NO = unreal.LinearColor(1.0, 0.35, 0.3, 1.0)
 def _road_mode_toggle(gw):
     _st['road_mode'] = not _st.get('road_mode', False)
     _st['road_start'] = None
+    if _hud(gw) is not None:
+        return
     unreal.SystemLibrary.print_string(gw, 'ROAD MODE %s' % ('ON - click start, click end (G to leave)' if _st['road_mode'] else 'off'),
                                       True, False, ROAD_COLOR_OK, 3.0, 'roadmode')
     _log('road mode %s' % ('on' if _st['road_mode'] else 'off'))
@@ -533,7 +630,8 @@ def _road_click(gw, gi, x, y):
     start = _st.get('road_start')
     if start is None:
         _st['road_start'] = (x, y)
-        unreal.SystemLibrary.print_string(gw, 'Road start set - click the end', True, False, ROAD_COLOR_OK, 2.0, 'roadmode')
+        if not _hud_set(gw, BarMessage='road start set \u00b7 click the end'):
+            unreal.SystemLibrary.print_string(gw, 'Road start set - click the end', True, False, ROAD_COLOR_OK, 2.0, 'roadmode')
         _log('road start (%.0f, %.0f)' % (x, y))
         return
     unreal._stacktown_road_request = (start[0], start[1], x, y)
@@ -733,8 +831,9 @@ def _tick(dt):
             _cam_state['stop'] = 0
             # Interim key legend until HUD v1 carries it (owner never found road
             # mode; the legend is the cheapest discoverability there is).
-            unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   scroll: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
-                                              True, False, unreal.LinearColor(0.85, 0.9, 1.0, 1.0), 12.0, 'keylegend')
+            if _hud(gw) is None:
+              unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   scroll: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
+                                                True, False, unreal.LinearColor(0.85, 0.9, 1.0, 1.0), 12.0, 'keylegend')
         rig = _st['rig']
         # C++ camera (2026-09-06, PLAN_CPP_PORT.md step 5): when the possessed
         # pawn is AStacktownCameraPawn the rig is retired - frozen by the C++
@@ -770,15 +869,24 @@ def _tick(dt):
         # The selection lives in Python; the rig's variable stays None and its
         # HUD cluster collapsed until HUD v1 reads the selection from here.
         _hold_selection(gw, gi, rig)
+        if any(edges.values()) and _st.get('hud_refusal'):
+            _st['hud_refusal'] = False
+            _hud_set(gw, ActionRefusal='')
+        if any(edges.values()) and _st.get('hud_transient') and not (edges.get('MouseScrollUp') or edges.get('MouseScrollDown')):
+            _st['hud_transient'] = False
+            _hud_set(gw, BarMessage='click start, click end \u00b7 G to leave' if _st.get('road_mode') else '')
         if edges['G']:
             _road_mode_toggle(gw)
             _ghost_hide()
+            _hud_set(gw, bRoadMode=bool(_st.get('road_mode', False)),
+                     BarMessage='click start, click end \u00b7 G to leave' if _st.get('road_mode') else '')
         if edges['L']:
             import init_unreal as iu
             night = 0.0 if getattr(unreal, '_stacktown_night', 0.0) >= 0.5 else 1.0
             if iu._set_night(gw, night):
-                unreal.SystemLibrary.print_string(gw, 'NIGHT' if night >= 0.5 else 'DAY', True, False,
-                                                  unreal.LinearColor(0.8, 0.85, 1.0, 1.0), 1.5, 'daynight')
+                if not _hud_set(gw, bNight=night >= 0.5):
+                  unreal.SystemLibrary.print_string(gw, 'NIGHT' if night >= 0.5 else 'DAY', True, False,
+                                                    unreal.LinearColor(0.8, 0.85, 1.0, 1.0), 1.5, 'daynight')
                 _log('night -> %.0f' % night)
             else:
                 unreal.SystemLibrary.print_string(gw, 'No night yet (parameter collection missing)', True, False,
@@ -826,14 +934,19 @@ def _tick(dt):
             _st['n_acc'] += dt
             if not _st['n_fired']:
                 remaining = max(0.0, RESET_HOLD_S - _st['n_acc'])
-                unreal.SystemLibrary.print_string(gw, 'HOLD N TO RESET  %.1f' % remaining, True, False,
-                                                  unreal.LinearColor(1.0, 0.4, 0.3, 1.0), 0.3, 'nhold')
+                _st['hud_nhold'] = True
+                if not _hud_set(gw, BarMessage='HOLD N TO RESET \u00b7 %.1f' % remaining):
+                    unreal.SystemLibrary.print_string(gw, 'HOLD N TO RESET  %.1f' % remaining, True, False,
+                                                      unreal.LinearColor(1.0, 0.4, 0.3, 1.0), 0.3, 'nhold')
                 if _st['n_acc'] >= RESET_HOLD_S:
                     _st['n_fired'] = True
                     press_n_reset(gw, gi, rig)
         else:
             _st['n_acc'] = 0.0
             _st['n_fired'] = False
+            if _st.get('hud_nhold'):
+                _st['hud_nhold'] = False
+                _hud_set(gw, BarMessage='click start, click end \u00b7 G to leave' if _st.get('road_mode') else '')
     except Exception as e:
         k = str(e)[:80]
         if k not in _st['errs']:

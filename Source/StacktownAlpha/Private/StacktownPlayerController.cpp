@@ -2,6 +2,13 @@
 #include "StacktownAlpha.h"
 #include "StacktownCameraPawn.h"
 #include "StacktownCameraModel.h"
+#include "StacktownHud.h"
+#include "Blueprint/GameViewportSubsystem.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/Widget.h"
+#include "Components/PanelWidget.h"
+#include "Engine/GameInstance.h"
+#include "Engine/Engine.h"
 #include "Components/InputComponent.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
@@ -23,6 +30,85 @@ void AStacktownPlayerController::BeginPlay()
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(Mode);
 	bShowMouseCursor = true;
+	BuildHud();
+}
+
+void AStacktownPlayerController::BuildHud()
+{
+	HudModel = NewObject<UStacktownHudModel>(this, TEXT("HudModel"));
+	Hud = NewObject<UStacktownHud>(this, TEXT("Hud"));
+	Hud->Build(GetWorld());
+}
+
+void AStacktownPlayerController::ReadEconomyIntoModel()
+{
+	// Until the C++ economy owns the facts, money and demand are the Blueprint
+	// game instance's variables, written by the Python driver every sync.
+	UGameInstance* GI = GetGameInstance();
+	if (!GI || !HudModel)
+	{
+		return;
+	}
+	auto ReadNumber = [GI](const TCHAR* Name, double& Out)
+	{
+		if (FProperty* P = GI->GetClass()->FindPropertyByName(Name))
+		{
+			if (FNumericProperty* NP = CastField<FNumericProperty>(P))
+			{
+				if (NP->IsFloatingPoint())
+				{
+					Out = NP->GetFloatingPointPropertyValue(P->ContainerPtrToValuePtr<void>(GI));
+				}
+				else if (NP->IsInteger())
+				{
+					Out = (double)NP->GetSignedIntPropertyValue(P->ContainerPtrToValuePtr<void>(GI));
+				}
+			}
+		}
+	};
+	ReadNumber(TEXT("Money"), HudModel->Money);
+	ReadNumber(TEXT("Demand"), HudModel->Demand);
+}
+
+void AStacktownPlayerController::RetireRigBar(AActor* Rig)
+{
+	// The rig's BeginPlay built its own top bar and kept its text blocks in
+	// variables; walk up from MoneyText to the root widget and remove it, so
+	// the C++ bar is the only one on screen.
+	if (!Rig)
+	{
+		return;
+	}
+	FObjectProperty* P = CastField<FObjectProperty>(Rig->GetClass()->FindPropertyByName(TEXT("MoneyText")));
+	if (!P)
+	{
+		return;
+	}
+	UWidget* W = Cast<UWidget>(P->GetObjectPropertyValue_InContainer(Rig));
+	while (W && W->GetParent())
+	{
+		W = W->GetParent();
+	}
+	if (W)
+	{
+		if (UGameViewportSubsystem* VS = GEngine ? GEngine->GetEngineSubsystem<UGameViewportSubsystem>() : nullptr)
+		{
+			VS->RemoveWidget(W);
+			UE_LOG(LogStacktown, Log, TEXT("StacktownPlayerController: removed the rig's bar (%s)"), *W->GetName());
+		}
+	}
+}
+
+void AStacktownPlayerController::ApplyHud()
+{
+	if (!Hud || !HudModel || !Hud->IsBuilt())
+	{
+		return;
+	}
+	float MX = 0.f, MY = 0.f;
+	const bool bCursor = GetMousePosition(MX, MY);
+	const float Scale = UWidgetLayoutLibrary::GetViewportScale(GetWorld());
+	Hud->Apply(HudModel, FVector2D(MX, MY) / FMath::Max(Scale, 0.01f), bCursor);
 }
 
 void AStacktownPlayerController::SetupInputComponent()
@@ -108,13 +194,22 @@ void AStacktownPlayerController::FreezeRigs()
 		{
 			P->SetActorTickEnabled(false);
 			FrozenRigs.Add(P);
-			UE_LOG(LogStacktown, Log, TEXT("StacktownPlayerController: froze %s (retired rig: tick off, HUD kept)"), *P->GetName());
+			UE_LOG(LogStacktown, Log, TEXT("StacktownPlayerController: froze %s (retired rig: tick off)"), *P->GetName());
+			if (Hud && Hud->IsBuilt())
+			{
+				RetireRigBar(P);
+				bRigBarRetired = true;
+			}
 		}
 	}
 }
 
 void AStacktownPlayerController::PumpRigHud(float DeltaTime)
 {
+	if (bRigBarRetired)
+	{
+		return;
+	}
 	RigHudAccum += DeltaTime;
 	if (RigHudAccum < RigHudInterval)
 	{
@@ -201,4 +296,6 @@ void AStacktownPlayerController::PlayerTick(float DeltaTime)
 	FreezeRigs();
 	PumpRigHud(DeltaTime);
 	DriveCamera(DeltaTime);
+	ReadEconomyIntoModel();
+	ApplyHud();
 }

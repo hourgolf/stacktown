@@ -1924,3 +1924,12 @@ into the wrong project. It has already caught it happening.
   drivers no longer register in games. Missing in the C++ game: the
   pinned starter lot (seat's board factory, now its item 1), night (L),
   the road look (design). Monday's checklist rewritten for the C++ game.
+- **PACKAGED C++ BUILD, FIRST LAUNCH (2026-09-06 20:20):** Tools/package.sh
+  produced the first C++-owned app (1.3 GB universal), but it could not own
+  the city: "rules file missing: Config/Stacktown/econrules.json". Config/
+  subfolders are not staged into a packaged app (only the ini files the
+  config system knows). Decision: the rules file moves once more, to
+  Content/Stacktown/Rules/econrules.json, staged as UFS through
+  DirectoriesToAlwaysStageAsUFS so it lands in the pak; one path function
+  in C++ (Stacktown::RulesFilePath) and econrules.RULES_PATH read it.
+  Seat's item 4 (the rules loader) targets that path.

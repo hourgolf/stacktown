@@ -112,6 +112,12 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 20:20 PDT), one correction to your
+item 4: the rules file moves AGAIN, to Content/Stacktown/Rules/econrules.json
+(a packaged app does not stage Config/ subfolders; the first C++ package
+failed to own the city on exactly that). I move it, add the UFS staging
+entry, and expose Stacktown::RulesFilePath() in StacktownWorldBoard.h; your
+loader reads that function's path. Nothing else changes.
 COORDINATOR -> ENGINEERING (2026-09-06 19:40 PDT), PRIORITIES RE-ORDERED
 toward the beta (owner's word: "push toward our goal"). The Phase B switch
 is flipped: every game process is C++-owned now, the Python drivers are

@@ -1816,3 +1816,12 @@ into the wrong project. It has already caught it happening.
   seat's C++ loader reads the same file (its item 3). Checked after the
   run: the owner's citystate.json untouched (Sep 4 11:43, gitignored);
   citytick's "state file wiped" line refers to its own Saved/SelfTest copy.
+- **CATALOGUE PORTED (2026-09-06, coordinator): Stacktown::Catalogue**
+  (StacktownCatalogue.h/.cpp) - species by zlib CRC-32 of the recipe id
+  (own table-driven CRC; UE's FCrc is a different polynomial), tier bands,
+  the width ladder, mass asset names and material paths, Resolve() that
+  errors rather than guesses, exactly woodmap.py. 5 Stacktown.Catalogue
+  tests pinned to the oracle's printed answers (crc32 values included):
+  72/72 headless. Next for the actor swap: the lot transform math
+  (init_unreal._lot_transform / _apply_lot_offset) and a lot visual
+  component that loads the mass and the species material.

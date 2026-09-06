@@ -1704,3 +1704,24 @@ into the wrong project. It has already caught it happening.
   not loaded - a build with the editor open links a numbered hot-reload
   dylib and leaves UnrealEditor.modules on the old library. Rule in PLAN
   §3; memory stale-dylib-pass-line.
+
+- **THE C++ CAMERA LANDED (2026-09-06, coordinator, owner's word "take the
+  camera").** Files: StacktownCameraModel.h (pure pose arithmetic, tested by
+  Stacktown.Camera.* x6), AStacktownCameraPawn (focus/yaw/pitch/distance
+  targets eased; focal log-interpolated 24 mm wide to 200 mm close so the
+  lens lengthens as it closes in), AStacktownPlayerController (right-drag
+  orbit, wheel zoom toward the board point under the cursor, screen-edge
+  and arrow pan, board clamp; takes possession back from the placed
+  BP_LensRig, which still auto-possesses at BeginPlay, freezes the rig's
+  tick - so its instant-N reset can never fire again - and keeps its
+  BeginPlay-built top bar updating by calling UpdateHUD through
+  reflection), AStacktownGameMode (default pawn + controller; set as the
+  project's GlobalDefaultGameMode). clickdriver.py no longer requires the
+  rig and switches its camera helpers off under the C++ pawn. Proof:
+  54/54 headless (clean link, editor closed); live in a standalone game on
+  the test save: controller/pawn classes read back, rig tick False, arrival
+  pose equals the rig's (location within 20 uu), orbit/zoom/pan verbs moved
+  the pose as the model predicts, three HighResShot frames inspected, the
+  Python click path still places. Wide limit = arrival distance (21024) so
+  the arrival lens is the rig's 24 mm. Owner's Monday checklist:
+  Docs/CHECKLIST_MONDAY.md. Retired keys: Q/E/W/S/A/D/R/F.

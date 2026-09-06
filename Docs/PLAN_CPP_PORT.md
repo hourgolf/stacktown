@@ -40,7 +40,7 @@ Order is by testability, headless first:
 | 2 | placement.py | `FPlacement` pure functions | 27 placement tests ported |
 | 3 | BP_Parcel behaviour + init_unreal sync | `AStacktownParcel` C++ base; BP_Parcel re-parented, keeps ResolveMesh | parcel state round-trips; CPD channels pushed |
 | 4 | roads (resolve_road, draw_road, pool) | `AStacktownRoad` + road pool | road tests ported |
-| 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (Enhanced Input; controls per §6) | play test from a checklist |
+| 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (controls per §6) | CAMERA HALF DONE 2026-09-06 by the coordinator (54/54, live-proven); click/verb input still Python until step 3 gives it a C++ parcel to talk to |
 | 6 | PrintString HUD + Docs/HUD_V1.md | `UStacktownHUD` (UMG built in C++) | screenshot review by the look seat |
 
 Step 6 notes from the LOOK seat (board, 2026-09-05): bind the four `*_Font`

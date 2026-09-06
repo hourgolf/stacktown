@@ -210,6 +210,14 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 16:30 PDT - PACKAGED again for Monday: Saved/Packaged/Mac/StacktownAlpha.app,
+  universal (x86_64 arm64), built from f73455f (ledger reader, night glow,
+  custom-depth selection, the roads map edit). Smoke: the app launched,
+  wrote its lock at 16:27 and saved its own city at 16:29 (money 100, 0 parcels, 0 roads, trades_processed 0);
+  no crash report; quit by the coordinator. The packaged Development app
+  writes NO log file, so its evidence is the lock, the save and the frame -
+  add -log to its Info.plist arguments if a Monday failure needs a log.
+
 - 2026-09-06 16:24 PDT - COMMITTED on the owner's word: the ledger reader, glow channels,
   custom-depth selection, scrim, r.CustomDepth=3 (f8fa14c) and the TestCity
   map edit (starter roads to MI_board_road, live spans on the drawn road's

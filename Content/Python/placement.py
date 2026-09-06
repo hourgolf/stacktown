@@ -400,10 +400,16 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
     above for why the two are the same number on purpose.
 
     world_coord = road['start'][axis] + along, THEN snapped - not
-    `along` snapped directly. Neither PLATE_X_MIN nor PLATE_Y_MIN is a
-    multiple of WIDTH_QUANTUM, so snapping the road-relative offset
-    would shift the grid off-quantum silently. Converting to world
-    space first makes the arterial case reduce EXACTLY to the
+    `along` snapped directly. The reason on record until 2026-09-06
+    ("neither plate minimum is a multiple of WIDTH_QUANTUM") was true
+    of the 410 snap and is stale since the snap became POSITION_QUANTUM
+    (10) on 2026-09-03: both minima ARE multiples of 10. The order still
+    matters, for a different reason: round() is half-to-even, so a tie
+    breaks on the parity of the integer part, and snapping in road
+    space can land one quantum away from snapping in world space.
+    (Found by the engineering seat's mutation pass while porting this
+    file to C++.) Converting to world space first makes the arterial
+    case reduce EXACTLY to the
     pre-multi-road math (road['start'][0] is PLATE_X_MIN, along =
     x - PLATE_X_MIN, so world_coord == x always - self-test 13 checks
     this identity directly) while correctly generalizing to the cross

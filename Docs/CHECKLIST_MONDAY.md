@@ -47,9 +47,10 @@ no roads yet. That is the pipeline a stranger's download will use.
     like ONE big swirl per road (known: the design lane is fixing the
     tiling).
 15. TRADES (mock, no market): with the game running, append one line to
-    Saved/Stacktown/trade_ledger.jsonl (path under the packaged app:
-    ~/Library/Containers/com.YourCompany.StacktownAlpha/Data/Documents/
-    StacktownAlpha/Saved/Stacktown/):
+    Saved/Stacktown/trade_ledger.jsonl (under the packaged app the folder
+    is ~/Library/Containers/com.YourCompany.StacktownAlpha/Data/Library/
+    Application Support/Epic/StacktownAlpha/Saved/Stacktown/ - the
+    citystate.json there is the app's own save):
         {"trade_id": "t1", "pnl": 12.5}
     Within two seconds money rises and the bar reads `trades: ...`. Append
     the same line again: money rises again (it is a NEW trade - the cursor

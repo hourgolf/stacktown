@@ -1677,3 +1677,9 @@ into the wrong project. It has already caught it happening.
   Also set on the owner's word: universal Mac packaging
   (MacTargetSettings.TargetArchitecture) in DefaultEngine.ini; camera spec
   in PLAN_CPP_PORT.md §6; Monday = milestone-test day.
+
+- **STANDING WORD (2026-09-06, owner): "push the board yourself."** The
+  coordinator commits and pushes changes under Docs/ (board, ledger, plan,
+  charters) without asking each time, because the engineering seat works
+  from the GitHub clone and only sees the board after a push. Code, assets
+  and config still need the owner's word per commit.

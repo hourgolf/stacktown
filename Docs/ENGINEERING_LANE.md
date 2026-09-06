@@ -35,6 +35,14 @@ Docs/HANDOFF.md §5 from 2026-09-04 onward, then Docs/BOARD.md.
   to the control scheme in PLAN_CPP_PORT.md §6 (right-drag orbit, wheel
   zoom, edge/arrow pan).
 
+## Known traps
+- HUD fonts: bind the four `*_Font` assets under /Game/Stacktown/UI/Fonts,
+  never the `F_*` faces (PLAN_CPP_PORT.md, step 6 notes).
+- A changed reflected write to a Blueprint actor re-runs its construction
+  script and resets non-instance-editable variables (HANDOFF §5,
+  2026-09-04). In C++ this no longer applies to your own classes, but it
+  still bites any Blueprint you drive from code.
+
 ## First tasks
 1. Phase 1 step 1: UStacktownEconomy + FCityState with the 17 + 9 tests.
 2. Then step 2: FPlacement with the 27 tests.

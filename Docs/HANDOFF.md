@@ -1677,3 +1677,21 @@ into the wrong project. It has already caught it happening.
   Also set on the owner's word: universal Mac packaging
   (MacTargetSettings.TargetArchitecture) in DefaultEngine.ini; camera spec
   in PLAN_CPP_PORT.md §6; Monday = milestone-test day.
+
+- **STANDING WORD (2026-09-06, owner): "push the board yourself."** The
+  coordinator commits and pushes changes under Docs/ (board, ledger, plan,
+  charters) without asking each time, because the engineering seat works
+  from the GitHub clone and only sees the board after a push. Code, assets
+  and config still need the owner's word per commit.
+
+- **PHASE 1 STEP 1 PROVEN ON THE MAC (2026-09-06, coordinator).** The
+  engineering seat (Linux container, no engine) ported econrules + citytick
+  to C++ (StacktownEconomyRules, UStacktownEconomy) with expectations
+  GENERATED from the Python oracle and a pre-flight shim under Tools/
+  preflight; 16/17 planted mutations caught there. Real-engine run here:
+  first build compiled first try, 27/28 - the one red was engine-only (a
+  UGameInstanceSubsystem outered to the transient package; the ensure fires
+  once per site, so nine sibling tests passed on the same broken fixture).
+  Seat fixed it (5d38749); rebuilt 6.6 s; 28 passed, 0 failed, 0 ensures.
+  Workflow settled: the seat writes and pre-flights, the coordinator builds
+  and produces every pass line; the board is pushed by the coordinator.

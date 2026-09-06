@@ -43,6 +43,12 @@ Order is by testability, headless first:
 | 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (Enhanced Input; controls per §6) | play test from a checklist |
 | 6 | PrintString HUD + Docs/HUD_V1.md | `UStacktownHUD` (UMG built in C++) | screenshot review by the look seat |
 
+Step 6 notes from the LOOK seat (board, 2026-09-05): bind the four `*_Font`
+assets under /Game/Stacktown/UI/Fonts, never the `F_*` faces, or every glyph
+draws as the missing-glyph box (import_fonts.py:15 is wrong; proven by
+import_fonts_composite.py). LOOK 5's second legend line for the key rig is
+retired with the rig; the HUD legend describes the §6 controls.
+
 Rules for every step: the test lands with the port; the Python driver keeps
 running until its C++ replacement passes; both are compared on the same saved
 state before the Python side is switched off.
@@ -67,7 +73,9 @@ Signing and notarization only when builds go to other people.
 - The owner tests milestones only, from a written checklist of five to ten
   items, and replies in the same format (what you did, what you saw).
 - Ten-line status on Docs/BOARD.md every working day. Commits on the owner's
-  word in the committing session.
+  word in the committing session, with one standing exception (owner's word
+  2026-09-06): the coordinator commits and pushes board, ledger and plan
+  changes under Docs/ without asking, so the board reaches the cloud seat.
 - Command-line loops the seats use:
 
 ```bash

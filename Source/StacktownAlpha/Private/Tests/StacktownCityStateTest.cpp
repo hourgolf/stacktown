@@ -21,6 +21,8 @@
 #include "Misc/Paths.h"
 #include "HAL/PlatformFileManager.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "StacktownEconomy.h"
 #include "StacktownEconomyTestCommon.h"
 
@@ -37,16 +39,30 @@ namespace
 			TEXT("_selftest_citystate_cpp.json"));
 	}
 
-	/** A subsystem outside a GameInstance. The verbs and persistence do not touch
-	 *  the outer, so this is the whole lifecycle they need; the strong pointer is
-	 *  what keeps GC off it for the duration of a test. */
+	/** A subsystem standing on its own, with no running game around it.
+	 *
+	 *  IT STILL NEEDS A GAME INSTANCE FOR AN OUTER. UStacktownEconomy is a
+	 *  UGameInstanceSubsystem, and outering one to the transient package is
+	 *  rejected - which is what the first real-engine run of these tests found
+	 *  (build OK, 27/28, Stacktown.CityState.Buy the one red). The pre-flight in
+	 *  Tools/preflight cannot see this class of defect at all: it never
+	 *  constructs a UObject. Second concrete instance of that blind spot, after
+	 *  Tick()'s sort. Recorded in Tools/preflight/CoreMinimal.h too.
+	 *
+	 *  A bare NewObject<UGameInstance> is enough here because nothing under test
+	 *  drives the game instance - it is an outer, not a running game. Both
+	 *  strong pointers are what keep GC off the pair for a test's duration, and
+	 *  GameInstance is declared FIRST deliberately: members initialise in
+	 *  declaration order, so it already exists when Econ names it as its outer. */
 	struct FScopedEconomy
 	{
+		TStrongObjectPtr<UGameInstance> GameInstance;
 		TStrongObjectPtr<UStacktownEconomy> Econ;
 		FString Path;
 
 		explicit FScopedEconomy(bool bPersist = true)
-			: Econ(NewObject<UStacktownEconomy>(GetTransientPackage()))
+			: GameInstance(NewObject<UGameInstance>(GEngine))
+			, Econ(NewObject<UStacktownEconomy>(GameInstance.Get()))
 			, Path(SelfTestStatePath())
 		{
 			IPlatformFile& File = FPlatformFileManager::Get().GetPlatformFile();

@@ -21,6 +21,24 @@
 // substitute for the headless pass line that PLAN_CPP_PORT.md section 3 asks
 // for. The pass line is the proof; this is how the port arrives with fewer
 // obvious defects still in it.
+//
+// WHAT IT HAS ACTUALLY MISSED, kept concrete rather than hypothetical so the
+// next person can calibrate on evidence instead of on this file's own promises:
+//
+//   1. Tick()'s sorted iteration. Deleting the sort passes here and always
+//      will, because TMap below is std::map, which is ordered. UE's TMap is
+//      not, and float addition is not associative, so on the engine that
+//      deletion makes Money depend on hash bucketing. Found by reasoning, kept
+//      as the declared survivor in mutate.py.
+//   2. The game-instance outer. StacktownCityStateTest built its subsystem with
+//      NewObject<UStacktownEconomy>(GetTransientPackage()); a
+//      UGameInstanceSubsystem needs a UGameInstance as its outer. This harness
+//      never constructs a UObject, so it could not have caught it under any
+//      mutation. Found by the FIRST real-engine run: build OK, 27/28,
+//      Stacktown.CityState.Buy the one red.
+//
+// The pattern in both: this file is blind to anything that is about the ENGINE
+// rather than about the arithmetic. It is worth exactly that much.
 #pragma once
 
 #include <algorithm>

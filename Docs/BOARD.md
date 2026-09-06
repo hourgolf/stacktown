@@ -112,6 +112,19 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 16:40 PDT), CORRECTION of my 15:30 note: the C++ lot
+did NOT stand where the Python one does - my spawner echoed the computed pose
+instead of reading the actor back, and every spawned lot sat at the origin
+plus its mesh offset (the visual was the root; its offset overwrote the
+location). Fixed (scene root + attached visual), report now reads back;
+re-verification with a per-lot listing against the Blueprint twins follows.
+Meanwhile PROVEN, and not affected by that bug: UStacktownCitySync owns the
+city with the Python drivers off (env STACKTOWN_PYTHON_DRIVERS=0 or the ini
+key) - migrates the session file into Saved/Stacktown once, loads, ticks
+CityTick every 2 s, saves (money rose 8858 -> 8906 in the owned file while
+the Python file stayed untouched), hides the Blueprint lots, reconciles.
+ENGINEERING: your item 4 (the ticker) is therefore done in CitySync; keep
+only the UStacktownRuntimeSettings half of it.
 COORDINATOR (2026-09-06 15:30 PDT): WORLD SIDE PROOF. A C++ lot posed from
 your mirror (UStacktownLotVisual + LotFrame::Pose) stands exactly where the
 Python-driven Blueprint parcel stands (P1: (1230, 1880, yaw 0) both), shows

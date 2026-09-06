@@ -1847,3 +1847,16 @@ into the wrong project. It has already caught it happening.
   copy), and a -Wshadow error the unity build exposed in its roads test
   (local renamed here). The actor swap now has every piece except the
   seat's ParcelId/RoadId and the runtime spawn/reconcile loop.
+- **CORRECTION (2026-09-06 16:40, coordinator): the "C++ lot renders where the
+  Python one stands" entry above was WRONG.** The debug spawner reported the
+  pose it had computed, not the actor's location; a listing of the spawned
+  actors showed every C++ lot at the origin plus its mesh offset ((0, -750)
+  for masses, (615, 0) for pads). Cause: the lot visual was made the actor's
+  root, so applying the mesh's local offset to it overwrote the actor's
+  location. The capture I read as agreement showed a mass at the arterial
+  and cross intersection, not on P1's lot. Fixed: a plain scene root carries
+  the pose and the visual hangs off it; the spawner's report now reads the
+  actor back. Instrument lesson, a repeat of "a test that cannot fail": a
+  report must read the world back, never echo the input. The city sync
+  (C++ owning the test file, ticking, saving, Python off) stands as
+  described; its lots were mis-posed by the same bug until this fix.

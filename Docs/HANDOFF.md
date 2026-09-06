@@ -210,6 +210,22 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 16:14 PDT - CLEAN BUILD, editor closed: 81/81 (20 Placement, 17 Economy,
+  10 CityState, 7 Roads, 6 Handover, 6 Camera, 5 Catalogue, 4 LotTransform,
+  4 Board [seat's board factory, first pass here], 1 RoadTransform, 1 Smoke).
+  Trade ledger reader PROVEN in a C++-owned test game (see TRADE_ADAPTER 7.1).
+  Design lane's 16:02 rulings applied: legend scrim to the shared 0.88 ground;
+  GlowLevel/GlowState (cpdmap 1/2) now WRITTEN by C++ every reconcile - the
+  night frame Saved/SelfTest/look_cpp2/frame_night_glow.png shows lit windows
+  on both owned masses (they were black: read by the material, written by
+  nothing); selection now writes custom depth + stencil 1 and the camera
+  blends /Game/Stacktown/Materials/M_PP_Outline when the design lane authors
+  it (r.CustomDepth=3 in DefaultEngine.ini). UNCOMMITTED, owner's word needed:
+  StacktownCitySync.h/.cpp, StacktownPlayerController.cpp, StacktownAgreement
+  .h/.cpp, StacktownLotVisual.h/.cpp, StacktownCameraPawn.cpp, StacktownHud.cpp,
+  Config/DefaultEngine.ini. Mock ledger removed after each probe; lane marker,
+  lock removed; editor relaunched on the clean build.
+
 Every item cost hours. They are ordered by how much.
 
 ### Editor and tooling

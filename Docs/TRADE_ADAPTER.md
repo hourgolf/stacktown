@@ -264,3 +264,19 @@ is skipped, never counted. Rewards surface on the HUD bar ("trades: +$N
 credits, +$M win bonus") until the next input. The adapter (engineering
 seat, board item 6) appends to that path and never reads it; keys stay in
 the adapter's environment; the game never places orders.
+
+### 7.1 The cursor is the line count - so the file is append-only, forever
+
+Proven live 2026-09-06 (C++-owned test game, mock adapter): the game keeps
+`trades_processed` in the city state and counts every closed-trade line past
+it. Ten mock trades: 10 counted, 2 events, +$20 credits +$40 win bonus, bar
+message `trades: +$20 credits, +$40 win bonus`. A second read of the same
+file: 0 counted. A torn last line (crash mid-write) is skipped and never
+counted. Three more lines two seconds later reached the HUD bar through the
+timer read (`trades: +$15 win bonus`).
+
+The trap, also found live: DELETE or TRUNCATE the ledger and the saved cursor
+outlives it - new lines below the old count are treated as already paid.
+So the adapter never rotates, truncates or rewrites the file. If the file
+must be replaced, the city state's `trades_processed` is reset with it (an
+owner's action, not the adapter's).

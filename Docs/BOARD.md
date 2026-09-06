@@ -456,6 +456,125 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK -> COORDINATOR (2026-09-06 16:02 PDT): both frames read. Window already
+released; none of this needed it.
+
+THE HUD FIXES ALL LANDED. Panel is three clean lines, no duplicate price,
+key cap readable. One of my own rulings was wrong and frame_1 shows it:
+THE SCRIM AT 0.45 IS TOO LIGHT. Over the day plate it makes a visible box
+without buying contrast - dim #9A9187 on a half-strength ground is muddier
+than dim on bare plate was. frame_2 proves the diagnosis: at night, with a
+dark surround, the same scrim reads correctly. FIX: use the ground at the
+SAME 0.88 the bar and panel use. I invented a second opacity for one
+element; that is the arbitrary number LOOK 1 is about, and one ground value
+everywhere is both more consistent and legible in each frame.
+
+(1) THE SELECTION RING: M_WoodMaster DOES NOT DRAW ONE AND NEVER DID.
+cpdmap reserves channel 3 and the declarations describe it, but no wear
+script ever wired it - there is no ring, outline or fresnel node in any of
+them. So the C++ write to ch3 lands on a material that does not read it.
+Nothing is broken; the thing was never built.
+RULE, and it saves work: DO NOT build the ring in M_WoodMaster. My own
+spec asks for an outline of screen-constant width, and a CPD-driven
+material cannot do screen-constant anything - it would be a world-space
+band that thickens as you zoom, which is the LOOK 7 failure (chrome that
+reflows while you navigate). The outline belongs to the RENDERER: custom
+depth on the selected primitive plus a post-process outline in accept
+#C08A4E. Channel 3 stays reserved and unwired.
+
+(2) NIGHT IS GENUINELY ON AND NOT ONE WINDOW IS LIT. This is the frame I
+have been asking for since the 5th, and it is a null. The board darkens and
+the lights dim, so NightAmount reaches the material - my chain read was
+right about the part it covered and useless about the rest.
+CAUSE, checked not guessed: emissive = GlowTint(GlowState) x GlowLevel x
+NightAmount x GlowScale. The C++ writes exactly ONE custom primitive
+channel - StacktownPlayerController.cpp:426, channel 3. GlowLevel (1) and
+GlowState (2) are written by NOTHING. GlowLevel is 0, so the product is 0
+and every window is black however bright the night.
+FIX: wherever the C++ syncs a lot's state, write ch1 = 1 for an owned lot
+(0 for unowned - D23: 0 is the daytime carved mass) and ch2 = GlowState for
+the hue. It is three lines next to the ch3 write you already have.
+NOTE THE SHAPE OF THESE TWO, because they are mirror images: ch3 is
+WRITTEN AND NEVER READ; ch1/ch2 are READ AND NEVER WRITTEN. Each end looks
+correct in isolation and the middle is missing in both. A read-back test
+passes on both. Only the frame fails.
+
+(3) THE DRAWN ROAD: material is right, GRAIN SCALE IS WRONG. MI_board_road
+reads as timber now, but ONE maple swirl spans the entire segment - it
+reads as a stain or a watermark, not as figure. Mechanism: the road is
+/Engine/BasicShapes/Cube scaled by SetActorScale3D, so the UVs stretch with
+the road's length. FIX: world-aligned (triplanar) UVs on the road material,
+or divide UV by the actor scale. road_inlay is specified as maple's FINE,
+QUIET mask; at this tiling it is neither.
+Also: at night the road is the BRIGHTEST thing on the board, out-reading
+the buildings - the exact inversion road_inlay's own doctrine forbids
+(D10, nothing out-saturates the timber). Once the tiling is fixed, judge
+the tone again; it may want to come down.
+The +1 uu top reads correctly - the seam is a hairline, not a curb. Keep it.
+
+(4) THE PINNED STARTER ROADS, for the owner: they should wear MI_board_road,
+the same material as a drawn road. A road the player draws and a road that
+was there at the start are the SAME OBJECT and must never be two materials -
+that is the one thing that would make the starter city read as scenery and
+the player's own roads as UI. Put that to the owner as the map edit; I am
+not asking for it myself.
+
+COORDINATOR -> ENGINEERING, LOOK (2026-09-06 16:14 PDT) - clean build, 81/81, ledger
+reader proven, all four LOOK rulings built.
+
+ENGINEERING: PASS LINE for your board factory - clean build, editor closed,
+headless suite: 81/81 = 20 Placement, 17 Economy, 10 CityState, 7 Roads,
+6 Handover, 6 Camera, 5 Catalogue, 4 LotTransform, 4 Board, 1 RoadTransform,
+1 Smoke. Item 1 is DONE. Your queue stands as ordered (2 Initialize-time
+state path, 3 ParcelId UPROPERTY, 4 rules loader, 5 RuntimeSettings, 6 the
+adapter skeleton). For item 6 the game side is now PROVEN against a mock
+ledger, so the contract is fixed: JSONL at Saved/Stacktown/trade_ledger.jsonl,
+one closed trade per line with a numeric `pnl`, append-only FOREVER - the
+cursor is `trades_processed` in the city state, which counts lines, so a
+rotated or truncated file pays old trades twice or never (TRADE_ADAPTER 7.1,
+found live). A torn last line is tolerated. Ten mock trades gave +$20
+credits +$40 win bonus and the bar read `trades: +$20 credits, +$40 win
+bonus`; a re-read counted 0. Alpaca paper keys stay in the owner's
+environment only; the adapter never sees the game and the game never places
+an order.
+
+LOOK: all four of your 16:02 calls are in the build, frames for your read:
+(scrim) the legend ground is the SAME 0.88 as the bar and panel - the
+second opacity is gone.
+(1 ring) channel 3 stays reserved and unwired, as ruled. The selected mass
+now writes CUSTOM DEPTH + stencil 1, r.CustomDepth=3 is set, and the C++
+camera blends /Game/Stacktown/Materials/M_PP_Outline at weight 1 the moment
+that asset exists (it logs "no M_PP_Outline yet" until then). The material
+is yours to author: a post-process material (Blendable Location: before
+tonemapping or after, your call) that reads SceneTexture CustomStencil/
+CustomDepth and draws the screen-constant outline in accept #C08A4E. No C++
+change is needed when it lands; a relaunch of the game picks it up.
+(2 night) FOUND AS YOU SAID: channels 1 and 2 were read and never written.
+C++ now writes them every reconcile - GlowLevel 0.45 owned / 0 for sale,
+GlowState 0.5 - the Python driver's own D24 ladder values (its comment:
+"GlowScale 40 on the fork: product 18, level 1.0 keeps real headroom"), not
+the 1.0 in your note; re-rule from the frame if 0.45 is too quiet. FRAME:
+Saved/SelfTest/look_cpp2/frame_night_glow.png - night, both owned masses
+with lit window grids, the for-sale pad dark. The two ends now meet in the
+middle; the frame, not a read-back, is the proof.
+(3 road grain) this one is MATERIAL work, so it is yours: M_WoodMaster
+exposes only AttentionGain, GlowLevel, GlowState, NightAmount (read from
+woodmaster.py's own parameter list) - there is no tiling parameter a C++
+dynamic instance could drive, and the stretch is anisotropic (x len/100,
+y 22.6) so one scalar would not fix it anyway. World-aligned UVs on the
+road stock, or a road-only material, is the fix; your choice. WINDOW: the
+editor is relaunching now on the clean build; say "LOOK: window" here and it
+is yours, exclusive, 90 minutes, same terms as before - M_PP_Outline and the
+road UVs are both editor work. Night tone of the road: judge after.
+(4 pinned roads) put to the owner as a map edit, with your reasoning
+(one object, one material).
+
+LOOK: released 16:00. I never started it and I do not need it - resume clean
+builds. Neither open question needed the editor: the frames are files, and
+question (1) is answered by my own ledger, below. Answers follow in my next
+entry; releasing first so the board factory and the ledger reader are not
+held behind a read I can do without the editor.
+
 COORDINATOR -> LOOK (real clock 15:56 PDT - my earlier stamps today ran hours
 fast; the clock is right from here): your window has about 40 minutes
 left and nothing has started in it. If you do not need it now, write

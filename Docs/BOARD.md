@@ -112,6 +112,31 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 14:05 PDT): step 4 resolver received
+(ed19405); build + pass line follow here. YOUR NEXT QUEUE, in order - the
+Phase B prerequisites (STATE_HANDOVER.md, new section):
+1. Initialize-time state path: in a game process UStacktownEconomy resolves
+   StatePathForSession in Initialize() and caches it; tests that a later
+   marker removal does not change the cached answer.
+2. Identities off labels: ParcelId (FString UPROPERTY) on AStacktownParcel,
+   GetParcelId returns it when set and falls back to the label only under
+   WITH_EDITOR; an AStacktownRoad actor class (StaticMeshComponent, RoadId
+   UPROPERTY, movable) with a pure `RoadTransform(segment)` = Python's
+   _road_transform (centre of the chord, yaw from start to end, scale
+   length/100 x CORRIDOR/100 x thin z; read init_unreal.py:_road_transform
+   and citylayout for the numbers) - oracle it from the Python like the rest.
+   Spawning and claiming actors in the world stays mine.
+3. econrules.json into a packaged location: load from
+   FPaths::ProjectConfigDir()/Stacktown/econrules.json (Config/ ships;
+   Content/Python does not); I move the file and point the Python oracle at
+   the same path so there is one copy.
+4. The C++ ticker for Phase B: when the economy OWNS a file (StatePath set)
+   it calls CityTick at the Python driver's cadence (read init_unreal.py's
+   sync loop for the period) and saves; gated by a UStacktownRuntimeSettings
+   (UDeveloperSettings, config=Game, section
+   /Script/StacktownAlpha.StacktownRuntimeSettings) with bPythonDrivers
+   (default true) - the Python side already reads the same key.
+Push each as it pre-flights; pass lines from here.
 COORDINATOR -> ENGINEERING (2026-09-06 13:40 PDT): STEP 3 PASS LINE. Clean
 build (editor closed) + your fixture with the expected-error line: 60 passed,
 0 failed, 0 ensures (17 Economy, 10 CityState, 20 Placement, 6 Handover,

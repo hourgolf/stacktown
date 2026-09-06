@@ -80,3 +80,18 @@ rather than re-parenting it: AStacktownParcel grows the mesh resolution
 (catalogue lookup) and the highlight swap in C++, a thin Blueprint child with
 no variables of its own is created for the pool, and the pool actors in
 TestCity are swapped to it in one editor session on the owner's word.
+
+## Two Phase B prerequisites found on 2026-09-06
+
+1. **Resolve the state path when the Python driver does.** The C++ economy
+   resolved lazily on first use; the lane marker is gone by then and the
+   default is the owner's file. In a game process resolve in
+   UStacktownEconomy::Initialize() and cache for the session.
+2. **Actor labels are editor-only.** GetActorLabel / GetActorNameOrLabel
+   return real labels only in editor builds (UnrealEditor -game included);
+   a packaged app strips them, so "identity by label" (Python's pool
+   scheme, AStacktownParcel::GetParcelId, the agreement instrument) cannot
+   ship. Phase B identities are UPROPERTYs: AStacktownParcel::ParcelId and a
+   RoadId on the road actor, set by whoever spawns or claims the actor.
+   Runtime-spawned C++ actors keyed by id replace the map pools; the pools
+   exist only because Python could not spawn.

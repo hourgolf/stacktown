@@ -20,6 +20,7 @@
 #include "Misc/AutomationTest.h"
 #include "StacktownPlacementTestCommon.h"
 #include "StacktownEconomyTestCommon.h"
+#include "StacktownEconomy.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -420,7 +421,7 @@ STACKTOWN_PLACE_TEST(FStacktownPlaceRoundTrip, "Stacktown.Placement.RoundTrip")
 
 	FCityState Back;
 	FString Err;
-	TestTrue(TEXT("round trip parses"), CityStateFromJson(CityStateToJson(S), Back, Err));
+	TestTrue(TEXT("round trip parses"), Stacktown::CityStateFromJson(Stacktown::CityStateToJson(S), Back, Err));
 
 	const FLotPlacement& L1 = Back.Parcels[TEXT("P1")].Placement.GetValue();
 	TestEqual(TEXT("P1 road_id survived"), LotRoadId(L1), FString(T26_P1_RoadId));

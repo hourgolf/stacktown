@@ -1,0 +1,59 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "StacktownPlayerController.generated.h"
+
+class AStacktownCameraPawn;
+
+/**
+ * Drives AStacktownCameraPawn from raw input (right-drag orbit, wheel zoom
+ * toward the cursor, screen-edge and arrow-key pan) and takes possession back
+ * from the retired BP_LensRig, whose placed instance still auto-possesses the
+ * player at its BeginPlay. The rig's tick is frozen so its old key handling
+ * (including the instant N reset) can never fire again; its BeginPlay-built
+ * top bar is kept alive by calling its UpdateHUD through reflection.
+ */
+UCLASS()
+class STACKTOWNALPHA_API AStacktownPlayerController : public APlayerController
+{
+	GENERATED_BODY()
+
+public:
+	AStacktownPlayerController();
+
+	/** Pixels from the viewport edge that start an edge pan. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|Camera")
+	float EdgePanPixels = 14.f;
+	/** Seconds between UpdateHUD calls on the frozen rig. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|Camera")
+	float RigHudInterval = 0.25f;
+	/** Set false to leave the mouse to the widgets (edge pan off). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|Camera")
+	bool bEdgePan = true;
+
+	UFUNCTION(BlueprintPure, Category = "Stacktown|Camera")
+	AStacktownCameraPawn* GetCameraPawn() const;
+
+	/** The board point under the cursor, or false when the cursor is off the board plane. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
+	bool BoardPointUnderCursor(FVector& OutPoint) const;
+
+	virtual void BeginPlay() override;
+	virtual void PlayerTick(float DeltaTime) override;
+	virtual void SetupInputComponent() override;
+
+private:
+	void EnsureCameraPossessed();
+	void FreezeRigs();
+	void PumpRigHud(float DeltaTime);
+	void DriveCamera(float DeltaTime);
+	void OnWheelUp();
+	void OnWheelDown();
+
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> FrozenRigs;
+	float RigHudAccum = 0.f;
+	int32 PendingWheelNotches = 0;
+	bool bPossessionSettled = false;
+};

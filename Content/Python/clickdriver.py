@@ -736,22 +736,34 @@ def _tick(dt):
             unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   scroll: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
                                               True, False, unreal.LinearColor(0.85, 0.9, 1.0, 1.0), 12.0, 'keylegend')
         rig = _st['rig']
-        if rig is None:
-            return
+        # C++ camera (2026-09-06, PLAN_CPP_PORT.md step 5): when the possessed
+        # pawn is AStacktownCameraPawn the rig is retired - frozen by the C++
+        # controller - and every camera helper below is skipped. Clicks,
+        # verbs, ghost, roads and night keep running; none of them need the
+        # rig except as a variable bag, so a missing rig no longer stops them.
+        try:
+            _pawn = unreal.GameplayStatics.get_player_pawn(gw, 0)
+            cpp_cam = _pawn is not None and _pawn.get_class().get_name() == 'StacktownCameraPawn'
+        except Exception:
+            cpp_cam = False
+        if cpp_cam != _st.get('cpp_cam'):
+            _st['cpp_cam'] = cpp_cam
+            _log('camera: %s' % ('C++ StacktownCameraPawn (rig helpers off)' if cpp_cam else 'BP_LensRig'))
         edges = {}
         for name, key in _KEY.items():
             down = pc.is_input_key_down(key)
             edges[name] = down and not _st['down'].get(name, False)
             _st['down'][name] = down
         _st['edges'] = edges
-        if edges.get('E'):
-            _ladder_step(rig, +1)
-        elif edges.get('Q'):
-            _ladder_step(rig, -1)
-        else:
-            _cam_sanity(rig)
-        if not edges['LeftMouseButton'] and not (edges.get('E') or edges.get('Q')):
-            _st['cam_prev'] = _cam_snapshot(rig)
+        if rig is not None and not cpp_cam:
+            if edges.get('E'):
+                _ladder_step(rig, +1)
+            elif edges.get('Q'):
+                _ladder_step(rig, -1)
+            else:
+                _cam_sanity(rig)
+            if not edges['LeftMouseButton'] and not (edges.get('E') or edges.get('Q')):
+                _st['cam_prev'] = _cam_snapshot(rig)
         # The rig's SelectedParcel is never written from here (2026-09-04): a
         # reflected write to the rig re-runs its construction script and resets
         # its non-instance-editable variables (StopIndex, the ladder arrays).
@@ -780,7 +792,8 @@ def _tick(dt):
         else:
             _ghost_hide()
         if edges['LeftMouseButton']:
-            _cam_hold_on_click(rig)
+            if rig is not None and not cpp_cam:
+                _cam_hold_on_click(rig)
             _focus_game(pc)
         if edges['LeftMouseButton'] and road_mode:
             hit = pc.get_hit_result_under_cursor_by_channel(unreal.TraceTypeQuery.ECC_VISIBILITY, False)

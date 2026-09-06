@@ -63,6 +63,13 @@ reads the ledger. Keys live in the owner's shell environment only.
 UAT BuildCookRun produces a real universal .app (Apple Silicon + Intel, owner's word); the owner tests the app, not the editor.
 Signing and notarization only when builds go to other people.
 
+PIPELINE PROVEN EARLY (2026-09-06): Tools/package.sh produces
+Saved/Packaged/Mac/StacktownAlpha.app (universal, 850 MB, 90 s, clean
+cook). The packaged app runs the C++ camera and HUD only until steps 3, 4
+and the input port land, because the Python drivers cannot cook. Findings
+and fixes in HANDOFF §5 (cook error policy, GameDefaultMap, the config
+section UnrealBuildTool reads for architecture).
+
 ## 3. The workflow
 
 - Two active seats: ENGINEERING (the port; Docs/ENGINEERING_LANE.md) and LOOK

@@ -112,6 +112,13 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 11:35 PDT): PACKAGING PIPELINE PROVEN. Tools/package.sh
+-> Saved/Packaged/Mac/StacktownAlpha.app, universal (x86_64 + arm64), 850 MB,
+clean cook, 90 s end to end. The packaged app runs the C++ camera + HUD and
+nothing else, because Python cannot cook: every step that moves economy,
+placement, roads and input into C++ is now directly a step toward a beta
+someone can download. ENGINEERING: step 3 is the gate. LOOK: your HUD read
+is still open above.
 COORDINATOR (2026-09-06 12:05 PDT), saying so first: CLOSING THE EDITOR
 (two minutes) to link HUD v1 in C++ (Docs/HUD_V1.md LOOK 1-9 + CONTENT 1-7:
 bar, selection panel, two-line legend, cursor refusal; *_Font assets bound).

@@ -1742,3 +1742,35 @@ into the wrong project. It has already caught it happening.
   for HUD work. 54/54 headless; three acceptance frames under
   Saved/SelfTest/hud_v1 inspected: ramp, grid, colours, alignment axes
   and absence rules all hold; the LOOK seat's read requested on the board.
+
+- **FIRST PACKAGING SMOKE (2026-09-06, coordinator, Phase 3 pulled early
+  to find blockers).** UAT BuildCookRun -platform=Mac: the game target
+  built and the cook finished all 539 packages in 55 s, then reported
+  "Failure - 1 error" and UAT exited 25 (Error_UnknownCookFailure). The
+  one error was the ModelContextProtocol plugin's HttpListener failing to
+  bind port 8000 inside the cook commandlet (the open editor holds it) -
+  the cook treats any logged error as failure. Three fixes: (1) the cook
+  runs with -additionalcookeroptions="-DisablePlugins=ModelContextProtocol,
+  EditorToolset,AutomationTestToolset" and -skipbuildeditor (UAT's -build
+  otherwise rebuilds the editor target while the editor is open, leaving
+  a -0001 hot-reload dylib and a stale .modules manifest); (2)
+  GameDefaultMap still pointed at /Game/Maps/OneBuildingTest, which no
+  longer exists - now TestCity; (3) the game binary came out arm64-only:
+  UnrealBuildTool reads the architecture from
+  [/Script/MacTargetPlatform.MacTargetSettings] (UEBuildMac.cs), not the
+  settings class's own section, and needs DefaultArchitecture as well as
+  TargetArchitecture set to universal - both added, both sections kept.
+  ModelContextProtocol is a Runtime plugin: now TargetAllowList Editor in
+  the .uproject so no MCP server ships in a game build. A packaged build
+  today runs the C++ camera and HUD only - economy, clicks and roads are
+  still Python and cannot cook - so this is a pipeline proof, not a beta.
+- **PACKAGING, SECOND FINDING (2026-09-06):** with the cook fixed, UAT
+  archived a StacktownAlpha.app that died at launch ("Library not loaded:
+  @rpath/libtbb.12.dylib", from Core's Intel TBB dependency). The STAGED
+  bundle in Saved/StagedBuilds/Mac ran (its own stdout shows the C++
+  controller's viewport mouse settings and the cooked HUD fonts loading right
+  after "Starting Game"); the ARCHIVED bundle lacked Contents/UE entirely
+  because the Mac -package step was not requested. Tools/package.sh now
+  passes -package. Lesson for the instrument file: a packaged app's log-level
+  lines (LogStacktown) do not reach stdout; Display-level engine lines are
+  the evidence there.

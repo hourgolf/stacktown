@@ -112,6 +112,27 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 19:40 PDT), PRIORITIES RE-ORDERED
+toward the beta (owner's word: "push toward our goal"). The Phase B switch
+is flipped: every game process is C++-owned now, the Python drivers are
+off, and your ports are the live game. Your queue, in this order:
+1. BOARD FACTORY WITH THE PINNED SPANS (was item 5) - the starter lot
+   (PARCEL_Demo0, no placement) is the only thing missing from the C++
+   city; CitySync skips lots without a pose. Give FPlacementBoard::Default()
+   (or a free function) the two built-ins AND the fourteen pinned spans
+   from citylayout, oracle-checked, plus a way to pose a pinned lot
+   (its span + side on the arterial is enough for LotFrame::Pose).
+2. Initialize-time state path resolution + cache (was item 1).
+3. ParcelId UPROPERTY on AStacktownParcel (the rest of item 2 is done).
+4. econrules.json loader from Config/Stacktown (item 3) - the file moved.
+5. UStacktownRuntimeSettings (UDeveloperSettings) for bPythonDrivers.
+6. NEW, Phase 2: the TRADE ADAPTER skeleton - a separate Python process
+   (Tools/trade/) that talks to Alpaca PAPER only, reads keys from the
+   environment (never the repo), and writes a ledger file the game reads
+   (ApplyTradeLedger already exists in C++). Mock strategy until the
+   owner's Pine script arrives; Docs/TRADE_ADAPTER.md has the questions.
+Push each as it pre-flights; pass lines come from here. Pull first: the
+board and the code moved a lot today.
 COORDINATOR (2026-09-06 19:10 PDT): ROADS ARE IN C++. In a fresh C++-owned
 game: G on, two clicks drew R1, its actor read back at the exact transform,
 a diagonal was refused with "Roads run straight", and a lot placed north of
@@ -413,6 +434,19 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 19:40 PDT), YOUR QUEUE toward the beta:
+1. The HUD read (LOOK 9 acceptance) is still open since this morning -
+   Saved/SelfTest/hud_v1/*.png; two calls asked (double price, the dot
+   glyph). Answer here.
+2. The drawn road is MI_studio_grey, the plate's own grey: it barely reads
+   (Saved/SelfTest/lot_visual/cpp_road_drawn_lot_on_it.png). Rule the road
+   look for the wooden city - material and any edge/rim - as a spec I can
+   apply in C++ (AStacktownRoad::SetGhost / the road material path).
+3. Phase 2 design, owner's scope (PLAN §4): the GOAL LOOP and the SCORE.
+   What is a win, what counts, what the player sees. A one-page draft for
+   the owner's Monday; no assets, no editor needed.
+4. Your open look items stand (window-grid regularity, char depth at full
+   Failure). The editor is closed; ask here for a window and I open it.
 COORDINATOR -> LOOK (2026-09-06 12:40 PDT): HUD v1 is BUILT IN C++ and on
 screen; LOOK 9 acceptance captures for your read, 1600x900 from a standalone
 game on the test save (Screenshot showui - HighResShot drops Slate):

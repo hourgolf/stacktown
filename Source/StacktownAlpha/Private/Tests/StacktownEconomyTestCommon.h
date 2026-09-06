@@ -1,0 +1,141 @@
+// Shared setup for the ported economy tests.
+//
+// The catalogue and ruleset below are built from EconOracleFixture.inl, which is
+// generated from the Python oracle. So a test here is not asking "does my C++
+// agree with my C++" - the ladder answers, the baked set and every constant came
+// out of the module this port is a translation of.
+#pragma once
+
+#include "CoreMinimal.h"
+#include "StacktownEconomyRules.h"
+#include "EconOracleFixture.inl"
+
+namespace StacktownTest
+{
+
+/** econrules.json exactly as the oracle read it. Built field by field rather
+ *  than parsed, so a test never depends on finding a file. */
+inline Stacktown::FEconRules OracleRules()
+{
+	Stacktown::FEconRules R;
+	R.MoneyStart        = StacktownOracle::MoneyStart;
+	R.PriceBase         = StacktownOracle::PriceBase;
+	R.PricePer100uu     = StacktownOracle::PricePer100uu;
+	R.PricePerTier      = StacktownOracle::PricePerTier;
+	R.RentPerTier       = StacktownOracle::RentPerTier;
+	R.GrowthThreshold   = StacktownOracle::GrowthThreshold;
+	R.DemandDefault     = StacktownOracle::DemandDefault;
+	R.TradeCreditsPerN  = StacktownOracle::TradeCreditsPerN;
+	R.TradeCreditAmount = StacktownOracle::TradeCreditAmount;
+	R.TradeBonusPerWin  = StacktownOracle::TradeBonusPerWin;
+	return R;
+}
+
+/** The catalogue the oracle was standing on: the three recipes the tests name,
+ *  and exactly the meshes that were baked when the fixture was generated.
+ *
+ *  This is the one deliberate improvement on the Python's own tests. Their test
+ *  5 asserts office t0->t1 is blocked and carries a comment admitting the
+ *  assert will start failing the day somebody bakes office_t1 - a test that
+ *  breaks on unrelated art work. Injecting the catalogue makes the same claim
+ *  without the coupling. The real Baked/ directory is still checked, once, by
+ *  the parity test rather than by all seventeen. */
+inline TSharedRef<Stacktown::FStaticCatalogue> OracleCatalogue()
+{
+	TSharedRef<Stacktown::FStaticCatalogue> C = MakeShared<Stacktown::FStaticCatalogue>();
+	C->TierCounts.Add(TEXT("vernacular"), StacktownOracle::TierCount_vernacular);
+	C->TierCounts.Add(TEXT("office"),     StacktownOracle::TierCount_office);
+	C->TierCounts.Add(TEXT("tower"),      StacktownOracle::TierCount_tower);
+	for (int32 i = 0; i < StacktownOracle::BakedForTestsNum; ++i)
+	{
+		C->BakedAssets.Add(FString(StacktownOracle::BakedForTests[i]));
+	}
+	return C;
+}
+
+inline Stacktown::FParcelState Parcel(const TCHAR* Rid, int32 Tier, double Width,
+	bool bOwned = false, double Accum = 0.0, bool bFailed = false, double Performance = 0.0)
+{
+	Stacktown::FParcelState P;
+	P.Rid = Rid;
+	P.Tier = Tier;
+	P.Width = Width;
+	P.bOwned = bOwned;
+	P.Accum = Accum;
+	P.bFailed = bFailed;
+	P.Performance = Performance;
+	return P;
+}
+
+inline Stacktown::FCityState CityWith(const TCHAR* Pid, const Stacktown::FParcelState& P,
+	double Money, double Demand = 1.0)
+{
+	Stacktown::FCityState S;
+	S.Money = Money;
+	S.Demand = Demand;
+	S.Parcels.Add(Pid, P);
+	return S;
+}
+
+/** Bool as text, so a bool comparison goes through TestEqual's FString overload
+ *  instead of relying on which of the int32/float/double overloads a bool
+ *  promotes to. Keeps "got false, expected true" in the failure message, which
+ *  TestTrue(A == B) would throw away. */
+inline FString BoolStr(bool b) { return b ? FString(TEXT("true")) : FString(TEXT("false")); }
+
+/** Field-by-field state comparison. The boundary tests need it because the
+ *  claim they carry across from citytick.py is "what the wrapper produced and
+ *  what the rules produced are the same state" - and after a save/load round
+ *  trip, which is where a serialization bug would hide. Compared with the same
+ *  tolerance as every other figure rather than by bit equality: JSON round-trips
+ *  a double through decimal. */
+inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCityState& B,
+	double Tolerance, FString& OutWhy)
+{
+	if (FMath::Abs(A.Money - B.Money) > Tolerance)
+	{
+		OutWhy = FString::Printf(TEXT("money %.12f vs %.12f"), A.Money, B.Money);
+		return false;
+	}
+	if (FMath::Abs(A.Demand - B.Demand) > Tolerance)
+	{
+		OutWhy = FString::Printf(TEXT("demand %.12f vs %.12f"), A.Demand, B.Demand);
+		return false;
+	}
+	if (A.TradesProcessed != B.TradesProcessed)
+	{
+		OutWhy = FString::Printf(TEXT("trades_processed %d vs %d"), A.TradesProcessed, B.TradesProcessed);
+		return false;
+	}
+	if (A.Parcels.Num() != B.Parcels.Num())
+	{
+		OutWhy = FString::Printf(TEXT("parcel count %d vs %d"), A.Parcels.Num(), B.Parcels.Num());
+		return false;
+	}
+	for (const TPair<FString, Stacktown::FParcelState>& Pair : A.Parcels)
+	{
+		const Stacktown::FParcelState* Other = B.Parcels.Find(Pair.Key);
+		if (Other == nullptr)
+		{
+			OutWhy = FString::Printf(TEXT("parcel '%s' missing"), *Pair.Key);
+			return false;
+		}
+		const Stacktown::FParcelState& P = Pair.Value;
+		if (P.Rid != Other->Rid || P.Tier != Other->Tier || P.bOwned != Other->bOwned
+			|| P.bFailed != Other->bFailed
+			|| FMath::Abs(P.Width - Other->Width) > Tolerance
+			|| FMath::Abs(P.Accum - Other->Accum) > Tolerance
+			|| FMath::Abs(P.Performance - Other->Performance) > Tolerance)
+		{
+			OutWhy = FString::Printf(TEXT("parcel '%s' differs"), *Pair.Key);
+			return false;
+		}
+	}
+	return true;
+}
+
+/** Every comparison of a money/rent figure in these tests. 1e-9 is the Python's
+ *  own tolerance, carried across rather than loosened to make a port pass. */
+inline constexpr double Tol = 1e-9;
+
+} // namespace StacktownTest

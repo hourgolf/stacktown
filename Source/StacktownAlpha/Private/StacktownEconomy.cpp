@@ -1,0 +1,357 @@
+// Ported from Content/Python/citytick.py. See StacktownEconomy.h for the split
+// between this file and the pure rules layer, and for why this subsystem
+// refuses to write anything until it is told where.
+
+#include "StacktownEconomy.h"
+
+#include "StacktownAlpha.h"
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
+
+namespace Stacktown
+{
+
+static bool ParseJsonObject(const FString& JsonText, TSharedPtr<FJsonObject>& Out, FString& OutError)
+{
+	const TSharedRef<TJsonReader<TCHAR>> Reader = TJsonReaderFactory<TCHAR>::Create(JsonText);
+	if (!FJsonSerializer::Deserialize(Reader, Out) || !Out.IsValid())
+	{
+		OutError = FString::Printf(TEXT("malformed JSON: %s"), *Reader->GetErrorMessage());
+		return false;
+	}
+	return true;
+}
+
+static FString WriteJsonObject(const TSharedRef<FJsonObject>& Object)
+{
+	FString Out;
+	const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
+		TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Out);
+	FJsonSerializer::Serialize(Object, Writer);
+	return Out;
+}
+
+/** Required-key read. A ruleset with a missing or non-numeric key is a broken
+ *  ruleset and must say so, not quietly inherit a default and run as if it were
+ *  the owner's tuning. */
+static bool ReadNumber(const TSharedPtr<FJsonObject>& Obj, const TCHAR* Key, double& Out, FString& OutError)
+{
+	if (!Obj->TryGetNumberField(Key, Out))
+	{
+		OutError = FString::Printf(TEXT("econrules.json: missing or non-numeric key '%s'"), Key);
+		return false;
+	}
+	return true;
+}
+
+bool FEconRules::FromJson(const FString& JsonText, FEconRules& Out, FString& OutError)
+{
+	TSharedPtr<FJsonObject> Root;
+	if (!ParseJsonObject(JsonText, Root, OutError))
+	{
+		return false;
+	}
+
+	FEconRules R;
+	double CreditsPerN = 0.0;
+	const bool bAll =
+		ReadNumber(Root, TEXT("money_start"),           R.MoneyStart,        OutError) &&
+		ReadNumber(Root, TEXT("price_base"),            R.PriceBase,         OutError) &&
+		ReadNumber(Root, TEXT("price_per_100uu"),       R.PricePer100uu,     OutError) &&
+		ReadNumber(Root, TEXT("price_per_tier"),        R.PricePerTier,      OutError) &&
+		ReadNumber(Root, TEXT("rent_per_tier"),         R.RentPerTier,       OutError) &&
+		ReadNumber(Root, TEXT("growth_threshold"),      R.GrowthThreshold,   OutError) &&
+		ReadNumber(Root, TEXT("demand_default"),        R.DemandDefault,     OutError) &&
+		ReadNumber(Root, TEXT("trade_credits_per_n"),   CreditsPerN,         OutError) &&
+		ReadNumber(Root, TEXT("trade_credit_amount"),   R.TradeCreditAmount, OutError) &&
+		ReadNumber(Root, TEXT("trade_bonus_per_win"),   R.TradeBonusPerWin,  OutError);
+	if (!bAll)
+	{
+		return false;
+	}
+
+	if (CreditsPerN < 1.0)
+	{
+		// Milestone arithmetic divides by this. The Python would raise; refusing
+		// the ruleset outright is the same answer said earlier.
+		OutError = FString::Printf(TEXT("econrules.json: trade_credits_per_n must be >= 1, got %g"), CreditsPerN);
+		return false;
+	}
+	R.TradeCreditsPerN = static_cast<int32>(CreditsPerN);
+
+	Out = R;
+	return true;
+}
+
+FCityState SeedState(const FEconRules& R)
+{
+	FCityState S;
+	S.Money = R.MoneyStart;
+	S.Demand = R.DemandDefault;
+	S.TradesProcessed = 0;
+	S.RoadsJson = TEXT("{}");
+	return S;
+}
+
+bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutError)
+{
+	TSharedPtr<FJsonObject> Root;
+	if (!ParseJsonObject(JsonText, Root, OutError))
+	{
+		return false;
+	}
+
+	FCityState S;
+	if (!Root->TryGetNumberField(TEXT("money"), S.Money))
+	{
+		OutError = TEXT("citystate: missing or non-numeric 'money'");
+		return false;
+	}
+	if (!Root->TryGetNumberField(TEXT("demand"), S.Demand))
+	{
+		OutError = TEXT("citystate: missing or non-numeric 'demand'");
+		return false;
+	}
+
+	// Absent in every save written before the trade ledger existed. Zero is the
+	// correct reading of "no trades counted yet", so this is a default rather
+	// than a migration.
+	int32 Processed = 0;
+	Root->TryGetNumberField(TEXT("trades_processed"), Processed);
+	S.TradesProcessed = Processed;
+
+	const TSharedPtr<FJsonObject>* Roads = nullptr;
+	if (Root->TryGetObjectField(TEXT("roads"), Roads) && Roads != nullptr && Roads->IsValid())
+	{
+		S.RoadsJson = WriteJsonObject((*Roads).ToSharedRef());
+	}
+
+	const TSharedPtr<FJsonObject>* Parcels = nullptr;
+	if (Root->TryGetObjectField(TEXT("parcels"), Parcels) && Parcels != nullptr && Parcels->IsValid())
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Parcels)->Values)
+		{
+			const TSharedPtr<FJsonObject>* PObj = nullptr;
+			if (!Pair.Value.IsValid() || !Pair.Value->TryGetObject(PObj) || PObj == nullptr)
+			{
+				OutError = FString::Printf(TEXT("citystate: parcel '%s' is not an object"), *Pair.Key);
+				return false;
+			}
+			FParcelState P;
+			(*PObj)->TryGetStringField(TEXT("rid"), P.Rid);
+			(*PObj)->TryGetNumberField(TEXT("tier"), P.Tier);
+			(*PObj)->TryGetNumberField(TEXT("width"), P.Width);
+			(*PObj)->TryGetBoolField(TEXT("owned"), P.bOwned);
+			(*PObj)->TryGetNumberField(TEXT("accum"), P.Accum);
+			// 'failed' and 'performance' post-date some saves; the struct
+			// defaults (false / neutral) are what the Python's own .get() falls
+			// back to, so an old save reads identically on both sides.
+			(*PObj)->TryGetBoolField(TEXT("failed"), P.bFailed);
+			(*PObj)->TryGetNumberField(TEXT("performance"), P.Performance);
+			S.Parcels.Add(Pair.Key, P);
+		}
+	}
+
+	Out = MoveTemp(S);
+	return true;
+}
+
+FString CityStateToJson(const FCityState& State)
+{
+	const TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetNumberField(TEXT("money"), State.Money);
+	Root->SetNumberField(TEXT("demand"), State.Demand);
+	Root->SetNumberField(TEXT("trades_processed"), State.TradesProcessed);
+
+	const TSharedRef<FJsonObject> Parcels = MakeShared<FJsonObject>();
+	// Sorted, so a save is stable under a re-write and a diff of two saves shows
+	// what changed rather than how the map happened to hash.
+	TArray<FString> Ids;
+	State.Parcels.GetKeys(Ids);
+	Ids.Sort([](const FString& A, const FString& B) { return A < B; });
+	for (const FString& Id : Ids)
+	{
+		const FParcelState& P = State.Parcels[Id];
+		const TSharedRef<FJsonObject> PObj = MakeShared<FJsonObject>();
+		PObj->SetStringField(TEXT("rid"), P.Rid);
+		PObj->SetNumberField(TEXT("tier"), P.Tier);
+		PObj->SetNumberField(TEXT("width"), P.Width);
+		PObj->SetBoolField(TEXT("owned"), P.bOwned);
+		PObj->SetNumberField(TEXT("accum"), P.Accum);
+		PObj->SetBoolField(TEXT("failed"), P.bFailed);
+		PObj->SetNumberField(TEXT("performance"), P.Performance);
+		Parcels->SetObjectField(Id, PObj);
+	}
+	Root->SetObjectField(TEXT("parcels"), Parcels);
+
+	TSharedPtr<FJsonObject> Roads;
+	FString RoadsError;
+	if (ParseJsonObject(State.RoadsJson, Roads, RoadsError) && Roads.IsValid())
+	{
+		Root->SetObjectField(TEXT("roads"), Roads);
+	}
+	else
+	{
+		// Never drop the key: seed_state() declares it and readers use it.
+		Root->SetObjectField(TEXT("roads"), MakeShared<FJsonObject>());
+	}
+
+	return WriteJsonObject(Root);
+}
+
+} // namespace Stacktown
+
+// -----------------------------------------------------------------------------
+
+void UStacktownEconomy::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	SeedFresh();
+	if (!Catalogue.IsValid())
+	{
+		Catalogue = MakeShared<Stacktown::FStaticCatalogue>();
+	}
+}
+
+void UStacktownEconomy::Deinitialize()
+{
+	Super::Deinitialize();
+}
+
+void UStacktownEconomy::SetStatePath(const FString& InAbsolutePath)
+{
+	StatePath = InAbsolutePath;
+}
+
+void UStacktownEconomy::SetCatalogue(const TSharedPtr<Stacktown::ICatalogue>& InCatalogue)
+{
+	Catalogue = InCatalogue;
+}
+
+bool UStacktownEconomy::LoadRules(const FString& JsonText, FString& OutError)
+{
+	Stacktown::FEconRules Parsed;
+	if (!Stacktown::FEconRules::FromJson(JsonText, Parsed, OutError))
+	{
+		UE_LOG(LogStacktown, Error, TEXT("LoadRules refused: %s"), *OutError);
+		return false;
+	}
+	Rules = Parsed;
+	return true;
+}
+
+bool UStacktownEconomy::LoadState(FString& OutError)
+{
+	if (StatePath.IsEmpty())
+	{
+		return true;
+	}
+	if (!FPaths::FileExists(StatePath))
+	{
+		State = Stacktown::SeedState(Rules);
+		return true;
+	}
+	FString Text;
+	if (!FFileHelper::LoadFileToString(Text, *StatePath))
+	{
+		OutError = FString::Printf(TEXT("could not read %s"), *StatePath);
+		return false;
+	}
+	return Stacktown::CityStateFromJson(Text, State, OutError);
+}
+
+bool UStacktownEconomy::SaveState() const
+{
+	if (StatePath.IsEmpty())
+	{
+		// The deliberate no-op. See the class comment: this port does not guess
+		// at the owner's save.
+		return true;
+	}
+	return FFileHelper::SaveStringToFile(Stacktown::CityStateToJson(State), *StatePath);
+}
+
+void UStacktownEconomy::CityTick()
+{
+	TArray<Stacktown::FEconEvent> Events;
+	Stacktown::Tick(Rules, State, Events);
+	SaveState();
+}
+
+bool UStacktownEconomy::CityBuy(const FString& Pid, FString& OutReason)
+{
+	const Stacktown::FVerbResult R = Stacktown::Buy(Rules, State, Pid);
+	OutReason = R.Reason;
+	if (R.bOk)
+	{
+		SaveState();
+	}
+	return R.bOk;
+}
+
+bool UStacktownEconomy::CityUpgrade(const FString& Pid, FString& OutReason)
+{
+	check(Catalogue.IsValid());
+	const Stacktown::FVerbResult R = Stacktown::Upgrade(Rules, *Catalogue, State, Pid);
+	OutReason = R.Reason;
+	if (R.bOk)
+	{
+		SaveState();
+	}
+	return R.bOk;
+}
+
+bool UStacktownEconomy::CityRepair(const FString& Pid, FString& OutReason)
+{
+	const Stacktown::FVerbResult R = Stacktown::Repair(Rules, State, Pid);
+	OutReason = R.Reason;
+	if (R.bOk)
+	{
+		SaveState();
+	}
+	return R.bOk;
+}
+
+bool UStacktownEconomy::EnsureParcel(const FString& Pid, const FString& Rid, double Width)
+{
+	if (State.Parcels.Contains(Pid))
+	{
+		return false;
+	}
+	Stacktown::FParcelState P;
+	P.Rid = Rid;
+	P.Tier = 0;          // ALWAYS. See the header.
+	P.Width = Width;
+	P.bOwned = false;
+	P.Accum = 0.0;
+	P.bFailed = false;
+	P.Performance = 0.0;
+	State.Parcels.Add(Pid, P);
+	SaveState();
+	return true;
+}
+
+void UStacktownEconomy::ResetCity()
+{
+	State = Stacktown::SeedState(Rules);
+	SaveState();
+	UE_LOG(LogStacktown, Warning,
+		TEXT("CITYSTATE RESET: state wiped, reseeded from money_start=%.1f"), State.Money);
+}
+
+void UStacktownEconomy::ApplyTradeLedger(const TArray<double>& LedgerPnls,
+	TArray<Stacktown::FEconEvent>& OutEvents)
+{
+	const int32 Before = State.TradesProcessed;
+	Stacktown::ApplyTradeLedger(Rules, State, LedgerPnls, OutEvents);
+	if (State.TradesProcessed != Before)
+	{
+		SaveState();
+	}
+}

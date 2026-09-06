@@ -113,3 +113,13 @@ Saved/standalone.lock
 .vscode/
 .idea/
 Source/**/*.generated.h
+
+# ---- self-test scratch (ENGINEERING_LANE.md) --------------------------------
+# The charter puts test state under Saved/SelfTest, and that is all this is:
+# per-run throwaway saves, the compiled pre-flight binary, and the oracle JSON
+# that Tools/oracle regenerates from Content/Python on demand. Same reasoning as
+# the grain masks above - regenerable by construction, generator and sources
+# versioned. The artifact that MUST survive is the generated
+# Source/StacktownAlpha/Private/Tests/EconOracleFixture.inl, which is committed
+# and diffable so a reviewer can see what the oracle said.
+Saved/SelfTest/

@@ -61,7 +61,39 @@ Seats:
   Verifies, grants windows, keeps this board and HANDOFF §5.
 - ENGINEERING (to be opened by the owner, stronger model): charter
   Docs/ENGINEERING_LANE.md. First tasks: economy + state (17 + 9 tests),
-  then placement (27 tests). Not yet staffed.
+  then placement (27 tests). STAFFED 2026-09-06.
+  ENGINEERING: channel received 2026-09-06 07:37 PDT (14:37 UTC).
+  pwd /home/user/stacktown
+  ada5210 Phase 0 of the C++ runtime: a game module, a headless test loop, the plan
+  STATUS 2026-09-06: Phase 1 step 1 WRITTEN, NOT YET BUILT.
+  LANDED (branch claude/engineering-lane-task-1-i3hi7s, uncommitted):
+  StacktownEconomyRules.h/.cpp (pure, no UObject - the verbs, the pricing,
+  the ledger, FStaticCatalogue); StacktownEconomy.h/.cpp (UStacktownEconomy
+  GameInstance subsystem - persistence, Blueprint boundary, econrules.json
+  parsing); 17 Stacktown.Economy tests and 10 Stacktown.CityState tests;
+  Tools/oracle/ (fixture generator + pre-flight harness + mutation runner).
+  PROVEN HERE: the Python oracle runs in this container (econrules 17/17,
+  citytick 9/9), and every C++ expectation is GENERATED from it into
+  EconOracleFixture.inl rather than transcribed. The ported rules were
+  compiled with clang and executed against those expectations - 132 checks,
+  0 failures - and 13 of 14 planted mutations turned it red, so the suite
+  can fail. NOT PROVEN: anything requiring the engine.
+  BLOCKED, unchanged: no Unreal here (Linux container, no UBT/engine
+  headers/Automation, unreal-mcp ConnectionRefused), so PLAN section 3's
+  headless pass line CANNOT be produced from this seat. The 14th mutation
+  (unsorted tick iteration) survives here BY CONSTRUCTION - the pre-flight
+  shim maps TMap onto std::map, which is ordered - and only a real UE build
+  can catch it. Treat the harness as pre-flight, never as the proof.
+  ALSO FOUND, for the coordinator: citytick.py persists to
+  Content/Python/citystate.json but PLAN step 1 says the C++ state is
+  "FCityState JSON in Saved/". While both sides run those are two files that
+  drift the moment both are live, so UStacktownEconomy writes NOTHING until
+  its StatePath is set explicitly and never guesses at the owner's save.
+  Related: econrules.json lives under Content/Python, which is UncookedOnly
+  and cannot ship - a Phase 2 item, flagged not fixed.
+  QUESTION: who runs the UE build and pastes the pass line - the coordinator
+  on the Mac, or should this seat be moved onto the Mac? Nothing is
+  committed; commits need the owner's word in the committing session.
 - LOOK (the direction-B design session): continues under the addendum at
   the end of Docs/DIRECTION_B_LANE.md. No editor window granted.
 - BETA gameplay lane: RETIRED (Docs/BETA_LANE.md, retired section). Its

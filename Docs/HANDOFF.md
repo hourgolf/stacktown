@@ -1695,3 +1695,12 @@ into the wrong project. It has already caught it happening.
   Seat fixed it (5d38749); rebuilt 6.6 s; 28 passed, 0 failed, 0 ensures.
   Workflow settled: the seat writes and pre-flights, the coordinator builds
   and produces every pass line; the board is pushed by the coordinator.
+
+- **PHASE 1 STEP 2 PROVEN ON THE MAC (2026-09-06, coordinator): 48/48**
+  (17 Economy, 10 CityState, 20 Placement, 1 Smoke), clean link with the
+  editor closed. The seat's push needed a one-line compile fix (missing
+  include; applied locally, seat to commit). INSTRUMENT LESSON: the first
+  run after the push reported 28/28 with the placement tests compiled but
+  not loaded - a build with the editor open links a numbered hot-reload
+  dylib and leaves UnrealEditor.modules on the old library. Rule in PLAN
+  §3; memory stale-dylib-pass-line.

@@ -112,6 +112,41 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 10:30 PDT): STEP 2 PASS LINE, clean
+link with the editor closed: `Automation RunTests Stacktown` -> 48 passed,
+0 failed, 0 ensures (17 Economy, 10 CityState, 20 Placement, 1 Smoke).
+Step 2 is PROVEN on the Mac, with two notes:
+(1) COMPILE FIX NEEDED IN YOUR TREE: your push did not build here -
+StacktownPlacementTest.cpp:423 "use of undeclared identifier
+CityStateToJson". The file never includes StacktownEconomy.h (the
+declaration lives in namespace Stacktown there; `using namespace` alone
+does not import it). I built with a LOCAL, UNCOMMITTED trial fix: add
+`#include "StacktownEconomy.h"` after the two TestCommon includes and
+qualify the call as Stacktown::CityStateFromJson(Stacktown::CityStateToJson(S), Back, Err).
+Commit exactly that (or your equivalent) and push; my copy is discarded
+when yours lands. Your pre-flight could not see it because the shim
+compiles everything into one translation unit - worth a line in
+Tools/preflight/CoreMinimal.h's own list of blind spots.
+(2) COUNT: you reported 29 Placement cases; the engine registers 20
+Stacktown.Placement tests (20 STACKTOWN_PLACE_TEST invocations). If 29 is
+oracle cases folded into 20 test bodies, say so in the status and the
+number stands; if nine tests are missing, find them.
+AGREED: roads 28-39 stay at step 4. TMap answer accepted; OverlapOrder's
+deliberate divergence from the Python is fine - write it in the C++ comment
+as a divergence, not a port. The stale reason in placement.py is the
+coordinator's to fix (Python is the oracle; you do not edit it).
+INSTRUMENT RULE, new, in PLAN §3: a pass line is only valid from a build
+made with the editor closed; with it open, UBT links a -000N hot-reload
+library and the headless runner keeps testing the old one - that is how
+your step 2 "passed" 28/28 here first, with no placement test loaded.
+NEXT, step 3 (the parcel actor): write AStacktownParcel as the C++ base
+BP_Parcel will be re-parented onto - the properties BP_Parcel already has
+(RecipeId, WidthUU, Tier, Owned, Price, Accum, Highlighted, Level, Last*)
+as UPROPERTYs with matching names and types so the re-parent keeps values,
+plus the economy hookup (pull from UStacktownEconomy by label). Leave
+ResolveMesh and SetHighlighted in the Blueprint for now. The re-parent
+itself is an editor action on the Mac: the coordinator does it on the
+owner's word once your class builds here.
 COORDINATOR (2026-09-06 10:20 PDT), saying so first: CLOSING THE EDITOR for
 about two minutes. A build with the editor open links a hot-reload library
 (-0002) and leaves the .modules file on the old one, so the headless runner

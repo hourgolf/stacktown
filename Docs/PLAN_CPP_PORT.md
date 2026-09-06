@@ -88,6 +88,15 @@ Signing and notarization only when builds go to other people.
 "/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" "$PWD/StacktownAlpha.uproject" -ExecCmds="Automation RunTests Stacktown; Quit" -unattended -nopause -nullrhi -log -ABSLOG="$PWD/Saved/Logs/tests.log"
 ```
 
+### Instrument rule: build with the editor CLOSED before any pass line
+Found 2026-09-06: with the editor open, Build.sh links a hot-reload library
+(libUnrealEditor-StacktownAlpha-000N.dylib) and leaves UnrealEditor.modules
+pointing at the previous plain library, so UnrealEditor-Cmd tests the OLD
+module and reports the old suite as if it were the new one. A pass line is
+only valid when the build ran with no editor process on the project and the
+.modules file names the plain library. Tools/reload_game.sh and the LOOK
+seat's windows are scheduled around that.
+
 ## 4. Scope for the simple building game
 
 One board. Roads. Twenty building types across oak, ash, pine, cherry and

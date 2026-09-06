@@ -95,6 +95,28 @@ struct STACKTOWNALPHA_API FStaticCatalogue : public ICatalogue
 	virtual bool    AssetExists(const FString& Rid, int32 Tier, double Width) const override;
 };
 
+// FLotPlacement lives HERE, beside FParcelState, rather than in
+// StacktownPlacement.h - the same split the Python has. citystate.json owns the
+// placement DATA (econrules.py has never known the key exists and does not need
+// to); StacktownPlacement.h owns what the data MEANS. A parcel this data
+// describes is indistinguishable to the economy from a pinned one.
+
+/** Where a placed lot sits: its span along its road's axis, and which side. */
+struct STACKTOWNALPHA_API FLotPlacement
+{
+	double  X0 = 0.0;
+	double  X1 = 0.0;
+	FString Side;
+
+	/** ABSENT on lots written before the key existed - the owner's real save has
+	 *  four of them. Optional rather than defaulted to "arterial" at parse time
+	 *  so that "absent" and "present and equal to arterial" stay distinguishable
+	 *  across a save round trip, which the ported test 26 asserts directly.
+	 *  LotRoadId() below is the ONE place the fallback rule lives; three call
+	 *  sites had independently written their own copy of it before that. */
+	TOptional<FString> RoadId;
+};
+
 struct STACKTOWNALPHA_API FParcelState
 {
 	FString Rid;
@@ -107,6 +129,12 @@ struct STACKTOWNALPHA_API FParcelState
 	 *  ruling (2) is that performance moves on player trades only, and no trading
 	 *  system exists to move it. Read by Premium(). */
 	double  Performance = 0.0;
+
+	/** Present only on PLAYER-PLACED lots; a pinned parcel never carries it.
+	 *  This is the one key that distinguishes the two paths, and it is additive
+	 *  by construction - everything that reads the seven fields above was never
+	 *  written to care about an eighth. */
+	TOptional<FLotPlacement> Placement;
 };
 
 /** The live city. Mirrors the dict econrules.tick()/buy()/upgrade() operate on. */
@@ -163,6 +191,13 @@ struct STACKTOWNALPHA_API FVerbResult
 	static FVerbResult Ok()                          { return FVerbResult{ true,  FString() }; }
 	static FVerbResult No(const FString& InReason)    { return FVerbResult{ false, InReason }; }
 };
+
+/** A fresh city, straight from the ruleset's declared start. Roads is an empty
+ *  object, matching seed_state(). Lives in the rules layer, not beside the
+ *  subsystem: it reads a ruleset and returns a struct, with no disk and no
+ *  UObject anywhere in it - which is also what lets the placement port seed a
+ *  city when the port is checked against the oracle outside the engine. */
+STACKTOWNALPHA_API FCityState SeedState(const FEconRules& R);
 
 // --- pure pricing --------------------------------------------------------------
 // price() and rent() take a recipe id in the Python and never read it. The

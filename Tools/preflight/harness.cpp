@@ -16,6 +16,7 @@
 //   Tools/preflight/run.sh
 
 #include "StacktownEconomyTestCommon.h"
+#include "StacktownPlacementTestCommon.h"
 
 #include <cstdio>
 #include <string>
@@ -357,6 +358,252 @@ int main()
 		CheckNear("A accum", S.Parcels[TEXT("A")].Accum, StacktownOracle::TickMulti_Accum_A, Tol);
 		CheckNear("C accum", S.Parcels[TEXT("C")].Accum, StacktownOracle::TickMulti_Accum_C, Tol);
 		CheckNear("B accrues nothing", S.Parcels[TEXT("B")].Accum, StacktownOracle::TickMulti_Accum_B, Tol);
+	}
+
+	// =====================================================================
+	// PLACEMENT (Phase 1 step 2) - placement.py self-tests 1-27.
+	// Tests 28-39 (drawn roads) are step 4's and are not here. Tests 6 and 26
+	// are also absent: both are about serialization, which needs the Json
+	// module, so they run only on the Mac.
+	// =====================================================================
+	{
+		using namespace StacktownPlacementOracle;
+		const FPlacementBoard Board = OracleBoard();
+		auto Seed = [&R]() { return SeedState(R); };
+
+		auto CheckLot = [&](const char* What, const FLotPlacement& Got, const FLotDef& Want) {
+			FString Why;
+			++gChecks;
+			if (!LotMatches(Got, Want, Why)) { Fail(What, Why.S); }
+		};
+
+		CASE("Placement.FirstPlace");
+		{
+			FCityState S = Seed();
+			const FPlaceResult Res = Place(Board, S, T1_X, T1_Y, true, V0Width);
+			CheckBool("ok", Res.bOk, T1_Ok);
+			CheckStr("pid", Res.Pid, FString(T1_Pid));
+			CheckStr("reason", Res.Reason, FString(T1_Reason));
+			const FParcelState& P = S.Parcels[FString(T1_Pid)];
+			CheckStr("rid", P.Rid, FString(T1_Rid));
+			CheckInt("tier", P.Tier, T1_Tier);
+			CheckNear("width", P.Width, T1_Width, Tol);
+			CheckBool("placement present", P.Placement.IsSet(), true);
+			if (P.Placement.IsSet()) { CheckLot("lot", P.Placement.GetValue(), T1_Lot); }
+		}
+
+		CASE("Placement.OffBoard");
+		{
+			FCityState S = Seed();
+			Place(Board, S, T1_X, T1_Y, true, V0Width);
+			const int32 Before = S.Parcels.Num();
+			const FPlaceResult Res = Place(Board, S, T2_X, T2_Y, true, V0Width);
+			CheckBool("ok", Res.bOk, T2_Ok);
+			CheckStr("reason", Res.Reason, FString(T2_Reason));
+			CheckInt("nothing registered", S.Parcels.Num(), Before);
+		}
+
+		CASE("Placement.Sides");
+		{
+			FCityState Base = Seed();
+			Place(Board, Base, T1_X, T1_Y, true, V0Width);
+			FCityState A = Base;
+			const FPlaceResult Over = Place(Board, A, T3_X, T3_Y, true, V0Width);
+			CheckBool("overlap ok", Over.bOk, T3_Ok);
+			CheckStr("overlap reason", Over.Reason, FString(T3_Reason));
+			FCityState B = Base;
+			const FPlaceResult South = Place(Board, B, T4_X, T4_Y, true, V0Width);
+			CheckBool("south ok", South.bOk, T4_Ok);
+			CheckStr("south pid", South.Pid, FString(T4_Pid));
+			CheckLot("south lot", B.Parcels[FString(T4_Pid)].Placement.GetValue(), T4_Lot);
+		}
+
+		CASE("Placement.NextPid");
+		{
+			FCityState S = Seed();
+			Place(Board, S, T1_X, T1_Y, true, V0Width);
+			Place(Board, S, T4_X, T4_Y, true, V0Width);
+			const FPlaceResult Res = Place(Board, S, T5_X, T5_Y, true, V0Width);
+			CheckBool("ok", Res.bOk, T5_Ok);
+			CheckStr("pid", Res.Pid, FString(T5_Pid));
+			CheckLot("lot", S.Parcels[FString(T5_Pid)].Placement.GetValue(), T5_Lot);
+		}
+
+		CASE("Placement.PlateContainsBlocks");
+		CheckBool("west", PlateXMin <= BlockEnvXMin, true);
+		CheckBool("east", BlockEnvXMax <= PlateXMax, true);
+
+		CASE("Placement.PoolExhausted");
+		{
+			FCityState S = Seed();
+			const FLotDef Degenerate = { 0.0, 0.0, TEXT("north"), nullptr };
+			for (int32 i = 0; i < PoolSize; ++i)
+			{
+				S.Parcels.Add(FString::Printf(TEXT("ZZ%d"), i), PlacedParcel(Board, Degenerate));
+			}
+			const FPlaceResult Res = Place(Board, S, T8_X, T8_Y, true, V0Width);
+			CheckBool("ok", Res.bOk, T8_Ok);
+			CheckStr("reason", Res.Reason, FString(T8_Reason));
+		}
+
+		CASE("Placement.PlanReactivation");
+		{
+			auto RunPlan = [&](const TCHAR* const* Pids, int32 PidsNum,
+			                   const TCHAR* const* Labels, int32 LabelsNum,
+			                   const TCHAR* const* WantPids, const TCHAR* const* WantLabels,
+			                   int32 PairsNum, const TCHAR* const* WantUn, int32 UnNum) {
+				TArray<FString> P, L;
+				for (int32 i = 0; i < PidsNum; ++i)   { P.Add(FString(Pids[i])); }
+				for (int32 i = 0; i < LabelsNum; ++i) { L.Add(FString(Labels[i])); }
+				TArray<TPair<FString, FString>> Pairs;
+				TArray<FString> Un;
+				PlanReactivation(P, L, Pairs, Un);
+				CheckInt("pair count", Pairs.Num(), PairsNum);
+				for (int32 i = 0; i < PairsNum && i < Pairs.Num(); ++i)
+				{
+					CheckStr("pair pid", Pairs[i].Key, FString(WantPids[i]));
+					CheckStr("pair label", Pairs[i].Value, FString(WantLabels[i]));
+				}
+				CheckInt("unmatched count", Un.Num(), UnNum);
+				for (int32 i = 0; i < UnNum && i < Un.Num(); ++i)
+				{
+					CheckStr("unmatched", Un[i], FString(WantUn[i]));
+				}
+			};
+			RunPlan(T9_Pids, T9_PidsNum, T9_Labels, T9_LabelsNum,
+			        T9_PairPids, T9_PairLabels, T9_PairsNum, T9_Unmatched, T9_UnmatchedNum);
+			RunPlan(T10_Pids, T10_PidsNum, T10_Labels, T10_LabelsNum,
+			        T10_PairPids, T10_PairLabels, T10_PairsNum, T10_Unmatched, T10_UnmatchedNum);
+			RunPlan(T12_Pids, T12_PidsNum, T12_Labels, T12_LabelsNum,
+			        T12_PairPids, T12_PairLabels, T12_PairsNum, T12_Unmatched, T12_UnmatchedNum);
+		}
+
+		CASE("Placement.PinnedSpans");
+		{
+			const FCityState S = Seed();
+			const FClickResult Ref = ResolveClick(Board, S, T11.X, T11.Y, T11.bPinsActive, V0Width);
+			CheckBool("pins active ok", Ref.bOk, T11.bOk);
+			CheckStr("pins active reason", Ref.Reason, FString(T11.Reason));
+			const FClickResult Acc = ResolveClick(Board, S, T11b.X, T11b.Y, T11b.bPinsActive, V0Width);
+			CheckBool("empty mode ok", Acc.bOk, T11b.bOk);
+			CheckStr("empty mode reason", Acc.Reason, FString(T11b.Reason));
+			CheckLot("empty mode lot", Acc.Lot, T11b.Lot);
+		}
+
+		auto CheckResolve = [&](const char* What, const TArray<FRoad>& Roads, const FResolveCase& C) {
+			FRoadLocal Local;
+			const FRoad* Got = ResolveRoad(Board.Rules, Roads, C.X, C.Y, Local);
+			if (C.Road == nullptr) { CheckBool(What, Got == nullptr, true); return; }
+			++gChecks;
+			if (Got == nullptr) { Fail(What, "expected a road, got none"); return; }
+			CheckStr("road", Got->Id, FString(C.Road));
+			CheckNear("along", Local.Along, C.Along, Tol);
+			CheckNear("across", Local.Across, C.Across, Tol);
+			CheckStr("side", Local.Side, FString(C.Side));
+		};
+
+		CASE("Placement.ResolveRoadAlone");
+		{
+			const TArray<FRoad> Arterial = OnlyRoad(Board, TEXT("arterial"));
+			const TArray<FRoad> Cross    = OnlyRoad(Board, TEXT("cross"));
+			for (int32 i = 0; i < T13ArterialAloneNum; ++i) { CheckResolve("arterial alone", Arterial, T13ArterialAlone[i]); }
+			for (int32 i = 0; i < T14CrossAloneNum; ++i)    { CheckResolve("cross alone", Cross, T14CrossAlone[i]); }
+		}
+
+		CASE("Placement.ResolveRoadSelection");
+		{
+			CheckResolve("nearest wins", Board.Roads, T15);
+			CheckResolve("past the band", Board.Roads, T17);
+			CheckResolve("point to segment", OnlyRoad(Board, TEXT("arterial")), T18);
+			for (int32 i = 0; i < T19TooFarNum; ++i) { CheckResolve("too far", Board.Roads, T19TooFar[i]); }
+		}
+
+		CASE("Placement.ResolveRoadCrossing");
+		for (int32 i = 0; i < T16CrossingNum; ++i) { CheckResolve("crossing", Board.Roads, T16Crossing[i]); }
+
+		CASE("Placement.CrossStreet");
+		{
+			FCityState S = Seed();
+			const FPlaceResult W = Place(Board, S, T20_X, T20_Y, true, V0Width);
+			CheckBool("west ok", W.bOk, T20_Ok);
+			CheckStr("west pid", W.Pid, FString(T20_Pid));
+			CheckLot("west lot", S.Parcels[FString(T20_Pid)].Placement.GetValue(), T20_Lot);
+			const FPlaceResult E = Place(Board, S, T21_X, T21_Y, true, V0Width);
+			CheckBool("east ok", E.bOk, T21_Ok);
+			CheckStr("east pid", E.Pid, FString(T21_Pid));
+			CheckLot("east lot", S.Parcels[FString(T21_Pid)].Placement.GetValue(), T21_Lot);
+		}
+
+		CASE("Placement.InTheRoad");
+		{
+			const FClickResult A = ResolveClick(Board, Seed(), T22.X, T22.Y, T22.bPinsActive, V0Width);
+			CheckBool("arterial ok", A.bOk, T22.bOk);
+			CheckStr("arterial reason", A.Reason, FString(T22.Reason));
+			const FClickResult C = ResolveClick(Board, Seed(), T23.X, T23.Y, T23.bPinsActive, V0Width);
+			CheckBool("cross ok", C.bOk, T23.bOk);
+			CheckStr("cross reason", C.Reason, FString(T23.Reason));
+		}
+
+		CASE("Placement.CrossingClick");
+		for (int32 i = 0; i < T24CrossingNum; ++i)
+		{
+			const FClickCase& C = T24Crossing[i];
+			const FClickResult Res = ResolveClick(Board, Seed(), C.X, C.Y, C.bPinsActive, V0Width);
+			CheckBool("ok", Res.bOk, C.bOk);
+			CheckStr("reason", Res.Reason, FString(C.Reason));
+		}
+
+		CASE("Placement.Snap");
+		{
+			for (int32 i = 0; i < SnapCasesNum; ++i)
+			{
+				CheckNear("snap", Snap(Board.Rules, SnapCases[i].In), SnapCases[i].Expected, Tol);
+			}
+			const FClickResult A = ResolveClick(Board, Seed(), SnapClick.X, SnapClick.Y, SnapClick.bPinsActive, V0Width);
+			CheckBool("off-grid ok", A.bOk, SnapClick.bOk);
+			CheckLot("off-grid lot", A.Lot, SnapClick.Lot);
+			const FClickResult B = ResolveClick(Board, Seed(), SnapClickHalf.X, SnapClickHalf.Y, SnapClickHalf.bPinsActive, V0Width);
+			CheckBool("half-case ok", B.bOk, SnapClickHalf.bOk);
+			CheckLot("half-case lot", B.Lot, SnapClickHalf.Lot);
+		}
+
+		CASE("Placement.LotRoadId");
+		for (int32 i = 0; i < T25Num; ++i)
+		{
+			CheckStr("road id", LotRoadId(LotFrom(T25_Lots[i])), FString(T25_Expected[i]));
+		}
+
+		CASE("Placement.Corner");
+		{
+			FCityState S = Seed();
+			S.Parcels.Add(TEXT("A"), PlacedParcel(Board, T27_Lot0));
+			const FClickResult A = ResolveClick(Board, S, T27Cross.X, T27Cross.Y, T27Cross.bPinsActive, V0Width);
+			CheckBool("cross click ok", A.bOk, T27Cross.bOk);
+			CheckStr("cross click reason", A.Reason, FString(T27Cross.Reason));
+
+			FCityState S2 = Seed();
+			S2.Parcels.Add(TEXT("C"), PlacedParcel(Board, T27_Lot1));
+			const FClickResult B = ResolveClick(Board, S2, T27Arterial.X, T27Arterial.Y, T27Arterial.bPinsActive, V0Width);
+			CheckBool("arterial click ok", B.bOk, T27Arterial.bOk);
+			CheckStr("arterial click reason", B.Reason, FString(T27Arterial.Reason));
+
+			const FRoad* Art = FindRoad(Board.Roads, TEXT("arterial"));
+			const FRoad* Crs = FindRoad(Board.Roads, TEXT("cross"));
+			CheckBool("roads found", Art != nullptr && Crs != nullptr, true);
+			if (Art != nullptr && Crs != nullptr)
+			{
+				const FLotRect R0 = LotRect(Board.Rules, *Art, LotFrom(T27_Lot0));
+				CheckNear("R0 xmin", R0.XMin, T27_Rect0.XMin, Tol);
+				CheckNear("R0 xmax", R0.XMax, T27_Rect0.XMax, Tol);
+				CheckNear("R0 ymin", R0.YMin, T27_Rect0.YMin, Tol);
+				CheckNear("R0 ymax", R0.YMax, T27_Rect0.YMax, Tol);
+				const FLotRect R1 = LotRect(Board.Rules, *Crs, LotFrom(T27_Lot1));
+				CheckNear("R1 xmin", R1.XMin, T27_Rect1.XMin, Tol);
+				CheckNear("R1 xmax", R1.XMax, T27_Rect1.XMax, Tol);
+				CheckNear("R1 ymin", R1.YMin, T27_Rect1.YMin, Tol);
+				CheckNear("R1 ymax", R1.YMax, T27_Rect1.YMax, Tol);
+			}
+		}
 	}
 
 	printf("\n%s: %d checks, %d failures\n",

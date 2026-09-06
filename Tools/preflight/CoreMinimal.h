@@ -176,7 +176,12 @@ public:
 struct FMath
 {
 	static double Abs(double V) { return V < 0.0 ? -V : V; }
+	// std::nearbyint is half-to-even under the default rounding mode, which is
+	// what Python's round() does and what the lot-span snap depends on.
 	static double RoundHalfToEven(double V) { return std::nearbyint(V); }
+	static double Sqrt(double V) { return std::sqrt(V); }
+	template <typename T> static T Min(T A, T B) { return A < B ? A : B; }
+	template <typename T> static T Max(T A, T B) { return A > B ? A : B; }
 };
 
 // The module export macro is meaningless outside a UE build.
@@ -192,3 +197,23 @@ template <typename T, typename... A> TSharedRef<T> MakeShared(A&&... Args)
 {
 	return std::make_shared<T>(std::forward<A>(Args)...);
 }
+
+// TOptional, as far as FLotPlacement::RoadId and FParcelState::Placement need
+// it. The distinction this type carries is load-bearing here and not cosmetic:
+// a lot with NO road_id key is not the same as one whose road_id happens to be
+// "arterial", and the owner's real save contains four of the former.
+template <typename T>
+class TOptional
+{
+public:
+	TOptional() : bSet(false), Value() {}
+	TOptional(const T& In) : bSet(true), Value(In) {}
+	TOptional& operator=(const T& In) { bSet = true; Value = In; return *this; }
+	bool IsSet() const { return bSet; }
+	const T& GetValue() const { return Value; }
+	T& GetValue() { return Value; }
+	void Reset() { bSet = false; Value = T(); }
+private:
+	bool bSet;
+	T Value;
+};

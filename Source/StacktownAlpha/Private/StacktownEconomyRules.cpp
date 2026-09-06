@@ -10,6 +10,16 @@
 namespace Stacktown
 {
 
+FCityState SeedState(const FEconRules& R)
+{
+	FCityState S;
+	S.Money = R.MoneyStart;
+	S.Demand = R.DemandDefault;
+	S.TradesProcessed = 0;
+	S.RoadsJson = TEXT("{}");
+	return S;
+}
+
 double Price(const FEconRules& R, int32 Tier, double Width)
 {
 	return R.PriceBase + R.PricePer100uu * (Width / 100.0) + R.PricePerTier * Tier;

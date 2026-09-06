@@ -130,6 +130,28 @@ inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCitySt
 			OutWhy = FString::Printf(TEXT("parcel '%s' differs"), *Pair.Key);
 			return false;
 		}
+		// Placement joined the schema in step 2. Compared here so a round-trip
+		// test cannot pass while silently dropping a placed lot's position - and
+		// ABSENT road_id is compared as absent, because preserving that
+		// distinction is the whole point of it being optional.
+		if (P.Placement.IsSet() != Other->Placement.IsSet())
+		{
+			OutWhy = FString::Printf(TEXT("parcel '%s': placement present on one side only"), *Pair.Key);
+			return false;
+		}
+		if (P.Placement.IsSet())
+		{
+			const Stacktown::FLotPlacement& L = P.Placement.GetValue();
+			const Stacktown::FLotPlacement& M = Other->Placement.GetValue();
+			if (FMath::Abs(L.X0 - M.X0) > Tolerance || FMath::Abs(L.X1 - M.X1) > Tolerance
+				|| L.Side != M.Side
+				|| L.RoadId.IsSet() != M.RoadId.IsSet()
+				|| (L.RoadId.IsSet() && L.RoadId.GetValue() != M.RoadId.GetValue()))
+			{
+				OutWhy = FString::Printf(TEXT("parcel '%s': placement differs"), *Pair.Key);
+				return false;
+			}
+		}
 	}
 	return true;
 }

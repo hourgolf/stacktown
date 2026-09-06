@@ -89,16 +89,6 @@ bool FEconRules::FromJson(const FString& JsonText, FEconRules& Out, FString& Out
 	return true;
 }
 
-FCityState SeedState(const FEconRules& R)
-{
-	FCityState S;
-	S.Money = R.MoneyStart;
-	S.Demand = R.DemandDefault;
-	S.TradesProcessed = 0;
-	S.RoadsJson = TEXT("{}");
-	return S;
-}
-
 bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutError)
 {
 	TSharedPtr<FJsonObject> Root;
@@ -154,6 +144,28 @@ bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutErr
 			// back to, so an old save reads identically on both sides.
 			(*PObj)->TryGetBoolField(TEXT("failed"), P.bFailed);
 			(*PObj)->TryGetNumberField(TEXT("performance"), P.Performance);
+
+			// 'placement' is present only on player-placed lots (step 2).
+			const TSharedPtr<FJsonObject>* PlacementObj = nullptr;
+			if ((*PObj)->TryGetObjectField(TEXT("placement"), PlacementObj)
+				&& PlacementObj != nullptr && PlacementObj->IsValid())
+			{
+				FLotPlacement L;
+				(*PlacementObj)->TryGetNumberField(TEXT("x0"), L.X0);
+				(*PlacementObj)->TryGetNumberField(TEXT("x1"), L.X1);
+				(*PlacementObj)->TryGetStringField(TEXT("side"), L.Side);
+				// ABSENT, not defaulted. v0 wrote no road_id, so the owner's real
+				// save has four lots without the key, and a round trip must not
+				// invent one for them - LotRoadId() applies the fallback at the
+				// point of use instead. Losing that distinction here is what
+				// would quietly rewrite the owner's save on first load.
+				FString RoadId;
+				if ((*PlacementObj)->TryGetStringField(TEXT("road_id"), RoadId))
+				{
+					L.RoadId = RoadId;
+				}
+				P.Placement = L;
+			}
 			S.Parcels.Add(Pair.Key, P);
 		}
 	}
@@ -186,6 +198,21 @@ FString CityStateToJson(const FCityState& State)
 		PObj->SetNumberField(TEXT("accum"), P.Accum);
 		PObj->SetBoolField(TEXT("failed"), P.bFailed);
 		PObj->SetNumberField(TEXT("performance"), P.Performance);
+		if (P.Placement.IsSet())
+		{
+			const FLotPlacement& L = P.Placement.GetValue();
+			const TSharedRef<FJsonObject> LObj = MakeShared<FJsonObject>();
+			LObj->SetNumberField(TEXT("x0"), L.X0);
+			LObj->SetNumberField(TEXT("x1"), L.X1);
+			LObj->SetStringField(TEXT("side"), L.Side);
+			// The key is written only when the lot actually has one - see the
+			// reader above for why absence is preserved rather than filled in.
+			if (L.RoadId.IsSet())
+			{
+				LObj->SetStringField(TEXT("road_id"), L.RoadId.GetValue());
+			}
+			PObj->SetObjectField(TEXT("placement"), LObj);
+		}
 		Parcels->SetObjectField(Id, PObj);
 	}
 	Root->SetObjectField(TEXT("parcels"), Parcels);

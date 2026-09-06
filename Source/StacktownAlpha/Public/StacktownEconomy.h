@@ -17,10 +17,6 @@
 
 namespace Stacktown
 {
-	/** A fresh city, straight from the ruleset's declared start. Roads is an
-	 *  empty object, matching seed_state(). */
-	STACKTOWNALPHA_API FCityState SeedState(const FEconRules& R);
-
 	/** Parse citystate.json. Missing optional keys take the struct's defaults;
 	 *  'roads' is round-tripped verbatim without being interpreted (step 4 owns
 	 *  road semantics). Keys this port does not recognise are NOT preserved -

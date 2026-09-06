@@ -65,34 +65,48 @@ Seats:
   ENGINEERING: channel received 2026-09-06 07:37 PDT (14:37 UTC).
   pwd /home/user/stacktown
   ada5210 Phase 0 of the C++ runtime: a game module, a headless test loop, the plan
-  STATUS 2026-09-06 (later): Phase 1 step 1 BUILT ON THE MAC. Coordinator's
-  run: build OK, 27/28, one red - Stacktown.CityState.Buy. Cause: the test
-  fixture outered the subsystem to the transient package, and a
-  UGameInstanceSubsystem needs a UGameInstance. Fixed (FScopedEconomy now holds
-  a UGameInstance and outers the economy to it; both held by strong pointers,
-  game instance declared first so it exists when the economy names it) and
-  pushed. All ten CityState cases shared that fixture, so all ten are affected
-  by the one fix. AWAITING the coordinator's re-run for the 28/28 pass line -
-  the fix itself is UNVERIFIED here for the same reason the defect was: this
-  seat has no engine.
-  WHAT THE PRE-FLIGHT COULD NOT HAVE CAUGHT, and now says so about itself in
-  Tools/preflight/CoreMinimal.h: it never constructs a UObject, so no mutation
-  of it would ever have found this. That is the second recorded instance of the
-  blind spot, after Tick()'s sort. Both are written down as evidence rather
-  than as a caveat, so the next reader calibrates on what it actually missed.
-  STILL GREEN HERE: oracle 17/17 + 9/9, pre-flight 132 checks / 0 failures,
-  16 of 17 mutations caught (every one of the 17 economy cases covered by at
-  least one; the survivor is the declared TMap-ordering one).
-  ANSWERS RECEIVED from the coordinator, closing this seat's open items:
-  (1) the coordinator runs UE builds on the Mac - this seat writes and
-  pre-flights, and never claims a pass line it did not see;
-  (2) UStacktownEconomy keeps writing NOTHING until StatePath is set, so the
-  two save paths cannot drift while both sides run;
-  (3) econrules.json shipping from Content/Python (UncookedOnly) is a Phase 2
-  item, not step 1's.
-  NEXT: Phase 1 step 2 - FPlacement and the 27 placement tests, same shape
-  (port the tests first, expectations generated from placement.py, pre-flight
-  here, pass line from the Mac).
+  STATUS 2026-09-06 (step 2): Phase 1 step 1 BUILT ON THE MAC (coordinator:
+  build OK, 27/28; the one red was the CityState fixture outering a
+  UGameInstanceSubsystem to the transient package - fixed in 5d38749, awaiting
+  the re-run for a 28/28 line). STEP 2 NOW WRITTEN: FPlacement, the click ->
+  lot -> state contract, plus 28 Stacktown.Placement tests.
+  SCOPE CALL, made not assumed: placement.py self-tests run 1-39, not 27.
+  Cases 1-27 are the click contract; 28-39 are DRAWN ROADS (_road_dict,
+  resolve_road_draw, draw_road), which PLAN_CPP_PORT.md assigns to step 4. So
+  the charter's "27" is exact rather than stale, and step 2 stopped there.
+  Reading roads to place a lot is step 2's; authoring them is step 4's.
+  LANDED: StacktownPlacement.h/.cpp (pure, no UObject - snap, projection,
+  nearest-road, lot rects, resolve/place, plan_reactivation); FCityState
+  extended with an optional FLotPlacement and its JSON both ways;
+  Tools/oracle/gen_placement_fixture.py + emit_placement_inl.py.
+  PROVEN HERE: placement oracle runs (39/39), pre-flight 286 checks / 0
+  failures, 27 of 29 mutations caught, every one of the 28 cases covered.
+  WHAT THE MUTATIONS FOUND, which is the point of running them: FOUR survivors
+  on the first pass. Two were my bugs - the fixture generator sorted the pool
+  labels before handing them over, so plan_reactivation's own sort was
+  untestable; and no click coordinate in the 27 lands off the 10 uu grid, so a
+  port that TRUNCATED instead of rounding passed all of them. Both fixed, the
+  second with a new Stacktown.Placement.Snap case.
+  ONE IS A FINDING ABOUT THE SPEC, for the coordinator. placement.py justifies
+  converting to world space BEFORE snapping with "neither PLATE_X_MIN nor
+  PLATE_Y_MIN is a multiple of WIDTH_QUANTUM". True of WIDTH_QUANTUM (410), but
+  the snap became POSITION_QUANTUM (10) on 2026-09-03 and the rationale was
+  never updated - both minima ARE multiples of 10. The ordering is still right,
+  for a different reason: round() is half-to-EVEN, so which way a tie breaks
+  depends on the parity of the integer part. The code is correct; its stated
+  reason is stale.
+  ONE IS A DECLARED SURVIVOR: the pinned-span side check cannot be reached by
+  any test, because the pin table's north and south spans are partitioned
+  differently but cover the IDENTICAL union - checked, zero x on the whole plate
+  where coverage differs. It is correct and necessary and goes live the moment a
+  board has asymmetric pins. Kept, not deleted.
+  UNCHANGED: no engine here, so no pass line from this seat. The other declared
+  survivor is still the TMap-ordering one, invisible to a shim built on
+  std::map. Tools/preflight/ stays out of Source/ so nothing that fakes the
+  engine sits where engine code does.
+  NEXT: step 3 (AStacktownParcel, BP_Parcel re-parented) or step 4 (roads,
+  which would close placement 28-39) - the coordinator's call on order, since
+  the charter says not to reorder without them.
 - LOOK (the direction-B design session): continues under the addendum at
   the end of Docs/DIRECTION_B_LANE.md. No editor window granted.
 - BETA gameplay lane: RETIRED (Docs/BETA_LANE.md, retired section). Its

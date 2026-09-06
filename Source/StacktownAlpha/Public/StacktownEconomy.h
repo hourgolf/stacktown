@@ -13,6 +13,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "StacktownEconomyRules.h"
+#include "StacktownStateHandover.h"
 #include "StacktownEconomy.generated.h"
 
 namespace Stacktown
@@ -132,6 +133,43 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stacktown|Economy")
 	double GetDemand() const { return State.Demand; }
 
+	// --- Phase A: mirror the Python-written state, read-only -----------------
+	// Docs/STATE_HANDOVER.md. Until Phase B the Python driver is the only writer
+	// of the city state. This subsystem re-reads what the Python side resolved
+	// and exposes it; it never ticks on its own and never sets StatePath.
+
+	/** Re-read the file at AbsolutePath and replace the mirrored state.
+	 *
+	 *  READ-ONLY BY CONSTRUCTION: it parses into a local and only commits on
+	 *  success, so a truncated file mid-write leaves the previous mirror intact
+	 *  rather than blanking every parcel for a frame. Refuses, loudly, if
+	 *  StatePath is set - mirroring and owning the file are mutually exclusive,
+	 *  and the moment both are true there are two writers, which is the one
+	 *  thing this whole contract exists to prevent. */
+	bool MirrorFromFile(const FString& AbsolutePath, FString& OutError);
+
+	/** How many times the mirror has been refreshed. The live agreement check
+	 *  needs to know a sync actually happened rather than assuming it. */
+	int32 GetMirrorSyncCount() const { return MirrorSyncCount; }
+
+	/** The session's state file, by the four rules the Python driver uses
+	 *  (override, standalone lock, marker, default).
+	 *
+	 *  RESOLVED ONCE PER SESSION and cached. Resolving per call let a marker
+	 *  that appeared mid-session flip a running standalone game to the test file
+	 *  for a few ticks and back, leaving two files carrying the owner's layout
+	 *  four seconds apart. Pass bForceReresolve only when a session genuinely
+	 *  restarts. */
+	FString StatePathForSession(Stacktown::EStateSource& OutSource, bool bForceReresolve = false);
+
+	/** Set before the session resolves its path. The override route, for a
+	 *  caller driving another lane's session. */
+	void SetStateOverride(const FString& InAbsolutePath) { StateOverride = InAbsolutePath; }
+
+	/** Gather the real inputs (marker, lock, process kind) from disk. Exposed so
+	 *  the resolution can be logged or asserted without repeating the gathering. */
+	Stacktown::FStatePathInputs GatherStatePathInputs() const;
+
 	/** Load from StatePath, seeding fresh if there is no file yet. No-op when
 	 *  StatePath is empty. */
 	bool LoadState(FString& OutError);
@@ -144,4 +182,11 @@ private:
 	Stacktown::FCityState State;
 	TSharedPtr<Stacktown::ICatalogue> Catalogue;
 	FString StatePath;
+
+	// Phase A mirror state. None of this is written to disk.
+	FString StateOverride;
+	FString CachedSessionPath;
+	Stacktown::EStateSource CachedSessionSource = Stacktown::EStateSource::Default;
+	bool    bSessionPathResolved = false;
+	int32   MirrorSyncCount = 0;
 };

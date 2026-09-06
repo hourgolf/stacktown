@@ -17,6 +17,7 @@
 
 #include "StacktownEconomyTestCommon.h"
 #include "StacktownPlacementTestCommon.h"
+#include "StacktownStateHandover.h"
 
 #include <cstdio>
 #include <string>
@@ -616,6 +617,114 @@ int main()
 				CheckNear("R1 ymin", R1.YMin, T27_Rect1.YMin, Tol);
 				CheckNear("R1 ymax", R1.YMax, T27_Rect1.YMax, Tol);
 			}
+		}
+	}
+
+	// =====================================================================
+	// STATE HANDOVER (Phase 1 step 3, Docs/STATE_HANDOVER.md Phase A).
+	// The pure half only: ResolveStatePath, IsPoolLabel, FactsForLabel.
+	// MirrorFromFile and AStacktownParcel need the engine and run on the Mac.
+	// These expectations are HAND-WRITTEN, not oracle-generated - the Python
+	// rules live in init_unreal.py, which imports `unreal` and cannot run here.
+	// =====================================================================
+	{
+		auto Base = []() {
+			FStatePathInputs In;
+			In.DefaultStatePath = TEXT("/proj/Content/Python/citystate.json");
+			In.TestStatePath    = TEXT("/proj/Content/Python/citystate_test.json");
+			return In;
+		};
+
+		CASE("Handover.StatePathRules");
+		{
+			// The default is the owner's real file, unconditionally.
+			FStatePathResolution R = ResolveStatePath(Base());
+			CheckStr("default path", R.Path, FString("/proj/Content/Python/citystate.json"));
+			CheckStr("default source", StateSourceName(R.Source), FString("default"));
+
+			// Override wins over the lock and the marker both.
+			FStatePathInputs Ov = Base();
+			Ov.Override = TEXT("/somewhere/else.json");
+			Ov.bStandalonePidAlive = true;
+			Ov.bMarkerExists = true;
+			Ov.MarkerContent = TEXT("/marker/path.json");
+			R = ResolveStatePath(Ov);
+			CheckStr("override path", R.Path, FString("/somewhere/else.json"));
+			CheckStr("override source", StateSourceName(R.Source), FString("override"));
+
+			// An editor session steps aside for a live standalone game...
+			FStatePathInputs Lk = Base();
+			Lk.bStandalonePidAlive = true;
+			Lk.bIsGameProcess = false;
+			R = ResolveStatePath(Lk);
+			CheckStr("lock path", R.Path, Lk.TestStatePath);
+			CheckStr("lock source", StateSourceName(R.Source), FString("standalone-lock"));
+
+			// ...but the game process itself is the legitimate holder.
+			FStatePathInputs Gp = Base();
+			Gp.bStandalonePidAlive = true;
+			Gp.bIsGameProcess = true;
+			R = ResolveStatePath(Gp);
+			CheckStr("game keeps the real file", R.Path, Gp.DefaultStatePath);
+			CheckStr("and says default", StateSourceName(R.Source), FString("default"));
+
+			// Marker content is the path, trimmed.
+			FStatePathInputs Mk = Base();
+			Mk.bMarkerExists = true;
+			Mk.MarkerContent = TEXT("  /lane/own.json\n");
+			R = ResolveStatePath(Mk);
+			CheckStr("marker content", R.Path, FString("/lane/own.json"));
+			CheckStr("marker source", StateSourceName(R.Source), FString("marker"));
+
+			// Empty or whitespace-only means the test path, not an empty path.
+			const char* Empties[] = { "", "   ", "\n\t " };
+			for (int i = 0; i < 3; ++i)
+			{
+				FStatePathInputs E = Base();
+				E.bMarkerExists = true;
+				E.MarkerContent = FString(Empties[i]);
+				R = ResolveStatePath(E);
+				CheckStr("empty marker means test path", R.Path, E.TestStatePath);
+				CheckStr("still marker", StateSourceName(R.Source), FString("marker"));
+			}
+
+			// The lock outranks the marker.
+			FStatePathInputs Both = Base();
+			Both.bStandalonePidAlive = true;
+			Both.bMarkerExists = true;
+			Both.MarkerContent = TEXT("/lane/own.json");
+			R = ResolveStatePath(Both);
+			CheckStr("lock beats marker", StateSourceName(R.Source), FString("standalone-lock"));
+		}
+
+		CASE("Handover.PoolLabels");
+		{
+			CheckBool("POOL_00", IsPoolLabel(TEXT("POOL_00")), true);
+			CheckBool("POOL_PIN_NE0", IsPoolLabel(TEXT("POOL_PIN_NE0")), true);
+			CheckBool("P1", IsPoolLabel(TEXT("P1")), false);
+			CheckBool("NE0", IsPoolLabel(TEXT("NE0")), false);
+			CheckBool("pool_00 lowercase", IsPoolLabel(TEXT("pool_00")), false);
+		}
+
+		CASE("Handover.FactsForLabel");
+		{
+			FCityState S = SeedState(R);
+			S.Parcels.Add(TEXT("NE0"), Parcel(TEXT("vernacular"), 2, 1230.0, true, 7.5, true, -0.5));
+			const FParcelFacts F = FactsForLabel(R, S, TEXT("NE0"));
+			CheckBool("found", F.bFound, true);
+			CheckStr("rid", F.Rid, FString("vernacular"));
+			CheckNear("width", F.Width, 1230.0, Tol);
+			CheckInt("tier", F.Tier, 2);
+			CheckBool("owned", F.bOwned, true);
+			CheckBool("failed", F.bFailed, true);
+			CheckNear("accum", F.Accum, 7.5, Tol);
+			CheckBool("not placed", F.bPlaced, false);
+			// Recomputed from tier and width, never read from state.
+			CheckNear("price", F.Price, Price(R, 2, 1230.0), Tol);
+
+			const FParcelFacts Missing = FactsForLabel(R, S, TEXT("NOPE"));
+			CheckBool("absent not found", Missing.bFound, false);
+			CheckInt("absent carries no tier", Missing.Tier, 0);
 		}
 	}
 

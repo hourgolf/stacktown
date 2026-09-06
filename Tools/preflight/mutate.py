@@ -27,6 +27,7 @@ PRIVATE = os.path.join(ROOT, 'Source', 'StacktownAlpha', 'Private')
 TARGETS = {
     'rules':     (os.path.join(PRIVATE, 'StacktownEconomyRules.cpp'), 'STACKTOWN_RULES_CPP'),
     'placement': (os.path.join(PRIVATE, 'StacktownPlacement.cpp'),    'STACKTOWN_PLACEMENT_CPP'),
+    'handover':  (os.path.join(PRIVATE, 'StacktownStateHandover.cpp'), 'STACKTOWN_HANDOVER_CPP'),
 }
 
 # (name, what it breaks, find, replace, expected_to_be_caught, target)
@@ -155,6 +156,39 @@ MUTATIONS = [
     ('overlap-scan-unsorted', 'a refusal names whichever lot was added first',
      'TArray<FString> Ids;\n\tState.Parcels.GetKeys(Ids);\n\tIds.Sort([](const FString& A, const FString& B) { return A < B; });',
      'TArray<FString> Ids;\n\tState.Parcels.GetKeys(Ids);', True, 'placement'),
+
+    # ---- the state handover (Phase 1 step 3) --------------------------------
+    ('default-flips-to-the-test-path', 'the OWNER lands on the test file by default',
+     'Out.Path = In.DefaultStatePath;\n\tOut.Source = EStateSource::Default;',
+     'Out.Path = In.TestStatePath;\n\tOut.Source = EStateSource::Default;', True, 'handover'),
+
+    ('lock-steers-the-game-process-too', 'a running standalone game is pushed off its own save',
+     'if (!In.bIsGameProcess && In.bStandalonePidAlive)',
+     'if (In.bStandalonePidAlive)', True, 'handover'),
+
+    ('empty-marker-yields-an-empty-path', 'a touch-created marker selects nothing at all',
+     'Out.Path = Trimmed.IsEmpty() ? In.TestStatePath : Trimmed;',
+     'Out.Path = Trimmed;', True, 'handover'),
+
+    ('marker-content-not-trimmed', 'a trailing newline becomes part of the path',
+     'const FString Trimmed = In.MarkerContent.TrimStartAndEnd();',
+     'const FString Trimmed = In.MarkerContent;', True, 'handover'),
+
+    ('pool-prefix-case-insensitive', 'a real parcel named pool_x is skipped as dormant',
+     'return Label.StartsWith(TEXT("POOL_"), ESearchCase::CaseSensitive);',
+     'return Label.StartsWith(TEXT("POOL_"), ESearchCase::IgnoreCase)\n\t\t|| Label.StartsWith(TEXT("pool_"), ESearchCase::CaseSensitive);', True, 'handover'),
+
+    # Reports found for a label that is absent, WITHOUT dereferencing the null
+    # pointer. An earlier version of this mutation flipped the guard itself,
+    # which segfaulted the harness - that scores as "caught" on the exit code
+    # while no test actually noticed anything, which is not the claim being made.
+    ('missing-label-reports-found', 'an unregistered lot shows as an unowned tier-0 one',
+     '\t\t// bFound stays false and every other field stays at its default. The\n\t\t// caller must write nothing.\n\t\treturn Facts;',
+     '\t\tFacts.bFound = true;\n\t\treturn Facts;', True, 'handover'),
+
+    ('price-not-recomputed-from-tier', 'the price shown stops tracking the tier',
+     'Facts.Price   = Price(R, P->Tier, P->Width);',
+     'Facts.Price   = Price(R, 0, P->Width);', True, 'handover'),
 
     # ---- the honest negatives ------------------------------------------------
     # DECLARED SURVIVOR, and now for a PROVEN reason rather than a shim artifact.

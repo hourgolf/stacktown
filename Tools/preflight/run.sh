@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="${1:-$ROOT/Saved/SelfTest/econ_harness}"
 SRC_RULES="${STACKTOWN_RULES_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownEconomyRules.cpp}"
 SRC_PLACE="${STACKTOWN_PLACEMENT_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownPlacement.cpp}"
+SRC_HAND="${STACKTOWN_HANDOVER_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownStateHandover.cpp}"
 
 mkdir -p "$(dirname "$OUT")"
 clang++ -std=c++20 -O0 -g -Wall -Wextra -Wno-unused-parameter \
@@ -15,5 +16,6 @@ clang++ -std=c++20 -O0 -g -Wall -Wextra -Wno-unused-parameter \
 	"$ROOT/Tools/preflight/harness.cpp" \
 	"$SRC_RULES" \
 	"$SRC_PLACE" \
+	"$SRC_HAND" \
 	-o "$OUT"
 "$OUT"

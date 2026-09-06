@@ -37,8 +37,16 @@
 //      mutation. Found by the FIRST real-engine run: build OK, 27/28,
 //      Stacktown.CityState.Buy the one red.
 //
-// The pattern in both: this file is blind to anything that is about the ENGINE
-// rather than about the arithmetic. It is worth exactly that much.
+//   3. A MISSING INCLUDE. StacktownPlacementTest.cpp called CityStateToJson
+//      without including StacktownEconomy.h. This harness compiles its whole
+//      world into ONE translation unit, so a declaration pulled in by any other
+//      header is visible to all of them and no missing include can ever fail
+//      here. UBT compiles each .cpp separately and rejected it. Found by the
+//      coordinator's build, not by this; fixed in 29150be.
+//
+// The pattern in all three: this file is blind to anything that is about the
+// ENGINE or the BUILD rather than about the arithmetic. It is worth exactly
+// that much.
 #pragma once
 
 #include <algorithm>
@@ -72,6 +80,19 @@ public:
 	bool operator==(const FString& O) const { return S == O.S; }
 	bool operator!=(const FString& O) const { return S != O.S; }
 	bool operator< (const FString& O) const { return S <  O.S; }
+
+	bool StartsWith(const FString& Prefix, int32 /*SearchCase*/ = 0) const
+	{
+		return S.rfind(Prefix.S, 0) == 0;
+	}
+	FString TrimStartAndEnd() const
+	{
+		const char* WS = " \t\n\r\f\v";
+		const size_t B = S.find_first_not_of(WS);
+		if (B == std::string::npos) { return FString(); }
+		const size_t E = S.find_last_not_of(WS);
+		return FString(S.substr(B, E - B + 1));
+	}
 
 	static FString Printf(const char* Fmt, ...)
 	{
@@ -194,6 +215,10 @@ struct FMath
 	template <typename T> static T Min(T A, T B) { return A < B ? A : B; }
 	template <typename T> static T Max(T A, T B) { return A > B ? A : B; }
 };
+
+// ESearchCase exists so the call sites read the same in both worlds; the shim's
+// StartsWith is always case-sensitive, which is the only mode the port uses.
+struct ESearchCase { enum Type { CaseSensitive = 0, IgnoreCase = 1 }; };
 
 // The module export macro is meaningless outside a UE build.
 #define STACKTOWNALPHA_API

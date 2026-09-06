@@ -9,6 +9,8 @@
 #include "Dom/JsonValue.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "HAL/PlatformProcess.h"
+#include "HAL/FileManager.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -302,6 +304,100 @@ bool UStacktownEconomy::SaveState() const
 		return true;
 	}
 	return FFileHelper::SaveStringToFile(Stacktown::CityStateToJson(State), *StatePath);
+}
+
+// --- Phase A: mirroring ------------------------------------------------------
+
+bool UStacktownEconomy::MirrorFromFile(const FString& AbsolutePath, FString& OutError)
+{
+	if (!StatePath.IsEmpty())
+	{
+		// Two writers is the one failure this contract exists to prevent, so
+		// this refuses rather than quietly preferring one role over the other.
+		OutError = FString::Printf(
+			TEXT("refusing to mirror: StatePath is set to '%s', so this subsystem owns a file"),
+			*StatePath);
+		UE_LOG(LogStacktown, Error, TEXT("%s"), *OutError);
+		return false;
+	}
+	if (!FPaths::FileExists(AbsolutePath))
+	{
+		OutError = FString::Printf(TEXT("no state file at %s"), *AbsolutePath);
+		return false;
+	}
+	FString Text;
+	if (!FFileHelper::LoadFileToString(Text, *AbsolutePath))
+	{
+		OutError = FString::Printf(TEXT("could not read %s"), *AbsolutePath);
+		return false;
+	}
+	// Parsed into a LOCAL first. The Python side rewrites this file whole, so a
+	// read landing mid-write sees a truncated document; committing that would
+	// blank every parcel for a frame.
+	Stacktown::FCityState Parsed;
+	if (!Stacktown::CityStateFromJson(Text, Parsed, OutError))
+	{
+		return false;
+	}
+	State = MoveTemp(Parsed);
+	++MirrorSyncCount;
+	return true;
+}
+
+Stacktown::FStatePathInputs UStacktownEconomy::GatherStatePathInputs() const
+{
+	Stacktown::FStatePathInputs In;
+	In.Override = StateOverride;
+
+	// Phase A paths are the PYTHON side's, because Phase A mirrors the file the
+	// Python driver resolved. Phase B moves these under Saved/Stacktown/.
+	const FString PythonDir = FPaths::Combine(FPaths::ProjectContentDir(), TEXT("Python"));
+	In.DefaultStatePath = FPaths::Combine(PythonDir, TEXT("citystate.json"));
+	In.TestStatePath    = FPaths::Combine(PythonDir, TEXT("citystate_test.json"));
+
+	const FString MarkerPath = FPaths::Combine(PythonDir, TEXT("lane_pie.marker"));
+	In.bMarkerExists = FPaths::FileExists(MarkerPath);
+	if (In.bMarkerExists)
+	{
+		FFileHelper::LoadFileToString(In.MarkerContent, *MarkerPath);
+	}
+
+	// Editor subsystems do not exist in a standalone game process, which is the
+	// same distinction the Python makes; only an EDITOR session steps aside for
+	// the lock.
+	In.bIsGameProcess = !GIsEditor;
+
+	const FString LockPath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("standalone.lock"));
+	FString LockText;
+	if (FFileHelper::LoadFileToString(LockText, *LockPath))
+	{
+		const uint32 Pid = static_cast<uint32>(FCString::Atoi(*LockText.TrimStartAndEnd()));
+		// A stale lock from a crashed process must not steer anyone: liveness is
+		// checked, not assumed from the file existing.
+		In.bStandalonePidAlive = Pid != 0
+			&& Pid != FPlatformProcess::GetCurrentProcessId()
+			&& FPlatformProcess::IsApplicationRunning(Pid);
+	}
+	return In;
+}
+
+FString UStacktownEconomy::StatePathForSession(Stacktown::EStateSource& OutSource, bool bForceReresolve)
+{
+	if (bSessionPathResolved && !bForceReresolve)
+	{
+		OutSource = CachedSessionSource;
+		return CachedSessionPath;
+	}
+	const Stacktown::FStatePathResolution R = Stacktown::ResolveStatePath(GatherStatePathInputs());
+	CachedSessionPath = R.Path;
+	CachedSessionSource = R.Source;
+	bSessionPathResolved = true;
+	OutSource = R.Source;
+	// The source label is the audit trail: a lane that forgot its marker shows
+	// "default" against its own session here.
+	UE_LOG(LogStacktown, Log, TEXT("state path for session: %s (%s)"),
+		*R.Path, *Stacktown::StateSourceName(R.Source));
+	return R.Path;
 }
 
 void UStacktownEconomy::CityTick()

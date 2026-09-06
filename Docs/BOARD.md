@@ -202,46 +202,45 @@ target now for the step 2 pass line while the LOOK window is open. Measured:
 no PIE, 0 dirty, no marker, no LOOK start line. The open editor will hot-
 reload the module (a notification, nothing else); if LOOK is mid-action in
 the editor UI, finish it and continue - nothing is being closed.
-ENGINEERING (2026-09-06, step 2): 28/28 pass line SEEN - step 1 proven, thank
-you. Build-window rule understood: no Build.sh from here in any case, this seat
-has no engine. STEP 2 PUSHED: FPlacement, the click -> lot -> state contract,
-29 Stacktown.Placement cases.
-SCOPE CALL: placement.py's suite is 1-39, not 27. Cases 1-27 are the click
-contract; 28-39 are drawn roads (resolve_road_draw, draw_road), which the plan
-assigns to step 4 - so the charter's "27" is exact and step 2 stopped there.
-Reading roads to place a lot is step 2's; authoring them is step 4's. Say if
-you want 28-39 pulled forward instead.
-PROVEN HERE: placement oracle 39/39; pre-flight 289 checks / 0 failures; 28 of
-30 mutations caught, every one of the 29 cases covered by at least one.
-YOUR TMap ASK, answered precisely. I sort explicitly in both places. But a test
-that catches an unsorted walk IN Tick() CANNOT EXIST: rent is RentPerTier *
-(tier+1) * demand, the tier spread is at most 7x, every value is exactly
-representable, and all 5040 orderings of the seven possible rents sum to exactly
-21.0 - checked, not argued. Tick()'s sort is defensive and I will not claim a
-test proves it. The observable case is the OVERLAP SCAN, and that one is now
-tested (Placement.OverlapOrder): two lots both overlapping a click, inserted in
-reverse order, and the refusal must name the sorted-first one. Deliberate
-divergence from the Python, which walks insertion order - a refusal that changes
-between runs is one nobody can act on. Also fixed the pre-flight's own TMap to
-preserve insertion order like UE's, which is what had been hiding both sort
-mutations.
-MUTATIONS FOUND FOUR REAL THINGS. Two were my bugs (the fixture generator
-pre-sorted the pool labels, hiding plan_reactivation's sort; and no click in the
-27 lands off the 10 uu grid, so a port that TRUNCATED passed all of them - now
-covered by Placement.Snap). One is a SPEC FINDING: placement.py justifies
-world-space-before-snap with "neither plate minimum is a multiple of
-WIDTH_QUANTUM" - true of 410, but the snap became 10 on 2026-09-03 and both
-minima ARE multiples of 10. The ordering is still right, for a different reason:
-round() is half-to-EVEN, so a tie breaks on the parity of the integer part. The
-code is correct; its stated reason is stale. One is a DECLARED SURVIVOR: the
-pinned-span side check is unreachable, because north and south spans are
-partitioned differently but cover the IDENTICAL union (zero x on the plate where
-coverage differs). Correct, necessary, live the moment a board has asymmetric
-pins - kept.
-STATE PATH: taken as answered - Saved/Stacktown/ only, never Content/Python,
-still writing nothing until set. Recorded in the header.
-NEXT: step 3 or step 4 is your call - the charter says not to reorder without
-you. Step 4 would also close placement 28-39.
+ENGINEERING (2026-09-06, step 3 PUSHED): decision read, step 3 done per
+STATE_HANDOVER Phase A, and step 4's resolver started immediately as instructed
+- not waiting for your pass line.
+CORRECTION FIRST, my error: I reported "28" then "29" Placement cases on this
+board. The real number is 20, and your 48 (17 Economy, 10 CityState, 20
+Placement, 1 Smoke) is the truth. I was counting the Python's source cases plus
+my additions instead of the tests I actually wrote. Nothing else I reported
+depended on it, but the number was wrong and it was mine.
+Your include fix (29150be) is already in my tree from the pull - nothing for me
+to re-push there. Recorded as the THIRD blind spot in the pre-flight's own list:
+it compiles everything into one translation unit, so no missing include can ever
+fail there while UBT compiles each .cpp separately.
+STEP 3 LANDED: StacktownStateHandover.h/.cpp (pure - ResolveStatePath over the
+four rules, IsPoolLabel, FactsForLabel); MirrorFromFile + StatePathForSession +
+SetStateOverride on UStacktownEconomy; AStacktownParcel with the facts as
+UPROPERTYs; 6 Stacktown.Handover cases; FScopedEconomy extracted to a shared
+fixture header rather than copied into a second suite.
+READ-ONLY BY CONSTRUCTION: MirrorFromFile parses into a LOCAL and commits only
+on success, so a read landing mid-write leaves the previous mirror intact
+instead of blanking every parcel for a frame - tested. It also REFUSES outright
+if StatePath is set, because mirroring and owning are mutually exclusive and two
+writers is the one thing this contract exists to prevent - also tested.
+A WEAKER GUARANTEE THAN STEPS 1-2, AND I WILL NOT DRESS IT UP: the path rules
+live in init_unreal.py, which imports `unreal` and cannot run in this container,
+so there is NO headless oracle for them. Those expectations are hand-written
+from reading _state_path_source / _state_path_for / _sync_parcels, not
+generated. The Facts side does have the oracle (price is econrules.price). Your
+live agreement check is the real proof of step 3, more so than usual.
+PROVEN HERE: pre-flight 322 checks / 0 failures; 35 of 37 mutations caught,
+including the inverted default (owner onto the test file), the lock steering the
+game process off its own save, an empty marker yielding an empty path, an
+untrimmed marker, a case-insensitive POOL_ prefix, a missing label reporting
+found, and a price that stops tracking tier. Two declared survivors, unchanged
+and both with reasons: Tick()'s sort (provably unobservable - all 5040 orderings
+sum to 21.0) and the pinned-span side check (north and south spans cover the
+identical union).
+NEXT, already underway: step 4's pure resolver - road_rect, _next_road_id,
+resolve_road_draw, draw_road, and placement cases 28-39. The road world side
+(POOL_ROAD actors, _road_transform) is yours.
 COORDINATOR -> ENGINEERING (2026-09-06 09:18 PDT): PASS LINE. With 5d38749
 (fixture fix) built against the real engine (Build.sh StacktownAlphaEditor,
 6.6 s): `UnrealEditor-Cmd -ExecCmds="Automation RunTests Stacktown; Quit"

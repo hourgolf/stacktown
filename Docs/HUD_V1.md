@@ -114,9 +114,8 @@ selected. A vertical box:
 
     SelectedNameText     title,  ink
     SelectedStateText    body,   ink — always, all three states
-    SelectedPriceText    body,   Space Mono Bold, accept or dim
-    (16 gap)                     absent entirely if no verb is present
-    verb rows            body,   one per available verb
+    (16 gap)
+    verb rows            body,   one per available verb, price on the row
 
 **The state line is `ink` in all three states.** CONTENT 4 asks which D16
 colour each of FOR SALE / OWNED · TIER n / NEEDS REPAIR maps to. The answer is
@@ -132,14 +131,25 @@ this species' grey on the board, legible at board range (LOOK 8). The three
 states are told apart by their words, by which verb appears beneath them, and
 by the wood. Not by a colour the player would have to learn.
 
-**The price line is absent, not blank, when no verb is present.** CONTENT 4 is
-right that it must not read `0` or `—`; absence satisfies that and matches the
-panel's own rule for verbs. A blank-but-present row is the same failure as a
-greyed-but-present verb: it holds space to say nothing. The panel's height is
-content-driven, so absence simply shortens it.
+**There is no separate price line. Amended 2026-09-06 on the LOOK 9 read.**
+The first build followed this section as written and put the price twice —
+once on `SelectedPriceText`, once on the verb row, stacked 32 apart in the
+same face and colour. In the frame it reads as a bug, not as information.
 
-A verb row is `[key]  Verb  price` on one line: micro key cap in `dim`, verb in
-`ink`, price right-aligned in Space Mono Bold. **Available verbs only** — an
+The verb row's price is the one that survives, because it has a subject:
+`U  UPGRADE  $200` is a whole statement, while a bare `$200` above it prices
+nothing the eye can name. And since CONTENT 1 guarantees at most one verb is
+ever present, the verb row carries the price whenever a price exists — so the
+standalone line was redundant in every case, not only this one.
+
+It got in because this section and CONTENT 4 specified a price independently
+and neither read the other. Worth naming: two correct halves can still
+compose into a wrong panel, and only the frame showed it.
+
+A verb row is `[key]  Verb  price` on one line: key cap at **label** size in
+`dim`, verb in `ink`, price right-aligned in Space Mono Bold. The key cap was
+micro in the first draft and the frame showed it as the least legible thing in
+the row — which is backwards, since it is the part that says what to press. **Available verbs only** — an
 unavailable verb is absent, not greyed. A greyed list teaches the player to
 read past the whole panel.
 
@@ -304,6 +314,14 @@ bucketing function nobody has built yet; not proposed here, since nothing
 today would drive it.
 
 ## CONTENT 4 — the selection panel's own three lines
+
+> **SUPERSEDED IN PART, 2026-09-06 (LOOK seat, on the LOOK 9 read).**
+> `SelectedPriceText` is withdrawn — it and the verb row printed the same
+> price twice in the built HUD. The price lives on the verb row only; see
+> LOOK 5. Nothing else in this section changes, and its reasoning is left
+> exactly as the beta lane wrote it. Marked rather than rewritten because
+> that lane is retired and this file is what Phase 6 builds from.
+
 
     SelectedNameText     the lot's recipe id and width — e.g. "vernacular 820"
     SelectedStateText    one of: FOR SALE / OWNED · TIER n / NEEDS REPAIR

@@ -1924,3 +1924,29 @@ into the wrong project. It has already caught it happening.
   drivers no longer register in games. Missing in the C++ game: the
   pinned starter lot (seat's board factory, now its item 1), night (L),
   the road look (design). Monday's checklist rewritten for the C++ game.
+- **PACKAGED C++ BUILD, FIRST LAUNCH (2026-09-06 20:20):** Tools/package.sh
+  produced the first C++-owned app (1.3 GB universal), but it could not own
+  the city: "rules file missing: Config/Stacktown/econrules.json". Config/
+  subfolders are not staged into a packaged app (only the ini files the
+  config system knows). Decision: the rules file moves once more, to
+  Content/Stacktown/Rules/econrules.json, staged as UFS through
+  DirectoriesToAlwaysStageAsUFS so it lands in the pak; one path function
+  in C++ (Stacktown::RulesFilePath) and econrules.RULES_PATH read it.
+  Seat's item 4 (the rules loader) targets that path.
+- **NIGHT IN C++ (2026-09-06 20:30, coordinator):** UStacktownNight ports
+  _set_night / _apply_night_lights (NightAmount on MPC_WoodCity; the seven
+  named lights dimmed by their factors, day values captured once, the sky
+  cooled to (0.55, 0.68, 0.95)); L toggles it in the C++ controller and
+  the HUD's NIGHT word follows. Lights are found by name/label OR an actor
+  tag of the same name, so a packaged build can keep night once the map's
+  lights carry tags (an editor change, owner's word). Live in a C++-owned
+  game: NightAmount 0 -> 1 -> 0, CITY_Key 20.5M -> 2.05M -> 20.5M, six
+  lights touched (the seventh name is not in the map). 77/77. With this,
+  every Python game feature is in C++ except the pinned starter lot.
+- **THE PACKAGED APP OWNS A CITY (2026-09-06 22:48):** with the rules file
+  in the pak (Content/Stacktown/Rules, UFS-staged), the packaged
+  StacktownAlpha.app logged "CitySync: OWNS the city", wrote its standalone
+  lock and its state under the app's own sandboxed Saved/Stacktown, hid the
+  Blueprint lots, built the HUD and possessed the C++ camera. A stranger's
+  download now starts a fresh, empty C++ city (the starter lot arrives with
+  the seat's board factory). This is the first true beta candidate.

@@ -27,8 +27,8 @@ is a fine answer; so is "no".
 
 Known and expected: Q, E, W, S, A, D, R and F no longer move the camera;
 they belonged to the retired rig. The starter city's demo lot does not
-appear yet (it waits on the engineering seat's board factory). L (night) is
-not in the C++ port yet. Drawn roads are the plate's own grey until the
+appear yet (it waits on the engineering seat's board factory). Press L for night and again for day: the lights dim, the windows glow, and
+NIGHT shows at the right of the bar. Drawn roads are the plate's own grey until the
 design lane rules their look.
 
 Optional, two minutes: double-click Saved/Packaged/Mac/StacktownAlpha.app

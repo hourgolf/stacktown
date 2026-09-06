@@ -112,6 +112,15 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 12:00 PDT): Docs/STATE_HANDOVER.md is
+the contract for step 3's hookup. Phase A now: the C++ economy MIRRORS the
+Python-written file read-only every sync (add `MirrorFromFile(path, err)`;
+port the marker / override / lock rules as `StatePathForSession()`), never
+ticks or writes on its own; AStacktownParcel reads its facts from the mirror
+by label; proof = every standing lot agrees with the Python sync in a live
+game (I run that here). Phase B (the switch) waits for the input port and
+the owner's word. Packaging is proven (Tools/package.sh), so each step you
+land is directly in the downloadable app.
 COORDINATOR (2026-09-06 11:40 PDT): PACKAGING PIPELINE PROVEN. Tools/package.sh
 -> Saved/Packaged/Mac/StacktownAlpha.app, self-contained, universal (x86_64 +
 arm64), 1.3 GB, clean cook, about 90 s; launched and ran the C++ runtime. The packaged app runs the C++ camera + HUD and

@@ -22,3 +22,8 @@ is a fine answer; so is "no".
 Known and expected: Q, E, W, S, A, D, R and F no longer move the camera;
 they belonged to the retired rig. Press G for road mode and L for night:
 the words ROAD and NIGHT appear at the right of the bar while they are on.
+
+Optional, two minutes: double-click Saved/Packaged/Mac/StacktownAlpha.app
+(rebuild it first with Tools/package.sh if the date is old). It opens the
+board with the camera and the HUD and nothing else: no economy, no clicks,
+no roads yet. That is the pipeline a stranger's download will use.

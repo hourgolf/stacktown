@@ -51,7 +51,8 @@ retired with the rig; the HUD legend describes the §6 controls.
 
 Rules for every step: the test lands with the port; the Python driver keeps
 running until its C++ replacement passes; both are compared on the same saved
-state before the Python side is switched off.
+state before the Python side is switched off. The handover itself (who writes
+the state file when) is Docs/STATE_HANDOVER.md.
 
 ### Phase 2 (weeks 4 to 8): make it a game
 Goal loop and score, growth over time, twenty building types across the five

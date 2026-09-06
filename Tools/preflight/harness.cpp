@@ -19,6 +19,7 @@
 #include "StacktownPlacementTestCommon.h"
 #include "StacktownStateHandover.h"
 #include "RoadsOracleFixture.inl"
+#include "StacktownLotTransform.h"
 
 #include <cstdio>
 #include <string>
@@ -891,6 +892,113 @@ int main()
 				CheckNear("rect ymin", Rect.YMin, T39_Rect.YMin, Tol);
 				CheckNear("rect ymax", Rect.YMax, T39_Rect.YMax, Tol);
 			}
+		}
+	}
+
+	// =====================================================================
+	// THE RUNTIME BOARD (queue item 1). FPlacementBoard::Default() is
+	// PRODUCTION data generated from citylayout, not a test fixture - so the
+	// interesting assertion is that it AGREES with the fixture the ported
+	// refusal logic was proved against.
+	// =====================================================================
+	{
+		const FPlacementBoard Real = FPlacementBoard::Default();
+		const FPlacementBoard Fixture = OracleBoard();
+
+		CASE("Board.Default");
+		{
+			CheckInt("two roads", Real.Roads.Num(), StacktownPlacementOracle::RoadsNum);
+			CheckInt("fourteen pins", Real.PinnedSpans.Num(), StacktownPlacementOracle::PinnedSpansNum);
+			CheckNear("plate x min", Real.PlateXMin, StacktownPlacementOracle::PlateXMin, Tol);
+			CheckNear("plate x max", Real.PlateXMax, StacktownPlacementOracle::PlateXMax, Tol);
+			CheckNear("v0 width", Real.Rules.V0Width, StacktownPlacementOracle::V0Width, Tol);
+			CheckInt("pool size", Real.Rules.PoolSize, StacktownPlacementOracle::PoolSize);
+			CheckStr("v0 recipe", Real.Rules.V0Recipe, FString(StacktownPlacementOracle::V0Recipe));
+			for (int32 i = 0; i < Real.PinnedSpans.Num(); ++i)
+			{
+				CheckBool("span has a key", !Real.PinnedSpans[i].Key.IsEmpty(), true);
+			}
+		}
+
+		CASE("Board.MatchesOracle");
+		{
+			CheckInt("same road count", Real.Roads.Num(), Fixture.Roads.Num());
+			for (int32 i = 0; i < Real.Roads.Num() && i < Fixture.Roads.Num(); ++i)
+			{
+				CheckStr("road id", Real.Roads[i].Id, Fixture.Roads[i].Id);
+				CheckNear("start x", Real.Roads[i].StartX, Fixture.Roads[i].StartX, Tol);
+				CheckNear("start y", Real.Roads[i].StartY, Fixture.Roads[i].StartY, Tol);
+				CheckNear("end x", Real.Roads[i].EndX, Fixture.Roads[i].EndX, Tol);
+				CheckNear("end y", Real.Roads[i].EndY, Fixture.Roads[i].EndY, Tol);
+				CheckStr("side plus", Real.Roads[i].SidePlus, Fixture.Roads[i].SidePlus);
+				CheckBool("axis", Real.Roads[i].bAxisX, Fixture.Roads[i].bAxisX);
+			}
+			CheckInt("same span count", Real.PinnedSpans.Num(), Fixture.PinnedSpans.Num());
+			for (int32 i = 0; i < Fixture.PinnedSpans.Num(); ++i)
+			{
+				const FPinnedSpan& Want = Fixture.PinnedSpans[i];
+				bool bFound = false;
+				for (int32 j = 0; j < Real.PinnedSpans.Num(); ++j)
+				{
+					const FPinnedSpan& Got = Real.PinnedSpans[j];
+					if (FMath::Abs(Got.X0 - Want.X0) < 1e-9 && FMath::Abs(Got.X1 - Want.X1) < 1e-9
+						&& Got.Side == Want.Side) { bFound = true; break; }
+				}
+				CheckBool("factory carries the fixture's span", bFound, true);
+			}
+		}
+
+		CASE("Board.PinnedPose");
+		{
+			const FCityState Empty;
+			const TArray<FRoad> Roads = Real.AllRoads(Empty);
+			int32 Posed = 0;
+			for (int32 i = 0; i < Real.PinnedSpans.Num(); ++i)
+			{
+				const FPinnedSpan& Span = Real.PinnedSpans[i];
+				FLotPlacement Lot;
+				CheckBool("key resolves", PinnedPlacementForKey(Real, Span.Key, Lot), true);
+				CheckNear("x0", Lot.X0, Span.X0, Tol);
+				CheckNear("x1", Lot.X1, Span.X1, Tol);
+				CheckStr("side", Lot.Side, Span.Side);
+				CheckStr("road", LotRoadId(Lot), FString("arterial"));
+
+				LotFrame::FPose Pose;
+				const bool bPosed = LotFrame::Pose(Lot, Roads, Pose);
+				CheckBool("poses", bPosed, true);
+				if (!bPosed) { continue; }
+				++Posed;
+				const double Expected = LotFrame::RoadHalf + LotFrame::BlockDepth * 0.5;
+				if (Span.Side == FString("north"))
+				{
+					CheckNear("pad x", Pose.X, Span.X0, Tol);
+					CheckNear("pad y", Pose.Y, Expected, Tol);
+					CheckNear("yaw", Pose.Yaw, 0.0, Tol);
+				}
+				else
+				{
+					CheckNear("pad x", Pose.X, Span.X1, Tol);
+					CheckNear("pad y", Pose.Y, -Expected, Tol);
+					CheckNear("yaw", Pose.Yaw, 180.0, Tol);
+				}
+			}
+			CheckInt("all fourteen posed", Posed, Real.PinnedSpans.Num());
+			FLotPlacement Nope;
+			CheckBool("unknown key resolves nothing",
+				PinnedPlacementForKey(Real, TEXT("NOPE"), Nope), false);
+		}
+
+		CASE("Board.PinsRefuse");
+		{
+			// TemporaryBoard carried no pins, so the C++ game accepted clicks on
+			// pinned frontage the Python refuses. With the factory in, it does not.
+			const FCityState S = SeedState(R);
+			const FClickResult Refused = ResolveClick(Real, S, 2360.0, 1500.0, true, Real.Rules.V0Width);
+			CheckBool("refused", Refused.bOk, false);
+			CheckBool("says pinned lot",
+				Refused.Reason.S.find("pinned lot") != std::string::npos, true);
+			const FClickResult Accepted = ResolveClick(Real, S, 2360.0, 1500.0, false, Real.Rules.V0Width);
+			CheckBool("empty mode still accepts", Accepted.bOk, true);
 		}
 	}
 

@@ -7,15 +7,20 @@ OUT="${1:-$ROOT/Saved/SelfTest/econ_harness}"
 SRC_RULES="${STACKTOWN_RULES_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownEconomyRules.cpp}"
 SRC_PLACE="${STACKTOWN_PLACEMENT_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownPlacement.cpp}"
 SRC_HAND="${STACKTOWN_HANDOVER_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownStateHandover.cpp}"
+# The coordinator's lot transform is pure, so the pre-flight can prove that a
+# pinned lot actually reaches a pose rather than only that its data exists.
+SRC_XFORM="${STACKTOWN_LOTXFORM_CPP:-$ROOT/Source/StacktownAlpha/Private/StacktownLotTransform.cpp}"
 
 mkdir -p "$(dirname "$OUT")"
 clang++ -std=c++20 -O0 -g -Wall -Wextra -Wno-unused-parameter \
 	-I"$ROOT/Tools/preflight" \
 	-I"$ROOT/Source/StacktownAlpha/Public" \
+	-I"$ROOT/Source/StacktownAlpha/Private" \
 	-I"$ROOT/Source/StacktownAlpha/Private/Tests" \
 	"$ROOT/Tools/preflight/harness.cpp" \
 	"$SRC_RULES" \
 	"$SRC_PLACE" \
 	"$SRC_HAND" \
+	"$SRC_XFORM" \
 	-o "$OUT"
 "$OUT"

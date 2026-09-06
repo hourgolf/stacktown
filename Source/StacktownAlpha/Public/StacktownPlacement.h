@@ -42,9 +42,17 @@ struct STACKTOWNALPHA_API FRoad
 	bool    bAxisX = true;
 };
 
-/** One pinned lot's frontage span. Position was never citystate.json's to own. */
+/** One pinned lot's frontage span. Position was never citystate.json's to own -
+ *  a pin's rid and width are its identity and live in state; where it STANDS has
+ *  always been the layout's. */
 struct STACKTOWNALPHA_API FPinnedSpan
 {
+	/** The citylayout key: NE0, SW3, and so on.
+	 *
+	 *  placement.PINNED_SPANS drops this, because answering "does this click
+	 *  cross a pin" never needed it. Posing a pinned lot needs the other
+	 *  direction - label to span - so the key is carried here. */
+	FString Key;
 	double  X0 = 0.0;
 	double  X1 = 0.0;
 	FString Side;
@@ -94,6 +102,13 @@ struct STACKTOWNALPHA_API FPlacementBoard
 	 *  them; if the mesh is resized they are re-measured and re-injected. */
 	double PlateXMin = -7650.0, PlateXMax = 7650.0;
 	double PlateYMin = -4230.0, PlateYMax = 4230.0;
+
+	/** The real board the game stands on: the two built-in roads, the fourteen
+	 *  pinned spans, the measured plate and the v0 rules - all generated from
+	 *  citylayout into StacktownBoardData.inl and cross-checked at generation
+	 *  time against placement.PINNED_SPANS, so the board the game uses is the
+	 *  board the ported refusal logic was tested against. */
+	static FPlacementBoard Default();
 
 	/** Every road a click should consider: the two built-ins PLUS whatever the
 	 *  player has drawn. A FRESH array every call, never cached - roads can be
@@ -280,6 +295,18 @@ STACKTOWNALPHA_API FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board,
  *  inserted UNCHANGED - not re-derived, the same discipline Place holds for a lot. */
 STACKTOWNALPHA_API FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityState& State,
 	double X0, double Y0, double X1, double Y1, const FString& WidthClass, bool bPinsActive);
+
+/** The placement a PINNED lot would have if it carried one.
+ *
+ *  A pin has no 'placement' key in state at all - only a player-placed lot gets
+ *  one - which is why the city sync skips every pin when it looks for a pose.
+ *  Its span and its side on the arterial are all a pose needs, so this
+ *  synthesizes the same shape LotFrame::Pose already takes rather than teaching
+ *  the pose path a second way to describe where a lot is.
+ *
+ *  @return false when no pinned span carries that key. */
+STACKTOWNALPHA_API bool PinnedPlacementForKey(const FPlacementBoard& Board,
+	const FString& Key, FLotPlacement& OutPlacement);
 
 STACKTOWNALPHA_API void PlanReactivation(const TArray<FString>& Pids,
 	const TArray<FString>& PoolLabels,

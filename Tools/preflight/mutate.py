@@ -244,6 +244,31 @@ MUTATIONS = [
      'FRoadDrawResult Result = ResolveRoadDraw(Board, State, X0, Y0, X1, Y1, WidthClass, bPinsActive);',
      True, 'placement'),
 
+    # ---- the runtime board factory (queue item 1) ----------------------------
+    ('board-drops-the-pinned-spans', 'the live board has no pins, so pinned ground is buildable',
+     'for (int32 i = 0; i < BoardData::PinnedSpansNum; ++i)', 'for (int32 i = 0; i < 0; ++i)',
+     True, 'placement'),
+
+    ('board-spans-lose-their-keys', 'a pinned parcel cannot find its own span',
+     'S.Key = Row.Key;', 'S.Key = FString();', True, 'placement'),
+
+    ('board-plate-bounds-swapped', 'the plate bounds are mirrored',
+     'Board.PlateXMin = BoardData::PlateXMin;\n\tBoard.PlateXMax = BoardData::PlateXMax;',
+     'Board.PlateXMin = BoardData::PlateXMax;\n\tBoard.PlateXMax = BoardData::PlateXMin;',
+     True, 'placement'),
+
+    ('pinned-placement-always-north', 'every south pin poses on the north frontage',
+     'OutPlacement.Side = Span.Side;', 'OutPlacement.Side = FString(TEXT("north"));',
+     True, 'placement'),
+
+    ('pinned-placement-wrong-road', 'a pinned lot poses against the cross street',
+     'OutPlacement.RoadId = Board.PinnedRoadId;', 'OutPlacement.RoadId = FString(TEXT("cross"));',
+     True, 'placement'),
+
+    ('pinned-key-lookup-always-succeeds', 'an unknown label yields a lot at the origin',
+     '	}\n\treturn false;\n}\n\nvoid SortRoadIds', '	}\n\treturn true;\n}\n\nvoid SortRoadIds',
+     True, 'placement'),
+
     # ---- the honest negatives ------------------------------------------------
     # DECLARED SURVIVOR, and now for a PROVEN reason rather than a shim artifact.
     # The shim's TMap preserves insertion order (as UE's does), so this mutation

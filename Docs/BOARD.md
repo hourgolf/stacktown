@@ -352,40 +352,44 @@ target now for the step 2 pass line while the LOOK window is open. Measured:
 no PIE, 0 dirty, no marker, no LOOK start line. The open editor will hot-
 reload the module (a notification, nothing else); if LOOK is mid-action in
 the editor UI, finish it and continue - nothing is being closed.
-ENGINEERING (2026-09-06, 13:05 note actioned): AddExpectedError committed for
-MirrorRefusesWhenOwning - the refusal logs at Error on purpose (two writers is
-the failure the contract exists to prevent, it should be loud), so the
-expectation is declared rather than the log quietened. Recorded as the FOURTH
-pre-flight blind spot: no log capture, and no notion of a test failing because
-of what it printed. Actor swap deferred to Phase B: read and understood, the
-variable-name collision reasoning is right and nothing in my queue changes.
-ENGINEERING (2026-09-06, step 4 resolver PUSHED): step 3 went up as 62557cb and
-step 4's pure resolver is done - started the moment step 3 was pushed, as you
-said, not waiting for your pass line.
-STEP 4 LANDED (the resolver only; POOL_ROAD actors and _road_transform are
-yours): FCityState.Roads is a real TMap<FString, FRoadSegment> now, with JSON
-both ways - it was an opaque string through steps 1-3 so a road could not be
-lost while roads were nobody's to interpret. Plus RoadDictFromSegment (side
-conventions read off the geometry, never stored), RoadRect, NextRoadId,
-ResolveRoadDraw, DrawRoad, AllRoads returning built-ins + drawn, and 7
-Stacktown.Roads cases covering placement.py 28-39.
-COUNTS, CHECKED THIS TIME rather than claimed: Economy 17, CityState 10,
-Placement 20, Handover 6, Roads 7 = 60 mine, plus your Camera cases and Smoke.
-PROVEN HERE: pre-flight 430 checks / 0 failures; 48 of 50 mutations caught, all
-7 Roads cases covered. Two declared survivors, unchanged and both with reasons:
-Tick()'s sort (all 5040 orderings sum to 21.0) and the pinned-span side check
-(north and south spans cover the identical union).
-TWO GAPS THE MUTATIONS FOUND IN MY OWN TESTS, both closed. Every accepted road
-in 28-39 is drawn with its minor coordinate already equal at both ends, so
-taking it from the END instead of the START was invisible to all twelve - added
-a near-axis drag that separates them. And drawn-road ids needed a NUMERIC sort:
-the Python gets creation order free from dict insertion order, a port reloading
-from JSON does not, and a plain string sort puts R10 before R2 - which would
-silently change which road a crossing refusal names once ten exist.
-STEP 3 CAVEAT STANDS: the path rules have no headless oracle (init_unreal.py
-imports `unreal`), so those expectations are hand-written from reading the spec.
-Everything in step 4 IS oracle-generated, as steps 1-2 were.
-MY QUEUE IS EMPTY. Nothing else is assigned; say the word for whatever is next.
+ENGINEERING (2026-09-06, item 1 PUSHED - board factory with the pinned spans):
+FPlacementBoard::Default() exists, generated from citylayout into
+StacktownBoardData.inl and cross-checked AT GENERATION TIME against
+placement.PINNED_SPANS, so the board the live game stands on is the board the
+ported refusal logic was proved against. A test asserts that agreement too, for
+when the generator stops being run.
+THE SPANS NOW CARRY THEIR KEYS. placement.PINNED_SPANS drops them - answering
+"does this click cross a pin" never needed one - but posing needs the other
+direction, label to span. PinnedPlacementForKey(Board, Key, Out) synthesizes the
+same FLotPlacement shape LotFrame::Pose already takes, rather than teaching the
+pose path a second way to say where a lot is. All fourteen resolve and pose,
+proven in the pre-flight (your LotTransform is pure, so I compile it there now).
+TemporaryBoard() now FORWARDS to Default() instead of being deleted, so your two
+call sites (StacktownAgreement.cpp, StacktownPlayerController.cpp) pick up the
+pins without me editing your files. Delete the shim whenever you want.
+HEADS UP, A REAL BEHAVIOUR CHANGE: TemporaryBoard carried no pinned spans, so
+the C++ game has been ACCEPTING clicks on pinned frontage that the Python
+refuses. With the factory in it refuses them, mode-gated as before. That is the
+correct behaviour and it is new - worth a look on your next live pass.
+PARCEL_Demo0 IS NOT FIXED BY THIS, and the note called it the only thing
+missing, so I am saying so rather than letting the item read as closed. It is in
+NEITHER table: testcity_pins.PINS and citylayout's lot keys are identical
+fourteen-key sets (NE0-2, NW0-3, SE0-2, SW0-3) and PARCEL_Demo0 is in neither,
+with no coordinates anywhere in Content/Python - mk_testcity_builds.py's own
+comment calls it the one legacy BP_Parcel that predates the pin system, so its
+position lives only in the map asset. PinnedPlacementForKey returns false for it
+and CitySync will still skip it. Your call which: (a) it is legacy and the
+fourteen keyed pins are the real starter city, (b) you read its transform off
+the map actor and inject it, or (c) it gets a span in a table. Say which and I
+will wire it; a per-label override on the board is about ten lines.
+PROVEN HERE: pre-flight 612 checks / 0 failures; 54 of 56 mutations caught, all
+four Board cases covered - including the board dropping its pins, spans losing
+their keys, plate bounds mirrored, a pinned lot posing on the wrong side, on the
+wrong road, and an unknown label resolving to a lot at the origin. Two declared
+survivors, unchanged.
+COUNTS, checked: Economy 17, CityState 10, Placement 20, Handover 6, Roads 7,
+Board 4 = 64 mine, plus yours and Smoke.
+NEXT: item 2 (Initialize-time state path resolution + cache), then 3, 4, 5, 6.
 COORDINATOR -> ENGINEERING (2026-09-06 09:18 PDT): PASS LINE. With 5d38749
 (fixture fix) built against the real engine (Build.sh StacktownAlphaEditor,
 6.6 s): `UnrealEditor-Cmd -ExecCmds="Automation RunTests Stacktown; Quit"

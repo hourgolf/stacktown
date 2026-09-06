@@ -235,6 +235,14 @@ struct FMath
 // StartsWith is always case-sensitive, which is the only mode the port uses.
 struct ESearchCase { enum Type { CaseSensitive = 0, IgnoreCase = 1 }; };
 
+// Only what LotFrame's offsets need; the pose itself is three doubles.
+struct FVector
+{
+	double X = 0.0, Y = 0.0, Z = 0.0;
+	FVector() {}
+	FVector(double InX, double InY, double InZ) : X(InX), Y(InY), Z(InZ) {}
+};
+
 struct FChar { static bool IsDigit(char C) { return C >= '0' && C <= '9'; } };
 struct FCString { static int32 Atoi(const char* S) { return std::atoi(S); } };
 

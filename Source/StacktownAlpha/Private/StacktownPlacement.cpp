@@ -3,9 +3,74 @@
 // board is injected rather than derived.
 
 #include "StacktownPlacement.h"
+#include "StacktownBoardData.inl"
 
 namespace Stacktown
 {
+
+FPlacementBoard FPlacementBoard::Default()
+{
+	FPlacementBoard Board;
+	Board.Rules.PositionQuantum = BoardData::PositionQuantum;
+	Board.Rules.V0Width         = BoardData::V0Width;
+	Board.Rules.V0Recipe        = FString(BoardData::V0Recipe);
+	Board.Rules.PoolSize        = BoardData::PoolSize;
+	Board.Rules.RoadHalf        = BoardData::RoadHalf;
+	Board.Rules.BlockDepth      = BoardData::BlockDepth;
+	Board.Rules.RoadMaxReach    = BoardData::RoadMaxReach;
+
+	// MEASURED off the board's own ground mesh, never derived - citylayout's
+	// procedural union was tried as the authority and the owner's live clicks
+	// proved it wrong twice.
+	Board.PlateXMin = BoardData::PlateXMin;
+	Board.PlateXMax = BoardData::PlateXMax;
+	Board.PlateYMin = BoardData::PlateYMin;
+	Board.PlateYMax = BoardData::PlateYMax;
+
+	for (int32 i = 0; i < BoardData::RoadsNum; ++i)
+	{
+		const BoardData::FRoadRow& Row = BoardData::Roads[i];
+		FRoad R;
+		R.Id = Row.Id;
+		R.StartX = Row.StartX; R.StartY = Row.StartY;
+		R.EndX = Row.EndX;     R.EndY = Row.EndY;
+		R.SidePlus = Row.SidePlus;
+		R.SideMinus = Row.SideMinus;
+		R.bAxisX = Row.bAxisX;
+		Board.Roads.Add(R);
+	}
+	for (int32 i = 0; i < BoardData::PinnedSpansNum; ++i)
+	{
+		const BoardData::FPinRow& Row = BoardData::PinnedSpans[i];
+		FPinnedSpan S;
+		S.Key = Row.Key;
+		S.X0 = Row.X0;
+		S.X1 = Row.X1;
+		S.Side = Row.Side;
+		Board.PinnedSpans.Add(S);
+	}
+	return Board;
+}
+
+bool PinnedPlacementForKey(const FPlacementBoard& Board, const FString& Key,
+	FLotPlacement& OutPlacement)
+{
+	for (const FPinnedSpan& Span : Board.PinnedSpans)
+	{
+		if (Span.Key == Key)
+		{
+			OutPlacement.X0 = Span.X0;
+			OutPlacement.X1 = Span.X1;
+			OutPlacement.Side = Span.Side;
+			// Every pinned span is on the arterial - PINNED_SPANS has no
+			// cross-street entries at all, which is why the click path's own
+			// pinned check is gated on the arterial too.
+			OutPlacement.RoadId = Board.PinnedRoadId;
+			return true;
+		}
+	}
+	return false;
+}
 
 void SortRoadIds(TArray<FString>& Ids)
 {

@@ -40,6 +40,7 @@ public:
 	static constexpr float TickIntervalSeconds = 2.0f;
 
 	int32 NumLots() const { return Lots.Num(); }
+	int32 NumRoads() const { return RoadActors.Num(); }
 	/** The parcel id a spawned lot actor stands for, or empty. */
 	FString PidForActor(const AActor* Actor) const;
 	AActor* ActorForPid(const FString& Pid) const;
@@ -49,6 +50,8 @@ private:
 	float TickAccum = 0.f;
 	FTimerHandle Timer;
 	UPROPERTY() TMap<FString, TObjectPtr<AActor>> Lots;
+	UPROPERTY() TMap<FString, TObjectPtr<AActor>> RoadActors;
+	TMap<FString, FString> RoadSignatures;
 	TMap<FString, FString> Signatures;
 	bool bBlueprintLotsHidden = false;
 

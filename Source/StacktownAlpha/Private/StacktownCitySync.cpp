@@ -6,6 +6,7 @@
 #include "StacktownStateHandover.h"
 #include "StacktownWorldBoard.h"
 #include "StacktownWoodCatalogue.h"
+#include "StacktownRoad.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Components/SceneComponent.h"
@@ -13,6 +14,7 @@
 #include "HAL/FileManager.h"
 #include "HAL/PlatformMisc.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Modules/ModuleManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "TimerManager.h"
@@ -25,6 +27,12 @@ bool UStacktownCitySync::ShouldCreateSubsystem(UObject* Outer) const
 
 bool UStacktownCitySync::PythonDriversEnabled()
 {
+	// A packaged app has no Python plugin at all (UncookedOnly): the C++ side
+	// owns the city there regardless of any setting.
+	if (!FModuleManager::Get().IsModuleLoaded(TEXT("PythonScriptPlugin")))
+	{
+		return false;
+	}
 	const FString Env = FPlatformMisc::GetEnvironmentVariable(TEXT("STACKTOWN_PYTHON_DRIVERS"));
 	if (!Env.IsEmpty())
 	{
@@ -191,13 +199,51 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			++Removed;
 		}
 	}
-	return FString::Printf(TEXT("reconcile: %d lots standing (%d spawned, %d updated, %d removed, %d without a pose), owner=%s"), Lots.Num(), Spawned, Updated, Removed, Skipped, bOwnsCity ? TEXT("C++") : TEXT("Python"));
+	// drawn roads: one AStacktownRoad per segment in the state
+	int32 RoadsSpawned = 0, RoadsRemoved = 0;
+	TSet<FString> RoadsSeen;
+	for (const auto& Pair : State.Roads)
+	{
+		const FString& Id = Pair.Key;
+		const Stacktown::FRoadSegment& Seg = Pair.Value;
+		RoadsSeen.Add(Id);
+		const FString Sig = FString::Printf(TEXT("%.0f|%.0f|%.0f|%.0f"), Seg.StartX, Seg.StartY, Seg.EndX, Seg.EndY);
+		TObjectPtr<AActor>* Existing = RoadActors.Find(Id);
+		AStacktownRoad* Road = (Existing && IsValid(*Existing)) ? Cast<AStacktownRoad>(Existing->Get()) : nullptr;
+		if (!Road)
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			Road = World->SpawnActor<AStacktownRoad>(AStacktownRoad::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
+			if (!Road) { continue; }
+			RoadActors.Add(Id, Road);
+			RoadSignatures.Remove(Id);
+			++RoadsSpawned;
+		}
+		if (RoadSignatures.FindRef(Id) != Sig)
+		{
+			Road->ShowSegment(Id, Seg);
+			RoadSignatures.Add(Id, Sig);
+		}
+	}
+	for (auto It = RoadActors.CreateIterator(); It; ++It)
+	{
+		if (!RoadsSeen.Contains(It.Key()))
+		{
+			if (IsValid(It.Value())) { It.Value()->Destroy(); }
+			RoadSignatures.Remove(It.Key());
+			It.RemoveCurrent();
+			++RoadsRemoved;
+		}
+	}
+	return FString::Printf(TEXT("reconcile: %d lots standing (%d spawned, %d updated, %d removed, %d without a pose), %d roads (%d spawned, %d removed), owner=%s"), Lots.Num(), Spawned, Updated, Removed, Skipped, RoadActors.Num(), RoadsSpawned, RoadsRemoved, bOwnsCity ? TEXT("C++") : TEXT("Python"));
 }
 
 void UStacktownCitySync::Deinitialize()
 {
 	if (UWorld* World = GetWorld()) { World->GetTimerManager().ClearTimer(Timer); }
 	Lots.Empty();
+	RoadActors.Empty();
 	Super::Deinitialize();
 }
 

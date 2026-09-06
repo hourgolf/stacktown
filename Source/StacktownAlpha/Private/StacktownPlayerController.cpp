@@ -13,6 +13,7 @@
 #include "StacktownCatalogue.h"
 #include "StacktownWoodCatalogue.h"
 #include "Components/SceneComponent.h"
+#include "StacktownRoad.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Widget.h"
@@ -532,6 +533,84 @@ FString AStacktownPlayerController::CityReset()
 	return FString::Printf(TEXT("city reset; money %.2f; %s"), Econ->GetState().Money, *Sync->Reconcile(false));
 }
 
+FString AStacktownPlayerController::ClassifyRoadRefusal(const FString& R)
+{
+	// Docs/HUD_V1.md CONTENT 2, the draw rows plus the shared overlap rows
+	if (R.Contains(TEXT("diagonal")) || R.Contains(TEXT("straight"))) { return TEXT("Roads run straight"); }
+	if (R.Contains(TEXT("short"))) { return TEXT("Too short for a road"); }
+	if (R.Contains(TEXT("cross"))) { return TEXT("Roads can't cross yet"); }
+	if (R.StartsWith(TEXT("off-board"))) { return TEXT("Off the board"); }
+	if (R.Contains(TEXT("pinned lot"))) { return TEXT("That's part of the starter city"); }
+	if (R.Contains(TEXT("existing lot"))) { return TEXT("Already built there"); }
+	return TEXT("Can't build here");
+}
+
+FString AStacktownPlayerController::CityRoadMode(bool bOn)
+{
+	bRoadMode = bOn;
+	bRoadStartSet = false;
+	HideRoadGhost();
+	HideGhost();
+	if (HudModel)
+	{
+		HudModel->bRoadMode = bOn;
+		HudModel->BarMessage = bOn ? TEXT("click start, click end \u00b7 G to leave") : TEXT("");
+	}
+	return bOn ? TEXT("road mode on") : TEXT("road mode off");
+}
+
+void AStacktownPlayerController::HideRoadGhost()
+{
+	if (RoadGhostActor) { RoadGhostActor->SetActorHiddenInGame(true); }
+}
+
+void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
+{
+	if (!bRoadStartSet) { HideRoadGhost(); return; }
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	if (!Econ) { return; }
+	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, TEXT("avenue"), PinsActive(GetGameInstance()));
+	if (!RoadGhostActor)
+	{
+		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		RoadGhostActor = GetWorld()->SpawnActor<AStacktownRoad>(AStacktownRoad::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	}
+	if (AStacktownRoad* G = Cast<AStacktownRoad>(RoadGhostActor))
+	{
+		// the chord as drawn when refused, the validated segment when accepted
+		if (R.bOk) { G->ShowSegment(TEXT("ghost"), R.Segment); }
+		else { G->Show(TEXT("ghost"), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y); }
+		G->SetGhost(true, R.bOk);
+		G->SetActorHiddenInGame(false);
+	}
+	if (HudModel) { HudModel->PlaceRefusal = R.bOk ? FString() : ClassifyRoadRefusal(R.Reason); }
+}
+
+FString AStacktownPlayerController::CityRoadClick(double X, double Y)
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	if (!bRoadStartSet)
+	{
+		bRoadStartSet = true; RoadStart = FVector2D(X, Y);
+		if (HudModel) { HudModel->BarMessage = TEXT("road start set \u00b7 click the end"); }
+		return FString::Printf(TEXT("road start (%.0f, %.0f)"), X, Y);
+	}
+	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, TEXT("avenue"), PinsActive(GetGameInstance()));
+	bRoadStartSet = false;
+	HideRoadGhost();
+	if (!R.bOk)
+	{
+		if (HudModel) { HudModel->PlaceRefusal = ClassifyRoadRefusal(R.Reason); HudModel->BarMessage = TEXT("click start, click end \u00b7 G to leave"); }
+		return FString::Printf(TEXT("road refused: %s -> \"%s\""), *R.Reason, *ClassifyRoadRefusal(R.Reason));
+	}
+	Econ->SaveState();
+	const FString Rep = Sync->Reconcile(false);
+	if (HudModel) { HudModel->PlaceRefusal.Reset(); HudModel->BarMessage = TEXT("click start, click end \u00b7 G to leave"); }
+	return FString::Printf(TEXT("road %s drawn (%.0f, %.0f) -> (%.0f, %.0f); %s"), *R.Id, R.Segment.StartX, R.Segment.StartY, R.Segment.EndX, R.Segment.EndY, *Rep);
+}
+
 void AStacktownPlayerController::DriveCity(float DeltaTime)
 {
 	if (!CityOwned() || !HudModel) { return; }
@@ -549,14 +628,24 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	const FString HitPid = HitActor ? Sync->PidForActor(HitActor) : FString();
 	FVector Board;
 	const bool bBoard = BoardPointUnderCursor(Board);
-	if (!HitPid.IsEmpty()) { HoverGhost(FVector::ZeroVector, true); }
-	else if (bBoard) { HoverGhost(Board, false); }
-	else { HideGhost(); }
-
-	if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
+	if (WasInputKeyJustPressed(EKeys::G)) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadMode(!bRoadMode)); }
+	if (bRoadMode)
 	{
-		if (!HitPid.IsEmpty()) { UE_LOG(LogStacktown, Log, TEXT("CLICK: %s"), *CitySelect(HitPid)); }
-		else if (bBoard) { UE_LOG(LogStacktown, Log, TEXT("CLICK: %s"), *CityPlaceAt(Board.X, Board.Y)); }
+		HideGhost();
+		if (bBoard) { RoadGhost(Board); } else { HideRoadGhost(); }
+		if (WasInputKeyJustPressed(EKeys::LeftMouseButton) && bBoard) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadClick(Board.X, Board.Y)); }
+	}
+	else
+	{
+		if (!HitPid.IsEmpty()) { HoverGhost(FVector::ZeroVector, true); }
+		else if (bBoard) { HoverGhost(Board, false); }
+		else { HideGhost(); }
+
+		if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
+		{
+			if (!HitPid.IsEmpty()) { UE_LOG(LogStacktown, Log, TEXT("CLICK: %s"), *CitySelect(HitPid)); }
+			else if (bBoard) { UE_LOG(LogStacktown, Log, TEXT("CLICK: %s"), *CityPlaceAt(Board.X, Board.Y)); }
+		}
 	}
 	if (WasInputKeyJustPressed(EKeys::B)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("B"))); }
 	if (WasInputKeyJustPressed(EKeys::U)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("U"))); }

@@ -64,6 +64,12 @@ public:
 	FString CityReset();
 	UFUNCTION(BlueprintPure, Category = "Stacktown|City")
 	double CurrentLotWidth() const;
+	/** Road mode on/off (G). */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityRoadMode(bool bOn);
+	/** A click in road mode: the first sets the start, the second draws; returns the outcome line. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityRoadClick(double X, double Y);
 
 private:
 	void EnsureCameraPossessed();
@@ -82,6 +88,14 @@ private:
 	bool CityOwned() const;
 	static FString ClassifyPlaceRefusal(const FString& Reason);
 	static FString ClassifyActionRefusal(const FString& Reason);
+	static FString ClassifyRoadRefusal(const FString& Reason);
+	void RoadGhost(const FVector& BoardPoint);
+	void HideRoadGhost();
+
+	bool bRoadMode = false;
+	bool bRoadStartSet = false;
+	FVector2D RoadStart = FVector2D::ZeroVector;
+	UPROPERTY() TObjectPtr<AActor> RoadGhostActor;
 
 	int32 WidthIndex = 0;
 	FString SelectedPid;

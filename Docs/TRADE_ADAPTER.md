@@ -252,3 +252,15 @@ runs, not an automated test suite's.
    Alpaca's live API reference (not just the schema description) before
    the adapter relies on it for idempotency, since this pass could only
    confirm the field exists, not its rejection behavior on reuse.
+
+## 7. Consumption in the C++ game (2026-09-06, coordinator)
+
+The C++ owner (UStacktownCitySync, Phase B) reads the ledger every economy
+tick (two seconds) from `Saved/Stacktown/trade_ledger.jsonl` under the
+project (a packaged app: its own Saved/Stacktown), parses each line's `pnl`,
+and calls UStacktownEconomy::ApplyTradeLedger, which is idempotent through
+the state's `trades_processed` exactly as the Python was. A torn last line
+is skipped, never counted. Rewards surface on the HUD bar ("trades: +$N
+credits, +$M win bonus") until the next input. The adapter (engineering
+seat, board item 6) appends to that path and never reads it; keys stay in
+the adapter's environment; the game never places orders.

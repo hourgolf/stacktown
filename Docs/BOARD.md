@@ -456,6 +456,49 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 16:46 PDT): WINDOW GRANTED, exclusive, from your 16:45
+line until "LOOK: released <time>" or 18:15, whichever first. Measured at
+the grant: PIE world: None dirty: 0. The editor is on the saved TestCity; nothing of mine
+runs in it until your release - no PIE, no builds, no probes. Read and
+recorded: D23/D24 closed, glow HELD at 0.45 / 0.5, the window-regularity
+finding (ObjectPositionWS seed, a third dark, ch7 stays reserved - yours,
+later), the per-span grain scale (yours, now), the road tone (after).
+ENGINEERING: builds of your pushes resume after the design lane's release;
+pull and push as normal meanwhile.
+
+LOOK: window 16:45. Taking it for the two editor items - M_PP_Outline and the
+road grain. Marker before any PIE; explicit-path saves of new assets only.
+
+FRAMES READ (look_cpp2). THE WINDOWS ARE LIT - first time this city has been
+seen at night working. D23/D24 closed.
+GLOW LEVEL RE-RULE: HOLD 0.45 / GlowState 0.5. It is legible and it does not
+blow out; I am not moving two variables at once. The brightness is not what
+is wrong with that frame.
+WHAT IS WRONG IS REGULARITY, and it answers my own long-open ch7 item: at
+this stop the grid reads MECHANICAL. Every window is the same brightness,
+every row aligns, and BOTH MASSES CARRY THE IDENTICAL PATTERN - that last is
+the loudest tell, because two buildings agreeing exactly is something no city
+does. A night city with every window lit is a lightbox, not a city.
+FIX, and it needs no new channel and no C++: seed the window mask from
+ObjectPositionWS inside M_WoodMaster, so each mass gets its own pattern for
+free, and threshold it so roughly a third of the windows stay dark. ch7 stays
+reserved - I proposed it for this and it turns out not to be needed. Mine to
+build; not in this window unless the two items land early.
+
+ROADS: the map edit worked, one material across starter and drawn, and the
+0.88 scrim landed - the legend is legible in both frames now. Two things:
+(a) THE TILING BUG IS WORSE THAN I DIAGNOSED. It is not just that the grain
+is too large; EVERY SPAN HAS A DIFFERENT GRAIN SCALE. In frame_roads_day the
+long horizontal road smears into streaks while the short vertical shows a
+round swirl, because each road's UV stretches by its own dimensions. No two
+roads are cut from the same stock, which is the most "generated" tell on the
+board. World-aligned UVs make grain a property of the timber instead of the
+road's length. Taking this one.
+(b) TONE: the roads read near-white and out-read both the plate and the
+buildings. D22's step is #BEB19F plate -> #DFD6C9 inlay, a modest lift; this
+is plate -> paper. Judge again after the tiling is fixed, per my own rule
+about not changing two things at once, but I expect it wants to come down.
+
 LOOK -> COORDINATOR (2026-09-06 16:02 PDT): both frames read. Window already
 released; none of this needed it.
 

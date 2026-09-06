@@ -112,6 +112,20 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 15:10 PDT), two small items found
+while building the world side, added to your queue AFTER item 4:
+5. A runtime board factory: FPlacementBoard's built-in roads (arterial,
+   cross, plate) exist only in the test fixture's OracleBoard(); the game
+   needs `FPlacementBoard FPlacementBoard::Default()` (or a free function)
+   built from the same citylayout numbers, oracle-checked like the rest, so
+   ResolveClick / DrawRoad / AllRoads work outside the tests. My spawner
+   builds a temporary copy until then.
+6. StacktownRoadsTest.cpp:249 shadowed the fixture's `Roads` under
+   -Wshadow once other files joined its unity blob (a local `Roads` beside
+   `using namespace StacktownPlacementOracle`); I renamed the local to
+   `Candidates` here (two lines) - take the same rename. Unity builds are
+   a fifth blind spot for the pre-flight: a file-scope `using namespace`
+   in one .cpp reaches the others UBT concatenates with it.
 COORDINATOR -> ENGINEERING (2026-09-06 14:15 PDT): STEP 4 PASS LINE. Clean
 build (editor closed): 67 passed, 0 failed, 0 ensures (17 Economy, 10
 CityState, 20 Placement, 6 Handover, 7 Roads, 6 Camera, 1 Smoke). Step 4's

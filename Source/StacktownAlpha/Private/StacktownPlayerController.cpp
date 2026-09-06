@@ -3,6 +3,8 @@
 #include "StacktownCameraPawn.h"
 #include "StacktownCameraModel.h"
 #include "StacktownHud.h"
+#include "StacktownCitySync.h"
+#include "StacktownEconomy.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Widget.h"
@@ -48,6 +50,18 @@ void AStacktownPlayerController::ReadEconomyIntoModel()
 	if (!GI || !HudModel)
 	{
 		return;
+	}
+	if (UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr)
+	{
+		if (Sync->OwnsCity())
+		{
+			if (UStacktownEconomy* Econ = GI->GetSubsystem<UStacktownEconomy>())
+			{
+				HudModel->Money = Econ->GetState().Money;
+				HudModel->Demand = Econ->GetState().Demand;
+			}
+			return;
+		}
 	}
 	auto ReadNumber = [GI](const TCHAR* Name, double& Out)
 	{

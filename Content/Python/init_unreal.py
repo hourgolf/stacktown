@@ -1253,6 +1253,9 @@ def _python_drivers_enabled():
     bPythonDrivers=false in Config/DefaultGame.ini turns the Python economy and
     click drivers off in every game process, leaving the C++ runtime as the
     only writer. Default true. Plain ini parse: no engine class needed."""
+    env = os.environ.get('STACKTOWN_PYTHON_DRIVERS', '').strip().lower()
+    if env:
+        return env not in ('0', 'false', 'no')
     try:
         ini = os.path.join(os.path.dirname(os.path.dirname(_citytick.HERE)), 'Config', 'DefaultGame.ini')
         section = None

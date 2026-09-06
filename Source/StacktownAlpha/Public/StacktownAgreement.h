@@ -25,4 +25,8 @@ public:
 	 *  actor's transform for the same label. Debug only; the actor is transient. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Debug", meta = (WorldContext = "WorldContextObject"))
 	static FString SpawnLotVisualFor(const UObject* WorldContextObject, const FString& Pid, bool bHideBlueprintTwin);
+
+	/** Run the city sync's reconcile now (Phase A: after a mirror) and report. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Debug", meta = (WorldContext = "WorldContextObject"))
+	static FString ReconcileNow(const UObject* WorldContextObject, bool bHideBlueprintLots);
 };

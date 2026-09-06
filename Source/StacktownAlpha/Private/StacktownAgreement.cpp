@@ -5,6 +5,9 @@
 #include "StacktownLotTransform.h"
 #include "StacktownLotVisual.h"
 #include "StacktownPlacement.h"
+#include "StacktownWorldBoard.h"
+#include "StacktownCitySync.h"
+#include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "EngineUtils.h"
@@ -141,11 +144,7 @@ FString UStacktownAgreementLibrary::SpawnLotVisualFor(const UObject* WorldContex
 	{
 		return FString::Printf(TEXT("%s is a pinned lot with no placement; its transform is the builder's"), *Pid);
 	}
-	// TEMPORARY until the seat's runtime board factory (board item 5): the two
-	// built-in roads exactly as the oracle fixture declares them.
-	Stacktown::FPlacementBoard Board;
-	{ Stacktown::FRoad R; R.Id = TEXT("arterial"); R.StartX = -7650.0; R.StartY = 0.0; R.EndX = 7650.0; R.EndY = 0.0; R.SidePlus = TEXT("north"); R.SideMinus = TEXT("south"); R.bAxisX = true; Board.Roads.Add(R); }
-	{ Stacktown::FRoad R; R.Id = TEXT("cross"); R.StartX = 0.0; R.StartY = -4230.0; R.EndX = 0.0; R.EndY = 4230.0; R.SidePlus = TEXT("west"); R.SideMinus = TEXT("east"); R.bAxisX = false; Board.Roads.Add(R); }
+	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard();
 	Stacktown::LotFrame::FPose Pose;
 	if (!Stacktown::LotFrame::Pose(P->Placement.GetValue(), Board.AllRoads(State), Pose))
 	{
@@ -158,13 +157,18 @@ FString UStacktownAgreementLibrary::SpawnLotVisualFor(const UObject* WorldContex
 	{
 		return TEXT("spawn failed");
 	}
+	USceneComponent* Root = NewObject<USceneComponent>(A, TEXT("Root"));
+	A->SetRootComponent(Root);
+	Root->RegisterComponent();
+	A->SetActorLocationAndRotation(FVector(Pose.X, Pose.Y, 0.0), FRotator(0.0, Pose.Yaw, 0.0));
 	UStacktownLotVisual* V = NewObject<UStacktownLotVisual>(A, TEXT("Building"));
-	A->SetRootComponent(V);
+	V->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform);
 	V->RegisterComponent();
 	FString Err;
 	const bool bShown = P->bOwned ? V->ShowMass(P->Rid, P->Tier, P->Width, false, Err) : V->ShowPad(P->Width, Err);
 	TArray<FString> Lines;
-	Lines.Add(FString::Printf(TEXT("C++ lot %s: pose (%.0f, %.0f, yaw %.0f) shows %s%s%s"), *Pid, Pose.X, Pose.Y, Pose.Yaw,
+	const FVector AL = A->GetActorLocation();
+	Lines.Add(FString::Printf(TEXT("C++ lot %s: actor READ BACK at (%.0f, %.0f, yaw %.0f) shows %s%s%s"), *Pid, AL.X, AL.Y, A->GetActorRotation().Yaw,
 		bShown ? *V->ShownAsset : TEXT("NOTHING"), V->ShownSpecies.IsEmpty() ? TEXT("") : TEXT(" in "), *V->ShownSpecies));
 	if (!bShown) { Lines.Add(FString::Printf(TEXT("  visual error: %s"), *Err)); }
 	for (TActorIterator<AActor> It(World); It; ++It)
@@ -177,4 +181,11 @@ FString UStacktownAgreementLibrary::SpawnLotVisualFor(const UObject* WorldContex
 		}
 	}
 	return FString::Join(Lines, TEXT("\n"));
+}
+
+FString UStacktownAgreementLibrary::ReconcileNow(const UObject* WorldContextObject, bool bHideBlueprintLots)
+{
+	UWorld* World = WorldContextObject ? WorldContextObject->GetWorld() : nullptr;
+	UStacktownCitySync* Sync = World ? World->GetSubsystem<UStacktownCitySync>() : nullptr;
+	return Sync ? Sync->Reconcile(bHideBlueprintLots) : FString(TEXT("no city sync in this world"));
 }

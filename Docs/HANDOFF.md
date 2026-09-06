@@ -210,6 +210,17 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 16:57 PDT - M_PP_OUTLINE VERIFIED: the design lane authored the post-process
+  outline in its 16:45-16:54 window (no PIE, 0 dirty, TestCity untouched);
+  a C++-owned test game with P1 selected shows a 2 px accent outline on the
+  selected mass only (Saved/SelfTest/look_cpp2/frame_outline_selected.png,
+  zoom_outline_selected.png). Content/Stacktown/Materials/M_PP_Outline.uasset
+  is UNCOMMITTED pending the owner's word. Road grain: not done; the fork
+  route (M_RoadInlay + re-parent MI_board_road) is the plan; the editor's
+  MaterialTools MCP toolset is live for the next window. Lesson recorded:
+  a scripted material can compile to a zero-instruction shader with every
+  read-back green - build a trivial control in the same script.
+
 - 2026-09-06 16:33 PDT - FRESH CITY PROVEN (what the packaged app starts with): in a C++-owned
   test game, the game's own reset gave the rules' fresh state ($100, no
   lots, no roads); a click at (2500, 1500) placed P1 at 820 on the arterial's

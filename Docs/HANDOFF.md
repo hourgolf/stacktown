@@ -1725,3 +1725,20 @@ into the wrong project. It has already caught it happening.
   Python click path still places. Wide limit = arrival distance (21024) so
   the arrival lens is the rig's 24 mm. Owner's Monday checklist:
   Docs/CHECKLIST_MONDAY.md. Retired keys: Q/E/W/S/A/D/R/F.
+
+- **HUD v1 LANDED IN C++ (2026-09-06, coordinator, under "keep going").**
+  UStacktownHudModel (plain UObject: money, demand, mode flags, selection
+  name/state/verb/key/price, action refusal, bar message, place refusal,
+  legend lines) + UStacktownHud (bar, selection panel, two-line legend,
+  cursor refusal; widgets built in code, added through the game viewport
+  subsystem; *_Font assets bound; LOOK 2-5 numbers). The controller owns
+  both, reads Money/Demand from the Blueprint game instance by reflection,
+  and removes the rig's BeginPlay bar by walking up from its MoneyText.
+  clickdriver.py writes the model (selection facts per CONTENT 1/4 with the
+  one present verb and its price; refusals; mode words; hold-N countdown;
+  place refusal from the ghost's reason) and keeps print_string only as a
+  fallback when no C++ HUD exists. Instrument lesson: HighResShot and a
+  plain Screenshot both drop Slate - `Screenshot showui` is the capture
+  for HUD work. 54/54 headless; three acceptance frames under
+  Saved/SelfTest/hud_v1 inspected: ramp, grid, colours, alignment axes
+  and absence rules all hold; the LOOK seat's read requested on the board.

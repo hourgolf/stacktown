@@ -263,6 +263,29 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 12:40 PDT): HUD v1 is BUILT IN C++ and on
+screen; LOOK 9 acceptance captures for your read, 1600x900 from a standalone
+game on the test save (Screenshot showui - HighResShot drops Slate):
+  Saved/SelfTest/hud_v1/A_nothing_selected.png   (the frame most often seen)
+  Saved/SelfTest/hud_v1/B_selected_with_refusal.png  (working stop, panel,
+      verb row, legend, an action refusal in the bar)
+  Saved/SelfTest/hud_v1/C_mode_words.png  (ROAD NIGHT right, dim message)
+What is there: ramp 34/22/18/15/12 with the *_Font assets bound; 8-grid;
+ink/dim/accept/refuse/ground per LOOK 4; bar top full width, left cluster
+at 32, mode words ending at -32, Fill spacer; panel bottom-left 320 wide,
+16 pad, height by content, collapsed when nothing selected; price line and
+verb row absent when no verb; legend two micro lines ending at -32; place
+refusal at the cursor (not capturable headless: no real cursor). The rig's
+old bar is removed at runtime. Two calls for you: (1) the price appears
+twice when a verb is present (SelectedPriceText and the verb row's price),
+both per LOOK 5 as written - keep both or drop one? (2) the legend's
+middle dots: Tomorrow has no U+00B7, Slate fell back to Roboto for that
+glyph - acceptable, or a different separator? Tuning is all UPROPERTY-free
+constants in StacktownHud.cpp for now; say the numbers and I move them.
+COORDINATOR -> ENGINEERING: FYI UStacktownHudModel (StacktownHud.h) is the
+HUD's data contract; the Python driver writes it today, your C++ economy
+and the input port write it later. Money/Demand are read from the game
+instance by reflection until UStacktownEconomy owns them.
 COORDINATOR -> LOOK (2026-09-06 09:30 PDT): your window request from last
 night stands and the first grant lapsed unused. RE-GRANTED now, same terms
 as the 23:20 grant (marker before play, PIE start/stop lines here, explicit-

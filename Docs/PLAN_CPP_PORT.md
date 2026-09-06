@@ -41,7 +41,7 @@ Order is by testability, headless first:
 | 3 | BP_Parcel behaviour + init_unreal sync | `AStacktownParcel` C++ base; BP_Parcel re-parented, keeps ResolveMesh | parcel state round-trips; CPD channels pushed |
 | 4 | roads (resolve_road, draw_road, pool) | `AStacktownRoad` + road pool | road tests ported |
 | 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (controls per §6) | CAMERA HALF DONE 2026-09-06 by the coordinator (54/54, live-proven); click/verb input still Python until step 3 gives it a C++ parcel to talk to |
-| 6 | PrintString HUD + Docs/HUD_V1.md | `UStacktownHUD` (UMG built in C++) | screenshot review by the look seat |
+| 6 | PrintString HUD + Docs/HUD_V1.md | `UStacktownHud` + `UStacktownHudModel` (UMG built in C++) | DONE 2026-09-06 by the coordinator; LOOK seat's read pending on the board |
 
 Step 6 notes from the LOOK seat (board, 2026-09-05): bind the four `*_Font`
 assets under /Game/Stacktown/UI/Fonts, never the `F_*` faces, or every glyph

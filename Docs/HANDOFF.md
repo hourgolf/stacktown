@@ -1774,3 +1774,9 @@ into the wrong project. It has already caught it happening.
   passes -package. Lesson for the instrument file: a packaged app's log-level
   lines (LogStacktown) do not reach stdout; Display-level engine lines are
   the evidence there.
+- **PACKAGED APP RUNS (2026-09-06 11:40):** with -package, UAT archived a
+  self-contained universal StacktownAlpha.app (1.3 GB; Contents/UE inside;
+  libtbb present). Launched from Saved/Packaged for 30 s: "Starting Game",
+  the C++ controller's viewport mouse settings, the cooked HUD fonts loading
+  - the packaged runtime executes our C++. Phase 3's pipeline is proven
+  with a runnable artifact; what it lacks is everything still in Python.

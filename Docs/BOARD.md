@@ -112,9 +112,9 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
-COORDINATOR (2026-09-06 11:35 PDT): PACKAGING PIPELINE PROVEN. Tools/package.sh
--> Saved/Packaged/Mac/StacktownAlpha.app, universal (x86_64 + arm64), 850 MB,
-clean cook, 90 s end to end. The packaged app runs the C++ camera + HUD and
+COORDINATOR (2026-09-06 11:40 PDT): PACKAGING PIPELINE PROVEN. Tools/package.sh
+-> Saved/Packaged/Mac/StacktownAlpha.app, self-contained, universal (x86_64 +
+arm64), 1.3 GB, clean cook, about 90 s; launched and ran the C++ runtime. The packaged app runs the C++ camera + HUD and
 nothing else, because Python cannot cook: every step that moves economy,
 placement, roads and input into C++ is now directly a step toward a beta
 someone can download. ENGINEERING: step 3 is the gate. LOOK: your HUD read

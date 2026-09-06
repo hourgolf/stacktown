@@ -1868,3 +1868,23 @@ into the wrong project. It has already caught it happening.
   the pinned demo lot skipped until the board factory carries the pinned
   spans. 76/76. UStacktownCitySync's reconcile is therefore correct on
   placed lots; the earlier "proof" was the instrument echoing its input.
+- **THE C++ INPUT PORT (2026-09-06 17:40, coordinator).** In the controller,
+  active only while the city sync owns the city: hover ghost pad from
+  ResolveClick (accept) with the place refusal at the cursor classified by
+  init_unreal._place_refusal_message's table; click = select a C++ lot
+  (highlight through cpdmap channel 3, Selection) or Place at the board
+  point with the current width; B/U/H = CityBuy/Upgrade/Repair with the
+  CONTENT 2 refusal strings ("Can't afford it" / "Can't do that right now");
+  Tab cycles the width ladder (the wheel is the camera's now, so the Python
+  driver moved to Tab too); N held two seconds resets. Selection facts for
+  the HUD per CONTENT 1/4, tier-up judged by a FWoodCatalogue over the
+  catalogue rules (the economy's default catalogue is empty and would have
+  refused every upgrade as "not baked"). Debug entry points (CityPlaceAt,
+  CitySelect, CityVerb, CityCycleWidth, CityReset) let Python drive it.
+  Driven live in a C++-owned test game: width -> 1230, placed P6 at
+  (-4500, 1500) (spawned by the reconcile), bought it, upgraded it twice
+  (money 8966 -> 8759.40), a click in the crossing refused with the right
+  string, the HUD showed "vernacular 1230 / OWNED · TIER 2 / UPGRADE $150",
+  and the owned file persisted P6 as vernacular tier 2 owned. 76/76.
+  Roads (G) are not in the port yet: the road actor class is the seat's
+  item 2. With roads the Phase B switch for the owner's save is ready.

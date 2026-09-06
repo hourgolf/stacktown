@@ -112,6 +112,14 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 17:40 PDT): THE INPUT PORT IS IN. With the Python
+drivers off, the C++ controller placed a lot, bought it, upgraded it twice,
+refused a click in the crossing with the CONTENT 2 string, showed the
+selection facts on the HUD, and the owned file persisted it - all driven
+headlessly through the port's debug entry points. Lots are fully C++ now;
+ROADS are the one gap and they wait on your item 2 (AStacktownRoad +
+RoadTransform). ENGINEERING: push item 1 and item 2 as soon as they
+pre-flight - item 2 is the last piece before the owner's Phase B switch.
 COORDINATOR (2026-09-06 17:00 PDT): RE-VERIFIED, read back from the world
 this time: five C++ lots at (1230,1880) (2460,1880) (3690,1880) (4920,1880)
 (-2400,1880), each matched by coordinates to its Blueprint twin P1..P5,

@@ -40,10 +40,10 @@ Order is by testability, headless first:
 | 2 | placement.py | `FPlacement` pure functions | 27 placement tests ported |
 | 3 | BP_Parcel behaviour + init_unreal sync | `AStacktownParcel` + state handover (mirror) | PROVEN 2026-09-06: 60/60, live agreement 5/5 lots on the test save; the actor swap moved to Phase B (STATE_HANDOVER.md) |
 | 4 | roads (resolve_road, draw_road, pool) | `AStacktownRoad` + road pool | road tests ported |
-| 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (controls per §6) | CAMERA HALF DONE 2026-09-06 by the coordinator (54/54, live-proven); click/verb input still Python until step 3 gives it a C++ parcel to talk to |
+| 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (controls per §6) | DONE 2026-09-06 by the coordinator: camera (54/54, live) and the input port (hover ghost, select, place, B/U/H, Tab width, N reset; driven live in a C++-owned game). Roads (G) wait on the road actor class |
 | 3b | woodmap.py (catalogue) | `Stacktown::Catalogue` (pure) | DONE 2026-09-06 by the coordinator: 5 tests pinned to the oracle, 72/72 |
 | 3c | init_unreal._lot_transform / _apply_lot_offset | `Stacktown::Lot` (pure) | DONE 2026-09-06 by the coordinator: 4 tests, 76/76 |
-| 3d | BP_Parcel visuals (ResolveMesh, pad) | `UStacktownLotVisual` + debug spawner | PROVEN LIVE 2026-09-06: C++ lot posed from the mirror stands exactly where the Python one does, right mass and species, captured |
+| 3d | BP_Parcel visuals + the world loop | `UStacktownLotVisual`, `UStacktownCitySync` (spawn/reconcile, owning mode, ticker) | PROVEN 2026-09-06 by read-back: five C++ lots at their twins' coordinates; C++ owns the test file with Python off, ticking and saving |
 | 6 | PrintString HUD + Docs/HUD_V1.md | `UStacktownHud` + `UStacktownHudModel` (UMG built in C++) | DONE 2026-09-06 by the coordinator; LOOK seat's read pending on the board |
 
 Step 6 notes from the LOOK seat (board, 2026-09-05): bind the four `*_Font`

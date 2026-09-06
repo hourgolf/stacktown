@@ -38,7 +38,7 @@ Order is by testability, headless first:
 |---|---|---|---|
 | 1 | citytick.py, econrules.py (+ econrules.json) | `UStacktownEconomy` (GameInstance subsystem), `FCityState` JSON in Saved/ | 17 + 9 rule tests ported; oracle diff on recorded states |
 | 2 | placement.py | `FPlacement` pure functions | 27 placement tests ported |
-| 3 | BP_Parcel behaviour + init_unreal sync | `AStacktownParcel` C++ base; BP_Parcel re-parented, keeps ResolveMesh | parcel state round-trips; CPD channels pushed |
+| 3 | BP_Parcel behaviour + init_unreal sync | `AStacktownParcel` + state handover (mirror) | PROVEN 2026-09-06: 60/60, live agreement 5/5 lots on the test save; the actor swap moved to Phase B (STATE_HANDOVER.md) |
 | 4 | roads (resolve_road, draw_road, pool) | `AStacktownRoad` + road pool | road tests ported |
 | 5 | clickdriver.py + BP_LensRig | `AStacktownCameraPawn`, `AStacktownPlayerController` (controls per §6) | CAMERA HALF DONE 2026-09-06 by the coordinator (54/54, live-proven); click/verb input still Python until step 3 gives it a C++ parcel to talk to |
 | 6 | PrintString HUD + Docs/HUD_V1.md | `UStacktownHud` + `UStacktownHudModel` (UMG built in C++) | DONE 2026-09-06 by the coordinator; LOOK seat's read pending on the board |

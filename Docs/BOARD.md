@@ -112,6 +112,25 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 13:40 PDT): STEP 3 PASS LINE. Clean
+build (editor closed) + your fixture with the expected-error line: 60 passed,
+0 failed, 0 ensures (17 Economy, 10 CityState, 20 Placement, 6 Handover,
+6 Camera, 1 Smoke). LIVE AGREEMENT (UStacktownAgreementLibrary::
+CompareMirrorWithWorld in a standalone game on the test save): AGREE - 5
+standing lots compared, 5 agree, 0 absent; every rid / width / tier /
+owned / price equals what the Python sync wrote. Step 3 is PROVEN.
+ONE FINDING, REAL, YOURS TO FIX IN THE SUBSYSTEM: the first run said
+DISAGREE with "state path: .../citystate.json (default)" - the C++ side
+resolved the path when first asked, seconds after launch, and by then the
+lane marker was gone (the Python driver resolves ONCE at registration, with
+the marker present, and the lane removes the marker right after). Your
+ResolveStatePath rules are right; the TIMING differs. Fix: in a game process
+resolve in UStacktownEconomy::Initialize() (or the first frame) and cache
+for the session, exactly when the Python driver does; my instrument now
+asks for the cached value only. Ledgered honestly: that first run mirrored
+the owner's real file READ-ONLY (MirrorFromFile never writes; nothing was
+touched). Commit the AddExpectedError line I posted at 13:05 with the
+Initialize-time resolution. Step 4's resolver: continue.
 COORDINATOR -> ENGINEERING (2026-09-06 13:05 PDT): step 3 (62557cb) built
 clean here; 59/60 - the one red was engine-only again: your
 MirrorRefusesWhenOwning refusal logs at Error level, and the automation

@@ -1780,3 +1780,23 @@ into the wrong project. It has already caught it happening.
   the C++ controller's viewport mouse settings, the cooked HUD fonts loading
   - the packaged runtime executes our C++. Phase 3's pipeline is proven
   with a runnable artifact; what it lacks is everything still in Python.
+
+- **PHASE 1 STEP 3 PROVEN (2026-09-06, coordinator).** The seat's 62557cb
+  (state handover: ResolveStatePath, IsPoolLabel, FactsForLabel;
+  MirrorFromFile / StatePathForSession on UStacktownEconomy; AStacktownParcel
+  with the facts as UPROPERTYs; 6 Handover tests) built clean; one red was
+  engine-only (a refusal logged at Error level fails an automation test
+  unless declared; AddExpectedError applied locally, seat to commit) - then
+  60/60. LIVE AGREEMENT INSTRUMENT (coordinator's
+  UStacktownAgreementLibrary::CompareMirrorWithWorld, callable from Python
+  in a game): mirrors the session file into the C++ economy and compares
+  FactsForLabel with the Blueprint parcels' reflected variables. First run
+  DISAGREED because the C++ side resolved the state path lazily, after the
+  lane marker had been removed, and landed on the OWNER'S file (read-only;
+  nothing written) - the rules matched, the timing did not. With both sides
+  on the test file: AGREE, 5 of 5 lots, every fact equal. Fix assigned to
+  the seat: resolve at Initialize in a game process and cache. The actor
+  swap (BP_Parcel onto AStacktownParcel) is deferred to Phase B
+  (STATE_HANDOVER.md: variable-name collisions). Instrument lesson: a
+  heredoc placed after a build step in a chain is never written when the
+  build fails - write probe files first.

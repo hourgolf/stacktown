@@ -1933,3 +1933,13 @@ into the wrong project. It has already caught it happening.
   DirectoriesToAlwaysStageAsUFS so it lands in the pak; one path function
   in C++ (Stacktown::RulesFilePath) and econrules.RULES_PATH read it.
   Seat's item 4 (the rules loader) targets that path.
+- **NIGHT IN C++ (2026-09-06 20:30, coordinator):** UStacktownNight ports
+  _set_night / _apply_night_lights (NightAmount on MPC_WoodCity; the seven
+  named lights dimmed by their factors, day values captured once, the sky
+  cooled to (0.55, 0.68, 0.95)); L toggles it in the C++ controller and
+  the HUD's NIGHT word follows. Lights are found by name/label OR an actor
+  tag of the same name, so a packaged build can keep night once the map's
+  lights carry tags (an editor change, owner's word). Live in a C++-owned
+  game: NightAmount 0 -> 1 -> 0, CITY_Key 20.5M -> 2.05M -> 20.5M, six
+  lights touched (the seventh name is not in the map). 77/77. With this,
+  every Python game feature is in C++ except the pinned starter lot.

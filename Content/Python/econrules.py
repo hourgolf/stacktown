@@ -38,7 +38,10 @@ import json
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RULES_PATH = os.path.join(HERE, 'econrules.json')
+# 2026-09-06: the rules file lives under Config/ so a packaged app can ship it
+# (Content/Python is UncookedOnly). One copy, read by the Python oracle and by
+# the C++ economy (Docs/STATE_HANDOVER.md, Phase B prerequisite 3).
+RULES_PATH = os.path.normpath(os.path.join(HERE, '..', '..', 'Config', 'Stacktown', 'econrules.json'))
 BAKED_DIR = os.path.normpath(os.path.join(
     HERE, '..', 'Stacktown', 'Baked'))
 

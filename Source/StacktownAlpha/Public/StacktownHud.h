@@ -51,7 +51,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD")
 	FString LegendCamera = TEXT("RIGHT-DRAG orbit · WHEEL zoom · EDGES or ARROWS pan");
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD")
-	FString LegendVerbs = TEXT("CLICK select / place · SCROLL width · B buy · U upgrade · H repair · N hold reset · G road mode");
+	FString LegendVerbs = TEXT("CLICK select / place · TAB width · B buy · U upgrade · H repair · N hold reset · G road mode");
 };
 
 /**

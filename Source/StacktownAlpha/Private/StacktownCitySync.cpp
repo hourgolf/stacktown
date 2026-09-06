@@ -5,6 +5,7 @@
 #include "StacktownLotVisual.h"
 #include "StacktownStateHandover.h"
 #include "StacktownWorldBoard.h"
+#include "StacktownWoodCatalogue.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Components/SceneComponent.h"
@@ -73,6 +74,7 @@ bool UStacktownCitySync::BeginOwning(FString& OutWhy)
 	const FString RulesPath = FPaths::ProjectConfigDir() / TEXT("Stacktown/econrules.json");
 	if (!FFileHelper::LoadFileToString(RulesText, *RulesPath)) { OutWhy = FString::Printf(TEXT("rules file missing: %s"), *RulesPath); return false; }
 	if (!Econ->LoadRules(RulesText, Err)) { OutWhy = Err; return false; }
+	Econ->SetCatalogue(MakeShared<Stacktown::FWoodCatalogue>());
 	Stacktown::EStateSource Source;
 	const FString SessionPath = Econ->StatePathForSession(Source, false);
 	// Phase B, step 1: the C++ owner writes under Saved/Stacktown, never under
@@ -197,4 +199,19 @@ void UStacktownCitySync::Deinitialize()
 	if (UWorld* World = GetWorld()) { World->GetTimerManager().ClearTimer(Timer); }
 	Lots.Empty();
 	Super::Deinitialize();
+}
+
+FString UStacktownCitySync::PidForActor(const AActor* Actor) const
+{
+	for (const auto& Pair : Lots)
+	{
+		if (Pair.Value.Get() == Actor) { return Pair.Key; }
+	}
+	return FString();
+}
+
+AActor* UStacktownCitySync::ActorForPid(const FString& Pid) const
+{
+	const TObjectPtr<AActor>* Found = Lots.Find(Pid);
+	return (Found && IsValid(*Found)) ? Found->Get() : nullptr;
 }

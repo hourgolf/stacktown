@@ -59,7 +59,7 @@ def _make_key(name):
         return k
 
 
-for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'L', 'Q', 'E', 'MouseScrollUp', 'MouseScrollDown'):
+for _name in ('LeftMouseButton', 'B', 'N', 'U', 'H', 'G', 'L', 'Q', 'E', 'Tab', 'MouseScrollUp', 'MouseScrollDown'):
     _KEY[_name] = _make_key(_name)
 
 _st = {'world': None, 'rig': None, 'down': {}, 'n_acc': 0.0, 'n_fired': False,
@@ -832,7 +832,7 @@ def _tick(dt):
             # Interim key legend until HUD v1 carries it (owner never found road
             # mode; the legend is the cheapest discoverability there is).
             if _hud(gw) is None:
-              unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   scroll: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
+              unreal.SystemLibrary.print_string(gw, 'KEYS   click: place / select   Tab: lot width   B buy   U upgrade   H repair   G road mode   L night   hold N reset   |   A/D orbit  W/S reach  Q/E zoom  R/F height  arrows aim',
                                                 True, False, unreal.LinearColor(0.85, 0.9, 1.0, 1.0), 12.0, 'keylegend')
         rig = _st['rig']
         # C++ camera (2026-09-06, PLAN_CPP_PORT.md step 5): when the possessed
@@ -872,7 +872,7 @@ def _tick(dt):
         if any(edges.values()) and _st.get('hud_refusal'):
             _st['hud_refusal'] = False
             _hud_set(gw, ActionRefusal='')
-        if any(edges.values()) and _st.get('hud_transient') and not (edges.get('MouseScrollUp') or edges.get('MouseScrollDown')):
+        if any(edges.values()) and _st.get('hud_transient') and not edges.get('Tab'):
             _st['hud_transient'] = False
             _hud_set(gw, BarMessage='click start, click end \u00b7 G to leave' if _st.get('road_mode') else '')
         if edges['G']:
@@ -920,10 +920,9 @@ def _tick(dt):
                 else:
                     loc = d['location']
                     click_at_hit(gw, gi, rig, d.get('hit_actor'), loc.x, loc.y)
-        if edges['MouseScrollUp']:
+        # Tab cycles the width since the C++ camera took the wheel for zoom (2026-09-06)
+        if edges.get('Tab'):
             _cycle_width(+1, gw)
-        if edges['MouseScrollDown']:
-            _cycle_width(-1, gw)
         if edges['B']:
             press_b(gw, gi, rig)
         if edges['U']:

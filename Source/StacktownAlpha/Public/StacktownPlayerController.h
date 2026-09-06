@@ -49,6 +49,22 @@ public:
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void SetupInputComponent() override;
 
+	// ---- the C++ input port (active only while the city sync owns the city) ----
+	/** Place a lot at a board point with the current width; returns the outcome line. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityPlaceAt(double X, double Y);
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CitySelect(const FString& Pid);
+	/** "B", "U" or "H" on the selected lot; returns the outcome line. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityVerb(const FString& Key);
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityCycleWidth(int32 Step);
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityReset();
+	UFUNCTION(BlueprintPure, Category = "Stacktown|City")
+	double CurrentLotWidth() const;
+
 private:
 	void EnsureCameraPossessed();
 	void FreezeRigs();
@@ -58,6 +74,22 @@ private:
 	void ReadEconomyIntoModel();
 	void RetireRigBar(AActor* Rig);
 	void ApplyHud();
+	void DriveCity(float DeltaTime);
+	void HoverGhost(const FVector& BoardPoint, bool bOverLot);
+	void HideGhost();
+	void RefreshSelection();
+	void SetSelectionHighlight(const FString& Pid, bool bOn);
+	bool CityOwned() const;
+	static FString ClassifyPlaceRefusal(const FString& Reason);
+	static FString ClassifyActionRefusal(const FString& Reason);
+
+	int32 WidthIndex = 0;
+	FString SelectedPid;
+	UPROPERTY() TObjectPtr<AActor> Ghost;
+	FVector LastHoverPoint = FVector(1e9, 1e9, 0.0);
+	float NHeld = 0.f;
+	bool bNFired = false;
+	bool bRefusalShowing = false;
 
 	UPROPERTY() TObjectPtr<UStacktownHudModel> HudModel;
 	UPROPERTY() TObjectPtr<UStacktownHud> Hud;

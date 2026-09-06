@@ -40,6 +40,9 @@ public:
 	static constexpr float TickIntervalSeconds = 2.0f;
 
 	int32 NumLots() const { return Lots.Num(); }
+	/** The parcel id a spawned lot actor stands for, or empty. */
+	FString PidForActor(const AActor* Actor) const;
+	AActor* ActorForPid(const FString& Pid) const;
 
 private:
 	bool bOwnsCity = false;

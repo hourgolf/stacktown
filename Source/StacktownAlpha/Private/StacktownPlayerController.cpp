@@ -5,6 +5,14 @@
 #include "StacktownHud.h"
 #include "StacktownCitySync.h"
 #include "StacktownEconomy.h"
+#include "StacktownEconomyRules.h"
+#include "StacktownPlacement.h"
+#include "StacktownWorldBoard.h"
+#include "StacktownLotTransform.h"
+#include "StacktownLotVisual.h"
+#include "StacktownCatalogue.h"
+#include "StacktownWoodCatalogue.h"
+#include "Components/SceneComponent.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Widget.h"
@@ -311,5 +319,261 @@ void AStacktownPlayerController::PlayerTick(float DeltaTime)
 	PumpRigHud(DeltaTime);
 	DriveCamera(DeltaTime);
 	ReadEconomyIntoModel();
+	DriveCity(DeltaTime);
 	ApplyHud();
+}
+
+// ---------------------------------------------------------------------------
+// The C++ input port: what Content/Python/clickdriver.py did, against the
+// city sync. Active only while the sync owns the city (Python drivers off);
+// otherwise the Python driver keeps the clicks and this does nothing.
+// ---------------------------------------------------------------------------
+
+namespace
+{
+	const double GWidths[5] = { 820.0, 1230.0, 1640.0, 2050.0, 2460.0 };
+	constexpr float ResetHoldSeconds = 2.0f;
+
+	bool PinsActive(const UGameInstance* GI)
+	{
+		if (!GI) { return true; }
+		if (FBoolProperty* BP = CastField<FBoolProperty>(GI->GetClass()->FindPropertyByName(TEXT("EmptyStart"))))
+		{
+			return !BP->GetPropertyValue_InContainer(GI);
+		}
+		return true;
+	}
+}
+
+bool AStacktownPlayerController::CityOwned() const
+{
+	const UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	return Sync && Sync->OwnsCity();
+}
+
+double AStacktownPlayerController::CurrentLotWidth() const
+{
+	return GWidths[FMath::Clamp(WidthIndex, 0, 4)];
+}
+
+FString AStacktownPlayerController::ClassifyPlaceRefusal(const FString& R)
+{
+	// init_unreal._place_refusal_message, verbatim (Docs/HUD_V1.md CONTENT 2)
+	if (R.StartsWith(TEXT("off-board"))) { return TEXT("Off the board"); }
+	if (R.Contains(TEXT("crosses a pinned lot"))) { return TEXT("That's part of the starter city"); }
+	if (R.Contains(TEXT("crosses an existing lot"))) { return TEXT("Already built there"); }
+	if (R.StartsWith(TEXT("pool exhausted"))) { return TEXT("No more lots available"); }
+	if (R.StartsWith(TEXT("in the road"))) { return TEXT("That's the road - click the block beside it"); }
+	if (R.StartsWith(TEXT("too far from a road"))) { return TEXT("Too far from a road"); }
+	if (R.Contains(TEXT("crossing"))) { return TEXT("That's the crossing - pick one road's frontage"); }
+	return TEXT("Can't build here");
+}
+
+FString AStacktownPlayerController::ClassifyActionRefusal(const FString& R)
+{
+	return R.Contains(TEXT("insufficient funds")) ? TEXT("Can't afford it") : TEXT("Can't do that right now");
+}
+
+void AStacktownPlayerController::HideGhost()
+{
+	if (Ghost) { Ghost->SetActorHiddenInGame(true); }
+	if (HudModel && !HudModel->PlaceRefusal.IsEmpty()) { HudModel->PlaceRefusal.Reset(); }
+}
+
+void AStacktownPlayerController::HoverGhost(const FVector& BoardPoint, bool bOverLot)
+{
+	if (bOverLot) { HideGhost(); LastHoverPoint = FVector(1e9, 1e9, 0.0); return; }
+	if (FVector::Dist2D(BoardPoint, LastHoverPoint) < 20.0) { return; }
+	LastHoverPoint = BoardPoint;
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	if (!Econ) { return; }
+	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard();
+	const Stacktown::FClickResult R = Stacktown::ResolveClick(Board, Econ->GetState(), BoardPoint.X, BoardPoint.Y, PinsActive(GetGameInstance()), CurrentLotWidth());
+	if (!R.bOk)
+	{
+		if (Ghost) { Ghost->SetActorHiddenInGame(true); }
+		if (HudModel) { HudModel->PlaceRefusal = ClassifyPlaceRefusal(R.Reason); }
+		return;
+	}
+	if (HudModel) { HudModel->PlaceRefusal.Reset(); }
+	Stacktown::LotFrame::FPose Pose;
+	if (!Stacktown::LotFrame::Pose(R.Lot, Board.AllRoads(Econ->GetState()), Pose)) { return; }
+	if (!Ghost)
+	{
+		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Ghost = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
+		USceneComponent* Root = NewObject<USceneComponent>(Ghost, TEXT("Root")); Ghost->SetRootComponent(Root); Root->RegisterComponent();
+		UStacktownLotVisual* V = NewObject<UStacktownLotVisual>(Ghost, TEXT("Pad")); V->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform); V->RegisterComponent();
+		V->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	Ghost->SetActorLocationAndRotation(FVector(Pose.X, Pose.Y, 2.0), FRotator(0.0, Pose.Yaw, 0.0));
+	if (UStacktownLotVisual* V = Ghost->FindComponentByClass<UStacktownLotVisual>())
+	{
+		FString Err;
+		if (!V->ShownAsset.EndsWith(FString::Printf(TEXT("w%d"), (int32)CurrentLotWidth()))) { V->ShowPad(CurrentLotWidth(), Err); }
+	}
+	Ghost->SetActorHiddenInGame(false);
+}
+
+void AStacktownPlayerController::SetSelectionHighlight(const FString& Pid, bool bOn)
+{
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	AActor* A = Sync ? Sync->ActorForPid(Pid) : nullptr;
+	if (UStacktownLotVisual* V = A ? A->FindComponentByClass<UStacktownLotVisual>() : nullptr)
+	{
+		V->SetCustomPrimitiveDataFloat(3, bOn ? 1.f : 0.f);   // cpdmap channel 3: Selection
+	}
+}
+
+void AStacktownPlayerController::RefreshSelection()
+{
+	if (!HudModel) { return; }
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	const Stacktown::FParcelState* P = Econ ? Econ->GetState().Parcels.Find(SelectedPid) : nullptr;
+	if (!P)
+	{
+		HudModel->bHasSelection = false;
+		return;
+	}
+	const Stacktown::FEconRules& R = Econ->GetRules();
+	HudModel->bHasSelection = true;
+	HudModel->SelectedName = FString::Printf(TEXT("%s %d"), *P->Rid, (int32)P->Width);
+	HudModel->Verb.Reset(); HudModel->VerbKey.Reset(); HudModel->VerbPrice = 0.0;
+	if (!P->bOwned)
+	{
+		HudModel->SelectedState = TEXT("FOR SALE");
+		HudModel->Verb = TEXT("BUY"); HudModel->VerbKey = TEXT("B"); HudModel->VerbPrice = Stacktown::Price(R, P->Tier, P->Width);
+	}
+	else if (P->bFailed)
+	{
+		HudModel->SelectedState = TEXT("NEEDS REPAIR");
+		HudModel->Verb = TEXT("REPAIR"); HudModel->VerbKey = TEXT("H"); HudModel->VerbPrice = Stacktown::RepairPrice(R, P->Tier);
+	}
+	else
+	{
+		HudModel->SelectedState = FString::Printf(TEXT("OWNED \u00b7 TIER %d"), P->Tier);
+		Stacktown::FWoodCatalogue Cat;
+		if (Stacktown::TierUpAllowed(Cat, P->Rid, P->Tier, P->Width).bOk)
+		{
+			HudModel->Verb = TEXT("UPGRADE"); HudModel->VerbKey = TEXT("U"); HudModel->VerbPrice = Stacktown::UpgradePrice(R, P->Tier, P->Performance);
+		}
+	}
+}
+
+FString AStacktownPlayerController::CitySelect(const FString& Pid)
+{
+	if (!SelectedPid.IsEmpty()) { SetSelectionHighlight(SelectedPid, false); }
+	SelectedPid = Pid;
+	if (!Pid.IsEmpty()) { SetSelectionHighlight(Pid, true); }
+	RefreshSelection();
+	return Pid.IsEmpty() ? TEXT("deselected") : FString::Printf(TEXT("selected %s (%s%s)"), *Pid, *HudModel->SelectedState, HudModel->Verb.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(", %s $%.0f"), *HudModel->Verb, HudModel->VerbPrice));
+}
+
+FString AStacktownPlayerController::CityPlaceAt(double X, double Y)
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	const Stacktown::FPlaceResult R = Stacktown::Place(Stacktown::TemporaryBoard(), Econ->GetMutableState(), X, Y, PinsActive(GetGameInstance()), CurrentLotWidth());
+	if (!R.bOk)
+	{
+		if (HudModel) { HudModel->PlaceRefusal = ClassifyPlaceRefusal(R.Reason); }
+		return FString::Printf(TEXT("place refused: %s -> \"%s\""), *R.Reason, *ClassifyPlaceRefusal(R.Reason));
+	}
+	Econ->SaveState();
+	const FString Rep = Sync->Reconcile(false);
+	CitySelect(R.Pid);
+	return FString::Printf(TEXT("placed %s at (%.0f, %.0f) width %.0f; %s"), *R.Pid, X, Y, CurrentLotWidth(), *Rep);
+}
+
+FString AStacktownPlayerController::CityVerb(const FString& Key)
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	if (SelectedPid.IsEmpty())
+	{
+		if (HudModel) { HudModel->ActionRefusal = TEXT("Select a lot first"); bRefusalShowing = true; }
+		return TEXT("no selection");
+	}
+	FString Reason; bool bOk = false; const TCHAR* Verb = TEXT("?");
+	if (Key == TEXT("B")) { Verb = TEXT("buy"); bOk = Econ->CityBuy(SelectedPid, Reason); }
+	else if (Key == TEXT("U")) { Verb = TEXT("upgrade"); bOk = Econ->CityUpgrade(SelectedPid, Reason); }
+	else if (Key == TEXT("H")) { Verb = TEXT("repair"); bOk = Econ->CityRepair(SelectedPid, Reason); }
+	else { return FString::Printf(TEXT("unknown verb key %s"), *Key); }
+	if (!bOk)
+	{
+		if (HudModel) { HudModel->ActionRefusal = ClassifyActionRefusal(Reason); bRefusalShowing = true; }
+		return FString::Printf(TEXT("%s %s refused: %s -> \"%s\""), Verb, *SelectedPid, *Reason, *ClassifyActionRefusal(Reason));
+	}
+	Econ->SaveState();
+	const FString Rep = Sync->Reconcile(false);
+	SetSelectionHighlight(SelectedPid, true);
+	RefreshSelection();
+	return FString::Printf(TEXT("%s %s ok; money %.2f; %s"), Verb, *SelectedPid, Econ->GetState().Money, *Rep);
+}
+
+FString AStacktownPlayerController::CityCycleWidth(int32 Step)
+{
+	WidthIndex = ((WidthIndex + Step) % 5 + 5) % 5;
+	LastHoverPoint = FVector(1e9, 1e9, 0.0);
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("lot width %d"), (int32)CurrentLotWidth()); }
+	return FString::Printf(TEXT("lot width %d"), (int32)CurrentLotWidth());
+}
+
+FString AStacktownPlayerController::CityReset()
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	CitySelect(FString());
+	Econ->ResetCity();
+	Econ->SaveState();
+	return FString::Printf(TEXT("city reset; money %.2f; %s"), Econ->GetState().Money, *Sync->Reconcile(false));
+}
+
+void AStacktownPlayerController::DriveCity(float DeltaTime)
+{
+	if (!CityOwned() || !HudModel) { return; }
+	UStacktownCitySync* Sync = GetWorld()->GetSubsystem<UStacktownCitySync>();
+
+	// any key press clears a showing refusal (LOOK 6: cleared on the next input)
+	const bool bAnyKey = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::B) || WasInputKeyJustPressed(EKeys::U)
+		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G);
+	if (bAnyKey && bRefusalShowing) { HudModel->ActionRefusal.Reset(); bRefusalShowing = false; }
+
+	// hover: a lot actor under the cursor, or the board point for the ghost
+	FHitResult Hit;
+	const bool bHit = GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	AActor* HitActor = bHit ? Hit.GetActor() : nullptr;
+	const FString HitPid = HitActor ? Sync->PidForActor(HitActor) : FString();
+	FVector Board;
+	const bool bBoard = BoardPointUnderCursor(Board);
+	if (!HitPid.IsEmpty()) { HoverGhost(FVector::ZeroVector, true); }
+	else if (bBoard) { HoverGhost(Board, false); }
+	else { HideGhost(); }
+
+	if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
+	{
+		if (!HitPid.IsEmpty()) { UE_LOG(LogStacktown, Log, TEXT("CLICK: %s"), *CitySelect(HitPid)); }
+		else if (bBoard) { UE_LOG(LogStacktown, Log, TEXT("CLICK: %s"), *CityPlaceAt(Board.X, Board.Y)); }
+	}
+	if (WasInputKeyJustPressed(EKeys::B)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("B"))); }
+	if (WasInputKeyJustPressed(EKeys::U)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("U"))); }
+	if (WasInputKeyJustPressed(EKeys::H)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("H"))); }
+	if (WasInputKeyJustPressed(EKeys::Tab)) { CityCycleWidth(+1); }
+
+	if (IsInputKeyDown(EKeys::N))
+	{
+		NHeld += DeltaTime;
+		if (!bNFired)
+		{
+			HudModel->BarMessage = FString::Printf(TEXT("HOLD N TO RESET \u00b7 %.1f"), FMath::Max(0.f, ResetHoldSeconds - NHeld));
+			if (NHeld >= ResetHoldSeconds) { bNFired = true; UE_LOG(LogStacktown, Log, TEXT("RESET: %s"), *CityReset()); }
+		}
+	}
+	else if (NHeld > 0.f)
+	{
+		NHeld = 0.f; bNFired = false; HudModel->BarMessage.Reset();
+	}
 }

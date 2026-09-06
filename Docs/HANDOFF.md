@@ -1831,3 +1831,19 @@ into the wrong project. It has already caught it happening.
   mesh offsets of _apply_lot_offset (pad cube W/2 along +x; mass 750
   toward the road). 4 Stacktown.LotTransform tests with the Python's own
   numbers, including the 2026-09-04 scar (a lot on drawn road R1): 76/76.
+- **THE C++ LOT RENDERS WHERE THE PYTHON ONE STANDS (2026-09-06,
+  coordinator).** UStacktownLotVisual (a StaticMeshComponent that loads
+  the catalogue mass + species material, or the ghost pad, with the
+  StacktownLotTransform offsets) and a debug spawner
+  (UStacktownAgreementLibrary::SpawnLotVisualFor) that poses a C++ lot from
+  the MIRROR for a placed parcel. Live on the test save: P1 -> C++ pose
+  (1230, 1880, yaw 0) shows SM_WMass_w1230_setback1 in oak; the Blueprint
+  actor for P1 stands at (1230, 1880, yaw 0) - identical; with the twin
+  hidden the C++ mass renders on the lot (capture:
+  Saved/SelfTest/lot_visual/P1_cpp_lot_bp_twin_hidden.png). Mirror
+  agreement 6/6 lots. 76/76 headless. Two things found on the way and
+  queued for the seat: the built-in roads live only in the test fixture
+  (a runtime board factory is needed; the spawner carries a temporary
+  copy), and a -Wshadow error the unity build exposed in its roads test
+  (local renamed here). The actor swap now has every piece except the
+  seat's ParcelId/RoadId and the runtime spawn/reconcile loop.

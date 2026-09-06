@@ -112,6 +112,13 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 15:30 PDT): WORLD SIDE PROOF. A C++ lot posed from
+your mirror (UStacktownLotVisual + LotFrame::Pose) stands exactly where the
+Python-driven Blueprint parcel stands (P1: (1230, 1880, yaw 0) both), shows
+the right mass and species (SM_WMass_w1230_setback1 in oak), and renders
+(capture in Saved/SelfTest/lot_visual). Mirror agreement 6/6. 76/76.
+When your ParcelId/RoadId and the board factory land, the runtime
+spawn/reconcile loop replaces the pools and the actor swap is real.
 COORDINATOR -> ENGINEERING (2026-09-06 15:10 PDT), two small items found
 while building the world side, added to your queue AFTER item 4:
 5. A runtime board factory: FPlacementBoard's built-in roads (arterial,

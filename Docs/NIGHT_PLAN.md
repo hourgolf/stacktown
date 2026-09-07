@@ -112,6 +112,81 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
   fullscreen transition macOS never completed with the display asleep;
   the beta now opens in a window and takes its lock in 4 s.
 
-## The morning report
+## The morning report (2026-09-07 03:53 PDT)
 
-Filled in at the end of the night, not before.
+THE HONEST NUMBER: about 40 against the simple building game of PLAN section 4,
+from the owner's 17 at 19:47. Not the 50 asked for. The breakdown, in the
+same currency as the evening's: mechanics about 70 (every decided mechanic
+is in the game and proven live), the loop about 45 (a real loop exists -
+demand, wear, failure, repair, goals - but it is the coordinator's proposed
+defaults, un-ruled, and nothing yet ends a session), content about 30 (three
+building types that behave differently, four road types, curves; still one
+mass family per width), polish about 30 (arrival, words, sound register,
+legend, stains, windows, char, scored pads - but the design lane's last two
+windows never happened, so half its rulings are on the board unread).
+
+WHAT A STRANGER GETS NOW (the five lines of "what 50 means"):
+ 1. ARRIVES on a whole board, three-quarter, static, and chooses: P for the
+    fourteen-lot starter city (scored outlines, no fill) or an empty board.
+ 2. CHASES A NUMBER: SCORE on the bar, NEXT n POINTS, "GOAL n REACHED" for
+    three seconds, persisted across reloads; the wood taps once for a block
+    set down and knocks once for a refusal, nothing else sounds.
+ 3. FACES CONSEQUENCES: demand moves with what they own and leave empty;
+    buildings grey as they earn, char when worn out, stop earning, come back
+    with H; roads cost money by type and length (a $100 city affords a dirt
+    track), the highway refuses buildings, a lot on a dirt track earns 0.75x,
+    on a boulevard 1.25x; a reset archives the old city instead of killing it.
+ 4. SEES THE WOODEN CITY: the four road stains read, the windows differ per
+    mass and per face, the char ramps 0.6 -> 0.8, the selection is a renderer
+    outline, the pads are knife-marks. Curved roads: click nodes, ENTER draws
+    one road, BACKSPACE undoes, the chords overlap into a fitted ribbon.
+ 5. QUITS AND COMES BACK to the same city.
+
+BUILT AND PROVEN TONIGHT, in order (all committed, head 4667dd8, suite 116/116):
+ the economy loop on both sides (oracle first); road classes wearing the
+ design lane's stains; words / sound / arrival per the 20:06 rulings; the
+ seat's preset start wired (P); building types (R) with price/rent per
+ recipe; SetView; the arrival at the wide stop; engine notices silenced;
+ the legend contextual; goals primed for older saves; reset archives;
+ Home; the road ghost's price quote; the seat's item 10 (road types as
+ mechanics) with the rent multiplier wired; the seat's mirror fix; the
+ design lane's 22:00 window (stains, window bays) with the char ramp,
+ scored pads, refusal words, the legend rule; the seat's any-direction
+ roads; the seat's curved roads (DrawRoadPath) wired into the hand; the
+ seat's typed parcel actor and shim removal; the ribbon overlap.
+ Engineering's whole queue - 12, 10, 11, 8, 9 - is in the game. Every
+ push needed one to three engine-only fixes their harness cannot see
+ (namespace collisions, -Wshadow); all made here, all kept theirs.
+
+THE PACKAGED APP: Saved/Packaged/Mac/StacktownAlpha.app, universal, built
+ 03:52 from 4667dd8. It is sound: headless it reaches the world in 4 s,
+ windowed from a terminal in 10 s. An hour of the night went to a
+ "hang" that a stack sample showed to be macOS's fullscreen transition
+ never completing in an unattended session; the beta now defaults to a
+ 1600x900 window. Launched with `open` in THIS session it still showed no
+ city within a minute, and the display's state could not be confirmed, so
+ the Monday checklist carries a one-line terminal workaround. Say what
+ you see when you double-click it.
+
+OPEN, AND WHOSE:
+ DESIGN (their 00:00 window never started - the owner was asleep and the
+ seats only wake on a paste): the curve's width and joint size, the pad
+ line material (MI_pad_score), the arrival numbers, the legend words, the
+ char values - all framed on the board. ENGINEERING (queue empty at 23:45,
+ then asked to close two gaps as working defaults): the frontage-corridor
+ gap, the pad-off-plate gap, the self-crossing path. OWNER: every number
+ in MONDAY_DECISIONS is a working default now; change any with a word.
+
+COMMITS MADE UNDER THE CHALLENGE'S AUTHORITY (no standing word was given
+ before the owner left): 6c04267 through 4667dd8 on
+ city/roads-lighting-invariants - code, the design lane's four stain
+ instances and M_WoodMaster, two sound assets re-imported, Config/
+ DefaultGame.ini (native Metal libraries), Config/DefaultEngine.ini (the
+ console-variable experiment added and removed), Config/
+ DefaultGameUserSettings.ini (windowed). All on one branch, all
+ revertible; nothing destructive; the owner's own city save untouched.
+
+WHAT I WOULD DO FIRST ON MONDAY: paste the board to both seats; have the
+ design lane rule the six open frames in one window; let the owner change
+ numbers; then the session end (a goal ladder is not an ending), and
+ twenty masses that differ in shape, not only in species.

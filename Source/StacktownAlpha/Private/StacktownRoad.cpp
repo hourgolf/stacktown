@@ -41,7 +41,23 @@ void AStacktownRoad::ShowSegment(const FString& InRoadId, const Stacktown::FRoad
 	RoadId = InRoadId;
 	WidthClass = Segment.WidthClass;
 	if (UMaterialInterface* M = RoadMaterialFor(WidthClass)) { Mesh->SetMaterial(0, M); }
-	const Stacktown::RoadFrame::FPose P = Stacktown::RoadFrame::Transform(Segment, CorridorWidth);
+	Stacktown::RoadFrame::FPose P = Stacktown::RoadFrame::Transform(Segment, CorridorWidth);
+	if (!Segment.Path.IsEmpty())
+	{
+		// A CHORD of a curved road (the seat's DrawRoadPath): a full-width slab 410 long
+		// fans open on the outside of a bend and shows wedge gaps (frame 23:40). The
+		// design lane's road language is a fitted polyline with JOINTS visible, not
+		// gaps, so each chord runs half a corridor past both ends - consecutive pieces
+		// overlap into one ribbon - and sits a hair higher than the one before, so the
+		// overlaps never fight. The seam between pieces stays as the cut.
+		// 300 uu past each end closes the outside wedge of a ~30 degree bend between
+		// 410 chords; half a corridor (frame 23:42) fattened the whole curve into a slab.
+		P.Scale.X += 600.0 / 100.0;
+		int32 Index = 0;
+		FString Digits; for (const TCHAR C : InRoadId) { if (FChar::IsDigit(C)) { Digits.AppendChar(C); } }
+		Index = Digits.IsEmpty() ? 0 : FCString::Atoi(*Digits);
+		P.Location.Z += 0.02 * (double)(Index % 64);
+	}
 	SetActorLocationAndRotation(P.Location, P.Rotation);
 	SetActorScale3D(P.Scale);
 }

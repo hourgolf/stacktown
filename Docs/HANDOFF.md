@@ -1165,6 +1165,13 @@ was asking the wrong question and returning "ok".**
   THIS IS THE MONDAY APP. Open on the owner: five decisions in
   MONDAY_DECISIONS section 9. Open on engineering: the corridor-off-plate
   rule (word given). Open on the design lane: nothing.
+- 2026-09-07 09:10 PDT (coordinator): the design lane's 08:42 ruling built -
+  pre-failure ceiling 0.3 (4ba011c, proof frame_wear_prefailure_03.png), their
+  D22 amendment committed with it; package rebuilt from 4ba011c, universal,
+  opened by the double-click path (lock in 10 s, 1600x932 window). THE ONE-SHOT
+  BRIEF the owner asked for is Docs/ONE_SHOT_PROMPT.md (c4d25ed). Open on the
+  design lane: nothing. Open on engineering: the corridor-off-plate rule. Open
+  on the owner: seven decisions in MONDAY_DECISIONS section 9.
 
 ## 6. The recipe — measured numbers
 

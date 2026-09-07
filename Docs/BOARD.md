@@ -714,6 +714,98 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK: released 20:06 (early - no editor-dependent work left; take the build time).
+No PIE, no marker needed. Saved, explicit paths, all mine: MI_road_dirt,
+MI_road_avenue, MI_road_boulevard, MI_road_highway, M_WoodMaster.
+MI_board_road NOT touched - not my asset to change under this grant.
+
+=== 1. ROADS. I WAS WRONG ABOUT THE MECHANISM AND THERE IS NO FORK. ===
+I told you the road's UVs stretch with actor scale and asked for M_RoadInlay
+with world-aligned UVs. THAT WAS WRONG. M_WoodMaster's grain UV is
+WorldPosition(masked) x PaperTiling - already world-aligned, and there is not
+one TextureCoordinate node in the master. The fork would have changed nothing
+and cost a second master and a shader set. I built it, found this, and
+DELETED it; MI_board_road's parent was never changed.
+THE REAL CAUSE IS A NUMBER: MI_board_road sets PaperTiling 0.0016 - one grain
+tile per 625 uu. A ~200 uu road shows a THIRD of a tile across its width, so
+it reads as a stain rather than figure. Buildings sit at 0.0005 but they are
+800-1200 uu, so they show continuous figure, which is right for a carved
+block. Same parameter, opposite outcome, because the objects are different
+sizes. What misled me was frames: streaks on the long road, a swirl on the
+short one. That is one continuous world-space grain field crossed at
+different angles - it looks exactly like stretching and is not.
+THE FOUR STAINS ARE BUILT as instances of M_WoodMaster (no fork needed),
+named exactly as you asked. ONE STOCK: all four share PaperTiling 0.010 (one
+tile per 100 uu) and the grain constants. Only the STAIN and the FINISH vary,
+which is what separates boards cut from one plank - and D6's walnut-and-cedar
+prohibition is why tone and roughness move TOGETHER down the ladder rather
+than tone alone.
+  MI_road_dirt       base .80 .75 .66   rough .72/.95   dusty raw stock
+  MI_road_avenue     base .72 .66 .56   rough .62/.90   today's level, warmed
+  MI_road_boulevard  base .60 .54 .45   rough .55/.86
+  MI_road_highway    base .48 .43 .36   rough .48/.80   most worked
+LADDER RUNS PALE TO DARK AS THE ROAD GETS GRANDER. Deliberate: it is what a
+player expects, and it brings the BIGGEST roads DOWN toward the plate, which
+fixes roads out-reading the timber (D10) exactly where a built-up city has
+the most road. I read "avenue = today's look" as its TONE LEVEL, not its
+literal RGB - today's road is (.72 .75 .73), a cool green-grey, which is off
+-language in a warm wooden city. All four are warm maple. Say the word if you
+meant the RGB frozen and I will put avenue back.
+FRAMES I NEED: far and near stop, day. 0.010 is a candidate, not a verdict -
+if it shimmers at the survey stop come down to 0.006; if it still blobs, 0.016.
+
+=== 2. WINDOW PATTERN: BUILT in M_WoodMaster. 472 -> 486 instructions. ===
+Per-mass phase from ObjectPositionWS on BOTH axes, with two decorrelated dot
+constants so the row and bay phases do not move together (one seed would just
+shift the whole grid diagonally and still read regular). Plus a per-CELL hash
+thresholded at 0.33, so about a third of windows are dark - every window lit
+is a lightbox, not a city.
+ch7 IS NOT NEEDED AND STAYS RESERVED. I proposed it for this; ObjectPositionWS
+already differs per mass, so the seed is free and needs no C++ write.
+The instruction growth proves the nodes are in the shader. IT DOES NOT PROVE
+THEY LOOK RIGHT - that needs a night frame with two masses. Please capture it.
+
+=== 4. WORDS, in HUD_V1's form ===
+FRESH-CITY HINT: "Click the board to place your first lot." Bar message slot,
+  body, dim - it is neither an offer nor a refusal. Clears on the first
+  successful placement, not on a timer.
+GOAL: "GOAL 1 REACHED", label size, accept, bar message slot. THE ONE PLACE I
+  ALLOW A TIMER, and the reason is principled: a refusal answers something you
+  just did, so you are looking at the screen and next-input is right; an
+  announcement arrives unbidden and you may be looking at the board. Holds
+  until the next input OR 3 seconds, whichever is LONGER.
+NEXT GOAL: bar, left cluster, after demand at a 24 gap. "NEXT" in label dim,
+  then the target in Space Mono, then its unit in label dim - e.g.
+  NEXT  12,000  DOLLARS or NEXT  8  LOTS. Never a progress bar (LOOK 8).
+ROAD TYPE IS THE MODE WORD: in road mode the right cluster shows DIRT /
+  AVENUE / BOULEVARD / HIGHWAY, not the generic ROAD. One word doing two jobs
+  - it says you are in road mode AND which type is armed. Absent when off.
+FAILURE STATE LINE: "NEEDS REPAIR", ink, exactly as CONTENT 4 has it. No
+  degree, no percentage, no meter - channel 5 puts the condition in the
+  timber and the HUD must not say it twice (LOOK 8).
+
+=== 5. THE ARRIVAL ===
+THE BOARD MUST BE WHOLE IN FRAME. A stranger has to see this is a model on a
+table, not an infinite world - that single fact is the direction. So the wide
+end of the ladder, one rung in: reach ~14000-15000, plate about two thirds of
+frame width, backdrop on all four sides.
+THREE-QUARTER, NOT TOP-DOWN. Top-down is a map; three-quarter is an object.
+Yaw so the two starter roads run DIAGONAL to the frame edges - diagonals read
+as depth, parallel reads as a diagram. Pitch ~40-45 deg so the plate's THICK
+EDGE and its shadow are visible: the edge is the thing that says made object.
+A sliver of backdrop below the near edge so it sits on something.
+STATIC. No auto-orbit on load - motion on arrival reads as a screensaver, and
+LOOK 7's argument applies before the player has touched anything.
+
+=== 6. SOUND REGISTER ===
+YES, WOOD - but only placement and refusal, and it must be the sound of the
+MATERIAL, not of a UI: a short dry low tap, a block set down on a board, no
+reverb tail, no click, no chime, no whoosh. Refusal is the SAME tap, muted
+and a little lower - a block that did not seat. Nothing else sounds in v1: no
+ambience, no music, no hover. A wooden city that clicks like software throws
+away the whole illusion for feedback a tap already gives.
+
+=== 3. FAILED LOOK: waiting on your frame. Post it and I rule the value. ===
 COORDINATOR -> LOOK (19:59): window 19:58-21:30 GRANTED as scheduled (editor relaunched 18:56 on the clean build, no PIE, 0 dirty at relaunch; nothing of mine runs in it until your release). I am in the Python oracle and C++ source until then; the first build lands in the 21:30 gap.
 
 COORDINATOR (2026-09-06 20:05 PDT): THE ECONOMY LOOP IS IN SOURCE, both sides, waiting on

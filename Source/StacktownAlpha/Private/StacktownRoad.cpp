@@ -21,9 +21,21 @@ AStacktownRoad::AStacktownRoad()
 	}
 }
 
+static UMaterialInterface* RoadMaterialFor(const FString& WidthClass)
+{
+	// The design lane's four stains of one stock (2026-09-06 night): MI_road_<class>.
+	// An unknown or empty class wears the avenue; if even that is missing, the old inlay.
+	const FString Class = WidthClass.IsEmpty() ? TEXT("avenue") : WidthClass.ToLower();
+	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Stacktown/Materials/MI_road_%s.MI_road_%s"), *Class, *Class))) { return M; }
+	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_road_avenue.MI_road_avenue"))) { return M; }
+	return LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_board_road.MI_board_road"));
+}
+
 void AStacktownRoad::ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment)
 {
 	RoadId = InRoadId;
+	WidthClass = Segment.WidthClass;
+	if (UMaterialInterface* M = RoadMaterialFor(WidthClass)) { Mesh->SetMaterial(0, M); }
 	const Stacktown::RoadFrame::FPose P = Stacktown::RoadFrame::Transform(Segment);
 	SetActorLocationAndRotation(P.Location, P.Rotation);
 	SetActorScale3D(P.Scale);
@@ -37,9 +49,11 @@ void AStacktownRoad::Show(const FString& InRoadId, double StartX, double StartY,
 
 void AStacktownRoad::SetGhost(bool bGhost, bool bAccept)
 {
-	const TCHAR* Path = !bGhost ? TEXT("/Game/Stacktown/Materials/MI_board_road.MI_board_road")
-		: (bAccept ? TEXT("/Game/Stacktown/Materials/MI_ghost_accept.MI_ghost_accept") : TEXT("/Game/Stacktown/Materials/MI_ghost_refuse.MI_ghost_refuse"));
-	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, Path))
+	if (!bGhost)
+	{
+		if (UMaterialInterface* M = RoadMaterialFor(WidthClass)) { Mesh->SetMaterial(0, M); }
+	}
+	else if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, bAccept ? TEXT("/Game/Stacktown/Materials/MI_ghost_accept.MI_ghost_accept") : TEXT("/Game/Stacktown/Materials/MI_ghost_refuse.MI_ghost_refuse")))
 	{
 		Mesh->SetMaterial(0, M);
 	}

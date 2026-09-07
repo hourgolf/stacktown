@@ -35,7 +35,7 @@ def seed_state():
     different missing key, not a migration this function performs."""
     r = econrules.rules()
     return {'money': r['money_start'], 'demand': r['demand_default'],
-            'parcels': {}, 'roads': {}}
+            'parcels': {}, 'roads': {}, 'goals_reached': 0}
 
 
 def load_state(state_path=STATE_PATH):
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
         # 1. No file yet -> load_state seeds from econrules.json exactly.
         s = load_state(TEST_PATH)
-        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}, 'roads': {}}, s
+        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}, 'roads': {}, 'goals_reached': 0}, s
 
         # 2. city_buy matches econrules.buy() exactly and persists on
         #    success (same known-answer parcel as econrules.py's own #3).
@@ -199,7 +199,8 @@ if __name__ == '__main__':
             s, e = city_tick(s, TEST_PATH)
             events += e
         assert s == direct_s2, (s, direct_s2)
-        assert abs(s['money'] - 32.9) < 1e-9, s['money']
+        sum_d = 10 * 1.05 - 0.05 * (1 - 0.9 ** 10) / (1 - 0.9)   # demand moves (econrules test 3)
+        assert abs(s['money'] - (25.4 + 0.75 * sum_d)) < 1e-9, s['money']
         assert s['parcels']['P1']['tier'] == 0, s['parcels']['P1']
         assert events == events_direct == [], events
 
@@ -221,7 +222,7 @@ if __name__ == '__main__':
         # 6. Reset wipes to a fresh seed regardless of what came before,
         #    and the file on disk matches what was returned.
         s = city_reset(TEST_PATH)
-        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}, 'roads': {}}, s
+        assert s == {'money': 100.0, 'demand': 1.0, 'parcels': {}, 'roads': {}, 'goals_reached': 0}, s
         with open(TEST_PATH) as f:
             assert json.load(f) == s
 

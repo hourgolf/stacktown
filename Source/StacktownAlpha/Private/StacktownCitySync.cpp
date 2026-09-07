@@ -197,7 +197,9 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			// which is B3's own rule for a new building. Wired when age lands in state.
 			// Age from the state (queue item 7); this passed a hard 0 before,
 			// so every mass rendered pale no matter how long it had stood.
-			V->ApplyState(P.bOwned, static_cast<float>(Stacktown::AgeFraction(P.AgeTicks)));
+			const double WearLimit = Econ->GetRules().WearTicksPerTier * (double)(P.Tier + 1);
+			const float Wear01 = WearLimit > 0.0 ? (float)(P.Wear / WearLimit) : 0.f;
+			V->ApplyState(P.bOwned, static_cast<float>(Stacktown::AgeFraction(P.AgeTicks)), Wear01, P.bFailed);
 		}
 	}
 	for (auto It = Lots.CreateIterator(); It; ++It)

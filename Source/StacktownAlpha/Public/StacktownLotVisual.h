@@ -32,11 +32,13 @@ public:
 	 *    0 Age        oxidation 0..1 along the species curve
 	 *    1 GlowLevel  night window emission - 0.45 owned (D24 ladder, GlowScale 40), 0 for sale (D20: bare board)
 	 *    2 GlowState  encoded hue, 0.5 neutral warm until the economy can say activity
-	 *    4 Attention, 5 Failure, 6 Scorch  0 today
+	 *    4 Attention 0 today
+	 *    5 Failure    0.6 x wear (weathers toward the species grey as the lot wears), 0.8 worn out (chars) until repaired
+	 *    6 Scorch     0 today
 	 *  Found by the design lane's night frame (2026-09-06 16:02): channels 1 and 2 were
 	 *  READ by the material and WRITTEN by nothing in C++, so every window was black. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Lot")
-	void ApplyState(bool bOwned, float Age);
+	void ApplyState(bool bOwned, float Age, float Wear01 = 0.f, bool bFailed = false);
 
 	/** Selection: cpdmap channel 3 (reserved, the material does not draw it) plus custom
 	 *  depth for the renderer outline the design lane ruled (post-process, accept #C08A4E). */

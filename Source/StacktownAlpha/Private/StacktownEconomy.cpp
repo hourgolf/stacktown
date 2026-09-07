@@ -74,7 +74,13 @@ bool FEconRules::FromJson(const FString& JsonText, FEconRules& Out, FString& Out
 		ReadNumber(Root, TEXT("demand_default"),        R.DemandDefault,     OutError) &&
 		ReadNumber(Root, TEXT("trade_credits_per_n"),   CreditsPerN,         OutError) &&
 		ReadNumber(Root, TEXT("trade_credit_amount"),   R.TradeCreditAmount, OutError) &&
-		ReadNumber(Root, TEXT("trade_bonus_per_win"),   R.TradeBonusPerWin,  OutError);
+		ReadNumber(Root, TEXT("trade_bonus_per_win"),   R.TradeBonusPerWin,  OutError) &&
+		ReadNumber(Root, TEXT("demand_gain"),           R.DemandGain,        OutError) &&
+		ReadNumber(Root, TEXT("demand_loss"),           R.DemandLoss,        OutError) &&
+		ReadNumber(Root, TEXT("demand_rate"),           R.DemandRate,        OutError) &&
+		ReadNumber(Root, TEXT("demand_min"),            R.DemandMin,         OutError) &&
+		ReadNumber(Root, TEXT("demand_max"),            R.DemandMax,         OutError) &&
+		ReadNumber(Root, TEXT("wear_ticks_per_tier"),   R.WearTicksPerTier,  OutError);
 	if (!bAll)
 	{
 		return false;
@@ -118,6 +124,9 @@ bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutErr
 	// than a migration.
 	int32 Processed = 0;
 	Root->TryGetNumberField(TEXT("trades_processed"), Processed);
+	double Goals = 0.0;
+	Root->TryGetNumberField(TEXT("goals_reached"), Goals);   // optional: absent on every save before 2026-09-06 night
+	S.GoalsReached = (int32)Goals;
 	S.TradesProcessed = Processed;
 
 	const TSharedPtr<FJsonObject>* Roads = nullptr;
@@ -173,6 +182,7 @@ bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutErr
 			// back to, so an old save reads identically on both sides.
 			(*PObj)->TryGetBoolField(TEXT("failed"), P.bFailed);
 			(*PObj)->TryGetNumberField(TEXT("performance"), P.Performance);
+			(*PObj)->TryGetNumberField(TEXT("wear"), P.Wear);   // optional: 0 on older saves
 			// Age. age_last_tier is read as OPTIONAL: absent means the lot has
 			// never been measured, which takes the reset branch on its next
 			// advance, and that is not the same as a recorded tier of 0.
@@ -218,6 +228,7 @@ FString CityStateToJson(const FCityState& State)
 	Root->SetNumberField(TEXT("money"), State.Money);
 	Root->SetNumberField(TEXT("demand"), State.Demand);
 	Root->SetNumberField(TEXT("trades_processed"), State.TradesProcessed);
+	Root->SetNumberField(TEXT("goals_reached"), State.GoalsReached);
 
 	const TSharedRef<FJsonObject> Parcels = MakeShared<FJsonObject>();
 	// Sorted, so a save is stable under a re-write and a diff of two saves shows
@@ -236,6 +247,7 @@ FString CityStateToJson(const FCityState& State)
 		PObj->SetNumberField(TEXT("accum"), P.Accum);
 		PObj->SetBoolField(TEXT("failed"), P.bFailed);
 		PObj->SetNumberField(TEXT("performance"), P.Performance);
+		PObj->SetNumberField(TEXT("wear"), P.Wear);
 		PObj->SetNumberField(TEXT("age_ticks"), P.AgeTicks);
 		// Written only when recorded, so a never-aged lot round-trips as one
 		// rather than acquiring a tier it was never measured against.
@@ -492,6 +504,7 @@ void UStacktownEconomy::CityTick()
 	// with the tests that predict what this call persists. Age stays outside
 	// Tick itself so the economy oracles' exact known answers hold.
 	Stacktown::TickCity(Rules, State, Events);
+	LastTickEvents.Append(Events);
 	SaveState();
 }
 
@@ -565,4 +578,11 @@ void UStacktownEconomy::ApplyTradeLedger(const TArray<double>& LedgerPnls,
 	{
 		SaveState();
 	}
+}
+
+void UStacktownEconomy::SetGoalsReached(int32 Rungs)
+{
+	if (State.GoalsReached == Rungs) { return; }
+	State.GoalsReached = Rungs;
+	SaveState();
 }

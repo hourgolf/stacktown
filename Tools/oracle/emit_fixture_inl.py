@@ -58,6 +58,12 @@ def main():
                       ('rent_per_tier', 'RentPerTier'),
                       ('growth_threshold', 'GrowthThreshold'),
                       ('demand_default', 'DemandDefault'),
+                      ('demand_gain', 'DemandGain'),
+                      ('demand_loss', 'DemandLoss'),
+                      ('demand_rate', 'DemandRate'),
+                      ('demand_min', 'DemandMin'),
+                      ('demand_max', 'DemandMax'),
+                      ('wear_ticks_per_tier', 'WearTicksPerTier'),
                       ('trade_credit_amount', 'TradeCreditAmount'),
                       ('trade_bonus_per_win', 'TradeBonusPerWin')):
         w('inline constexpr double %s = %s;' % (name, cxx_num(r[key])))
@@ -157,6 +163,7 @@ def main():
     w('inline constexpr int32  TickRetired_Tier  = %d;' % g['final']['parcels']['OF']['tier'])
     w('inline constexpr int32  TickRetired_Events = %d;' % len(g['events']))
     m = fx['tick_multi']
+    w('inline constexpr double TickMulti_DemandStart = %s;' % cxx_num(m['start_demand']))
     w('inline constexpr double TickMulti_Demand = %s;' % cxx_num(m['final']['demand']))
     w('inline constexpr double TickMulti_Money = %s;' % cxx_num(m['final']['money']))
     for pid in sorted(m['final']['parcels']):

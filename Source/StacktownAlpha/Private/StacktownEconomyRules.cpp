@@ -114,11 +114,14 @@ static void SortedParcelIds(const FCityState& State, TArray<FString>& OutIds)
 
 void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
 {
-	// Emptied, never appended to: a tick emits nothing now that growth is
-	// retired. Kept in the signature because every caller destructures it and
-	// step 3 will want the shape back.
+	// Mirrors econrules.tick() line for line (2026-09-06 night): rent at the demand
+	// the tick STARTED with, only for owned un-failed lots; wear by one, and at
+	// WearTicksPerTier x (tier + 1) the lot wears out (event WornOut); then demand
+	// moves toward its target by DemandRate of the gap and clamps. Sorted ids, so
+	// the sums are the Python's sums bit for bit.
 	OutEvents.Reset();
-
+	const double Demand = State.Demand;
+	int32 Owned = 0, ForSale = 0;
 	TArray<FString> Ids;
 	SortedParcelIds(State, Ids);
 	for (const FString& Id : Ids)
@@ -126,14 +129,30 @@ void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
 		FParcelState& P = State.Parcels[Id];
 		if (!P.bOwned)
 		{
+			++ForSale;
 			continue;
 		}
-		const double Earned = Rent(R, P.Tier, State.Demand);
+		++Owned;
+		if (P.bFailed)
+		{
+			continue;
+		}
+		const double Earned = Rent(R, P.Tier, Demand);
 		State.Money += Earned;
 		P.Accum += Earned;
-		// P.Tier is deliberately untouched. If a future edit adds a tier change
-		// here, invariant 1 is broken and the 1000-tick test will say so.
+		P.Wear += 1.0;
+		if (P.Wear >= R.WearTicksPerTier * (double)(P.Tier + 1))
+		{
+			P.bFailed = true;
+			FEconEvent E; E.Type = EEconEventType::WornOut; E.Amount = 0.0; E.Pid = Id;
+			OutEvents.Add(E);
+		}
+		// P.Tier is deliberately untouched (growth by purchase only, D20).
 	}
+	const double Target = R.DemandDefault + R.DemandGain * (double)Owned - R.DemandLoss * (double)ForSale;
+	double NewDemand = Demand + R.DemandRate * (Target - Demand);
+	NewDemand = FMath::Min(R.DemandMax, FMath::Max(R.DemandMin, NewDemand));
+	State.Demand = NewDemand;
 }
 
 void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
@@ -166,6 +185,8 @@ FVerbResult Buy(const FEconRules& R, FCityState& State, const FString& Pid)
 	State.Money -= Cost;
 	P->bOwned = true;
 	P->Accum = 0.0;
+	P->Wear = 0.0;
+	P->bFailed = false;
 	return FVerbResult::Ok();
 }
 
@@ -199,6 +220,7 @@ FVerbResult Upgrade(const FEconRules& R, const ICatalogue& Catalogue,
 	}
 	State.Money -= Cost;
 	P->Tier += 1;
+	P->Wear = 0.0;
 	return FVerbResult::Ok();
 }
 
@@ -224,6 +246,7 @@ FVerbResult Repair(const FEconRules& R, FCityState& State, const FString& Pid)
 	}
 	State.Money -= Cost;
 	P->bFailed = false;
+	P->Wear = 0.0;
 	return FVerbResult::Ok();
 }
 
@@ -291,11 +314,11 @@ void ApplyTradeLedger(const FEconRules& R, FCityState& State,
 	// oracle cases asserts the event list exactly, not as a set.
 	if (Credits != 0.0)
 	{
-		OutEvents.Add(FEconEvent{ EEconEventType::TradeCredits, Credits });
+		OutEvents.Add(FEconEvent{ EEconEventType::TradeCredits, Credits, FString() });
 	}
 	if (Bonus != 0.0)
 	{
-		OutEvents.Add(FEconEvent{ EEconEventType::TradeBonus, Bonus });
+		OutEvents.Add(FEconEvent{ EEconEventType::TradeBonus, Bonus, FString() });
 	}
 }
 

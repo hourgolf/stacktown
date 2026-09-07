@@ -144,7 +144,8 @@ def main():
         'B': parcel('office', 1, 2050.0, owned=False),   # unowned: earns nothing
     }}
     multi_after, multi_evs = econrules.tick(st_multi)
-    fx['tick_multi'] = {'final': multi_after, 'events': multi_evs}
+    fx['tick_multi'] = {'final': multi_after, 'events': multi_evs,
+                        'start_demand': st_multi['demand']}
 
     # --- the verbs: happy paths and every named refusal ----------------------
     def verb(fn, state, pid):

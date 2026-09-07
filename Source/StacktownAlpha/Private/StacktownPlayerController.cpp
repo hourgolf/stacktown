@@ -520,7 +520,7 @@ FString AStacktownPlayerController::CityVerb(const FString& Key)
 	const FString Rep = Sync->Reconcile(false);
 	SetSelectionHighlight(SelectedPid, true);
 	RefreshSelection();
-	PlayCue(TEXT("S_Buy"));
+	PlayCue(TEXT("S_Place"));   // LOOK 6: the block set down, the same material sound as placing
 	return FString::Printf(TEXT("%s %s ok; money %.2f; %s"), Verb, *SelectedPid, Econ->GetState().Money, *Rep);
 }
 
@@ -579,7 +579,7 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 	if (!bRoadStartSet) { HideRoadGhost(); return; }
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
-	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, TEXT("avenue"), PinsActive(GetGameInstance()));
+	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, RoadClass, PinsActive(GetGameInstance()));
 	if (!RoadGhostActor)
 	{
 		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -608,7 +608,7 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 		PlayCue(TEXT("S_Place"));
 		return FString::Printf(TEXT("road start (%.0f, %.0f)"), X, Y);
 	}
-	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, TEXT("avenue"), PinsActive(GetGameInstance()));
+	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, RoadClass, PinsActive(GetGameInstance()));
 	bRoadStartSet = false;
 	HideRoadGhost();
 	if (!R.bOk)
@@ -644,23 +644,57 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 
 	// THE GOAL LADDER (proposed): announce a rung the first time the score crosses it
 	// this session. A loaded city's standing rungs are not re-announced.
+	if (UStacktownEconomy* EconForGoals = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr)
 	{
+		// Persisted in the city (goals_reached): a reloaded city is not congratulated twice.
 		const int32 Goals = Stacktown::GoalsReached(HudModel->Score);
-		if (GoalsAnnounced < 0) { GoalsAnnounced = Goals; }
-		else if (Goals > GoalsAnnounced)
+		const int32 Already = EconForGoals->GetState().GoalsReached;
+		if (Goals > Already)
 		{
-			HudModel->BarMessage = FString::Printf(TEXT("GOAL %s REACHED"), *FText::AsNumber((int64)Stacktown::GoalLadder()[Goals - 1]).ToString());
-			PlayCue(TEXT("S_Goal"));
-			GoalsAnnounced = Goals;
+			// LOOK 4: "GOAL n REACHED" (the rung, not the amount), label size in accept, and it
+			// holds until the next input OR 3 seconds, whichever is longer - an announcement
+			// arrives unbidden. No sound: LOOK 6 allows the wood to speak only for placement
+			// and refusal.
+			PinnedBarMessage = FString::Printf(TEXT("GOAL %d REACHED"), Goals);
+			PinnedBarUntil = GetWorld()->GetTimeSeconds() + 3.0;
+			HudModel->BarMessage = PinnedBarMessage;
+			HudModel->bBarMessageAccent = true;
+			EconForGoals->SetGoalsReached(Goals);
 		}
+		GoalsAnnounced = Goals;
+		const TArray<double>& Ladder = Stacktown::GoalLadder();
+		HudModel->NextGoal = Goals < Ladder.Num() ? Ladder[Goals] : 0.0;
 	}
 	// THE FRESH CITY: a stranger's first screen has no lots and no instruction. The
 	// hint holds the bar until the first lot exists (wording is the design lane's).
 	if (UStacktownEconomy* EconForHint = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr)
 	{
 		const bool bFresh = EconForHint->GetState().Parcels.Num() == 0;
-		if (bFresh && !bRoadMode && HudModel->BarMessage.IsEmpty()) { HudModel->BarMessage = TEXT("click the plate beside a road to place your first lot"); bHintShowing = true; }
+		if (bFresh && !bRoadMode && HudModel->BarMessage.IsEmpty()) { HudModel->BarMessage = TEXT("Click the board to place your first lot."); bHintShowing = true; }   // LOOK 4 wording
 		else if (!bFresh && bHintShowing) { HudModel->BarMessage.Reset(); bHintShowing = false; }
+	}
+
+	if (!PinnedBarMessage.IsEmpty())
+	{
+		if (GetWorld()->GetTimeSeconds() < PinnedBarUntil) { HudModel->BarMessage = PinnedBarMessage; HudModel->bBarMessageAccent = true; }
+		else { PinnedBarMessage.Reset(); }
+	}
+	if (HudModel->BarMessage != PinnedBarMessage) { HudModel->bBarMessageAccent = false; }
+
+	// A lot wearing out is the loop's one bad surprise: the bar says so and the
+	// board knocks. The selection panel then reads NEEDS REPAIR and offers H.
+	if (UStacktownEconomy* EconForEvents = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr)
+	{
+		for (const Stacktown::FEconEvent& E : EconForEvents->LastTickEvents)
+		{
+			if (E.Type == Stacktown::EEconEventType::WornOut)
+			{
+				HudModel->BarMessage = TEXT("a building wore out \u00b7 select it and press H to repair");
+				PlayCue(TEXT("S_Refuse"));
+				UE_LOG(LogStacktown, Log, TEXT("WEAR: %s wore out"), *E.Pid);
+			}
+		}
+		EconForEvents->LastTickEvents.Reset();
 	}
 
 	// any key press clears a showing refusal (LOOK 6: cleared on the next input)
@@ -677,6 +711,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	const bool bBoard = BoardPointUnderCursor(Board);
 	if (WasInputKeyJustPressed(EKeys::G)) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadMode(!bRoadMode)); }
 	if (WasInputKeyJustPressed(EKeys::L)) { UE_LOG(LogStacktown, Log, TEXT("NIGHT: %s"), *CityNight(!(Night && Night->IsNight()))); }
+	if (bRoadMode && WasInputKeyJustPressed(EKeys::T)) { UE_LOG(LogStacktown, Log, TEXT("ROAD CLASS: %s"), *CityCycleRoadClass()); }
 	if (bRoadMode)
 	{
 		HideGhost();
@@ -734,4 +769,15 @@ void AStacktownPlayerController::PlayCue(const TCHAR* Name)
 	}
 	UGameplayStatics::PlaySound2D(this, Cue);
 	UE_LOG(LogStacktown, Log, TEXT("SOUND: %s"), Name);
+}
+
+FString AStacktownPlayerController::CityCycleRoadClass()
+{
+	static const TCHAR* Classes[] = { TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };
+	int32 Index = 1;
+	for (int32 i = 0; i < 4; ++i) { if (RoadClass == Classes[i]) { Index = i; break; } }
+	RoadClass = Classes[(Index + 1) % 4];
+	if (HudModel) { HudModel->RoadClass = RoadClass; HudModel->BarMessage = TEXT("click start, click end \u00b7 T next type \u00b7 G to leave"); }
+	PlayCue(TEXT("S_Place"));
+	return RoadClass;
 }

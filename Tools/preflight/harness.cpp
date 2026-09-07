@@ -351,7 +351,7 @@ int main()
 	{
 		FCityState S;
 		S.Money = 0.0;
-		S.Demand = StacktownOracle::TickMulti_Demand;
+		S.Demand = StacktownOracle::TickMulti_DemandStart;   // the scenario STARTS at 1.5; TickMulti_Demand is where the oracle left it
 		S.Parcels.Add(TEXT("C"), Parcel(TEXT("vernacular"), 2, 1230.0, true));
 		S.Parcels.Add(TEXT("A"), Parcel(TEXT("vernacular"), 0, 1230.0, true));
 		S.Parcels.Add(TEXT("B"), Parcel(TEXT("office"), 1, 2050.0, false));

@@ -68,6 +68,10 @@ void AStacktownCameraPawn::BeginPlay()
 	{
 		UE_LOG(LogStacktown, Log, TEXT("StacktownCameraPawn: no M_PP_Outline yet - selection has no outline"));
 	}
+	// THE ARRIVAL (design lane, 2026-09-06 20:06): the board whole in frame, one rung in
+	// from the wide end (~14,500), three-quarter so the starter roads run diagonal
+	// (yaw 35), pitch 42 so the plate's thick edge and shadow show, and STATIC.
+	TargetYaw = 35.0; TargetPitch = -42.0; TargetDistance = 14500.0;   // pitch is negative looking down in this model
 	SnapToTargets();
 	UE_LOG(LogStacktown, Log, TEXT("StacktownCameraPawn: focus (%.0f, %.0f) yaw %.1f pitch %.1f distance %.0f board x[%.0f..%.0f] y[%.0f..%.0f]"),
 		Focus.X, Focus.Y, Yaw, Pitch, Distance, BoardMin.X, BoardMax.X, BoardMin.Y, BoardMax.Y);

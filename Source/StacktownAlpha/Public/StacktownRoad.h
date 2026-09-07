@@ -19,6 +19,9 @@ public:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Stacktown|Road")
 	FString RoadId;
+	/** The segment's width class (dirt | avenue | boulevard | highway): picks MI_road_<class>. */
+	UPROPERTY(VisibleInstanceOnly, Category = "Stacktown|Road")
+	FString WidthClass;
 
 	/** Pose the road for a segment. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Road")

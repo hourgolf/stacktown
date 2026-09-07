@@ -48,6 +48,16 @@ struct STACKTOWNALPHA_API FEconRules
 	int32  TradeCreditsPerN  = 10;
 	double TradeCreditAmount = 20.0;
 	double TradeBonusPerWin  = 5.0;
+	/** 2026-09-06 night (NIGHT_PLAN.md, working defaults): demand moves toward
+	 *  DemandDefault + DemandGain x owned lots - DemandLoss x for-sale lots by
+	 *  DemandRate of the gap per tick, clamped to [DemandMin, DemandMax]; an
+	 *  owned lot wears out after WearTicksPerTier x (tier + 1) earning ticks. */
+	double DemandGain        = 0.05;
+	double DemandLoss        = 0.05;
+	double DemandRate        = 0.1;
+	double DemandMin         = 0.5;
+	double DemandMax         = 2.0;
+	double WearTicksPerTier  = 150.0;
 
 	/** Parse econrules.json. Returns false and fills OutError on malformed JSON
 	 *  or a missing key - never silently falls back to the defaults above, which
@@ -147,6 +157,11 @@ struct STACKTOWNALPHA_API FParcelState
 	 *  compare equal on that first pass and start counting a tick early. */
 	TOptional<int32> AgeLastTier;
 
+	/** Earning ticks since the lot was last bought, upgraded or repaired. At
+	 *  WearTicksPerTier x (tier + 1) the lot WEARS OUT (bFailed) and earns
+	 *  nothing until repaired. Double for the same round-trip reason as AgeTicks. */
+	double Wear = 0.0;
+
 	/** Present only on PLAYER-PLACED lots; a pinned parcel never carries it.
 	 *  This is the one key that distinguishes the two paths, and it is additive
 	 *  by construction - everything that reads the seven fields above was never
@@ -176,6 +191,9 @@ struct STACKTOWNALPHA_API FCityState
 	/** How many leading ledger entries ApplyTradeLedger has already counted.
 	 *  Top-level, not per-parcel: this is what makes the ledger idempotent. */
 	int32  TradesProcessed = 0;
+	/** Rungs of the goal ladder already announced (StacktownScore.h); persisted
+	 *  so a reloaded city is not congratulated twice. Written by the controller. */
+	int32  GoalsReached = 0;
 
 	/** PLAYER-DRAWN segments only, keyed by id. The two built-in roads (the
 	 *  arterial and the cross street) are constants of the board, never state -
@@ -200,16 +218,18 @@ enum class EEconEventType : uint8
 {
 	TradeCredits,
 	TradeBonus,
+	WornOut,   // a lot wore out this tick; Pid names it, Amount is 0
 };
 
 struct STACKTOWNALPHA_API FEconEvent
 {
 	EEconEventType Type   = EEconEventType::TradeCredits;
 	double         Amount = 0.0;
+	FString        Pid;
 
 	bool operator==(const FEconEvent& Other) const
 	{
-		return Type == Other.Type && Amount == Other.Amount;
+		return Type == Other.Type && Amount == Other.Amount && Pid == Other.Pid;
 	}
 };
 

@@ -77,6 +77,15 @@ public:
 	 *  the same place instead of each spelling the path itself. */
 	bool LoadRulesFromFile(FString& OutError);
 
+	/** The goal ladder's announced rungs (StacktownScore.h), persisted with the city so
+	 *  a reload is not congratulated twice. Saves immediately. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Economy")
+	void SetGoalsReached(int32 Rungs);
+
+	/** The events the last CityTick raised (a lot wearing out, and so on). Taken by
+	 *  the controller, which shows them and clears the list. */
+	TArray<Stacktown::FEconEvent> LastTickEvents;
+
 	/** Set the ruleset directly, bypassing the JSON. LoadRules is the validating
 	 *  entry point and is what production uses; this exists so a test can state
 	 *  the ruleset it means without needing a file on disk. */

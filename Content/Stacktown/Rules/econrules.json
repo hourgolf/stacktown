@@ -1,5 +1,5 @@
 {
-  "_": "SCAFFOLDING - every value is a placeholder awaiting the owner's economy notes. Read fresh per tick by design (bytecode-cache trap, HANDOFF).",
+  "_": "WORKING DEFAULTS (2026-09-06 night, NIGHT_PLAN.md): every value is a placeholder the owner can change; read fresh per tick by design (bytecode-cache trap, HANDOFF).",
   "money_start": 100,
   "price_base": 50,
   "price_per_100uu": 2,
@@ -9,5 +9,11 @@
   "demand_default": 1.0,
   "trade_credits_per_n": 10,
   "trade_credit_amount": 20,
-  "trade_bonus_per_win": 5
+  "trade_bonus_per_win": 5,
+  "demand_gain": 0.05,
+  "demand_loss": 0.05,
+  "demand_rate": 0.1,
+  "demand_min": 0.5,
+  "demand_max": 2.0,
+  "wear_ticks_per_tier": 150
 }

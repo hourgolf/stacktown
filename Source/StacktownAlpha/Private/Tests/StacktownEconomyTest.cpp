@@ -172,7 +172,8 @@ STACKTOWN_ECON_TEST(FStacktownEconThousandTicks, "Stacktown.Economy.ThousandTick
 		StacktownOracle::Tick1000_Accum, 1e-6);
 	TestEqual(TEXT("tier still 0 after 1000 ticks"), S.Parcels[TEXT("P1")].Tier,
 		StacktownOracle::Tick1000_Tier);
-	TestEqual(TEXT("no event ever fired"), EventCount, StacktownOracle::Tick1000_Events);
+	TestEqual(TEXT("events across 1000 ticks (one: the lot wore out at 150)"), EventCount, StacktownOracle::Tick1000_Events);
+	TestTrue(TEXT("the lot wore out"), S.Parcels[TEXT("P1")].bFailed);
 	return true;
 }
 
@@ -406,7 +407,7 @@ STACKTOWN_ECON_TEST(FStacktownEconMultiParcelOrder, "Stacktown.Economy.MultiParc
 	const FEconRules R = OracleRules();
 	FCityState S;
 	S.Money = 0.0;
-	S.Demand = StacktownOracle::TickMulti_Demand;
+	S.Demand = StacktownOracle::TickMulti_DemandStart;
 	S.Parcels.Add(TEXT("C"), Parcel(TEXT("vernacular"), 2, 1230.0, true));
 	S.Parcels.Add(TEXT("A"), Parcel(TEXT("vernacular"), 0, 1230.0, true));
 	S.Parcels.Add(TEXT("B"), Parcel(TEXT("office"), 1, 2050.0, false));
@@ -418,6 +419,7 @@ STACKTOWN_ECON_TEST(FStacktownEconMultiParcelOrder, "Stacktown.Economy.MultiParc
 	TestEqual(TEXT("C accrued"), S.Parcels[TEXT("C")].Accum, StacktownOracle::TickMulti_Accum_C, Tol);
 	TestEqual(TEXT("an unowned parcel accrues nothing"),
 		S.Parcels[TEXT("B")].Accum, StacktownOracle::TickMulti_Accum_B, Tol);
+	TestEqual(TEXT("demand moved as the oracle's did (two owned, one for sale)"), S.Demand, StacktownOracle::TickMulti_Demand, Tol);
 	return true;
 }
 

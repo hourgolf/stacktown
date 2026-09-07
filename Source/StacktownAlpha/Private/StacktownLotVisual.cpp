@@ -67,7 +67,7 @@ bool UStacktownLotVisual::ShowPad(double Width, FString& OutError)
 	return true;
 }
 
-void UStacktownLotVisual::ApplyState(bool bOwned, float Age)
+void UStacktownLotVisual::ApplyState(bool bOwned, float Age, float Wear01, bool bFailed)
 {
 	// Written through the function, never the property: the shader reads the runtime
 	// per-instance array, which only SetCustomPrimitiveDataFloat sets (the Python
@@ -77,7 +77,9 @@ void UStacktownLotVisual::ApplyState(bool bOwned, float Age)
 	SetCustomPrimitiveDataFloat(1, bOwned ? 0.45f : 0.f);
 	SetCustomPrimitiveDataFloat(2, 0.5f);
 	SetCustomPrimitiveDataFloat(4, 0.f);
-	SetCustomPrimitiveDataFloat(5, 0.f);
+	// cpdmap channel 5: 0 -> 0.6 weathers toward this species' grey, 0.6 -> 1 chars. A
+	// lot greys as it wears (a stranger sees decay coming) and chars when worn out.
+	SetCustomPrimitiveDataFloat(5, bFailed ? 0.8f : 0.6f * FMath::Clamp(Wear01, 0.f, 1.f));
 	SetCustomPrimitiveDataFloat(6, 0.f);
 }
 

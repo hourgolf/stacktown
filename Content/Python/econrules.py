@@ -84,24 +84,48 @@ def tier_up_allowed(rid, tier, width, baked_dir=BAKED_DIR):
 
 def tick(state):
     """One CityTick. state = {'money': float, 'demand': float,
-    'parcels': {pid: {'rid','tier','width','owned','accum',...}}}.
-    Returns (new_state, events) - events is always [] now (kept in the
-    return shape, not dropped, since citytick.city_tick and every
-    caller already destructures (state, events); a lot's tier NEVER
-    changes here, regardless of accum or demand - see module docstring,
-    "GROWTH RETIRED FROM tick()". accum keeps accruing (still real rent
-    collected, still what the HUD shows) - only the automatic threshold
-    check that used to read it is gone. Pure - caller owns
-    persistence."""
+    'parcels': {pid: {'rid','tier','width','owned','accum','wear',...}}}.
+    Returns (new_state, events). A lot's tier NEVER changes here (growth
+    retired, D20). Since 2026-09-06 night (NIGHT_PLAN.md, working
+    defaults) three things move:
+      RENT   - every owned, un-failed lot earns rent at the demand the tick
+               STARTED with; a failed lot earns nothing until repaired.
+      WEAR   - every owned, un-failed lot wears by 1 per tick; at
+               wear_ticks_per_tier x (tier+1) it WEARS OUT: failed=True,
+               event {'type': 'worn_out', 'pid': pid}. Wear resets on buy,
+               upgrade and repair. 150 ticks per tier is the patina's own
+               maturity constant (init_unreal: AGE_MATURE_TICKS), so a lot
+               wears out as its patina completes - a long-loved block is
+               old and then it needs a hand again.
+      DEMAND - moves toward demand_default + demand_gain x owned lots
+               - demand_loss x for-sale lots, by demand_rate of the gap per
+               tick, clamped to [demand_min, demand_max]. Owning raises it,
+               leaving pads unbought lowers it; Price and rent follow.
+    Pure - caller owns persistence."""
     r = rules()
     s = json.loads(json.dumps(state))   # defensive copy, JSON-clean
     events = []
+    demand = float(s['demand'])
+    owned = 0
+    for_sale = 0
     for pid, p in sorted(s['parcels'].items()):
         if not p.get('owned'):
+            for_sale += 1
             continue
-        earned = rent(p['rid'], p['tier'], s['demand'], r)
+        owned += 1
+        if p.get('failed'):
+            continue
+        earned = rent(p['rid'], p['tier'], demand, r)
         s['money'] += earned
         p['accum'] = p.get('accum', 0.0) + earned
+        p['wear'] = p.get('wear', 0) + 1
+        if p['wear'] >= r['wear_ticks_per_tier'] * (int(p['tier']) + 1):
+            p['failed'] = True
+            events.append({'type': 'worn_out', 'pid': pid, 'amount': 0.0})
+    target = r['demand_default'] + r['demand_gain'] * owned - r['demand_loss'] * for_sale
+    demand = demand + r['demand_rate'] * (target - demand)
+    demand = min(r['demand_max'], max(r['demand_min'], demand))
+    s['demand'] = demand
     return s, events
 
 
@@ -121,6 +145,8 @@ def buy(state, pid):
     s['money'] -= cost
     p['owned'] = True
     p['accum'] = 0.0
+    p['wear'] = 0
+    p['failed'] = False
     return s, True, ''
 
 
@@ -206,6 +232,7 @@ def upgrade(state, pid):
             s['money'], cost)
     s['money'] -= cost
     p['tier'] = int(p['tier']) + 1
+    p['wear'] = 0
     return s, True, ''
 
 
@@ -237,6 +264,7 @@ def repair(state, pid):
             s['money'], cost)
     s['money'] -= cost
     p['failed'] = False
+    p['wear'] = 0
     return s, True, ''
 
 
@@ -372,8 +400,16 @@ if __name__ == '__main__':
     for _ in range(10):
         st, e = tick(st)
         evs += e
-    assert abs(st['money'] - 32.9) < 1e-9, st['money']
-    assert abs(st['parcels']['P1']['accum'] - 7.5) < 1e-9, st['parcels']['P1']
+    #    RE-WALKED 2026-09-06 night (demand moves, NIGHT_PLAN.md): one owned
+    #    lot, none for sale -> target 1.05; d_0 = 1.0, d_{k+1} = d_k +
+    #    0.1 (1.05 - d_k), so d_k = 1.05 - 0.05 x 0.9^k and rent at tick k
+    #    is 0.75 d_k (the demand the tick STARTED with). Closed form, not
+    #    the loop's own arithmetic:
+    sum_d = 10 * 1.05 - 0.05 * (1 - 0.9 ** 10) / (1 - 0.9)
+    assert abs(st['money'] - (25.4 + 0.75 * sum_d)) < 1e-9, st['money']
+    assert abs(st['parcels']['P1']['accum'] - 0.75 * sum_d) < 1e-9, st['parcels']['P1']
+    assert abs(st['demand'] - (1.05 - 0.05 * 0.9 ** 10)) < 1e-9, st['demand']
+    assert st['parcels']['P1']['wear'] == 10, st['parcels']['P1']
     assert st['parcels']['P1']['tier'] == 0, st['parcels']['P1']
     assert evs == [], evs
     # 4. LADDERS ARE PER-RECIPE: office tops out at tier 3 (4 tiers).
@@ -402,6 +438,7 @@ if __name__ == '__main__':
     assert abs(st2['parcels']['OF']['accum'] - 40.65) < 1e-9, st2['parcels']['OF']
     assert st2['parcels']['OF']['tier'] == 0
     assert e2 == [], e2
+    assert abs(st2['demand'] - 1.005) < 1e-9, st2['demand']   # one owned lot: one step toward 1.05
     # 7. insufficient funds refuses loudly
     st3 = {'money': 1.0, 'demand': 1.0, 'parcels': {
         'P': {'rid': 'vernacular', 'tier': 0, 'width': 1230,
@@ -422,11 +459,34 @@ if __name__ == '__main__':
     for _ in range(1000):
         st8, e = tick(st8)
         evs8 += e
-    assert abs(st8['money'] - 750.0) < 1e-6, st8['money']
-    assert abs(st8['parcels']['P1']['accum'] - 750.0) < 1e-6, \
+    #    RE-WALKED 2026-09-06 night: the lot WEARS OUT on its 150th tick
+    #    (wear_ticks_per_tier 150 x (tier 0 + 1)) and earns nothing after;
+    #    the tier still never moves. Rent for ticks 0..149 at
+    #    d_k = 1.05 - 0.05 x 0.9^k (one owned lot, no for-sale):
+    sum_d150 = 150 * 1.05 - 0.05 * (1 - 0.9 ** 150) / (1 - 0.9)
+    assert abs(st8['money'] - 0.75 * sum_d150) < 1e-6, st8['money']
+    assert abs(st8['parcels']['P1']['accum'] - 0.75 * sum_d150) < 1e-6, \
         st8['parcels']['P1']
     assert st8['parcels']['P1']['tier'] == 0, st8['parcels']['P1']
-    assert evs8 == [], 'tier-related event fired during 1000 ticks: %r' % evs8
+    assert st8['parcels']['P1']['failed'] is True and st8['parcels']['P1']['wear'] == 150, st8['parcels']['P1']
+    assert evs8 == [{'type': 'worn_out', 'pid': 'P1', 'amount': 0.0}], evs8
+    # 8b. repair brings it back: pay repair_price(0) = 50, wear resets,
+    #     rent flows again on the next tick at the demand the city holds.
+    st8r, ok8, why8 = repair(st8, 'P1')
+    assert ok8, why8
+    assert st8r['parcels']['P1']['failed'] is False and st8r['parcels']['P1']['wear'] == 0
+    assert abs(st8r['money'] - (st8['money'] - 50.0)) < 1e-9
+    st8t, e8t = tick(st8r)
+    assert abs(st8t['money'] - (st8r['money'] + 0.75 * st8r['demand'])) < 1e-9 and e8t == []
+    # 8c. demand falls when pads sit unbought, and clamps at the rails.
+    st8d = {'money': 0.0, 'demand': 1.0, 'parcels': {
+        k: {'rid': 'vernacular', 'tier': 0, 'width': 1230, 'owned': False} for k in ('A', 'B', 'C')}}
+    st8d, _ = tick(st8d)
+    assert abs(st8d['demand'] - 0.985) < 1e-9, st8d['demand']   # target 0.85, one step of 0.1
+    st8c = {'money': 0.0, 'demand': 1.99, 'parcels': {
+        'P%d' % i: {'rid': 'vernacular', 'tier': 0, 'width': 1230, 'owned': True} for i in range(40)}}
+    st8c, _ = tick(st8c)
+    assert abs(st8c['demand'] - 2.0) < 1e-9, st8c['demand']     # target 3.0, clamped at demand_max
 
     # 9. climb/premium, direct - the two factors upgrade_price multiplies.
     assert climb(0) == 1 and climb(1) == 2 and climb(3) == 4

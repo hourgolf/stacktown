@@ -109,6 +109,15 @@ void UStacktownHud::Build(UWorld* InWorld)
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(ScoreLabel)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(24.f, 0.f, 0.f, 0.f)); }
 	ScoreText = MakeText(SpaceMonoBold, SizeBody, Ink);
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(ScoreText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(8.f, 0.f, 0.f, 0.f)); }
+	// NEXT goal (proposed): the number a stranger chases, beside the score.
+	NextLabel = MakeText(TomorrowMedium, SizeLabel, Dim, SpacingLabel);
+	SetText(NextLabel, TEXT("NEXT"));
+	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(NextLabel)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(24.f, 0.f, 0.f, 0.f)); }
+	NextText = MakeText(SpaceMonoBold, SizeBody, Ink);
+	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(NextText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(8.f, 0.f, 0.f, 0.f)); }
+	NextUnit = MakeText(TomorrowMedium, SizeLabel, Dim, SpacingLabel);   // LOOK 4: NEXT  5,000  POINTS - number then its unit
+	SetText(NextUnit, TEXT("POINTS"));
+	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(NextUnit)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(8.f, 0.f, 0.f, 0.f)); }
 	BarMessageText = MakeText(TomorrowMedium, SizeBody, Dim);
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(BarMessageText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(Margin, 0.f, 0.f, 0.f)); }
 	USpacer* Fill = NewObject<USpacer>(this);
@@ -217,6 +226,11 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 	SetText(MoneyText, MoneyString(M->Money));
 	SetText(DemandText, FString::Printf(TEXT("%.2f"), M->Demand));
 	SetText(ScoreText, FText::AsNumber((int64)FMath::RoundToDouble(M->Score)).ToString());
+	const bool bNext = M->NextGoal > 0.0;
+	NextLabel->SetVisibility(bNext ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	NextText->SetVisibility(bNext ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	NextUnit->SetVisibility(bNext ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	if (bNext) { SetText(NextText, FText::AsNumber((int64)M->NextGoal).ToString()); }
 	// the bar's message slot: a refusal wins, in refuse; otherwise the dim message
 	if (!M->ActionRefusal.IsEmpty())
 	{
@@ -225,10 +239,11 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 	}
 	else
 	{
-		BarMessageText->SetColorAndOpacity(FSlateColor(Dim));
+		BarMessageText->SetColorAndOpacity(FSlateColor(M->bBarMessageAccent ? Accept : Dim));
 		SetText(BarMessageText, M->BarMessage);
 	}
 	RoadWord->SetVisibility(M->bRoadMode ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	SetText(RoadWord, M->bRoadMode ? M->RoadClass.ToUpper() : FString(TEXT("ROAD")));   // LOOK 4: the type IS the mode word
 	NightWord->SetVisibility(M->bNight ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 
 	if (M->bHasSelection)

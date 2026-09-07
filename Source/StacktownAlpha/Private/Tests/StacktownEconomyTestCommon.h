@@ -28,6 +28,12 @@ inline Stacktown::FEconRules OracleRules()
 	R.TradeCreditsPerN  = StacktownOracle::TradeCreditsPerN;
 	R.TradeCreditAmount = StacktownOracle::TradeCreditAmount;
 	R.TradeBonusPerWin  = StacktownOracle::TradeBonusPerWin;
+	R.DemandGain        = StacktownOracle::DemandGain;
+	R.DemandLoss        = StacktownOracle::DemandLoss;
+	R.DemandRate        = StacktownOracle::DemandRate;
+	R.DemandMin         = StacktownOracle::DemandMin;
+	R.DemandMax         = StacktownOracle::DemandMax;
+	R.WearTicksPerTier  = StacktownOracle::WearTicksPerTier;
 	return R;
 }
 
@@ -105,6 +111,11 @@ inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCitySt
 		OutWhy = FString::Printf(TEXT("demand %.12f vs %.12f"), A.Demand, B.Demand);
 		return false;
 	}
+	if (A.GoalsReached != B.GoalsReached)
+	{
+		OutWhy = FString::Printf(TEXT("goals_reached %d vs %d"), A.GoalsReached, B.GoalsReached);
+		return false;
+	}
 	if (A.TradesProcessed != B.TradesProcessed)
 	{
 		OutWhy = FString::Printf(TEXT("trades_processed %d vs %d"), A.TradesProcessed, B.TradesProcessed);
@@ -162,6 +173,11 @@ inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCitySt
 		// Age joined the schema in queue item 7. Compared here, ABSENCE
 		// included: a round trip that quietly turned an unmeasured lot into one
 		// recorded at tier 0 would change when its patina starts.
+		if (FMath::Abs(P.Wear - Other->Wear) > Tolerance)
+		{
+			OutWhy = FString::Printf(TEXT("parcel '%s': wear differs"), *Pair.Key);
+			return false;
+		}
 		if (FMath::Abs(P.AgeTicks - Other->AgeTicks) > Tolerance
 			|| P.AgeLastTier.IsSet() != Other->AgeLastTier.IsSet()
 			|| (P.AgeLastTier.IsSet() && P.AgeLastTier.GetValue() != Other->AgeLastTier.GetValue()))

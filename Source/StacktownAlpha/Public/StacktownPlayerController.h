@@ -71,6 +71,9 @@ public:
 	/** A click in road mode: the first sets the start, the second draws; returns the outcome line. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityRoadClick(double X, double Y);
+	/** Cycle the road class drawn next; returns the new class. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityCycleRoadClass();
 	/** Night on/off (L). */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityNight(bool bOn);
@@ -111,6 +114,11 @@ private:
 	void PlayCue(const TCHAR* Name);
 	TMap<FString, TObjectPtr<class USoundBase>> Cues;
 	TSet<FString> CuesMissing;
+	/** A bar message that holds for a minimum time (LOOK 4: an announcement, 3 s or the next input, whichever is longer). */
+	FString PinnedBarMessage;
+	double PinnedBarUntil = 0.0;
+	/** The road class drawn next (dirt | avenue | boulevard | highway); T cycles it in road mode. */
+	FString RoadClass = TEXT("avenue");
 	/** Goal ladder rungs announced this session; -1 until the first owning tick (a loaded city is not re-announced). */
 	int32 GoalsAnnounced = -1;
 	/** The fresh-city hint is on the bar (cleared when the first lot exists). */

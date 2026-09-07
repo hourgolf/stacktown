@@ -94,3 +94,19 @@ sound (5). Building variety exists already (20 masses x 7 species); what it
 lacks is the design lane's patina and windows reading at the far stop,
 which is their queue. A 15 becomes a 30 when a stranger can lose points,
 chase a number, and hear the board answer.
+
+## 9. New since the night, for the owner (2026-09-07 morning)
+
+- ROAD TONE. The design lane found its own stain ladder sits within one
+  percent of the plate's value at the highway end and will raise it. The
+  alternative they will not take alone: ALL FOUR road stains DARKER than the
+  plate - a dark inlay in a pale board, ordinary marquetry - which would end
+  the "roads out-read the timber" note for good. The frame that decides is
+  Saved/SelfTest/look_cpp2/frame_stains_adjacent_wide.png. Your call.
+- THE PINNED MAP ROADS (arterial, cross) still draw the corridor with footway
+  strips; every drawn road is now the carriageway on bare plate. Making the
+  map match is a map edit: your word.
+- THE STARTER CITY starts with THREE BUILT LOTS (NW3, SE0, NE0, the player's,
+  tier 1) so the first frame shows timber. Which three, or how many, is yours
+  and the design lane's to move; the score starts near 460 because of them.
+- SLOTS are 1, 2, 3 - unnamed. Say if names matter for the beta.

@@ -11,6 +11,23 @@ the handmade-miniature look and the trade-linked economy as the differentiators.
 
 ## 0. Status at a glance (2026-09-06, end of day)
 
+HONEST NUMBERS, asked by the owner at 19:00 ("are we even close to 20% of
+our target?"): against the SIMPLE BUILDING GAME of section 4 - about 20.
+Mechanics about 35 (place, buy, upgrade, repair, straight roads, rent,
+trades credited, night, patina, a score, sounds - all raw, all working);
+the loop about 10 (a score exists, nothing is decided: no goal, no fail,
+demand never moves, roads are free and one-typed, no preset start); content
+about 15 (20 masses x 7 species exist, but no building TYPES that behave
+differently, no districts, no people); polish about 5 (no arrival, no
+menu, no sound direction, placeholder words). Against an AAA city builder:
+about 3. What moves 20 to 40 in two weeks: the loop ruled on Monday and
+built (design one-pager -> oracle -> C++), road types with rent effects and
+a moving demand (both decided-or-proposed, seat items 10-12), the design
+lane's three look items landing (grain, windows, patina at the far stop),
+and one polish pass on arrival + words. Test counts are not progress;
+none of the above is a test count.
+
+
 DONE, proven against the engine and live on the test save: economy + state
 (seat), placement (seat), state handover + mirror (seat), roads resolver
 (seat), board factory with the pinned spans (seat, pass line pending a

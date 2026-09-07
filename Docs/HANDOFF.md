@@ -210,6 +210,13 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 19:41 PDT - MONDAY APP REPACKAGED from 48c0531 (universal): score on the bar,
+  the fresh-city hint, the goal ladder, the four sound cues, the outline,
+  age, the roads map edit, and every path-loaded asset in the manifest
+  (S_Buy, S_Goal, M_PP_Outline, SM_GhostPad_* all present). Smoke: the app
+  took its lock and saved its own city; quit by the coordinator. Visual and
+  audible checks are Monday's (no screen access from this session).
+
 - 2026-09-06 18:57 PDT - PLACEHOLDER SOUND (proposed, MONDAY_DECISIONS §5): four generated
   wood taps at /Game/Stacktown/Audio (S_Place, S_Buy, S_Refuse, S_Goal),
   played by AStacktownPlayerController::PlayCue on place, verb ok, every

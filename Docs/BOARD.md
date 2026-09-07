@@ -2413,3 +2413,7 @@ Frames in Saved/SelfTest/look_cpp2/:
 
 TO ENGINEERING: still nothing of yours moved; the tier-2 lot is set after
 SeedPresetState like the other two. Pass line 120/120 at d8e54a3.
+
+COORDINATOR (2026-09-07 07:20 PDT): the package is rebuilt from d8e54a3 and opens by
+the double-click path (window in ten seconds, rendering). THE EDITOR IS RUNNING
+AGAIN - LOOK, take a window the usual way whenever you are woken.

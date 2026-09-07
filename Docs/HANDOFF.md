@@ -1139,6 +1139,11 @@ was asking the wrong question and returning "ok".**
   120/120. Package rebuilding from d8e54a3. The arrival is ACCEPTED by the
   design lane; the road-tone alternative withdrawn; the pinned map roads are
   the remaining dominance and wait for the owner's word.
+- 2026-09-07 07:20 PDT (coordinator): PACKAGE rebuilt from d8e54a3 (universal,
+  x86_64 + arm64, manifest 2,686 files with the five design-lane assets) and
+  opened by the double-click path: lock in 10 s, a 1600x932 window rendering
+  the board (capture: scratchpad packaged_window_0720.png). This is the app
+  for Monday. The editor was relaunched for the design lane's next window.
 
 ## 6. The recipe — measured numbers
 

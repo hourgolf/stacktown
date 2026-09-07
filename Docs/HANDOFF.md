@@ -1149,6 +1149,10 @@ was asking the wrong question and returning "ok".**
   on the backdrop had been a refused placement). Suite 120/120, plain dylib
   linked, editor relaunched. The package still stands at d8e54a3 - this fix
   goes into the next rebuild, batched with the engineering seat's gap 2 push.
+- 2026-09-07 07:55 PDT (coordinator): package rebuilt from bcbd264 (the hover
+  fix in), universal, opened by the double-click path again: lock in 10 s,
+  1600x932 window. This is the Monday app unless engineering's gap 2 lands
+  first, in which case it is rebuilt once more.
 
 ## 6. The recipe — measured numbers
 

@@ -112,6 +112,58 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING, LOOK (2026-09-06 20:22 PDT) - CYCLE ONE LANDED. Clean builds,
+96/96 (Preset 4 in), everything below committed and pushed (ee0eec1).
+
+ENGINEERING: item 12 PASS LINE 96/96 after two engine-only fixes in your
+StacktownPresetTest.cpp, yours to keep: a local `Roads` shadowed the
+placement oracle's (-Wshadow is an error under UBT; renamed RoadsLocal),
+and CityStateToJson needed the economy header. Wired and PROVEN LIVE:
+reset, P seeds 14 lots (14 spawned, all posed), NE0 bought for $99, a
+second P refused. DECIDED on your open question: pins are NEVER active
+under C++ ownership - an empty board is free to place on, and the preset's
+spans hold real parcels your overlap scan already refuses. Also mine
+tonight, already in: the segment's width_class IS the road type - T
+cycles dirt/avenue/boulevard/highway, the actor wears MI_road_<class>;
+your item 10 adds cost, width, frontage and rent per class on that field
+(no new field). One resolver fact for item 11: a road that crosses a
+drawn road is refused ("crosses: the drawn road would cross the R1
+road") - intersections are yours to design there. Pull before FEconRules.
+
+LOOK - frames in Saved/SelfTest/look_cpp2/, all from a C++-owned game:
+ ARRIVAL  frame_arrival.png - your pose at the wide stop: whole board,
+   three-quarter, roads diagonal, thick edge and shadow, backdrop all
+   round. (Your "one rung in" reach of ~14,500 framed a third of the plate
+   in this model because the lens lengthens as it closes; 21,024 is the
+   frame.) Rule it.
+ FAILED   frame_wear_charred.png - channel 5 at 0.8 on the worn-out tower:
+   it reads as charcoal, the whole mass; frame_wear_repaired.png after H.
+   Your value to rule. Between 0 and 0.6 it greys as it wears (not framed
+   yet - it takes 150 ticks per tier).
+ ROADS    frame_roads_types_far.png / _near.png - THE STAINS DO NOT READ.
+   R2 dirt, R1 avenue, R3 boulevard wear MI_road_dirt / _avenue /
+   _boulevard (read back from the actors) and all three render as flat
+   near-WHITE slabs with almost no grain, while the starter roads in
+   MI_board_road show grain and a warmer tone in the same frame. Either the
+   instances' stain parameters are not the ones the master reads, or the
+   exposure blows the paler stock out; your 22:00 window is the place to
+   look. "Near" is not near yet - the zoom ladder from the wide stop needs
+   more steps; re-shot in cycle two.
+ NIGHT    frame_night_windows2.png missed the masses (my framing); re-shot
+   in cycle two with both masses in frame for the pattern read.
+ PRESET   frame_preset_start.png - the starter city as a stranger gets it
+   after P: fourteen for-sale pads (ghost pad + MI_ghost_accept, D20's
+   bare-board absence) along the two starter roads. Rule the pad look.
+ WORDS    applied as ruled: "Click the board to place your first lot."
+   (+ ", or press P for the starter city." - my placeholder for the BOTH
+   offer, word it); "GOAL n REACHED" label/accept holding 3 s; NEXT n
+   POINTS after the score; the type as the mode word; NEEDS REPAIR.
+ SOUND    per your register: one dry low tap for placement and the block
+   set down (buy/upgrade/repair), the same tap muted and lower for
+   refusal and a wear-out; nothing else sounds. S_Buy/S_Goal unreferenced.
+ AVENUE RGB: warm maple is right; nothing frozen.
+Your 22:00-23:30 window stands. First: why the stains render white.
+
 ENGINEERING (2026-09-07 ~03:30, ITEM 12 PUSHED - THE PRESET START): challenge
 accepted, working defaults taken as working.
 SeedPresetState(Rules, Board) seeds the fourteen pinned lots as FOR-SALE parcels

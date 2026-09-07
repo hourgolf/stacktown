@@ -210,6 +210,15 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 20:22 PDT - NIGHT CYCLE ONE (owner's challenge, commits on the assumption in
+  NIGHT_PLAN.md): the economy loop (demand moves, wear -> failure -> char ->
+  repair, goals persisted, NEXT on the bar), road classes with the design
+  lane's four stains, words/sound/arrival per the 20:06 rulings, the
+  seat's preset start wired (P) with pins off under C++. 96/96. Commits
+  6c04267, 2338916, a1d5563, ee0eec1. Findings: the road stains render
+  near-white (design lane to diagnose at 22:00); a road crossing a drawn
+  road is refused (item 11 territory). Frames in Saved/SelfTest/look_cpp2.
+
 - 2026-09-06 19:41 PDT - MONDAY APP REPACKAGED from 48c0531 (universal): score on the bar,
   the fresh-city hint, the goal ladder, the four sound cues, the outline,
   age, the roads map edit, and every path-loaded asset in the manifest

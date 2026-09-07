@@ -56,7 +56,9 @@ Rules that held, in order of impact:
    it, sands it, refits it pale; neglect ambers then greys; failure chars; only
    repair helps.
 6. Roads are inlays of one paler stock in four stains, pale to dark as the
-   road gets grander: dirt, avenue, boulevard, highway. Tone reinforces width;
+   road gets grander: dirt, avenue, boulevard, highway. The board's two
+   built-in roads are drawn the same way, as avenue slabs; nothing on the
+   board is white. Tone reinforces width;
    it never has to identify a road alone. A drawn road is drawn at its
    CARRIAGEWAY width on bare plate (no painted verge); a curved road's chords
    are MITRED so consecutive pieces share one edge — never overlapped, never
@@ -219,9 +221,9 @@ live trading ever.
 
 ## 10. Open, for the owner
 
-The pinned map roads still draw white at corridor width and are the brightest
-things on the board (make them the avenue's stain at carriageway width); which
-lots the starter city has built and how many; whether a fresh install opens on
+Whether to clean the map's old white road dressing out of the level for good
+(the game already hides it and draws the built-ins as avenue-stained slabs);
+which lots the starter city has built and how many; whether a fresh install opens on
 the starter city; a tolerance or a bigger plate for diagonal roads; what lights
 a building at night (attribute trades to lots, or drive hue from rent); slot
 names; water-laying and terrain-carving as future build verbs (the reference

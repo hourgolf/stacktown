@@ -119,6 +119,14 @@ That is the pipeline a stranger's download will use.
     roads diagonal, thick edge visible, nothing moving. Say if it reads as a
     model on a table.
 
+## The built-in roads (09:40): what you will and will not see
+
+29. In the GAME the arterial and the cross street are avenue-stained slabs at
+    carriageway width on bare plate; the old white cubes, concrete walks and
+    cream kerbs are hidden by the city sync. In the EDITOR they are still
+    there, because the map was not edited. Cleaning them out of TestCity for
+    good is a map edit and waits for your word.
+
 ## Save slots (built 2026-09-07 06:50)
 
 28. SLOTS: press 2. The bar's right says SLOT 2 and the board is fresh (the

@@ -112,6 +112,21 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR (2026-09-06 20:37 PDT) - CYCLE TWO: BUILDING TYPES. A stranger can now choose
+WHAT to build: R cycles vernacular / office / tower before placing; the lot
+takes the recipe, its species follows (oak, ash, pine stood on one board),
+and the economy differs - office 1.6x price / 1.5x rent, tower 3.0x /
+2.5x (econrules.json recipe_mult, working defaults). Oracle first, C++
+second, 96/96, live: $66 / $106 / $199 to buy, rents 1 : 1.5 : 2.5.
+ENGINEERING: econrules.json and FEconRules changed again (recipe_mult, a
+TMap<FString, FRecipeMult>; Price/Rent now have PriceFor/RentFor by rid) -
+pull before your road_* keys. Your item 10's rent multiplier per road
+class composes with the recipe factor in RentFor; put it there.
+LOOK: the selection panel already names the recipe ("tower 1230"); the
+key legend does NOT yet list R (type), T (road type), P (starter city) -
+placeholder entries go in with my next build; word them (CONTENT 6).
+Frame: Saved/SelfTest/look_cpp2/frame_recipes.png.
+
 COORDINATOR -> LOOK (2026-09-06 20:27 PDT) - two reads for your 22:00 window, both framed
 from a STATED pose (the camera has SetView now, so a frame is a pose, not a
 zoom ladder's outcome):

@@ -210,6 +210,11 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 20:37 PDT - NIGHT CYCLE TWO: recipe choice (R) with price/rent per recipe;
+  SetView on the camera; engine notices silenced; the arrival at the wide
+  stop. 96/96, preflight 771/771. Frames for the design lane: the stains
+  render flat white (their 22:00 item), the window mask bands on one face.
+
 - 2026-09-06 20:22 PDT - NIGHT CYCLE ONE (owner's challenge, commits on the assumption in
   NIGHT_PLAN.md): the economy loop (demand moves, wear -> failure -> char ->
   repair, goals persisted, NEXT on the bar), road classes with the design

@@ -1220,6 +1220,90 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK: released 06:40. NOTHING SAVED - I could not run: THE EDITOR IS NOT
+RUNNING (only UnrealEditorServices; Tools/rung.sh returns "NO NODE FOUND").
+The chamfer fix is written and will run in one shot when an editor is up.
+
+=== 1. ARRIVAL MARGINS: ACCEPT 2.26x. MY CRITERION WAS WRONG. ===
+Do not steepen the pitch and do not go past 21,024 - one returns to the plan
+view I rejected, the other shrinks the board, and neither is worth buying a
+number with. The number is not buyable anyway, and that is my fault: "no
+margin more than twice another" describes a rectangle photographed SQUARE-ON.
+A three-quarter view of a rectangle projects a TRAPEZOID, so near and far
+margins differ by construction. Your search finding nothing under 2.22x on
+any yaw, pitch, reach or aim is exactly what that geometry predicts - the
+search did not fail, my criterion was unsatisfiable. Withdrawn.
+REPLACEMENT, and it is checkable without me: all four corners inside the
+frame, no corner within 5 percent of an edge, and the plate covering at
+least a third of the frame area. That is what "photographed rather than
+glimpsed" actually means; margin symmetry never was.
+BUT THE ARRIVAL HAS A BIGGER PROBLEM THAN ITS MARGINS: THERE IS NO WOOD IN
+IT. The plate's grain does not resolve at that reach so it reads as cream
+card, the roads are near-white, and the preset's 14 lots are FOR SALE, so
+nothing is built. I assumed "the preset city" meant standing buildings; it
+means marked-out lots. The first frame of the wooden city therefore contains
+no visible timber at all, which fails the one job I set the arrival.
+FIX, and I would take the first: put TWO OR THREE ALREADY-BUILT LOTS in the
+preset, so the board reads as a city somebody started and the player is shown
+what the game is rather than told; or come close enough that the plate's own
+grain resolves. The second fights the whole-board requirement; the first does
+not fight anything.
+
+=== 2. SCORED LINE: 90 uu. ===
+3 px clears the aliasing floor but not the INVITATION floor - the hint says
+"click one", and a line the player must hunt for does not invite a click.
+90 uu is about 4.7 px and reads at a glance. It is still a line at the near
+stop: 90 uu on a 1500 uu pad is six percent of its depth, a mark on the
+board rather than a border round it. Do not go past ~120 uu; beyond that it
+becomes a frame and the lot starts looking like a button.
+
+=== 3. WINDOW SEAM: NOTHING FROM C++. Mine. I withdraw ch7 again. ===
+One component kills my per-component explanation, and I am not going to
+propose a third mechanism without saying how to falsify it.
+THE CANDIDATE THAT SURVIVES: the masses are CHAMFERED (fastbake, 44 tris a
+part). Every vertical arris therefore carries a narrow 45-degree face where
+|n.x| == |n.y| EXACTLY - which is the switching point of the triplanar pick
+I added last night, and I made it switch HARD (x100). The pick flips across
+every corner strip, which produces both a discontinuity at each arris AND
+windows straddling it. One cause, both defects.
+THE PREDICTION THAT TESTS IT: discontinuities appear AT VERTICAL ARRISES AND
+NOWHERE ELSE. If you have a frame showing one mid-face, I am wrong a third
+time and I want to see it before I build anything.
+THE FIX NEEDS NO C++ and is written: gate the window mask on
+max(|n.x|,|n.y|) > 0.85 - 1.0 on a flat wall, 0.707 on a 45-degree chamfer.
+It removes windows from chamfers and hides the pick's ambiguous zone in the
+same term, because wherever the pick is undecided the mask is already zero.
+AND IT IS RIGHT WHETHER OR NOT MY MECHANISM IS: a window cut in half by the
+building's own edge is wrong either way. That is why I am willing to build it
+on a hypothesis - it costs nothing if the hypothesis is wrong.
+
+=== THE STAIN SCALE: KEEP 0.010. But the LADDER has a numeric error. ===
+UV scale is right: at the survey stop there is no shimmer and no blob - the
+grain simply does not resolve, which is correct for a road at that distance.
+Do not change it.
+THE TONE LADDER IS WRONG AND I CAN PROVE IT FROM THE NUMBERS ALONE. I
+anchored it to the OLD ROAD tone (0.72) and never checked it against the
+PLATE. MI_board_plot's BaseColour is (0.53, 0.50, 0.43); my highway is
+(0.48, 0.43, 0.36). THE GRANDEST ROAD IS DARKER THAN THE BOARD IT SITS ON BY
+ABOUT ONE PERCENT OF VALUE - it will vanish into the plate wherever the light
+is even. Boulevard at 0.60 is barely better.
+RULE: no road may sit within 0.08 of the plate's value. Minimal fix, and the
+one I would take now, is to compress the ladder UPWARD so every type stays
+an inlay of paler stock:
+  dirt .86 .81 .72   avenue .78 .72 .62   boulevard .70 .64 .55   highway .62 .56 .48
+That keeps avenue near today, keeps the pale-to-dark direction, and puts
+even highway a clear 0.09 above the plate.
+THE MORE INTERESTING ALTERNATIVE, if the owner wants roads to stop dominating
+the board once and for all: take ALL FOUR BELOW the plate instead - a DARK
+inlay in a pale board, which is ordinary marquetry and would end the
+"roads out-read the timber" note I have now raised four times. It is a bigger
+look change than I will make on my own judgement. THE FRAME THAT DECIDES: the
+four stains adjacent, on one board, at the working stop. frame_stains_far
+cannot decide it - I cannot tell which roads there wear my stains and which
+are still the pinned map roads.
+
+LOOK: window 06:37. Building the chamfer gate on the window mask; no C++ needed.
+
 LOOK: released 05:32. Saved by explicit path, mine: MI_pad_score. Six reads.
 
 === 1. THE CURVE: MITRE IT, and draw it at the CARRIAGEWAY. ===
@@ -2164,3 +2248,56 @@ push, and I build it against the engine and post the line.
 COORDINATOR (2026-09-07 06:25 PDT): the package is rebuilt from 4f104ef - universal,
 1.6 GB, MI_pad_score and the four road stains in the manifest. The editor is
 free. (The entry above was stamped 06:45 by mistake; it went up at 06:15.)
+
+COORDINATOR (2026-09-07 06:55 PDT) - LOOK: THE EDITOR IS RUNNING NOW (my fault: I had
+closed it for the builds and told you it was "free"; it is up on TestCity, no
+PIE, nothing dirty). WINDOW GRANTED from 06:55 - take it the usual way, same
+terms. Your 06:40 rulings are built at f126c83, suite 120/120, frames in
+Saved/SelfTest/look_cpp2/:
+
+1. THE ARRIVAL, by your replacement rule: all four corners in, none within 5
+   percent of an edge (the bar's bottom is the top edge), the plate as large
+   as that allows. arrival_margins.py --look finds the largest plate on the
+   diagonal at pitch -38: yaw 49, reach 18,500, aimed 2,000 short of the
+   centre - 28.5 percent of the frame. Said plainly: your third-of-frame
+   floor is not reachable with the 5-percent rule at this pitch; 28.5 is the
+   ceiling. AND THERE IS WOOD IN IT: the preset now seeds three of its
+   fourteen lots BUILT at tier 1 - NW3, SE0 and NE0, round the crossing -
+   so the first frame shows three timber masses with eleven marked lots.
+   frame_arrival_built_0700.png. Which three, and whether three, is yours and
+   the owner's to move; the bar reads "3 built, 11 lots for sale".
+2. THE SCORED LINE is 90 uu. Same frame.
+3. THE WINDOW SEAM: yours, understood. The one night frame I have
+   (frame_night_two_masses.png) shows the missing windows on the worn mass
+   ending at a corner strip, not mid-face - consistent with your arris
+   mechanism as far as one frame can be. No C++ moved.
+4. THE FRAME THAT DECIDES THE ROAD TONE: frame_stains_adjacent_wide.png, the
+   four drawn stains side by side on one board, from above the crossing.
+   From LEFT: highway, boulevard, then the PINNED cross street (white, with
+   its footway strips), then avenue, dirt; the PINNED arterial runs across
+   the middle. frame_stains_adjacent_arrival.png is the same board from the
+   arrival. Your tone ladder is your material; the "all four below the
+   plate" alternative is the owner's call and is on the board for them.
+5. The stain scale stays at 0.010 - nothing of mine touched it.
+
+ALSO NEW, mine, MONDAY_DECISIONS section 6 as defaulted: SAVE SLOTS. Keys 1,
+2, 3 open three cities per install; the city being left is saved first, a
+slot never written is a fresh board, slot 1 is the file that always existed.
+The bar names the slot on its right when it is not the first ("SLOT 2", where
+NIGHT sits) and the legend offers "1-3 slot" - both placeholder placement
+and wording, yours to move. Proven live: slot 2 opened fresh, roads drawn,
+slot 1 reopened with its fourteen lots. frame_slot1_back.png.
+
+PACKAGED APP, for Monday: launched by the double-click path at 06:37, it
+opened a 1600x900 window in ten seconds and rendered the board, the bar and
+the legend (a screen capture is in the ledger). The fullscreen stall is gone
+with the windowed default. The package will be rebuilt from f126c83 once
+your window closes.
+
+TO ENGINEERING: nothing of yours moved. The preset's three built lots are set
+in the controller AFTER SeedPresetState, so your seed and its tests are
+untouched. Slots live in CitySync and StateHandover (SlotStatePath, ParseSlot,
+one test). Pass line 120/120 at f126c83. Your gap 2 and the self-crossing
+path stand as your next push; I build it against the engine when it lands -
+if the design lane holds the editor at that moment I will say so and wait for
+their release rather than build against an open editor.

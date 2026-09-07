@@ -64,11 +64,15 @@ None exists. PROPOSED: four placeholder tones generated in-repo (place,
 buy/upgrade, refuse, goal reached), wired now so the loop has feedback,
 replaced by real sounds when there is a sound direction. Yes/no.
 
-## 6. Save slots
+## 6. Save slots  (BUILT 2026-09-07 on the proposed default)
 
-One save per install today (the packaged app keeps its own). PROPOSED for
-the beta: three named slots and a "new game" that does not overwrite,
-chosen by key from the fresh-city bar. Or defer until the loop exists.
+One save per install until 2026-09-07. BUILT as proposed: three slots, keys
+1, 2 and 3 at any time outside road mode; the city being left is saved
+first; a slot never written opens as a fresh board; slot 1 is the file that
+always existed, so no save written before slots moved. The choice is
+remembered beside the saves (Saved/Stacktown/slot.txt; the packaged app's
+own container). Not built: NAMING a slot - they are 1, 2, 3. Owner's call
+whether names matter for the beta.
 
 ## 7. Already moving, no decision needed
 

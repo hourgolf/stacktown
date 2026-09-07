@@ -1115,6 +1115,19 @@ was asking the wrong question and returning "ok".**
   rebuilt from 4f104ef at 06:24 PDT: Saved/Packaged/Mac/StacktownAlpha.app, 1.6 GB,
   x86_64 + arm64, manifest 2,686 files carrying MI_pad_score and the four road
   stains. The owner's test state was restored after the frames.
+- 2026-09-07 06:55 PDT (coordinator): the design lane's 06:40 rulings built at
+  f126c83 - the preset seeds three BUILT lots (NW3, SE0, NE0) so the arrival
+  shows timber; the arrival follows their replacement rule (yaw 49, pitch
+  -38, reach 18,500, aim 2,000 short: 28.5 percent of the frame, the ceiling
+  under the 5-percent-edge rule; their third-of-frame floor is unreachable);
+  the scored line is 90 uu. SAVE SLOTS built on MONDAY_DECISIONS 6 (keys
+  1-3, slot.txt, SlotStatePath/ParseSlot, one test). Suite 120/120. Proven
+  live in a test game: preset 3 built (score 461), slot 2 fresh, four stains
+  drawn side by side there, slot 1 reopened with its 14 lots. THE PACKAGED
+  APP opened by the double-click path at 06:37: a 1600x900 window in 10 s,
+  rendering (capture: scratchpad packaged_window.png). The editor was
+  relaunched 06:51 for the design lane, who could not run in their 06:37
+  window because I had left it closed. Frames in Saved/SelfTest/look_cpp2/.
 
 ## 6. The recipe — measured numbers
 

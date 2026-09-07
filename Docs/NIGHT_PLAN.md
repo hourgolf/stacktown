@@ -205,3 +205,9 @@ WHAT I WOULD DO FIRST ON MONDAY: paste the board to both seats; have the
 - Honest score: unchanged at about 40. The cycle closed defects and rulings; it
   did not add a loop or content. Still not built: the pinned map roads at the
   carriageway (owner's word), slots, the market mock beyond the demo.
+- 06:55: LOOK's 06:40 rulings built (three built lots in the preset so the
+  arrival shows wood; arrival by their replacement rule; line 90 uu); SAVE
+  SLOTS built on the Monday default; the packaged app verified by the
+  double-click path. Honest score: the first frame now shows a started
+  wooden city and a stranger cannot lose a city by starting another - call
+  it 42-45. The engineering seat is mid-push on gap 2.

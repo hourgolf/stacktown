@@ -1176,7 +1176,10 @@ was asking the wrong question and returning "ok".**
   at the carriageway - CitySync hides the map's road dressing by material
   (18 pieces) and draws the arterial and the cut cross street as slabs; no map
   edit. Frames frame_arrival_pinned_stained.png / frame_crossing_stained_near.png.
-  Suite 122/122. Package rebuilding.
+  Suite 122/122. Package rebuilt from 4134eeb and opened by the double-click
+  path at 09:05: the cooked app shows the stained built-ins and none of the
+  map's white dressing, so the material-name hiding holds in a cooked build
+  (capture: scratchpad packaged_window_0950.png). THIS IS THE MONDAY APP.
 
 ## 6. The recipe — measured numbers
 

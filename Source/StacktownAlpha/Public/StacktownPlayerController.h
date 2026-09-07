@@ -106,6 +106,10 @@ private:
 	FString SelectedPid;
 	UPROPERTY() TObjectPtr<AActor> Ghost;
 	FVector LastHoverPoint = FVector(1e9, 1e9, 0.0);
+	/** Goal ladder rungs announced this session; -1 until the first owning tick (a loaded city is not re-announced). */
+	int32 GoalsAnnounced = -1;
+	/** The fresh-city hint is on the bar (cleared when the first lot exists). */
+	bool bHintShowing = false;
 	float NHeld = 0.f;
 	bool bNFired = false;
 	bool bRefusalShowing = false;

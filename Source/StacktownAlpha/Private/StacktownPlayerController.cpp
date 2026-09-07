@@ -4,6 +4,7 @@
 #include "StacktownCameraModel.h"
 #include "StacktownHud.h"
 #include "StacktownCitySync.h"
+#include "StacktownScore.h"
 #include "StacktownEconomy.h"
 #include "StacktownEconomyRules.h"
 #include "StacktownPlacement.h"
@@ -69,6 +70,7 @@ void AStacktownPlayerController::ReadEconomyIntoModel()
 			{
 				HudModel->Money = Econ->GetState().Money;
 				HudModel->Demand = Econ->GetState().Demand;
+				HudModel->Score = Stacktown::Score(Econ->GetRules(), Econ->GetState());   // proposed; see StacktownScore.h
 			}
 			return;
 		}
@@ -628,6 +630,26 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	{
 		HudModel->BarMessage = Sync->LastTradeMessage;   // stays until the next input, like every bar message
 		Sync->LastTradeMessage.Reset();
+	}
+
+	// THE GOAL LADDER (proposed): announce a rung the first time the score crosses it
+	// this session. A loaded city's standing rungs are not re-announced.
+	{
+		const int32 Goals = Stacktown::GoalsReached(HudModel->Score);
+		if (GoalsAnnounced < 0) { GoalsAnnounced = Goals; }
+		else if (Goals > GoalsAnnounced)
+		{
+			HudModel->BarMessage = FString::Printf(TEXT("GOAL %s REACHED"), *FText::AsNumber((int64)Stacktown::GoalLadder()[Goals - 1]).ToString());
+			GoalsAnnounced = Goals;
+		}
+	}
+	// THE FRESH CITY: a stranger's first screen has no lots and no instruction. The
+	// hint holds the bar until the first lot exists (wording is the design lane's).
+	if (UStacktownEconomy* EconForHint = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr)
+	{
+		const bool bFresh = EconForHint->GetState().Parcels.Num() == 0;
+		if (bFresh && !bRoadMode && HudModel->BarMessage.IsEmpty()) { HudModel->BarMessage = TEXT("click the plate beside a road to place your first lot"); bHintShowing = true; }
+		else if (!bFresh && bHintShowing) { HudModel->BarMessage.Reset(); bHintShowing = false; }
 	}
 
 	// any key press clears a showing refusal (LOOK 6: cleared on the next input)

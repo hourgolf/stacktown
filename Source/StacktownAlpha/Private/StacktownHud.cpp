@@ -102,6 +102,13 @@ void UStacktownHud::Build(UWorld* InWorld)
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(DemandLabel)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(24.f, 0.f, 0.f, 0.f)); }
 	DemandText = MakeText(SpaceMonoBold, SizeBody, Ink);
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(DemandText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(8.f, 0.f, 0.f, 0.f)); }
+	// SCORE, PROPOSED (MONDAY_DECISIONS section 1): the same label + number pattern as
+	// demand, 24 gap, so the left cluster stays "persistent facts only" (LOOK 5).
+	ScoreLabel = MakeText(TomorrowMedium, SizeLabel, Dim, SpacingLabel);
+	SetText(ScoreLabel, TEXT("SCORE"));
+	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(ScoreLabel)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(24.f, 0.f, 0.f, 0.f)); }
+	ScoreText = MakeText(SpaceMonoBold, SizeBody, Ink);
+	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(ScoreText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(8.f, 0.f, 0.f, 0.f)); }
 	BarMessageText = MakeText(TomorrowMedium, SizeBody, Dim);
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(BarMessageText)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(Margin, 0.f, 0.f, 0.f)); }
 	USpacer* Fill = NewObject<USpacer>(this);
@@ -209,6 +216,7 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 	}
 	SetText(MoneyText, MoneyString(M->Money));
 	SetText(DemandText, FString::Printf(TEXT("%.2f"), M->Demand));
+	SetText(ScoreText, FText::AsNumber((int64)FMath::RoundToDouble(M->Score)).ToString());
 	// the bar's message slot: a refusal wins, in refuse; otherwise the dim message
 	if (!M->ActionRefusal.IsEmpty())
 	{

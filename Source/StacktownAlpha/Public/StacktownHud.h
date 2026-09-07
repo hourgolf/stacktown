@@ -28,6 +28,8 @@ public:
 	// the bar
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") double Money = 0.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") double Demand = 0.0;
+	/** PROPOSED score (StacktownScore.h) - on the bar for the design lane to rule on. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") double Score = 0.0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") bool bRoadMode = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") bool bNight = false;
 	/** An action refusal (Docs/HUD_V1.md CONTENT 2): refuse colour, cleared on the next input. */
@@ -81,6 +83,8 @@ private:
 	UPROPERTY() TObjectPtr<UTextBlock> MoneyText;
 	UPROPERTY() TObjectPtr<UTextBlock> DemandLabel;
 	UPROPERTY() TObjectPtr<UTextBlock> DemandText;
+	UPROPERTY() TObjectPtr<UTextBlock> ScoreLabel;
+	UPROPERTY() TObjectPtr<UTextBlock> ScoreText;
 	UPROPERTY() TObjectPtr<UTextBlock> BarMessageText;
 	UPROPERTY() TObjectPtr<UTextBlock> RoadWord;
 	UPROPERTY() TObjectPtr<UTextBlock> NightWord;

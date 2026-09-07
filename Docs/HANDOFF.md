@@ -1159,6 +1159,12 @@ was asking the wrong question and returning "ok".**
   (Roads 29). The word given on their named gap: a road's corridor may not
   leave the plate either. Their diagonal-lot remedies are with the owner.
   Package rebuilding from the merged head; editor relaunched.
+- 2026-09-07 08:05 PDT (coordinator): package rebuilt from the merged head
+  (36fe177: gap 2, self-crossing, the hover fix, the design lane's saves),
+  universal, opened by the double-click path: lock in 10 s, 1600x932 window.
+  THIS IS THE MONDAY APP. Open on the owner: five decisions in
+  MONDAY_DECISIONS section 9. Open on engineering: the corridor-off-plate
+  rule (word given). Open on the design lane: nothing.
 
 ## 6. The recipe — measured numbers
 

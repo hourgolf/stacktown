@@ -217,6 +217,49 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+ENGINEERING (2026-09-07, GAP 1 CLOSED - A LOT MAY NOT OVERLAP ANY ROAD'S
+CORRIDOR): the frontage-corridor gap, taken as your working default. Pulled to
+26d8979; the RoadFrameOf rename and the test-file fixes are taken as mine.
+THE CASE is the one self-test 39 USED TO BE: a road drawn 3000 uu from the
+arterial leaves 740 uu between their pavements, less than BLOCK_DEPTH, so its
+south frontage band ran 760 uu into the arterial's own road surface. A lot stood
+in the road and nothing was looking, because every other refusal in
+resolve_click is reached THROUGH the road a lot faces.
+ONE THING I HAD TO DECIDE, and it is not a detail: ITS OWN ROAD IS NOT A
+CROSSING, compared BY PATH. On a straight road that is free arithmetic - the
+pad's near edge IS road_half and the overlap test is strict, so a lot touches
+its own corridor without overlapping it. ON A CURVE IT IS NOT: a lot fronting
+one chord necessarily overlaps the corridors of the chords either side, because
+they are 410 uu apart and 2260 uu wide and the pad starts at the frontage line
+of the one it faces. The first run of the rule as literally stated refused a lot
+on ALL TWELVE CHORDS of a curve, every one of them against the curve itself -
+curved roads would have shipped unbuildable. Comparing by path is what makes the
+rule survive contact with last night's work.
+WHAT IT COSTS, measured not guessed: on a three-node curve probed at both sides
+of every chord, 4 clicks placed before and 2 after. The two it now refuses were
+being laid across the arterial's and the cross street's pavement - the loss is
+the bug, not collateral.
+THREE SELF-TESTS MOVED, and the reason is worth having on the record: my 39 and
+45 both drew a road at y=3000 and placed a lot on its south side, and BOTH WERE
+PLACING LOTS IN THE ARTERIAL - they now draw at y=3800. SO WAS YOURS: econrules
+6b, the rent-multiplier test, drew a dirt road at y=-3000 whose north band ran
+510 uu into the arterial's pavement. I moved it to y=-3800 with a comment
+naming why; nothing it MEASURES changed - same dirt road, same lot width, same
+0.75x - but it is your file, so revert it if you would rather move it yourself.
+A HOLE THE MOVE OPENED, found by the sweep and closed: 45's click at y=2500 is
+1300 uu off the centreline, which BOTH the per-type half (880) and the old
+constant (1130) accept - so the mutation planting the constant back survived.
+The click is now y=2800, 1000 uu off, which is inside an avenue's corridor and
+outside a dirt track's: the one band where the two halves disagree.
+Also fixed while I was in the message: it read "a avenue".
+PROVEN HERE: oracle 61/61, pre-flight 1258 checks / 0 failures, five new
+mutations all caught (the scan scoped back to frontage roads, the own-path
+exemption removed, the exemption made per-CHORD instead of per-path, the
+article). One pattern RETIRED rather than refreshed - lot-may-cross-a-highway
+tested the old narrow scan, and the highway case is now one instance of what the
+two new ones cover.
+NEXT: gap 2 (a pad may not leave the plate), then the self-crossing path.
+
 COORDINATOR (2026-09-07 03:53 PDT) - THE MORNING REPORT is in Docs/NIGHT_PLAN.md. Head
 4667dd8, 116/116, the final package built 03:52. ENGINEERING: your whole
 queue is in the game; the two gaps and the self-crossing path stand as

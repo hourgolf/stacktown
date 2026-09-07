@@ -370,4 +370,52 @@ STACKTOWN_DIR_TEST(FStacktownRoadScansComparePads, "Stacktown.Roads.ScansCompare
 	return true;
 }
 
+// --- 61: a lot may not overlap ANY road's corridor ---------------------------
+STACKTOWN_DIR_TEST(FStacktownRoadLotNotInAnyCorridor, "Stacktown.Roads.LotNotInAnyCorridor")
+{
+	// The gap raised twice and decided as a working default on 2026-09-07. The
+	// case is the one self-test 39 used to be: a road drawn 3000 uu from the
+	// arterial leaves 740 uu between their pavements, which is less than
+	// BlockDepth, so its south frontage band ran 760 uu into the arterial's own
+	// road surface. A lot stood in the road and nothing was looking, because
+	// every other refusal is reached THROUGH the road a lot faces.
+	const FPlacementBoard Board = OracleBoard();
+	FEconRules Rules = OracleRules();
+	FCityState S = DirSeed();
+	const FRoadDrawResult D = DrawRoad(Board, S, T61_Road[0], T61_Road[1],
+		T61_Road[2], T61_Road[3], FString(TEXT("avenue")), true);
+	TestTrue(TEXT("the road itself is legal"), D.bOk);
+	const FClickResult C = ResolveClick(Board, S, T61_ClickX, T61_ClickY,
+		true, Board.Rules.V0Width);
+	TestEqual(TEXT("the lot in the arterial's pavement refuses"),
+		BoolStr(C.bOk), BoolStr(T61_Ok));
+	TestEqual(TEXT("and names the road it would cross"), C.Reason, FString(T61_Reason));
+
+	// ITS OWN ROAD IS NOT A CROSSING, and for a CURVE that is not free
+	// arithmetic. On a straight road the pad's near edge IS RoadHalf and
+	// QuadsOverlap is strict, so a lot touches its own corridor without
+	// overlapping it. On a curve a lot fronting one chord necessarily overlaps
+	// the corridors of the chords either side - they are 410 uu apart and 2260
+	// uu wide. Comparing by PATH is what keeps curves buildable: the first run
+	// of this check refused a lot on all twelve chords of this very curve,
+	// every one of them against the curve itself.
+	FCityState Cv = SeedState(Rules);
+	Cv.Money = 40000.0;
+	TArray<FVector2D> CurveNodes;
+	for (int32 i = 0; i < T61_CurveNodesNum; ++i)
+	{
+		CurveNodes.Add(FVector2D(T61_CurveNodes[i].X, T61_CurveNodes[i].Y));
+	}
+	const FRoadPathResult Path = DrawRoadPath(Board, Cv, CurveNodes,
+		FString(TEXT("avenue")), false);
+	TestTrue(TEXT("curve drawn"), Path.bOk);
+	const FClickResult OnCurve = ResolveClick(Board, Cv, T61_FrontedX, T61_FrontedY,
+		false, Board.Rules.V0Width);
+	if (!TestTrue(TEXT("a lot still fronts the curve"), OnCurve.bOk)) { return false; }
+	TestEqual(TEXT("lot x0"), OnCurve.Lot.X0, T61_FrontedLot.X0, 1e-9);
+	TestEqual(TEXT("lot x1"), OnCurve.Lot.X1, T61_FrontedLot.X1, 1e-9);
+	TestEqual(TEXT("lot road"), LotRoadId(OnCurve.Lot), FString(T61_FrontedLot.RoadId));
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

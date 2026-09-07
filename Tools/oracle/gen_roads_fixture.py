@@ -135,13 +135,16 @@ def main():
     }
 
     # --- 39: a lot placed AGAINST a drawn road, end to end -------------------
+    # RELOCATED 2026-09-07 with the oracle's own test 39: at y=3000 this road's
+    # south frontage band ran 760 uu into the arterial's pavement, which a lot
+    # may no longer do.
     s39 = funded()
-    s39, _, _, _ = P.draw_road(s39, 6200.0, 3000.0, 7600.0, 3000.0)
-    s39, pid39, ok39, reason39 = P.place(s39, 6900.0, 1700.0)
+    s39, _, _, _ = P.draw_road(s39, 6200.0, 3800.0, 7600.0, 3800.0)
+    s39, pid39, ok39, reason39 = P.place(s39, 6900.0, 2500.0)
     lot39 = s39['parcels'][pid39]['placement'] if ok39 else None
     fx['t39_place_against_drawn'] = {
         'drawn': seg(s39['roads']['R1']),
-        'click': [6900.0, 1700.0],
+        'click': [6900.0, 2500.0],
         'pid': pid39, 'ok': ok39, 'reason': reason39, 'lot': lot39,
         'rect': list(P.lot_rect(lot39, P._all_roads(s39))) if ok39 else None,
     }
@@ -233,14 +236,21 @@ def main():
 
     # 45: a narrower road pulls its own frontage line in - the dirt road's
     # footprint and a lot on its south side, against the avenue's own numbers.
-    fx['t45_dirt_frontage'] = {'road_rect': list(P.road_rect(
-        P._road_dict(s44['roads'][rid44]), R))}
+    fx['t45_dirt_frontage'] = {}
     s45 = funded()
-    s45, _, ok45, reason45 = P.draw_road(s45, 6200.0, 3000.0, 7600.0, 3000.0,
-                                         'dirt')
-    s45, pid45, ok45b, reason45b = P.place(s45, 6900.0, 2000.0)
+    # ITS OWN ROAD, carried in the fixture rather than borrowed from 44's: 45
+    # places a lot and so had to move north on 2026-09-07, while 44 is about
+    # the price and did not.
+    road45 = [6200.0, 3800.0, 7600.0, 3800.0]
+    s45, _, ok45, reason45 = P.draw_road(s45, road45[0], road45[1], road45[2],
+                                         road45[3], 'dirt')
+    # 1000 uu off the centreline: inside an avenue's corridor and outside a
+    # dirt track's, so this click is the one the two halves disagree about.
+    s45, pid45, ok45b, reason45b = P.place(s45, 6900.0, 2800.0)
     fx['t45_dirt_frontage'].update({
-        'click': [6900.0, 2000.0], 'pid': pid45, 'ok': ok45b,
+        'road': road45,
+        'road_rect': list(P.road_rect(P._road_dict(s45['roads']['R1']), R)),
+        'click': [6900.0, 2800.0], 'pid': pid45, 'ok': ok45b,
         'reason': reason45b,
         'lot': s45['parcels'][pid45]['placement'] if ok45b else None,
         'rect': list(P.lot_rect(s45['parcels'][pid45]['placement'],
@@ -302,7 +312,7 @@ def main():
     # drag orders must produce, plus the two orders as inputs - a fixture with
     # two expected answers would be recording the bug.
     fx['t49_drag_direction'] = []
-    for c0, c1, click in (((6200.0, 3000.0), (7600.0, 3000.0), (6900.0, 1700.0)),
+    for c0, c1, click in (((6200.0, 3800.0), (7600.0, 3800.0), (6900.0, 2500.0)),
                           ((7300.0, -4230.0), (7300.0, -3000.0), (5500.0, -3600.0))):
         seen = []
         for a, b in ((c0, c1), (c1, c0)):
@@ -592,6 +602,41 @@ def main():
     fx['t59_two_nodes'] = {'nodes': [[2000.0, -4000.0], [5000.0, -4000.0]],
                            'path_id': pf, 'ids': idsf,
                            'segments': [seg(sf['roads'][i]) for i in idsf]}
+
+    # ---- the frontage-corridor gap closed, self-test 61 (2026-09-07) -------
+    # A lot may not overlap ANY road's corridor, not only one that refuses
+    # frontage. The case is the one test 39 used to be, and the exemption for
+    # the lot's OWN PATH is what keeps a curve buildable.
+    s61 = funded()
+    s61, _r61, ok61, why61 = P.draw_road(s61, 6200.0, 3000.0, 7600.0, 3000.0)
+    assert ok61, why61
+    ok61b, why61b, _lot61 = P.resolve_click(s61, 6900.0, 1700.0)
+    fx['t61_corridor'] = {
+        'road': [6200.0, 3000.0, 7600.0, 3000.0],
+        'click': [6900.0, 1700.0], 'ok': ok61b, 'reason': why61b,
+    }
+    s61c = citytick.seed_state()
+    s61c['money'] = 40000.0
+    s61c, path61, ids61, ok61c, why61c = P.draw_road_path(
+        s61c, [(2000.0, -4000.0), (4000.0, -2600.0), (6000.0, -4000.0)],
+        pins_active=False)
+    assert ok61c, why61c
+    fronted = []
+    for k in range(len(ids61)):
+        f = P.road_frame(P._road_dict(s61c['roads'][ids61[k]]))
+        m = (f[0] + f[2] * f[6] * 0.5, f[1] + f[3] * f[6] * 0.5)
+        for sg in (1.0, -1.0):
+            st, lp, o61, w61 = P.place(s61c, m[0] + f[4] * 1500.0 * sg,
+                                       m[1] + f[5] * 1500.0 * sg,
+                                       pins_active=False)
+            if o61 and st['parcels'][lp]['placement']['road_id'] in ids61:
+                fronted.append({'click': [m[0] + f[4] * 1500.0 * sg,
+                                          m[1] + f[5] * 1500.0 * sg],
+                                'lot': st['parcels'][lp]['placement']})
+    assert fronted, 'the corridor rule must not make a curve unbuildable'
+    fx['t61_curve'] = {'nodes': [[2000.0, -4000.0], [4000.0, -2600.0],
+                                 [6000.0, -4000.0]],
+                       'fronted': fronted[:1], 'fronted_count': len(fronted)}
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_PATH, 'w') as f:

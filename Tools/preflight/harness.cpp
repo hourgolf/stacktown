@@ -955,8 +955,10 @@ int main()
 		CASE("Roads.PlaceAgainstDrawn");
 		{
 			FCityState S = RoadSeed();
-			const FRoadDrawResult Drawn = DrawRoad(Board, S, T31.X0, T31.Y0, T31.X1, T31.Y1,
-				FString("avenue"), true);
+			// T39's OWN road, not 31's: 39 places a lot and so moved north when a
+			// lot stopped being allowed to overlap the arterial's corridor.
+			const FRoadDrawResult Drawn = DrawRoad(Board, S, T39_Drawn.StartX, T39_Drawn.StartY,
+				T39_Drawn.EndX, T39_Drawn.EndY, FString(T39_Drawn.WidthClass), true);
 			CheckBool("road drawn", Drawn.bOk, true);
 			const FPlaceResult P = Place(Board, S, T39_ClickX, T39_ClickY, true, Board.Rules.V0Width);
 			CheckBool("placed", P.bOk, T39_Ok);
@@ -1151,8 +1153,11 @@ int main()
 		{
 			// 45: a dirt road's own corridor and its own frontage line.
 			FCityState S = RoadSeed();
-			const FRoadDrawResult D = DrawRoad(Board, S, T44_AvenueRefused.X0, T44_AvenueRefused.Y0,
-				T44_AvenueRefused.X1, T44_AvenueRefused.Y1, FString(T44_DirtStored.WidthClass), true);
+			// ITS OWN ROAD (T45_Road), not 44's: 45 places a lot and so moved
+			// north when a lot stopped being allowed to overlap the arterial's
+			// corridor, while 44 is about the price and stayed put.
+			const FRoadDrawResult D = DrawRoad(Board, S, T45_Road[0], T45_Road[1],
+				T45_Road[2], T45_Road[3], FString(T44_DirtStored.WidthClass), true);
 			CheckBool("dirt drawn", D.bOk, true);
 			const FLotRect RoadR = RoadRect(Board.Rules, Board.Econ,
 				RoadDictFromSegment(D.Id, S.Roads[D.Id]));
@@ -1669,6 +1674,49 @@ int main()
 					CheckNear("span max", Hi, T58_SpanMax, Tol);
 					CheckBool("the span is wider than the chord", Hi - Lo > F.Length, true);
 				}
+			}
+		}
+
+		CASE("Roads.LotNotInAnyCorridor");
+		{
+			auto RoadSeed = [&R]() { FCityState St = SeedState(R); St.Money = GeometryMoney; return St; };
+			// 61: a lot may not overlap ANY road's corridor, not only one that
+			// REFUSES frontage. The case is the one test 39 used to be - a road
+			// drawn 3000 uu from the arterial leaves 740 uu between their
+			// pavements, less than BlockDepth, so its south frontage band ran
+			// 760 uu into the arterial's own road surface.
+			FCityState S = RoadSeed();
+			const FRoadDrawResult D = DrawRoad(Board, S, T61_Road[0], T61_Road[1],
+				T61_Road[2], T61_Road[3], FString(TEXT("avenue")), true);
+			CheckBool("the road itself is legal", D.bOk, true);
+			const FClickResult C = ResolveClick(Board, S, T61_ClickX, T61_ClickY,
+				true, Board.Rules.V0Width);
+			CheckBool("the lot in the arterial's pavement refuses", C.bOk, T61_Ok);
+			CheckStr("and names the road it would cross", C.Reason, FString(T61_Reason));
+
+			// ITS OWN ROAD IS NOT A CROSSING, and for a curve that is not free
+			// arithmetic: a lot fronting one chord necessarily overlaps the
+			// corridors of the chords either side. Comparing by PATH is what
+			// keeps curves buildable - the first run of this check refused a lot
+			// on all twelve chords, every one against the curve itself.
+			FCityState Cv = SeedState(R);
+			Cv.Money = 40000.0;
+			TArray<FVector2D> CurveNodes;
+			for (int32 i = 0; i < T61_CurveNodesNum; ++i)
+			{
+				CurveNodes.Add(FVector2D(T61_CurveNodes[i].X, T61_CurveNodes[i].Y));
+			}
+			const FRoadPathResult Path = DrawRoadPath(Board, Cv, CurveNodes,
+				FString(TEXT("avenue")), false);
+			CheckBool("curve drawn", Path.bOk, true);
+			const FClickResult OnCurve = ResolveClick(Board, Cv, T61_FrontedX,
+				T61_FrontedY, false, Board.Rules.V0Width);
+			CheckBool("a lot still fronts the curve", OnCurve.bOk, true);
+			if (OnCurve.bOk)
+			{
+				CheckNear("lot x0", OnCurve.Lot.X0, T61_FrontedLot.X0, Tol);
+				CheckNear("lot x1", OnCurve.Lot.X1, T61_FrontedLot.X1, Tol);
+				CheckStr("lot road", LotRoadId(OnCurve.Lot), FString(T61_FrontedLot.RoadId));
 			}
 		}
 

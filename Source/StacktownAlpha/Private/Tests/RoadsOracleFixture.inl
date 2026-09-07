@@ -76,13 +76,13 @@ inline const TCHAR* const T38_Ids[] = { TEXT("R1"), TEXT("R2") };
 inline constexpr int32 T38_IdsNum = 2;
 
 // 39: a lot placed AGAINST a drawn road, through place() itself.
-inline const FSegDef T39_Drawn = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr };
+inline const FSegDef T39_Drawn = { TEXT("R1"), 6200.0, 3800.0, 7600.0, 3800.0, TEXT("avenue"), nullptr };
 inline constexpr double T39_ClickX = 6900.0;
-inline constexpr double T39_ClickY = 1700.0;
+inline constexpr double T39_ClickY = 2500.0;
 inline const TCHAR* const T39_Pid = TEXT("P1");
 inline constexpr bool T39_Ok = true;
 inline const FLotDef2 T39_Lot = { 6490.0, 7310.0, TEXT("south"), TEXT("R1") };
-inline const FRectDef T39_Rect = { 6490.0, 7310.0, 370.0, 1870.0 };
+inline const FRectDef T39_Rect = { 6490.0, 7310.0, 1170.0, 2670.0 };
 
 // ---- ROAD TYPES AS MECHANICS, self-tests 40-48 -----------------------
 // MONDAY_DECISIONS section 2. Every number below came out of the oracle
@@ -133,11 +133,15 @@ inline const FSegDef T44_DirtStored = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000
 inline constexpr double T44_MoneyAfter = 30.0;
 
 // 45: a narrower road pulls its own frontage line in.
-inline const FRectDef T45_DirtRoadRect = { 6200.0, 7600.0, 2120.0, 3880.0 };
+inline const FRectDef T45_DirtRoadRect = { 6200.0, 7600.0, 2920.0, 4680.0 };
+// 45 draws its OWN road: it places a lot, so it moved north when a lot
+// stopped being allowed to overlap the arterial's corridor; 44 is
+// about the price and stayed where it was.
+inline constexpr double T45_Road[4] = { 6200.0, 3800.0, 7600.0, 3800.0 };
 inline constexpr double T45_ClickX = 6900.0;
-inline constexpr double T45_ClickY = 2000.0;
+inline constexpr double T45_ClickY = 2800.0;
 inline const FLotDef2 T45_Lot = { 6490.0, 7310.0, TEXT("south"), TEXT("R1") };
-inline const FRectDef T45_LotRect = { 6490.0, 7310.0, 620.0, 2120.0 };
+inline const FRectDef T45_LotRect = { 6490.0, 7310.0, 1420.0, 2920.0 };
 
 // 46: the rent multiplier - own type, then the highway proximity bonus,
 // which MULTIPLIES, measured pavement to pad and bounded at 2,000 uu.
@@ -174,7 +178,7 @@ struct FDragCase { double FX0; double FY0; double FX1; double FY1;
                    double ClickX; double ClickY; FSegDef Segment;
                    FLotDef2 Lot; double Money; };
 inline const FDragCase T49_Drag[] = {
-	{ 6200.0, 3000.0, 7600.0, 3000.0, 6900.0, 1700.0, { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr }, { 6490.0, 7310.0, TEXT("south"), TEXT("R1") }, 860.0 },
+	{ 6200.0, 3800.0, 7600.0, 3800.0, 6900.0, 2500.0, { TEXT("R1"), 6200.0, 3800.0, 7600.0, 3800.0, TEXT("avenue"), nullptr }, { 6490.0, 7310.0, TEXT("south"), TEXT("R1") }, 860.0 },
 	{ 7300.0, -4230.0, 7300.0, -3000.0, 5500.0, -3600.0, { TEXT("R1"), 7300.0, -4230.0, 7300.0, -3000.0, TEXT("avenue"), nullptr }, { -4010.0, -3190.0, TEXT("west"), TEXT("R1") }, 877.0 },
 };
 inline constexpr int32 T49_DragNum = 2;
@@ -299,12 +303,12 @@ inline const FSegDef T57_Segments[] = {
 // 58: joints in more than one CHORD, and a lot that spans them.
 inline const FNode T58_Joints[] = { { 2320.0, -3750.0 }, { 3240.0, -2930.0 }, { 3580.0, -2710.0 }, { 4720.0, -2900.0 }, { 5040.0, -3160.0 } };
 inline constexpr int32 T58_JointsNum = 5;
-inline constexpr double T58_ClickX = 2595.1230827640884;
-inline constexpr double T58_ClickY = -1560.6447642717733;
-inline const FLotDef2 T58_Lot = { 920.0, 1740.0, TEXT("north"), TEXT("R5") };
-inline constexpr double T58_ChordLength = 404.96913462633177;
-inline constexpr double T58_SpanMin = 726.9689831340979;
-inline constexpr double T58_SpanMax = 1929.0359022566483;
+inline constexpr double T58_ClickX = 6500.429386953155;
+inline constexpr double T58_ClickY = -2466.8460358732927;
+inline const FLotDef2 T58_Lot = { 6070.0, 6890.0, TEXT("north"), TEXT("R11") };
+inline constexpr double T58_ChordLength = 417.73197148410844;
+inline constexpr double T58_SpanMin = 5858.30189464705;
+inline constexpr double T58_SpanMax = 7133.760888381909;
 
 // 59: one decision - any chord failing refuses the whole path.
 inline const FNode T59_Crosses_Nodes[] = { { 2000.0, -3300.0 }, { 4000.0, -2100.0 }, { 6000.0, -3300.0 } };
@@ -352,5 +356,18 @@ inline const FSegDef T59_Two_Segments[] = {
 	{ TEXT("R6"), 4050.0, -4000.0, 4460.0, -4000.0, TEXT("avenue"), TEXT("C1") },
 	{ TEXT("R7"), 4460.0, -4000.0, 5000.0, -4000.0, TEXT("avenue"), TEXT("C1") },
 };
+
+// 61: a lot may not overlap ANY road's corridor - with its own PATH
+// exempt, without which no lot could front a curve at all.
+inline constexpr double T61_Road[4] = { 6200.0, 3000.0, 7600.0, 3000.0 };
+inline constexpr double T61_ClickX = 6900.0;
+inline constexpr double T61_ClickY = 1700.0;
+inline constexpr bool T61_Ok = false;
+inline const TCHAR* const T61_Reason = TEXT("in the road: [6490.0, 7310.0] would run across the arterial, an avenue");
+inline const FNode T61_CurveNodes[] = { { 2000.0, -4000.0 }, { 4000.0, -2600.0 }, { 6000.0, -4000.0 } };
+inline constexpr int32 T61_CurveNodesNum = 3;
+inline constexpr double T61_FrontedX = 3493.4773755400165;
+inline constexpr double T61_FrontedY = -4706.582902364304;
+inline const FLotDef2 T61_FrontedLot = { -1070.0, -250.0, TEXT("south"), TEXT("R2") };
 
 } // namespace StacktownRoadsOracle

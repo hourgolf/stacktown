@@ -240,8 +240,12 @@ STACKTOWN_ROADS_TEST(FStacktownRoadsPlaceAgainstDrawn, "Stacktown.Roads.PlaceAga
 	const FPlacementBoard Board = OracleBoard();
 	FCityState S = RoadSeed();
 
-	const FRoadDrawResult Drawn = DrawRoad(Board, S, T31.X0, T31.Y0, T31.X1, T31.Y1,
-		TEXT("avenue"), true);
+	// T39's OWN road, not 31's: 39 places a lot and so moved north on
+	// 2026-09-07, when a lot stopped being allowed to overlap the arterial's
+	// corridor. At y=3000 its south frontage band ran 760 uu into that
+	// pavement - the lot was always in the road and nothing was looking.
+	const FRoadDrawResult Drawn = DrawRoad(Board, S, T39_Drawn.StartX, T39_Drawn.StartY,
+		T39_Drawn.EndX, T39_Drawn.EndY, FString(T39_Drawn.WidthClass), true);
 	TestTrue(TEXT("road drawn"), Drawn.bOk);
 
 	// The click path must resolve against a drawn road exactly as it does the

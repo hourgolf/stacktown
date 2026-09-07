@@ -442,6 +442,12 @@ def sample_path(nodes, spacing=WIDTH_QUANTUM):
     return deduped
 
 
+def _article(word):
+    """'a' or 'an'. Small, but these strings are read by a person: "a avenue"
+    is the kind of seam that makes a message look machine-made."""
+    return 'an' if word[:1].lower() in 'aeiou' else 'a'
+
+
 def road_material_name(road):
     """The material instance the engine side loads for this road's
     surface - MI_road_dirt / _avenue / _boulevard / _highway. Formatted
@@ -937,13 +943,25 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
     # watching test 39 refuse; fixing it changes where lots may go on
     # boards that already exist, which is the owner's call and not part of
     # road types. RAISED on Docs/BOARD.md, not silently fixed here.
+    _own_path = road_path_id(road)
     for other in roads:
-        if road_has_frontage(other, r):
+        # ITS OWN ROAD IS NOT A CROSSING. For a straight road this is already
+        # true by arithmetic - the pad's near edge IS road_half, and
+        # quads_overlap is strict, so a lot touches its own corridor without
+        # overlapping it. For a CURVE it is not: a lot fronting one chord
+        # necessarily overlaps the corridors of the chords either side of it,
+        # because they are 410 uu apart and 2260 uu wide and the pad starts at
+        # the frontage line of the one it faces. Comparing by PATH rather than
+        # by chord is what makes the rule below survive contact with curved
+        # roads - without it no lot could front a curve at all, which is what
+        # the first run of this check showed on all twelve chords.
+        if road_path_id(other) == _own_path:
             continue
         if quads_overlap(mine, road_quad(other, r)):
             return False, (
-                'in the road: [%.1f, %.1f] would run across the %s, a %s'
-                % (x0, x1, other['id'], road_type(other))), None
+                'in the road: [%.1f, %.1f] would run across the %s, %s %s'
+                % (x0, x1, other['id'], _article(road_type(other)),
+                   road_type(other))), None
     for p in state['parcels'].values():
         lot = p.get('placement')
         if not lot:
@@ -2069,26 +2087,31 @@ if __name__ == '__main__':
     # 39. FULL INTEGRATION: a lot placed AGAINST a drawn road, through
     #     place() itself (task b's own point - resolve_click must
     #     resolve against a drawn road exactly as it does the built-ins).
-    #     Click at (6900, 1700): 1700 is on R1's SOUTH frontage (across=
-    #     -1300, |across| > ROAD_HALF=1130, within block-depth reach),
-    #     nearer to R1 (1300) than to the arterial (1700) or anything
-    #     else. x0/x1 snap around 6900 exactly as they would on the
+    #     Click at (6900, 2500): across = -1300 off R1, |across| >
+    #     ROAD_HALF=1130 and within block-depth reach, and nearer to R1
+    #     (1300) than to the arterial (2500) or anything else. x0/x1 snap around 6900 exactly as they would on the
     #     arterial; road_id is 'R1', not a built-in string. lot_rect
     #     (via _all_roads, since R1 is not in the default ROADS-only
     #     lookup) proves the axis-generalization end to end, not just in
-    #     isolation: south of a horizontal road with centre y=3000 means
-    #     y in [3000-2630, 3000-1130] = [370, 1870], read off R1's own
+    #     isolation: south of a horizontal road with centre y=3800 means
+    #     y in [3800-2630, 3800-1130] = [1170, 2670], read off R1's own
     #     'start' the same way it is for the arterial.
     s39 = citytick.seed_state()
     s39['money'] = 1000.0   # see 31 - geometry test, not a price test
-    s39, _, _, _ = draw_road(s39, 6200.0, 3000.0, 7600.0, 3000.0)
-    s39, pid39, ok39, reason39 = place(s39, 6900.0, 1700.0)
+    #     RELOCATED 2026-09-07, when a lot stopped being allowed to overlap ANY
+    #     road's corridor: at y=3000 this road's south frontage band was
+    #     370..1870 and ran 760 uu into the arterial's own pavement. The lot
+    #     was always in the road; nothing had been looking. y=3800 leaves
+    #     1170..2670, clearing the arterial's 1130 by 40 uu, and the click
+    #     moves to y=2500 so this road is still the NEAREST one to it.
+    s39, _, _, _ = draw_road(s39, 6200.0, 3800.0, 7600.0, 3800.0)
+    s39, pid39, ok39, reason39 = place(s39, 6900.0, 2500.0)
     assert ok39 and pid39 == 'P1' and reason39 == '', (pid39, ok39, reason39)
     assert s39['parcels']['P1']['placement'] == {
         'x0': 6490.0, 'x1': 7310.0, 'side': 'south', 'road_id': 'R1'
     }, s39['parcels']['P1']['placement']
     assert lot_rect(s39['parcels']['P1']['placement'], _all_roads(s39)) == (
-        6490.0, 7310.0, 370.0, 1870.0)
+        6490.0, 7310.0, 1170.0, 2670.0)
 
 
     # ---- ROAD TYPES AS MECHANICS, 2026-09-06 (40-47) -------------------
@@ -2229,13 +2252,22 @@ if __name__ == '__main__':
     assert road_rect(s44['roads']['R1'], R) == (6200.0, 7600.0, 2120.0, 3880.0)
     s45 = citytick.seed_state()
     s45['money'] = 2000.0
-    s45, _, ok45, reason45 = draw_road(s45, 6200.0, 3000.0, 7600.0, 3000.0,
+    #     RELOCATED with 39, and for the same reason: a dirt road at y=3000 put
+    #     its south frontage at 620..2120, half of it inside the arterial's own
+    #     pavement. At y=3800 the band is 1420..2920.
+    s45, _, ok45, reason45 = draw_road(s45, 6200.0, 3800.0, 7600.0, 3800.0,
                                         'dirt')
     assert ok45, reason45
-    s45, pid45, ok45b, reason45b = place(s45, 6900.0, 2000.0)
+    #     THE CLICK SITS IN THE BAND THE TWO HALVES DISAGREE ABOUT: 1000 uu
+    #     off the centreline is INSIDE an avenue's corridor (1130) and OUTSIDE
+    #     a dirt track's (880), so a per-type half offers frontage here and the
+    #     one constant would refuse it as "in the road". Moving this click to
+    #     2500 with the road on 2026-09-07 quietly lost that - both halves
+    #     accept 1300 - and a mutation planting the constant back survived.
+    s45, pid45, ok45b, reason45b = place(s45, 6900.0, 2800.0)
     assert ok45b and pid45 == 'P1', (pid45, ok45b, reason45b)
     assert lot_rect(s45['parcels']['P1']['placement'], _all_roads(s45), R) == (
-        6490.0, 7310.0, 620.0, 2120.0)
+        6490.0, 7310.0, 1420.0, 2920.0)
 
     # 46. THE RENT MULTIPLIER, the part that makes a type a planning
     #     decision. Own-road type first (dirt 0.75, avenue 1.0, boulevard
@@ -2325,13 +2357,14 @@ if __name__ == '__main__':
     #     flipped its side name with it (the normal is the direction rotated
     #     +90 degrees). Silent whenever the mirrored span still landed on the
     #     road; test 31's own road, drawn the other way, put a south click's lot
-    #     at [7890, 8710] instead of [6490, 7310].
+    #     at [7890, 8710] instead of [6490, 7310]. (The horizontal case moved
+    #     north with 39 on 2026-09-07, for the corridor rule, not for this one.)
     #
     #     Both axes, and both the SEGMENT and the LOT, because the two failed
     #     differently: the stored segment was already fine (road_rect takes
     #     min/max), and the lot was not.
     for _c0, _c1, _click, _want in (
-            ((6200.0, 3000.0), (7600.0, 3000.0), (6900.0, 1700.0),
+            ((6200.0, 3800.0), (7600.0, 3800.0), (6900.0, 2500.0),
              {'x0': 6490.0, 'x1': 7310.0, 'side': 'south', 'road_id': 'R1'}),
             ((7300.0, -4230.0), (7300.0, -3000.0), (5500.0, -3600.0),
              {'x0': -4010.0, 'x1': -3190.0, 'side': 'west', 'road_id': 'R1'})):
@@ -2828,7 +2861,54 @@ if __name__ == '__main__':
         _fe = road_frame(_e)
         assert _h - _l < 3.0 * WIDTH_QUANTUM, (_e['id'], _l, _h)
 
-    print('placement self-check: 60/60 pass (pure-Python click->lot->state '
+    # 61. A LOT MAY NOT OVERLAP ANY ROAD'S CORRIDOR (2026-09-07, the gap
+    #     raised twice and now decided as a working default). Until this the
+    #     scan was scoped to roads that REFUSE frontage, because closing it
+    #     moves where lots may go on boards that already exist; the
+    #     coordinator's 23:37 note decides it.
+    #
+    #     The case is the one self-test 39 used to be: a road drawn 3000 uu
+    #     from the arterial leaves 740 uu between their pavements, which is
+    #     less than BLOCK_DEPTH, so its south frontage band ran 760 uu INTO
+    #     the arterial's own road surface. A lot stood in the road and nothing
+    #     was looking.
+    s61 = citytick.seed_state()
+    s61['money'] = 2000.0
+    s61, _r61, _ok61, _why61 = draw_road(s61, 6200.0, 3000.0, 7600.0, 3000.0)
+    assert _ok61, _why61
+    _, _, _ok61b, _why61b = place(s61, 6900.0, 1700.0)
+    assert not _ok61b, 'a lot in the arterial pavement must refuse'
+    assert 'in the road' in _why61b and 'arterial' in _why61b, _why61b
+    assert 'an avenue' in _why61b, _why61b     # not "a avenue"
+    #     and the SAME click 800 uu further from the arterial is fine - which
+    #     is test 39 above, so the rule refuses the overlap and not the road.
+
+    #     ITS OWN ROAD IS NOT A CROSSING, and for a CURVE that is not free
+    #     arithmetic. A lot fronting one chord necessarily overlaps the
+    #     corridors of the chords either side of it: they are 410 uu apart and
+    #     2260 uu wide, and the pad starts at the frontage line of the one it
+    #     faces. Comparing by PATH is what keeps curves buildable - the first
+    #     run of this check refused a lot on all twelve chords of the curve
+    #     below, every one of them against the curve itself.
+    s61c = citytick.seed_state()
+    s61c['money'] = 40000.0
+    s61c, _p61, _ids61, _ok61c, _why61c = draw_road_path(
+        s61c, [(2000.0, -4000.0), (4000.0, -2600.0), (6000.0, -4000.0)],
+        pins_active=False)
+    assert _ok61c, _why61c
+    _fronted61 = 0
+    for _k in range(len(_ids61)):
+        _f = road_frame(_road_dict(s61c['roads'][_ids61[_k]]))
+        _m = (_f[0] + _f[2] * _f[6] * 0.5, _f[1] + _f[3] * _f[6] * 0.5)
+        for _sg in (1.0, -1.0):
+            _st, _lp, _o, _w = place(s61c, _m[0] + _f[4] * 1500.0 * _sg,
+                                      _m[1] + _f[5] * 1500.0 * _sg,
+                                      pins_active=False)
+            if _o and _st['parcels'][_lp]['placement']['road_id'] in _ids61:
+                _fronted61 += 1
+    assert _fronted61 > 0, 'the corridor rule must not make a curve unbuildable'
+
+    print('placement self-check: 61/61 pass (pure-Python click->lot->state '
           'contract; resolve_road multi-road frontage; cross-street and '
           'corner-overlap coverage; save/load round-trip; free placement '
           'along the road (1-27, prior sessions) PLUS drawn roads, '
@@ -2886,7 +2966,13 @@ if __name__ == '__main__':
           'curve would be "the crossing" end to end and carry no lots at '
           'all; and a lot spans the joined run of chords rather than the one '
           'it sits on, because the curve is sampled at 410 and the narrowest '
-          'lot is 820; live cursor-trace '
+          'lot is 820 PLUS the frontage-corridor gap closed, 2026-09-07 '
+          '(61): a lot may not overlap ANY road\'s corridor, not only one '
+          'that refuses frontage - the case self-test 39 used to be, where a '
+          'road drawn 3000 uu from the arterial left 740 uu between their '
+          'pavements and its frontage band ran into the arterial\'s road '
+          'surface - with the lot\'s OWN PATH exempt, without which no lot '
+          'could front a curve at all; live cursor-trace '
           'coordinates, actor spawn/resolve, and the feel itself are NOT '
           'provable here - see module docstring, and PLACEMENT_GRID.md '
           'section 8 - the owner\'s own click on empty board is the real '

@@ -221,6 +221,11 @@ def main():
     t45 = fx['t45_dirt_frontage']
     w('inline const FRectDef T45_DirtRoadRect = { %s, %s, %s, %s };'
       % tuple(n(v) for v in t45['road_rect']))
+    w('// 45 draws its OWN road: it places a lot, so it moved north when a lot')
+    w('// stopped being allowed to overlap the arterial\'s corridor; 44 is')
+    w('// about the price and stayed where it was.')
+    w('inline constexpr double T45_Road[4] = { %s };'
+      % ', '.join(n(v) for v in t45['road']))
     w('inline constexpr double T45_ClickX = %s;' % n(t45['click'][0]))
     w('inline constexpr double T45_ClickY = %s;' % n(t45['click'][1]))
     l = t45['lot']
@@ -480,6 +485,23 @@ def main():
     for sg in t['segments']:
         w('\t%s,' % segdef(sg))
     w('};')
+    w('')
+    w('// 61: a lot may not overlap ANY road\'s corridor - with its own PATH')
+    w('// exempt, without which no lot could front a curve at all.')
+    t = fx['t61_corridor']
+    w('inline constexpr double T61_Road[4] = { %s };'
+      % ', '.join(n(v) for v in t['road']))
+    w('inline constexpr double T61_ClickX = %s;' % n(t['click'][0]))
+    w('inline constexpr double T61_ClickY = %s;' % n(t['click'][1]))
+    w('inline constexpr bool T61_Ok = %s;' % b(t['ok']))
+    w('inline const TCHAR* const T61_Reason = %s;' % q(t['reason']))
+    t = fx['t61_curve']
+    w('inline const FNode T61_CurveNodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['nodes']))
+    w('inline constexpr int32 T61_CurveNodesNum = %d;' % len(t['nodes']))
+    w('inline constexpr double T61_FrontedX = %s;' % n(t['fronted'][0]['click'][0]))
+    w('inline constexpr double T61_FrontedY = %s;' % n(t['fronted'][0]['click'][1]))
+    w('inline const FLotDef2 T61_FrontedLot = %s;' % lotdef(t['fronted'][0]['lot']))
     w('')
     w('} // namespace StacktownRoadsOracle')
 

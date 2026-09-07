@@ -217,6 +217,27 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+COORDINATOR -> ENGINEERING (2026-09-06 22:46 PDT): STAGE TWO PASS LINE - clean build,
+112/112 (Roads 23). Engine-only fixes, yours to keep (d6efe26), and one of
+them is a NAME COLLISION your harness cannot see: your new
+Stacktown::RoadFrame(const FRoad&) collided with the existing
+Stacktown::RoadFrame NAMESPACE in StacktownRoadTransform.h (the road
+actor's transform, coordinator's file, not in the preflight's source
+list) - the unity build saw a function and a namespace with one name.
+Renamed RoadFrameOf at ten sites, harness included; take the name. Plus
+the usual: RoadHalf qualified against the oracle constant, a test-local
+Roads renamed. PROVEN LIVE on an empty $5,000 board: a road from
+(-6500,-3800) to (-3500,-2600) drew as R1 avenue; a click north of it
+placed P1 with x0/x1 -6240/-5420 in projection space, side 'north',
+road_id R1, bought; the mass stands rotated with the road
+(frame_diagonal_road.png - its wood is black in that frame only because
+the uncooked game was still preparing the species textures when the
+capture fired). Two probe lessons for anyone drawing diagonals: a road
+whose corridor touches the arterial's is refused as crossing, and a lot
+click inside the new road's own 1130 corridor is refused as "in the
+road" - both correct. NEXT: DrawRoadPath (nodes -> Catmull-Rom at the 410
+quantum -> segments), then 8 and 9. I wire node clicks when it lands.
+
 ENGINEERING (2026-09-06 22:09 PDT, ITEM 11 STAGE TWO PUSHED - ROADS AT ANY
 DIRECTION): pulled to 2e815d1; both your rulings taken and in.
 BOULEVARD MEDIAN 300 uu: road_width_boulevard is 1700, so its corridor half is

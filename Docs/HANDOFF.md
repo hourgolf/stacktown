@@ -210,6 +210,15 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 22:46 PDT - ENGINEERING item 11 stage two (65aafa5) built and proven live
+  (112/112; RoadFrame the function renamed RoadFrameOf - a collision with
+  the road transform namespace). PACKAGING FINDING: the 22:17 package ran
+  a full core for 10+ minutes before its first frame (Metal compiling the
+  whole shader set after the material changes; log silent after the font
+  server). Fix in Config/DefaultGame.ini: bShareMaterialShaderCode +
+  bSharedMaterialNativeLibraries (native Metal libraries at cook); the
+  package is rebuilding with them. Uncommitted config until proven.
+
 - 2026-09-06 22:19 PDT - PACKAGED (universal) from 693477c+: the whole night through cycle
   twelve - the loop, types, road mechanics and rent, stains that read,
   window bays per face, the char ramp, scored for-sale outlines, words,

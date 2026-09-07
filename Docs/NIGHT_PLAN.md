@@ -98,6 +98,13 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
   given the floor's grey (it still reads only up close at the arrival
   stop - by the rule's own "fine line", the lane rules); the arrival
   keeps the board whole at 20,000. 106/106. Package rebuilt at 22:16.
+- 22:44 cycle thirteen: engineering's any-direction roads (item 11 stage
+  two) built after a name collision their harness cannot see (RoadFrame
+  function vs namespace -> RoadFrameOf), 112/112, proven live with a
+  diagonal road and a lot on it. FOUND: the packaged app compiled its
+  shaders on first launch after the material changes (a full core, 10+
+  minutes, black window) - native Metal shader libraries switched on in
+  packaging; the package is rebuilding.
 
 ## The morning report
 

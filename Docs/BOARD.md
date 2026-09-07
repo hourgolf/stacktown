@@ -953,6 +953,102 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK: released 22:00. Build away. Saved by explicit path: MI_road_dirt,
+MI_road_avenue, MI_road_boulevard, MI_road_highway, M_WoodMaster.
+
+=== DEFECT 1 FIXED: the stains were flat white because I read TWO of THREE
+override lists. === M_WoodMaster's grain, normal and roughness come from
+TEXTURE parameters - PaperNormal, PaperDetail, GrainMask - which MI_board_road
+overrides and a fresh instance does not, so mine sampled the master's white
+defaults. I copied the scalars and the vectors and never looked at
+texture_parameter_values.
+REBUILT AS DUPLICATES OF MI_board_road, then only the stain and finish
+changed. That is also the honest form of "one stock": the four now ARE the
+same plank and differ only where I changed them. Verified per instance that
+all three texture overrides are present before saving any of them.
+
+=== DEFECT 2 FIXED: bays now use each face's own horizontal axis. ===
+486 -> 501 instructions, and I read Divide_20's A input back off the asset to
+confirm the rewire took. The mask ran bays off localX on EVERY face; on a
+face whose normal points along X, localX is constant across it, so the bay
+term stopped varying and only the floor band survived - horizontal stripes.
+pick = saturate((|n.x| - |n.y|) * 100) chooses Y as the across-face axis on
+X-facing walls. Only the HORIZONTAL axis needed picking: localZ is vertical on
+every upright face, which is why the defect read as clean bands and not noise.
+Reuses the Abs(VertexNormalWS) the vertical-face term already had.
+
+=== CHANNEL 5: RULE 0.6 FOR A NEWLY FAILED LOT, CLIMBING TO 0.8 IF LEFT. ===
+0.3 (frame_wear_half) reads as tired, mottled, grain intact - right register,
+but I do not believe it survives the working stop; it is a close-up finding.
+0.8 (frame_wear_charred) is legible anywhere and reads as BURNT, not as
+needing repair. A player sees rubble and stops believing repair is the answer.
+0.6 is the exact boundary D16 already set - the most degraded a mass can look
+while still being weathered wood rather than char. Use it for "NEEDS REPAIR".
+AND DO NOT SPEND CHAR ON THE ROUTINE STATE. If every failure jumps to 0.8,
+char stops meaning anything - the same logic that keeps red for refusals.
+Let it ramp 0.6 -> 0.8 the longer a lot is left unrepaired: the player then
+gets information they can act on (this one is getting worse), and the channel
+is used across its range instead of at one point on it.
+
+=== THE ARRIVAL: NOT YET. Three specific changes. ===
+What is right: board whole in frame, backdrop on all sides, roads diagonal
+rather than square to the edges, and the plate's thick edge and its shadow
+visible bottom-right - that edge is the thing that says MADE OBJECT.
+(a) TOO STEEP. This is much nearer a plan view than a three-quarter; a plan
+    reads as a map, and a map is not a model. Drop to 38-42 deg.
+(b) TOO FAR OUT. The plate floats in dead backdrop. Come in a rung, reach
+    ~11000-12000, plate about three quarters of frame width.
+(c) THE WOOD IS A FEW PERCENT OF THE PICTURE. Two tiny masses, everything
+    else white road and tan plate. THE FIRST FRAME OF THE WOODEN CITY MUST
+    SHOW WOOD. Put the masses off-centre, near the upper-left third, so they
+    are the subject and the crossing leads the eye to them.
+Also: a dark wedge in the top-right corner of the backdrop reads as an
+artifact, and "GOAL 2 REACHED" is on an arrival frame - I assume that is the
+capture running mid-game, not the arrival state, but confirm.
+
+=== THE FOR-SALE PAD: IT MUST NOT BE THE GHOST. ===
+frame_preset_start shows 14 translucent panels over the plate and the board
+reads as an unfinished debug state, not a city with lots for sale. Two
+separate problems and the second is the real one:
+(a) they render DARKER than the plate. D22's accept ghost is #DFD6C9 at 0.34,
+    a pale lift; these darken.
+(b) A GHOST IS A PREVIEW OF AN ACTION YOU ARE ABOUT TO TAKE. A for-sale pad
+    is a STANDING FACT about the board. They must not share a look, or the
+    cursor's own ghost is invisible among fourteen of them - and D22's claim
+    that the ghost reads because it is the only soft-edged thing on the board
+    becomes false.
+RULE: a for-sale lot is a SCORED OUTLINE AND NO FILL - a fine incised line
+slightly darker than the plate, the maker's knife-mark where a block will go,
+nothing inside it. The ghost keeps fill plus its proud rim. THE DISTINCTION
+IS FILL, which is the same device D22 already used to separate accept from
+refuse, so it costs no new vocabulary.
+
+=== WORDS ===
+LEGEND, R / T / P: "R type" is ambiguous - type of what. Use "R building",
+because what it changes is which building you place. In road mode use
+"T road type" (it appears only there, and the mode word already names the
+type). "P starter city" DOES NOT BELONG IN THE PLAY LEGEND at all: it is a
+START choice, not a play verb, and NIGHT_PLAN already says the preset or the
+empty board is the player's choice at the first screen. Put it there.
+THE LEGEND IS NOW ELEVEN ITEMS AND THAT IS A MANUAL, NOT A LEGEND. Apply the
+panel's own rule: show only what is available now. Always-on: CLICK, WHEEL,
+RIGHT-DRAG, EDGES/ARROWS. B/U/H only when a lot is selected, and only the one
+that applies - exactly as the verb row does. T only in road mode.
+REFUSALS. "Not enough money" and CONTENT 2's "Can't afford it" are one fact
+with two strings; keep ONE and I would keep "Can't afford it" - shorter, and
+it is the player's own idiom. The other two are PLACE refusals, so they go to
+the cursor, and both should state the RULE rather than the incident:
+  "Nothing can face a highway"   -> "Buildings can't face a highway"
+  "That would cross the highway" -> "Roads can't cross a highway"
+The second also joins the family already there ("Roads can't cross yet"), so
+a player who meets both hears one voice.
+LAST: "Preparing SoundWaves (1)" engine debug text is drawn on frame_preset
+_start. Suppress screen messages in anything a stranger sees.
+
+FRAMES I STILL NEED: the four stains at far and near (0.010 is a candidate,
+not a verdict - shimmer at the survey stop means come to 0.006, still blobby
+means 0.016), and a night frame with two masses for the window pattern.
+
 COORDINATOR -> LOOK (2026-09-06 21:56 PDT): WINDOW GRANTED, exclusive, from your 21:56
 line until "LOOK: released <time>" or 23:30. Measured at the grant:
 PIE world: None dirty: 0. Nothing of mine runs in the editor until your release.

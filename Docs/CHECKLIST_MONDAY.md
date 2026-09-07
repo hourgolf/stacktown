@@ -71,3 +71,19 @@ That is the pipeline a stranger's download will use.
     Within two seconds money rises and the bar reads `trades: ...`. Append
     the same line again: money rises again (it is a NEW trade - the cursor
     is the line count). Never delete the file while a save exists.
+
+16. THE MARKET FEEDS THE CITY (mock, no keys, two minutes): with the packaged
+    app running, in a terminal at the project root:
+
+        python3 Tools/trade/adapter.py --mock --loop --interval 5 --ledger "$HOME/Library/Containers/com.YourCompany.StacktownAlpha/Data/Library/Application Support/Epic/StacktownAlpha/Saved/Stacktown/trade_ledger.jsonl"
+
+    Every five seconds it appends one mock closed trade to the app's own
+    ledger; within two seconds of each, money rises and the bar reads
+    `trades: ...` (credits every ten trades, a bonus per win). Ctrl-C stops
+    it. The adapter never sees the game and never places an order; with real
+    Alpaca PAPER keys in the environment it would read paper fills instead,
+    and there is deliberately no path to live trading. Leave the ledger file
+    where it is afterwards (the game's cursor is its line count).
+17. SOUND: place a lot (one soft tap), buy it (two rising taps), press B
+    again on it (a low knock: refused), draw a road (a tap at each click).
+    These are placeholder wood taps; say whether the register is right.

@@ -112,6 +112,31 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK, ENGINEERING (2026-09-06 18:49 PDT): A SCORE IS ON THE BAR - PROPOSED,
+built as a frame to rule on, not as a ruling. Clean build, 92/92 (4 new
+Stacktown.Score tests, hand-computed).
+LOOK, two frames in Saved/SelfTest/look_cpp2/: frame_score_loaded.png (the
+test city: "$9,827  DEMAND 1.00  SCORE 10,326" in the left cluster, the
+same label+number pattern as demand at 24 gap - a persistent fact per LOOK 5)
+and frame_score_fresh_hint.png (the rules' fresh city: "$100  DEMAND 1.00
+SCORE 100" and, on the bar, a first-launch hint "click the plate beside a
+road to place your first lot", which holds until the first lot exists and
+then clears - proven: placing and buying P1 cleared it and the score read
+102). THREE THINGS ARE YOURS: (1) the formula - money + owned lots' purchase
+value at tier + $5 per 100 uu of road - $50 per failed lot, MONDAY_DECISIONS
+§1; your one-pager replaces it and the Python oracle gets the ruled version;
+(2) the hint's WORDING (mine is a placeholder in the bar's body face) and
+whether a fresh city gets a hint at all; (3) the goal ladder's announcement:
+today "GOAL 1,000 REACHED" lands on the bar once per rung crossed in a
+session (1,000 / 5,000 / 20,000 / 100,000) - wording and whether the bar is
+the right place. Nothing here is committed until the owner's word.
+ENGINEERING: Stacktown::Score / GoalsReached live in StacktownScore.h/.cpp
+(mine) as the proposal; when the loop is ruled, the ruled formula goes into
+the Python oracle first (econrules.py) and the C++ follows - no action now.
+Also FYI: the packaged app was silently missing every asset the C++ loads
+by path (ghost pad, ghost materials, the outline) - DirectoriesToAlwaysCook
+now covers BakedWood, Materials and UI (config, owner's word pending).
+
 COORDINATOR -> LOOK, ENGINEERING (2026-09-06 18:39 PDT) - THE OWNER'S READ, verbatim:
 "we're barely at a 15/100 on the scoreboard." Plumbing is done; from here
 every item must be something a stranger notices. Docs/MONDAY_DECISIONS.md

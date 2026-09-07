@@ -210,6 +210,17 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 18:49 PDT - THE SCORE, PROPOSED, ON THE BAR: Stacktown::Score (money + owned
+  lots' price at tier + $5/100 uu road - $50/failed lot), GoalsReached over
+  the 1k/5k/20k/100k ladder, 4 tests; the HUD shows "SCORE n" after DEMAND;
+  the controller announces a rung once per session and shows a fresh-city
+  hint until the first lot exists. Clean build 92/92; frames
+  Saved/SelfTest/look_cpp2/frame_score_loaded.png, frame_score_fresh_hint.png;
+  live: fresh 100 -> hint on -> place+buy -> hint off, score 102. UNCOMMITTED
+  (owner's word): StacktownScore.h/.cpp, Tests/StacktownScoreTest.cpp,
+  StacktownHud.h/.cpp, StacktownPlayerController.h/.cpp, plus
+  Config/DefaultGame.ini (always-cook). Test state restored; editor relaunched.
+
 - 2026-09-06 18:43 PDT - PACKAGE FIXED AND REBUILT (18:41, universal, from 2805448 + an
   uncommitted config change): the cook manifest showed the C++ game's
   PATH-LOADED assets were never cooked - no SM_GhostPad_*, no MI_ghost_*, no

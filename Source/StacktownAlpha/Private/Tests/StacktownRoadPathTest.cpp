@@ -254,4 +254,92 @@ STACKTOWN_PATH_TEST(FStacktownRoadPathIsOneDecision, "Stacktown.Roads.PathIsOneD
 	return true;
 }
 
+// --- 63: a path may not cross itself -----------------------------------------
+STACKTOWN_PATH_TEST(FStacktownRoadPathNoSelfCrossing, "Stacktown.Roads.PathDoesNotCrossItself")
+{
+	// The loop-back case the oracle's own docstring named as open until
+	// 2026-09-07: a path that looped back over itself drew, and its pavement
+	// lay across its pavement.
+	const FPlacementBoard Board = OracleBoard();
+	FEconRules Rules = OracleRules();
+
+	// (a) THE PRIMITIVE FIRST, on hand-built segments, because everything else
+	// rests on it and the interesting cases are ones a curve never happens to
+	// produce. MEETING END TO END IS NOT A CROSSING - that is what every joined
+	// pair of chords does, and a rule that called it one would refuse every
+	// curve ever drawn.
+	for (int32 i = 0; i < T63_PairsNum; ++i)
+	{
+		const FSegPair& P = T63_Pairs[i];
+		TestEqual(*FString::Printf(TEXT("%s"), P.Label),
+			BoolStr(SegmentsCross(FVector2D(P.A0X, P.A0Y), FVector2D(P.A1X, P.A1Y),
+				FVector2D(P.B0X, P.B0Y), FVector2D(P.B1X, P.B1Y))),
+			BoolStr(P.bCross));
+	}
+
+	// (b) THE CASE, and it is refused BY THIS RULE rather than by the board:
+	// the loop sits clear of both built-ins and inside the plate, and the same
+	// gesture with the loop-back node dropped draws.
+	{
+		int32 Ci = -1, Cj = -1;
+		const TArray<FVector2D> LoopPts = SamplePath(Board.Rules,
+			NodesOf(T63_LoopNodes, T63_LoopNodesNum), Board.Rules.WidthQuantum);
+		TestTrue(TEXT("the polyline crosses itself"), PathSelfCrossing(LoopPts, Ci, Cj));
+		TestEqual(TEXT("the first chord of the pair"), Ci, T63_LoopI);
+		TestEqual(TEXT("and the second"), Cj, T63_LoopJ);
+	}
+	FCityState S = SeedState(Rules);
+	S.Money = T63_LoopMoneyBefore;
+	const FRoadPathResult L = DrawRoadPath(Board, S,
+		NodesOf(T63_LoopNodes, T63_LoopNodesNum), Avenue, false);
+	TestEqual(TEXT("the loop-back refuses"), BoolStr(L.bOk), BoolStr(T63_LoopOk));
+	TestEqual(TEXT("naming the two chords"), L.Reason, FString(T63_LoopReason));
+	// nothing spent or stored - a refused path is one decision
+	TestEqual(TEXT("nothing spent"), S.Money, T63_LoopMoney, 1e-9);
+	TestEqual(TEXT("no road added"), S.Roads.Num(), T63_LoopRoads);
+
+	FCityState Open = SeedState(Rules);
+	Open.Money = T63_LoopMoneyBefore;
+	const FRoadPathResult O = DrawRoadPath(Board, Open,
+		NodesOf(T63_OpenNodes, T63_OpenNodesNum), Avenue, false);
+	TestEqual(TEXT("the same gesture without the loop-back draws"),
+		BoolStr(O.bOk), BoolStr(T63_OpenOk));
+	TestEqual(TEXT("and is one road of the oracle's length"),
+		O.Segments.Num(), T63_OpenChords);
+
+	// (c) EVERY CURVE ALREADY TESTED STILL DRAWS - the rule is exact, no
+	// threshold and no fudge factor, so this is reduction rather than hope.
+	{
+		int32 Ci = -1, Cj = -1;
+		TestFalse(TEXT("the probe curve does not cross itself"),
+			PathSelfCrossing(SamplePath(Board.Rules, NodesOf(Curve, CurveNum),
+				Board.Rules.WidthQuantum), Ci, Cj));
+		TestFalse(TEXT("nor does the open gesture"),
+			PathSelfCrossing(SamplePath(Board.Rules,
+				NodesOf(T63_OpenNodes, T63_OpenNodesNum), Board.Rules.WidthQuantum), Ci, Cj));
+	}
+
+	// (d) AND A HAIRPIN AS TIGHT AS THE SAMPLER CAN MAKE ONE STILL DRAWS, which
+	// is the whole reason the test is on CENTRELINES: a corridor rule cannot be
+	// stated for this at all, because chords two apart on a perfectly STRAIGHT
+	// road are T63_StraightChordGap apart and the corridor is T63_CorridorWidth
+	// wide - so every straight road would cross itself by that measure.
+	FCityState Hair = SeedState(Rules);
+	Hair.Money = T63_LoopMoneyBefore;
+	const FRoadPathResult H = DrawRoadPath(Board, Hair,
+		NodesOf(T63_HairpinNodes, T63_HairpinNodesNum), Avenue, false);
+	TestEqual(TEXT("the hairpin draws"), BoolStr(H.bOk), BoolStr(T63_HairpinOk));
+	TestEqual(TEXT("as one road"), H.Segments.Num(), T63_HairpinChords);
+	// WHAT THAT LEAVES OPEN, on the record rather than in a remark: this
+	// hairpin's own arms come within T63_HairpinGap of each other against a
+	// T63_CorridorWidth corridor, so its pavement lies on its pavement and this
+	// rule says nothing about it. Telling that apart from an ordinary bend
+	// needs a chord-distance threshold, which is a number nobody has decided.
+	TestTrue(TEXT("the hole this rule leaves is smaller than a corridor"),
+		T63_HairpinGap < T63_CorridorWidth);
+	TestTrue(TEXT("and a corridor rule would refuse a straight road"),
+		T63_StraightChordGap < T63_CorridorWidth);
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

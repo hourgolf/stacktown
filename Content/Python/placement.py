@@ -809,6 +809,75 @@ def quads_overlap(a, b):
     return True
 
 
+def _cross_sign(a, b, c):
+    """Sign of (b - a) x (c - a): +1 if c is left of ab, -1 right, 0 on the
+    line. The tolerance is RELATIVE to the two vectors' own sizes, because
+    these are board coordinates in the thousands and an absolute epsilon
+    would mean one thing at the origin and another at the plate's corner."""
+    abx, aby = b[0] - a[0], b[1] - a[1]
+    acx, acy = c[0] - a[0], c[1] - a[1]
+    v = abx * acy - aby * acx
+    tol = 1e-9 * (abs(abx) + abs(aby)) * (abs(acx) + abs(acy))
+    if v > tol:
+        return 1
+    if v < -tol:
+        return -1
+    return 0
+
+
+def _same_point(p, q):
+    return abs(p[0] - q[0]) < 1e-9 and abs(p[1] - q[1]) < 1e-9
+
+
+def _in_extent(a, b, p):
+    """p is known to be ON the infinite line ab - is it inside the segment?"""
+    return (min(a[0], b[0]) - 1e-9 <= p[0] <= max(a[0], b[0]) + 1e-9 and
+            min(a[1], b[1]) - 1e-9 <= p[1] <= max(a[1], b[1]) + 1e-9)
+
+
+def segments_cross(a0, a1, b0, b1):
+    """True if two CENTRELINES cross - they meet at a point interior to at
+    least one of them, or they lie along each other for some length.
+
+    MEETING END TO END IS NOT A CROSSING. That is what every joined pair of
+    chords on a path does, and what two roads drawn nose to tail do; a rule
+    that called it a crossing would refuse every curve ever drawn.
+
+    CENTRELINES, NOT CORRIDORS, and that is not a preference - a corridor
+    rule cannot be stated at all. Chords two apart on a perfectly STRAIGHT
+    road are 410 uu apart (they are 410 long), and the corridor is 2260 wide,
+    so every straight road overlaps its own pavement by that measure. The
+    centreline is the only instrument that tells a loop-back from a bend."""
+    d1 = _cross_sign(b0, b1, a0)
+    d2 = _cross_sign(b0, b1, a1)
+    d3 = _cross_sign(a0, a1, b0)
+    d4 = _cross_sign(a0, a1, b1)
+    if d1 * d2 < 0 and d3 * d4 < 0:
+        return True
+    # An endpoint of one lying ON the other - a T, or a collinear overlap.
+    # Excluded only when the point is that other segment's own endpoint too,
+    # which is the nose-to-tail case above.
+    for p, x, y in ((a0, b0, b1), (a1, b0, b1), (b0, a0, a1), (b1, a0, a1)):
+        if (_cross_sign(x, y, p) == 0 and _in_extent(x, y, p)
+                and not _same_point(p, x) and not _same_point(p, y)):
+            return True
+    return False
+
+
+def path_self_crossing(pts):
+    """(i, j) for the first pair of NON-ADJACENT chords of a sampled polyline
+    whose centrelines cross, or None. Lowest j first within the lowest i, so
+    the reason a player is shown is the same every run.
+
+    NON-ADJACENT because consecutive chords share an endpoint by
+    construction; that is a touch, and segments_cross already says so."""
+    for i in range(len(pts) - 1):
+        for j in range(i + 2, len(pts) - 1):
+            if segments_cross(pts[i], pts[i + 1], pts[j], pts[j + 1]):
+                return i, j
+    return None
+
+
 def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
     """(ok, reason, lot) - the click -> lot decision, MULTI-ROAD as of
     2026-09-03 (RESOLVE_ROAD_NOTES.md; resolve_road above, wired in
@@ -910,20 +979,35 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
                     'overlap: [%.1f, %.1f] crosses a pinned lot at '
                     '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
     candidate = {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
-    # A PAD CAN HANG OFF THE PLATE, and this is where the check would go.
-    # NOT ADDED TONIGHT, deliberately, and raised on Docs/BOARD.md instead:
-    # the span bound above keeps a lot inside its ROAD, and for the two
-    # built-ins the road spans the plate so those were the same thing. They
-    # are not the same thing for a road drawn near an edge - the first curve
-    # drawn along the southern margin put a pad at y = -5740 against a plate
-    # that stops at -4230, and self-test 52's own 45 degree lot reaches
-    # y = 5150 against a plate that stops at 4230.
+    # THE PAD MUST BE ON THE PLATE (2026-09-07, the second gap, decided as a
+    # working default). The span bound above keeps a lot inside its ROAD, and
+    # for the two built-ins the road spans the plate so those were the same
+    # thing. They are not the same thing for a road drawn near an edge: the
+    # first curve drawn along the southern margin put a pad at y = -5740
+    # against a plate that stops at -4230, and self-test 52's own 45 degree lot
+    # reached y = 5150.
     #
-    # It is a real, PRE-EXISTING gap (a straight road drawn near an edge does
-    # it too), the fix is four comparisons against quad_rect(lot_quad(...)),
-    # and it moves where lots may go on boards that already exist - the same
-    # reason the frontage-corridor gap above was raised rather than closed.
-    # The owner's call, not curved roads'.
+    # THE BOX, not the quad. A pad off the edge is off the edge whichever
+    # corner leaves first, the plate is axis-aligned, and the bounding box of a
+    # rotated pad is exactly the extent that has to fit - so this is the one
+    # place where the box is the right instrument rather than the lazy one.
+    _pad = quad_rect(lot_quad(candidate, roads, r))
+    # THE REASON NAMES THE EDGE AND THE DISTANCE, because that is the whole
+    # of what the player has to do about it: back off that far, that way.
+    # Largest overshoot wins when a corner leaves two edges at once; on a TIE
+    # the first in this order wins, so the message is the same every run and
+    # the same in both languages (a 45 degree pad ties north with east).
+    _over, _edge = PLATE_Y_MIN - _pad[2], 'south'
+    for _d, _name in ((_pad[3] - PLATE_Y_MAX, 'north'),
+                      (PLATE_X_MIN - _pad[0], 'west'),
+                      (_pad[1] - PLATE_X_MAX, 'east')):
+        if _d > _over:
+            _over, _edge = _d, _name
+    if _over > 0.0:
+        return False, (
+            'off-board: the lot would hang %.0f uu past the plate\'s %s edge'
+            % (_over, _edge)), None
+
     # QUADS, not bounding boxes: a diagonal lot's box is much bigger than the
     # lot and would refuse clicks that are fine. quads_overlap reduces exactly
     # to rects_overlap while everything is axis-aligned (self-test 50).
@@ -1322,11 +1406,20 @@ def resolve_road_path(state, nodes, width_class='avenue', pins_active=True,
     _in_crossing above, and the next road's own crossing check - treats them
     as the one road they are.
 
-    WHAT THAT LEAVES OPEN, named rather than hidden: a path that loops back
-    over itself is accepted, because this version cannot tell that apart from
-    a tight bend. Section 5 says "a single open-ended road" and defers
-    intersections; a self-crossing curve is the same question and waits with
-    them."""
+    IT MAY NOT CROSS ITSELF, closed 2026-09-07 (this docstring named it as
+    open, and it was: a path that looped back over itself drew, and its own
+    pavement lay across its own pavement). The test is CENTRELINE crossing
+    between non-adjacent chords - see segments_cross above, which also records
+    why a corridor rule cannot be stated for this at all. It is exact: no
+    threshold, no fudge factor, and a hairpin as tight as the sampler can
+    produce still draws.
+
+    WHAT THAT LEAVES OPEN, named rather than hidden: two arms of a hairpin
+    whose centrelines miss but whose CORRIDORS overlap still lay pavement on
+    pavement - the probe hairpin's arms come within 337 uu of each other
+    against a 2260 uu corridor. Telling that apart from an ordinary bend needs
+    a chord-distance threshold, which is a number nobody has decided; section
+    5's deferred intersections are the same question."""
     r = _rules(rules)
     if width_class not in ROAD_TYPES:
         return False, (
@@ -1355,6 +1448,18 @@ def resolve_road_path(state, nodes, width_class='avenue', pins_active=True,
             return False, (
                 'off-board: the curve leaves the plate at [%.0f, %.0f]'
                 % (px, py)), None
+
+    # A PATH MAY NOT CROSS ITSELF (2026-09-07, the loop-back case this
+    # function's own docstring named as open, now decided as a working
+    # default). Checked here, before anything is asked of the board, because
+    # it is a property of the gesture alone - the player gets the reason about
+    # the shape they drew rather than about whatever it happened to land on.
+    _hit = path_self_crossing(pts)
+    if _hit is not None:
+        return False, (
+            'crosses: the curve would cross itself, its %d%s chord over its '
+            '%d%s' % (_hit[1] + 1, _ordinal(_hit[1] + 1),
+                      _hit[0] + 1, _ordinal(_hit[0] + 1))), None
 
     path_id = _next_path_id(state)
     segments = []
@@ -2440,36 +2545,50 @@ if __name__ == '__main__':
     #     quad whose corners are the road frame's - which is the whole point:
     #     before this, resolve_click recovered a world position as
     #     start[axis] + along and could not have produced these at all.
-    #     Both sides of the same span are placeable (they share no ground);
-    #     the SAME span twice on the SAME side is refused.
+    #     RELOCATED 2026-09-07, when a pad stopped being allowed off the
+    #     plate: at (6200, 2500) this road's north lot reached y = 5150
+    #     against a plate that stops at 4230. It sits in the southern margin
+    #     now, where there is room.
+    #
+    #     AND ONLY ON ONE SIDE, which is a fact about the BOARD rather than
+    #     about the test, and SWEPT rather than argued: six lengths, the whole
+    #     plate at 200 uu steps, both diagonal orientations and nineteen
+    #     positions along each road - not one 45 degree road on this board
+    #     carries lots on both sides. The arithmetic says why: a 45 degree
+    #     road needs about 2440 uu each way for its pads, the plate is 8460
+    #     tall, and the arterial's corridor takes 2260 out of the middle of
+    #     it. The other side is asserted to refuse, with the reason that says
+    #     why. (Two lots ALONG one diagonal DO still fit - see 54.)
     s52 = citytick.seed_state()
     s52['money'] = 5000.0
-    s52, rid52, ok52, why52 = draw_road(s52, 6200.0, 2500.0, 7200.0, 3500.0)
+    s52, rid52, ok52, why52 = draw_road(s52, 6400.0, -4000.0, 7400.0, -3000.0)
     assert ok52 and rid52 == 'R1', (rid52, ok52, why52)
-    assert s52['roads']['R1'] == {'id': 'R1', 'start': (6200.0, 2500.0),
-                                   'end': (7200.0, 3500.0),
+    assert s52['roads']['R1'] == {'id': 'R1', 'start': (6400.0, -4000.0),
+                                   'end': (7400.0, -3000.0),
                                    'width_class': 'avenue'}, s52['roads']['R1']
     #     AND IT IS PRICED BY ITS TRUE LENGTH. sqrt(1000^2 + 1000^2) = 1414.21,
     #     so an avenue costs 141.42 - not the 200 a manhattan length would
     #     charge. The two only differ on a diagonal, which is why no case
     #     before this one could tell them apart.
     assert abs(s52['money'] - (5000.0 - 141.4213562373095)) < 1e-9, s52['money']
-    s52, pid52, ok52b, why52b = place(s52, 5639.4, 4060.6)
+    s52, pid52, ok52b, why52b = place(s52, 5839.3, -2439.3)
     assert ok52b and pid52 == 'P1', (pid52, ok52b, why52b)
     assert s52['parcels']['P1']['placement'] == {
-        'x0': 6450.0, 'x1': 7270.0, 'side': 'north', 'road_id': 'R1'
+        'x0': 1990.0, 'x1': 2810.0, 'side': 'north', 'road_id': 'R1'
     }, s52['parcels']['P1']['placement']
     _q52 = lot_quad(s52['parcels']['P1']['placement'], _all_roads(s52))
-    _want52 = ((5611.81, 3509.87), (6191.64, 4089.70),
-               (5130.98, 5150.36), (4551.15, 4570.53))
+    _want52 = ((5808.11, -2993.83), (6387.94, -2414.00),
+               (5327.28, -1353.34), (4747.45, -1933.17))
     for _got, _exp in zip(_q52, _want52):
         assert abs(_got[0] - _exp[0]) < 0.01 and abs(_got[1] - _exp[1]) < 0.01, \
             (_got, _exp)
-    s52b, pid52b, ok52c, why52c = place(s52, 7760.6, 1939.4)
-    assert ok52c and s52b['parcels'][pid52b]['placement'] == {
-        'x0': 6450.0, 'x1': 7270.0, 'side': 'south', 'road_id': 'R1'
-    }, (ok52c, why52c)
-    _, _, ok52d, why52d = place(s52, 5639.4, 4060.6)
+    #     The other side is off the plate - the fact above, asserted rather
+    #     than assumed, with the reason a player would be shown.
+    _, _, ok52c, why52c = place(s52, 7960.7, -4560.7)
+    assert not ok52c, 'the far side of a margin diagonal cannot be on the plate'
+    assert 'off-board' in why52c and "past the plate's south edge" in why52c, \
+        why52c
+    _, _, ok52d, why52d = place(s52, 5839.3, -2439.3)
     assert not ok52d and 'overlap' in why52d, (ok52d, why52d)
 
     # 53. THE SIDE NAMES COME OFF THE NORMAL, not off the dominant axis of
@@ -2514,41 +2633,50 @@ if __name__ == '__main__':
     #     -facing fact rather than a nicety. A 45 degree lot's pad is an
     #     820 x 1500 rectangle turned 45 degrees; its bounding box is about
     #     1640 square, and the empty corners are most of it. Two lots along
-    #     the same street, spans well apart, have boxes that overlap and
-    #     pads that do not - so a bounding-box scan refuses the second
-    #     click on visibly empty ground.
+    #     the same street, spans adjacent, have boxes that overlap and pads
+    #     that do not - so a bounding-box scan refuses the second click on
+    #     visibly empty ground.
     #
-    #     Empty mode, because the pinned frontage is wall to wall from
-    #     |x| 1130 to 6050 and a diagonal long enough for two lots cannot
-    #     avoid it on this board. That is the same mode gate the click path
-    #     already has, not a special case invented for this test.
+    #     RELOCATED 2026-09-07 with the plate rule, and the second click is
+    #     DERIVED (one lot-width further along the same frame) rather than
+    #     hand-placed, so the pair is adjacent by construction. The pinned
+    #     frontage is wall to wall from |x| 1130 to 6050, so empty mode - the
+    #     same mode gate the click path already has.
+    #
+    #     WHAT THE PLATE RULE COSTS HERE, measured after a first answer that
+    #     was WRONG and caught by the mutation table: two lots along one
+    #     diagonal DO still fit, in plenty of places - a 1500 uu 45 degree
+    #     road in the southern margin carries them. What does NOT fit
+    #     anywhere is a 45 degree road with lots on BOTH sides: swept over
+    #     six lengths, the whole plate at 200 uu steps, both diagonal
+    #     orientations and nineteen positions along each road, zero pairs.
+    #     Test 52 asserts that one on a road of its own.
+    _road54 = {'id': 'R1', 'start': (-5000.0, -4200.0), 'end': (-3500.0, -2700.0),
+               'width_class': 'avenue'}
     s54 = citytick.seed_state()
     s54['money'] = 9000.0
-    s54, rid54, ok54, why54 = draw_road(s54, 5700.0, 2000.0, 7650.0, 3950.0,
+    s54, rid54, ok54, why54 = draw_road(s54, -5000.0, -4200.0, -3500.0, -2700.0,
                                          pins_active=False)
-    assert ok54, why54
+    assert ok54 and s54['roads'][rid54] == _road54, (ok54, why54)
     _f54 = road_frame(_road_dict(s54['roads'][rid54]))
-    _pids54 = []
-    for _t in (0.20, 0.80):
-        _al = _f54[6] * _t
-        _px = _f54[0] + _f54[2] * _al + _f54[4] * 1500.0
-        _py = _f54[1] + _f54[3] * _al + _f54[5] * 1500.0
-        s54, _pid, _ok, _why = place(s54, _px, _py, pins_active=False)
-        assert _ok, (_t, _why)
-        _pids54.append(_pid)
-    assert _pids54 == ['P1', 'P2'], _pids54
-    assert s54['parcels']['P1']['placement'] == {
-        'x0': 5590.0, 'x1': 6410.0, 'side': 'north', 'road_id': 'R1'
-    }, s54['parcels']['P1']['placement']
-    assert s54['parcels']['P2']['placement'] == {
-        'x0': 7240.0, 'x1': 8060.0, 'side': 'north', 'road_id': 'R1'
-    }, s54['parcels']['P2']['placement']
-    #     and the DISCRIMINATION itself, stated rather than implied: the pads
-    #     miss, the boxes do not.
-    _qa54 = lot_quad(s54['parcels']['P1']['placement'], _all_roads(s54))
-    _qb54 = lot_quad(s54['parcels']['P2']['placement'], _all_roads(s54))
-    assert not quads_overlap(_qa54, _qb54)
-    assert rects_overlap(quad_rect(_qa54), quad_rect(_qb54))
+    _lots54 = []
+    for _al54 in (_f54[6] * 0.20, _f54[6] * 0.20 + V0_WIDTH):
+        _px54 = _f54[0] + _f54[2] * _al54 + _f54[4] * 1500.0
+        _py54 = _f54[1] + _f54[3] * _al54 + _f54[5] * 1500.0
+        s54, _pid54, _ok54, _why54 = place(s54, _px54, _py54, pins_active=False)
+        assert _ok54, _why54
+        _lots54.append(s54['parcels'][_pid54]['placement'])
+    assert _lots54 == [{'x0': -6490.0, 'x1': -5670.0, 'side': 'north',
+                         'road_id': 'R1'},
+                        {'x0': -5670.0, 'x1': -4850.0, 'side': 'north',
+                         'road_id': 'R1'}], _lots54
+    #     ADJACENT: the second span starts exactly where the first ends.
+    assert _lots54[1]['x0'] == _lots54[0]['x1'], _lots54
+    _qa54 = lot_quad(_lots54[0], _all_roads(s54))
+    _qb54 = lot_quad(_lots54[1], _all_roads(s54))
+    assert not quads_overlap(_qa54, _qb54), 'the pads must miss'
+    assert rects_overlap(quad_rect(_qa54), quad_rect(_qb54)), (
+        'and their boxes must not - otherwise this proves nothing')
 
     # 55. THE OTHER THREE SCANS ALSO COMPARE PADS, not boxes. 54 proves it
     #     for the lot-vs-lot scan; there are three more call sites, and a
@@ -2590,24 +2718,33 @@ if __name__ == '__main__':
     assert rects_overlap(quad_rect(_qa55), quad_rect(_qb55))
 
     #     (c) A LOT vs a HIGHWAY's corridor - the no-frontage scan, which is a
-    #     refusal rather than a nicety. Test 54's diagonal street and its
-    #     first lot, plus a vertical HIGHWAY at x=2600 whose corridor
-    #     (1170..4030) clips the lot's box (which starts at 3943) and misses
-    #     the pad entirely. The click must still place, with the highway
-    #     standing there.
+    #     refusal rather than a nicety. A 45 degree street from (3000, 2000),
+    #     a south-side lot three quarters of the way along it, and a vertical
+    #     HIGHWAY at x=7400 whose corridor (5970..8830) clips the lot's box
+    #     (which reaches x 6609) and misses the pad entirely. The click must
+    #     still place, with the highway standing there.
+    #
+    #     RELOCATED 2026-09-07 with the plate rule. This case used to sit on a
+    #     diagonal out of (5700, 2000) with a NORTH-side lot, whose pad reached
+    #     y = 4542 against a plate that stops at 4230. It could not be nudged
+    #     back on: a 45 degree pad reaches 1859 uu across plus 580 along, and
+    #     the road itself has to clear the arterial's corridor by its own half,
+    #     so the near corner cannot start below y = 1929 and the far one lands
+    #     at 4471. North of the arterial there is no 45 degree lot at all - see
+    #     the board entry; this case moves to the side that has the room.
     _c55 = citytick.seed_state()
     _c55['money'] = 40000.0
-    _c55, _rc55, _ok55, _why55 = draw_road(_c55, 5700.0, 2000.0, 7650.0, 3950.0,
+    _c55, _rc55, _ok55, _why55 = draw_road(_c55, 3000.0, 2000.0, 4950.0, 3950.0,
                                             pins_active=False)
     assert _ok55, _why55
     _f55 = road_frame(_road_dict(_c55['roads'][_rc55]))
-    _al55 = _f55[6] * 0.20
-    _px55 = _f55[0] + _f55[2] * _al55 + _f55[4] * 1500.0
-    _py55 = _f55[1] + _f55[3] * _al55 + _f55[5] * 1500.0
+    _al55 = _f55[6] * 0.75
+    _px55 = _f55[0] + _f55[2] * _al55 - _f55[4] * 1500.0
+    _py55 = _f55[1] + _f55[3] * _al55 - _f55[5] * 1500.0
     _ok55, _why55, _lotc55 = resolve_click(_c55, _px55, _py55, pins_active=False)
-    assert _ok55 and _lotc55 == {'x0': 5590.0, 'x1': 6410.0, 'side': 'north',
+    assert _ok55 and _lotc55 == {'x0': 5190.0, 'x1': 6010.0, 'side': 'south',
                                   'road_id': 'R1'}, (_ok55, _why55, _lotc55)
-    _c55, _rh55, _ok55, _why55 = draw_road(_c55, 2600.0, 1800.0, 2600.0, 3000.0,
+    _c55, _rh55, _ok55, _why55 = draw_road(_c55, 7400.0, 2600.0, 7400.0, 3800.0,
                                             'highway', pins_active=False)
     assert _ok55, _why55
     _qh55 = road_quad(_road_dict(_c55['roads'][_rh55]))
@@ -2908,7 +3045,234 @@ if __name__ == '__main__':
                 _fronted61 += 1
     assert _fronted61 > 0, 'the corridor rule must not make a curve unbuildable'
 
-    print('placement self-check: 61/61 pass (pure-Python click->lot->state '
+    # 62. A PAD MAY NOT LEAVE THE PLATE (2026-09-07, the second gap, decided
+    #     as a working default). resolve_click already refused a span that
+    #     ran off the end of its ROAD; for the two built-ins the road spans
+    #     the plate, so that WAS this rule and nobody could tell them apart.
+    #     They come apart the moment a road is drawn near an edge or at an
+    #     angle: the first curve drawn along the southern margin put a pad at
+    #     y = -5740 against a plate that stops at -4230, and self-test 52's
+    #     own 45 degree lot reached y = 5150. Both were placeable.
+    #
+    #     (a) REDUCTION FIRST, and by sweep rather than by argument. Every
+    #     snapped span at every catalogue width, on both built-ins, on both
+    #     sides, has its pad inside the plate - so nothing already standing
+    #     on this board moves, and no click that used to work stops working.
+    #     A pad reaches ROAD_HALF + BLOCK_DEPTH = 2630 uu across, the plate
+    #     is 7650 x 4230 from the middle, and both built-ins run through it,
+    #     which is the whole of why this rule is free for them.
+    import woodmap                    # the width ladder itself, not a copy
+    _swept62 = 0
+    for _road62 in (ARTERIAL, CROSS_STREET):
+        _f62 = road_frame(_road_dict(_road62))
+        for _w62 in woodmap.WIDTHS:
+            _s62 = _f62[7]
+            while _s62 + _w62 <= _f62[7] + _f62[6] + 1e-9:
+                for _side62 in (_road_dict(_road62)['side_plus'],
+                                _road_dict(_road62)['side_minus']):
+                    _b62 = quad_rect(lot_quad(
+                        {'x0': _s62, 'x1': _s62 + _w62, 'side': _side62,
+                         'road_id': _road62['id']}, ROADS))
+                    assert (_b62[0] >= PLATE_X_MIN and _b62[1] <= PLATE_X_MAX and
+                            _b62[2] >= PLATE_Y_MIN and _b62[3] <= PLATE_Y_MAX), \
+                        ('the plate rule may not cost a built-in road one lot',
+                         _road62['id'], _side62, _w62, _s62, _b62)
+                    _swept62 += 1
+                _s62 += POSITION_QUANTUM
+    assert _swept62 > 20000, _swept62      # the sweep really did run
+
+    #     (b) THE WITNESS, and it is the PAD that leaves, not the click. This
+    #     45 degree road is entirely on the plate and the click is 779 uu
+    #     INSIDE its northern edge - a spot a player would read as obviously
+    #     fine - and the pad it would produce reaches y = 4542.
+    s62 = citytick.seed_state()
+    s62['money'] = 40000.0
+    s62, _r62, _ok62, _why62 = draw_road(s62, 5700.0, 2000.0, 7650.0, 3950.0,
+                                          pins_active=False)
+    assert _ok62, _why62
+    _f62b = road_frame(_road_dict(s62['roads'][_r62]))
+    _al62 = _f62b[6] * 0.20
+    _px62 = _f62b[0] + _f62b[2] * _al62 + _f62b[4] * 1500.0
+    _py62 = _f62b[1] + _f62b[3] * _al62 + _f62b[5] * 1500.0
+    assert PLATE_Y_MIN < _py62 < PLATE_Y_MAX and abs(_py62 - 3450.7) < 0.1, _py62
+    _ok62b, _why62b, _lot62 = resolve_click(s62, _px62, _py62, pins_active=False)
+    assert not _ok62b and _lot62 is None, (_ok62b, _lot62)
+    #     and the reason names the edge and the distance, which is the whole
+    #     of what the player has to do about it
+    assert _why62b == ("off-board: the lot would hang 312 uu past the "
+                       "plate's north edge"), _why62b
+    #     the click is also NOT refused for any older reason - it is on the
+    #     plate, within reach, on a road that offers frontage, on empty
+    #     ground, and its span is well inside the road
+    assert 'in the road' not in _why62b and 'overlap' not in _why62b, _why62b
+    assert 'exceeds' not in _why62b and 'no frontage' not in _why62b, _why62b
+
+    #     (c) THE BOX IS EXACTLY THE CORNER TEST HERE, which is why the box
+    #     is the right instrument in this one place and the lazy one
+    #     everywhere else: the plate is axis-aligned, so a rotated pad's box
+    #     is inside it exactly when all four of its corners are. Asserted on
+    #     the refused pad above and on the accepted one below, rather than
+    #     argued from the diagram.
+    def _corners_on_plate(_q):
+        return all(PLATE_X_MIN <= _cx <= PLATE_X_MAX and
+                   PLATE_Y_MIN <= _cy <= PLATE_Y_MAX for _cx, _cy in _q)
+
+    def _box_on_plate(_q):
+        _b = quad_rect(_q)
+        return (_b[0] >= PLATE_X_MIN and _b[1] <= PLATE_X_MAX and
+                _b[2] >= PLATE_Y_MIN and _b[3] <= PLATE_Y_MAX)
+
+    _bad62 = lot_quad({'x0': 5590.0, 'x1': 6410.0, 'side': 'north',
+                        'road_id': _r62}, _all_roads(s62))
+    assert _corners_on_plate(_bad62) is False and _box_on_plate(_bad62) is False
+
+    #     (d) AND IT IS THE PLATE, NOT THE SHAPE. The same 45 degree pad, the
+    #     same width, the same road angle, moved to where the board has room
+    #     - it places, and its own corners and box agree the other way.
+    s62d = citytick.seed_state()
+    s62d['money'] = 40000.0
+    s62d, _r62d, _ok62d, _why62d = draw_road(s62d, 3000.0, 2000.0, 4950.0,
+                                              3950.0, pins_active=False)
+    assert _ok62d, _why62d
+    _f62d = road_frame(_road_dict(s62d['roads'][_r62d]))
+    _al62d = _f62d[6] * 0.75
+    _px62d = _f62d[0] + _f62d[2] * _al62d - _f62d[4] * 1500.0
+    _py62d = _f62d[1] + _f62d[3] * _al62d - _f62d[5] * 1500.0
+    _ok62e, _why62e, _lot62d = resolve_click(s62d, _px62d, _py62d,
+                                              pins_active=False)
+    assert _ok62e, _why62e
+    _good62 = lot_quad(_lot62d, _all_roads(s62d))
+    assert _corners_on_plate(_good62) and _box_on_plate(_good62)
+
+    #     (e) ALL FOUR EDGES HOLD, not only the two the first cases happened
+    #     to reach. A vertical road 1250 uu inside each side margin: the click
+    #     on the outward side is ON THE PLATE and its pad is not, and the same
+    #     click mirrored inward places. Written because a mutation that
+    #     dropped the x edges entirely survived the first version of this
+    #     test - north and south were the only edges it ever reached.
+    for _x62, _sgn62, _edge62 in ((6400.0, 1.0, 'east'), (-6400.0, -1.0, 'west')):
+        s62e = citytick.seed_state()
+        s62e['money'] = 40000.0
+        s62e, _r62e, _ok62f, _why62f = draw_road(s62e, _x62, -4000.0, _x62,
+                                                  -1500.0, pins_active=False)
+        assert _ok62f, _why62f
+        _out62 = _x62 + 1200.0 * _sgn62
+        assert PLATE_X_MIN <= _out62 <= PLATE_X_MAX, _out62
+        _ok62g, _why62g, _l62g = resolve_click(s62e, _out62, -2800.0,
+                                                pins_active=False)
+        assert not _ok62g, (_x62, _l62g)
+        assert _why62g == ("off-board: the lot would hang 1380 uu past the "
+                           "plate's %s edge" % _edge62), _why62g
+        _ok62h, _why62h, _l62h = resolve_click(s62e, _x62 - 1200.0 * _sgn62,
+                                                -2800.0, pins_active=False)
+        assert _ok62h and _l62h is not None, (_ok62h, _why62h)
+
+    #     (f) AND THE EDGE ITSELF IS INSIDE. A pad FLUSH with the plate is on
+    #     the plate: the arterial's outermost lot has its box on x = -7650
+    #     exactly, and the cross street's on y = -4230. The rule is stated
+    #     with a strict >, and this is what that costs if it is ever loosened
+    #     - both of these are lots the board has always allowed.
+    s62f = citytick.seed_state()
+    _ok62i, _why62i, _l62i = resolve_click(s62f, PLATE_X_MIN + WIDTH_QUANTUM,
+                                            1500.0)
+    assert _ok62i, _why62i
+    assert quad_rect(lot_quad(_l62i, ROADS))[0] == PLATE_X_MIN, _l62i
+    _ok62j, _why62j, _l62j = resolve_click(s62f, 1500.0,
+                                            PLATE_Y_MIN + WIDTH_QUANTUM)
+    assert _ok62j, _why62j
+    assert quad_rect(lot_quad(_l62j, ROADS))[2] == PLATE_Y_MIN, _l62j
+
+    # 63. A PATH MAY NOT CROSS ITSELF (2026-09-07, the loop-back case
+    #     resolve_road_path's own docstring named as open, now decided as a
+    #     working default). It drew, and its pavement lay across its pavement.
+    #
+    #     (a) THE PRIMITIVE FIRST, on hand-built segments, because everything
+    #     below rests on it and the interesting cases are the ones a curve
+    #     never happens to produce. MEETING END TO END IS NOT A CROSSING -
+    #     that is what every joined pair of chords does, and a rule that
+    #     called it one would refuse every curve ever drawn.
+    _X = ((0.0, 0.0), (100.0, 100.0))                # a proper X
+    assert segments_cross(_X[0], _X[1], (0.0, 100.0), (100.0, 0.0))
+    assert not segments_cross(_X[0], _X[1], (200.0, 0.0), (300.0, 100.0))
+    assert not segments_cross(_X[0], _X[1], (100.0, 100.0), (200.0, 0.0))
+    assert not segments_cross(_X[0], _X[1], (0.0, 0.0), (100.0, -100.0))
+    #     a T - an endpoint standing in the middle of the other run - IS one
+    assert segments_cross(_X[0], _X[1], (50.0, 50.0), (150.0, 0.0))
+    #     and so is doubling back exactly along a run already laid
+    assert segments_cross(_X[0], _X[1], (50.0, 50.0), (150.0, 150.0))
+    #     but touching its far end and going on is not
+    assert not segments_cross(_X[0], _X[1], (100.0, 100.0), (200.0, 200.0))
+    #     parallel, however close, is not
+    assert not segments_cross(_X[0], _X[1], (1.0, 0.0), (101.0, 100.0))
+
+    #     (b) THE CASE, and it is refused BY THIS RULE rather than by the
+    #     board: the loop sits clear of both built-ins and inside the plate,
+    #     and the same gesture with the loop-back node dropped draws.
+    _LOOP63 = [(3000.0, -3900.0), (6200.0, -3900.0), (5800.0, -2500.0),
+                (3400.0, -2500.0), (4200.0, -4200.0)]
+    _pts63 = sample_path(_LOOP63)
+    assert path_self_crossing(_pts63) == (2, 22), path_self_crossing(_pts63)
+    s63 = citytick.seed_state()
+    s63['money'] = 90000.0
+    s63, _p63, _ids63, _ok63, _why63 = draw_road_path(s63, _LOOP63,
+                                                       pins_active=False)
+    assert not _ok63 and _ids63 is None, (_ok63, _ids63)
+    assert _why63 == ('crosses: the curve would cross itself, its 23rd chord '
+                      'over its 3rd'), _why63
+    #     and nothing was spent or stored - a refused path is one decision
+    assert s63['money'] == 90000.0 and not s63['roads'], s63['money']
+    #     THE SAME GESTURE WITHOUT THE LOOP-BACK DRAWS, which is what makes
+    #     the refusal about the crossing rather than about the ground.
+    s63b = citytick.seed_state()
+    s63b['money'] = 90000.0
+    s63b, _p63b, _ids63b, _ok63b, _why63b = draw_road_path(
+        s63b, _LOOP63[:4], pins_active=False)
+    assert _ok63b and len(_ids63b) == 18, (_ok63b, _why63b)
+
+    #     (c) EVERY CURVE ALREADY TESTED STILL DRAWS. The rule is exact - no
+    #     threshold, no fudge factor - so this is reduction, not hope.
+    for _nodes63 in (_CURVE, [(2000.0, -4000.0), (5000.0, -4000.0)],
+                     _LOOP63[:4]):
+        assert path_self_crossing(sample_path(_nodes63)) is None, _nodes63
+
+    #     (d) AND A HAIRPIN AS TIGHT AS THE SAMPLER CAN MAKE ONE STILL DRAWS,
+    #     which is the whole reason the test is on CENTRELINES. A corridor
+    #     rule cannot be stated for this at all: chords two apart on a
+    #     perfectly STRAIGHT road are 410 uu apart, because they are 410 long,
+    #     and the corridor is 2260 wide - so every straight road would cross
+    #     itself by that measure. Asserted, not argued.
+    _STRAIGHT63 = sample_path([(2000.0, -4000.0), (5000.0, -4000.0)])
+    assert abs(((_STRAIGHT63[2][0] - _STRAIGHT63[0][0]) ** 2
+                + (_STRAIGHT63[2][1] - _STRAIGHT63[0][1]) ** 2) ** 0.5
+               - 2.0 * WIDTH_QUANTUM) < 1e-6
+    _HAIR63 = [(4000.0, -4200.0), (5200.0, -2400.0), (4300.0, -2400.0)]
+    s63c = citytick.seed_state()
+    s63c['money'] = 90000.0
+    s63c, _p63c, _ids63c, _ok63c, _why63c = draw_road_path(s63c, _HAIR63,
+                                                            pins_active=False)
+    assert _ok63c, _why63c
+    #     WHAT THAT LEAVES OPEN, recorded so it cannot drift quietly: this
+    #     hairpin's own arms come within 288 uu of each other against a 2260
+    #     uu corridor, so its pavement lies on its pavement and this rule says
+    #     nothing about it. Telling that apart from an ordinary bend needs a
+    #     chord-distance threshold, which is a number nobody has decided.
+    _hp63 = sample_path(_HAIR63)
+    _gap63 = None
+    for _i in range(len(_hp63) - 1):
+        for _j in range(_i + 2, len(_hp63) - 1):
+            for _t in range(51):
+                _px = _hp63[_i][0] + (_hp63[_i + 1][0] - _hp63[_i][0]) * _t / 50.0
+                _py = _hp63[_i][1] + (_hp63[_i + 1][1] - _hp63[_i][1]) * _t / 50.0
+                for _u in range(51):
+                    _qx = _hp63[_j][0] + (_hp63[_j + 1][0] - _hp63[_j][0]) * _u / 50.0
+                    _qy = _hp63[_j][1] + (_hp63[_j + 1][1] - _hp63[_j][1]) * _u / 50.0
+                    _d = ((_px - _qx) ** 2 + (_py - _qy) ** 2) ** 0.5
+                    if _gap63 is None or _d < _gap63:
+                        _gap63 = _d
+    assert 288.0 < _gap63 < 290.0, _gap63
+    assert _gap63 < 2.0 * ROAD_HALF, 'the hole this rule leaves, on the record'
+
+    print('placement self-check: 63/63 pass (pure-Python click->lot->state '
           'contract; resolve_road multi-road frontage; cross-street and '
           'corner-overlap coverage; save/load round-trip; free placement '
           'along the road (1-27, prior sessions) PLUS drawn roads, '
@@ -2972,7 +3336,28 @@ if __name__ == '__main__':
           'road drawn 3000 uu from the arterial left 740 uu between their '
           'pavements and its frontage band ran into the arterial\'s road '
           'surface - with the lot\'s OWN PATH exempt, without which no lot '
-          'could front a curve at all; live cursor-trace '
+          'could front a curve at all PLUS the self-crossing path refused, '
+          '2026-09-07 (63): the loop-back case resolve_road_path\'s own '
+          'docstring named as open - CENTRELINE crossing between '
+          'non-adjacent chords, which is exact rather than a threshold, and '
+          'a corridor rule cannot be stated for this at all because chords '
+          'two apart on a perfectly straight road are 410 uu apart against a '
+          '2260 uu corridor; a hairpin whose arms come within 288 uu still '
+          'draws, and that hole is asserted rather than left to drift '
+          'PLUS the plate gap closed, '
+          '2026-09-07 (62): a lot\'s PAD may not leave the plate, which '
+          'the road-span bound only looked like it was doing because both '
+          'built-ins run the full width of the board; free for those two by '
+          'sweep rather than by argument (every snapped span, every '
+          'catalogue width, both sides), and it costs the diagonals - a 45 '
+          'degree road cannot carry lots on both sides anywhere on this '
+          'board - swept over six lengths, the whole plate at 200 uu steps '
+          'and both orientations, zero pairs - while two lots ALONG one '
+          'diagonal still fit in plenty of places, which is the correction '
+          'the mutation table forced on a first answer that claimed '
+          'otherwise; and the reason names the edge and the distance; '
+
+          'live cursor-trace '
           'coordinates, actor spawn/resolve, and the feel itself are NOT '
           'provable here - see module docstring, and PLACEMENT_GRID.md '
           'section 8 - the owner\'s own click on empty board is the real '

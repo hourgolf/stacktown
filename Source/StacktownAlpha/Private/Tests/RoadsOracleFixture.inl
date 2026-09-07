@@ -216,18 +216,21 @@ inline const FProjCase T51_Projection[] = {
 inline constexpr int32 T51_ProjectionNum = 2;
 
 // 52: a lot on a 45 degree road, end to end, priced by its true length.
-inline const FSegDef T52_Segment = { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue"), nullptr };
+inline const FSegDef T52_Segment = { TEXT("R1"), 6400.0, -4000.0, 7400.0, -3000.0, TEXT("avenue"), nullptr };
 inline constexpr double T52_MoneyBefore = 5000.0;
 inline constexpr double T52_MoneyAfter = 4858.57864376269;
-inline constexpr double T52_ClickX = 5639.4;
-inline constexpr double T52_ClickY = 4060.6;
-inline const FLotDef2 T52_Lot = { 6450.0, 7270.0, TEXT("north"), TEXT("R1") };
-inline const FQuadDef T52_Quad = { { 5611.808075912432, 6191.635636485402, 5130.9754647055815, 4551.147904132611 }, { 3509.86940139403, 4089.696961966999, 5150.35713374682, 4570.5295731738515 } };
-inline constexpr double T52_OtherX = 7760.6;
-inline constexpr double T52_OtherY = 1939.4;
-inline const FLotDef2 T52_OtherLot = { 6450.0, 7270.0, TEXT("south"), TEXT("R1") };
+inline constexpr double T52_ClickX = 5839.3;
+inline constexpr double T52_ClickY = -2439.3;
+inline const FLotDef2 T52_Lot = { 1990.0, 2810.0, TEXT("north"), TEXT("R1") };
+inline const FQuadDef T52_Quad = { { 5808.111831820431, 6387.939392393399, 5327.279220613578, 4747.45166004061 }, { -2993.8268426979716, -2413.9992821250025, -1353.3391103451813, -1933.1666709181504 } };
+// The far side is off the PLATE, not off the road - the cost of the
+// 2026-09-07 pad rule, emitted as the refusal it now is.
+inline constexpr double T52_OtherX = 7960.7;
+inline constexpr double T52_OtherY = -4560.7;
+inline constexpr bool T52_OtherOk = false;
+inline const TCHAR* const T52_OtherReason = TEXT("off-board: the lot would hang 1423 uu past the plate's south edge");
 inline constexpr bool T52_AgainOk = false;
-inline const TCHAR* const T52_AgainReason = TEXT("overlap: [6450.0, 7270.0] on the R1 crosses an existing lot at [6450.0, 7270.0] on the R1");
+inline const TCHAR* const T52_AgainReason = TEXT("overlap: [1990.0, 2810.0] on the R1 crosses an existing lot at [1990.0, 2810.0] on the R1");
 
 // 53: side names come off the NORMAL, not the dominant axis of the run.
 inline const FSideRow T53_Sides[] = {
@@ -239,10 +242,14 @@ inline const FSideRow T53_Sides[] = {
 };
 inline constexpr int32 T53_SidesNum = 5;
 
-// 54: two houses along one diagonal street - pads apart, boxes overlapping.
-inline const FSegDef T54_Segment = { TEXT("R1"), 5700.0, 2000.0, 7650.0, 3950.0, TEXT("avenue"), nullptr };
-inline constexpr double T54_Clicks[2][2] = { { 5029.339828220179, 3450.660171779821 }, { 6199.339828220179, 4620.660171779821 } };
-inline const FLotDef2 T54_Lots[2] = { { 5590.0, 6410.0, TEXT("north"), TEXT("R1") }, { 7240.0, 8060.0, TEXT("north"), TEXT("R1") } };
+// 54: two lots along one diagonal street - pads apart, boxes overlapping.
+// Both are placed for real, the second click derived one lot-width along
+// the same frame so the spans are adjacent by construction. The plate
+// rule of 2026-09-07 does NOT cost this case; what it costs is a 45
+// degree road with lots on BOTH sides, which is test 52's.
+inline const FSegDef T54_Segment = { TEXT("R1"), -5000.0, -4200.0, -3500.0, -2700.0, TEXT("avenue"), nullptr };
+inline constexpr double T54_Clicks[2][2] = { { -5760.660171779821, -2839.339828220179 }, { -5180.832611206853, -2259.5122676472092 } };
+inline const FLotDef2 T54_Lots[2] = { { -6490.0, -5670.0, TEXT("north"), TEXT("R1") }, { -5670.0, -4850.0, TEXT("north"), TEXT("R1") } };
 inline constexpr bool T54_Quads = false;
 inline constexpr bool T54_Rects = true;
 
@@ -256,10 +263,10 @@ inline constexpr double T55_RvR_First[4] = { 4400.0, 3600.0, 5900.0, 2100.0 };
 inline constexpr double T55_RvR_Second[4] = { 2500.0, 1200.0, 2500.0, 2100.0 };
 inline constexpr bool T55_RvR_Quads = false;
 inline constexpr bool T55_RvR_Rects = true;
-inline constexpr double T55_LvH_Road[4] = { 5700.0, 2000.0, 7650.0, 3950.0 };
-inline constexpr double T55_LvH_Click[2] = { 5029.339828220179, 3450.660171779821 };
-inline const FLotDef2 T55_LvH_Lot = { 5590.0, 6410.0, TEXT("north"), TEXT("R1") };
-inline constexpr double T55_LvH_Highway[4] = { 2600.0, 1800.0, 2600.0, 3000.0 };
+inline constexpr double T55_LvH_Road[4] = { 3000.0, 2000.0, 4950.0, 3950.0 };
+inline constexpr double T55_LvH_Click[2] = { 5523.160171779821, 2401.839828220179 };
+inline const FLotDef2 T55_LvH_Lot = { 5190.0, 6010.0, TEXT("south"), TEXT("R1") };
+inline constexpr double T55_LvH_Highway[4] = { 7400.0, 2600.0, 7400.0, 3800.0 };
 inline constexpr bool T55_LvH_Quads = false;
 inline constexpr bool T55_LvH_Rects = true;
 inline constexpr bool T55_LvH_StillPlaces = true;
@@ -366,8 +373,84 @@ inline constexpr bool T61_Ok = false;
 inline const TCHAR* const T61_Reason = TEXT("in the road: [6490.0, 7310.0] would run across the arterial, an avenue");
 inline const FNode T61_CurveNodes[] = { { 2000.0, -4000.0 }, { 4000.0, -2600.0 }, { 6000.0, -4000.0 } };
 inline constexpr int32 T61_CurveNodesNum = 3;
-inline constexpr double T61_FrontedX = 3493.4773755400165;
-inline constexpr double T61_FrontedY = -4706.582902364304;
-inline const FLotDef2 T61_FrontedLot = { -1070.0, -250.0, TEXT("south"), TEXT("R2") };
+inline constexpr double T61_FrontedX = 6500.429386953155;
+inline constexpr double T61_FrontedY = -2466.8460358732927;
+inline const FLotDef2 T61_FrontedLot = { 6070.0, 6890.0, TEXT("north"), TEXT("R11") };
+
+// 62: a lot's PAD may not leave the plate. The witness is a click 779 uu
+// INSIDE the plate's north edge whose pad reaches y = 4542; the control is
+// the same 45 degree shape where the board has room. T62_Swept is the
+// REDUCTION: the C++ runs the identical sweep and must reach the same count
+// with every pad inside the plate, so the rule is free for both built-ins by
+// measurement rather than by argument.
+inline constexpr double T62_Road[4] = { 5700.0, 2000.0, 7650.0, 3950.0 };
+inline constexpr double T62_ClickX = 5029.339828220179;
+inline constexpr double T62_ClickY = 3450.660171779821;
+inline constexpr bool T62_Ok = false;
+inline const TCHAR* const T62_Reason = TEXT("off-board: the lot would hang 312 uu past the plate's north edge");
+inline constexpr double T62_PadBox[4] = { 3943.0360723121803, 5583.52380466497, 2901.7575695735986, 4542.245301926389 };
+inline constexpr double T62_RoomRoad[4] = { 3000.0, 2000.0, 4950.0, 3950.0 };
+inline constexpr double T62_RoomClickX = 5523.160171779821;
+inline constexpr double T62_RoomClickY = 2401.839828220179;
+inline const FLotDef2 T62_RoomLot = { 5190.0, 6010.0, TEXT("south"), TEXT("R1") };
+inline constexpr double T62_Widths[] = { 820.0, 1230.0, 1640.0, 2050.0, 2460.0 };
+inline constexpr int32 T62_WidthsNum = 5;
+inline constexpr int32 T62_Swept = 20500;
+// ALL FOUR EDGES: a mutation that dropped the x edges survived the first
+// version of this test, because north and south were the only edges the
+// cases above ever reached.
+struct FEdgeCase { const TCHAR* Edge; double Road[4]; double OutX, OutY;
+	bool bOutOk; const TCHAR* OutReason; double InX, InY; bool bInOk; };
+inline const FEdgeCase T62_Edges[] = {
+	{ TEXT("east"), { 6400.0, -4000.0, 6400.0, -1500.0 }, 7600.0, -2800.0, false, TEXT("off-board: the lot would hang 1380 uu past the plate's east edge"), 5200.0, -2800.0, true },
+	{ TEXT("west"), { -6400.0, -4000.0, -6400.0, -1500.0 }, -7600.0, -2800.0, false, TEXT("off-board: the lot would hang 1380 uu past the plate's west edge"), -5200.0, -2800.0, true },
+};
+inline constexpr int32 T62_EdgesNum = 2;
+// AND THE EDGE ITSELF IS INSIDE: a pad flush with the plate is on it.
+inline constexpr double T62_FlushXClick[2] = { -7240.0, 1500.0 };
+inline const FLotDef2 T62_FlushXLot = { -7650.0, -6830.0, TEXT("north"), TEXT("arterial") };
+inline constexpr double T62_FlushXBox[4] = { -7650.0, -6830.0, 1130.0, 2630.0 };
+inline constexpr double T62_FlushYClick[2] = { 1500.0, -3820.0 };
+inline const FLotDef2 T62_FlushYLot = { -4230.0, -3410.0, TEXT("east"), TEXT("cross") };
+inline constexpr double T62_FlushYBox[4] = { 1130.0, 2630.0, -4230.0, -3410.0 };
+
+// 63: a path may not cross itself. CENTRELINES, not corridors - a
+// corridor rule cannot be stated for this at all, because chords two
+// apart on a perfectly STRAIGHT road are T63_StraightChordGap apart
+// against a T63_CorridorWidth corridor. The hairpin is what the exact
+// rule costs: it draws, and its own arms come within T63_HairpinGap.
+struct FSegPair { const TCHAR* Label; double A0X, A0Y, A1X, A1Y;
+	double B0X, B0Y, B1X, B1Y; bool bCross; };
+inline const FSegPair T63_Pairs[] = {
+	{ TEXT("a-proper-x"), 0.0, 0.0, 100.0, 100.0, 0.0, 100.0, 100.0, 0.0, true },
+	{ TEXT("apart"), 0.0, 0.0, 100.0, 100.0, 200.0, 0.0, 300.0, 100.0, false },
+	{ TEXT("nose-to-tail"), 0.0, 0.0, 100.0, 100.0, 100.0, 100.0, 200.0, 0.0, false },
+	{ TEXT("tail-to-nose"), 0.0, 0.0, 100.0, 100.0, 0.0, 0.0, 100.0, -100.0, false },
+	{ TEXT("a-tee"), 0.0, 0.0, 100.0, 100.0, 50.0, 50.0, 150.0, 0.0, true },
+	{ TEXT("doubles-back-along-it"), 0.0, 0.0, 100.0, 100.0, 50.0, 50.0, 150.0, 150.0, true },
+	{ TEXT("carries-on-from-the-end"), 0.0, 0.0, 100.0, 100.0, 100.0, 100.0, 200.0, 200.0, false },
+	{ TEXT("parallel-and-close"), 0.0, 0.0, 100.0, 100.0, 1.0, 0.0, 101.0, 100.0, false },
+};
+inline constexpr int32 T63_PairsNum = 8;
+inline const FNode T63_LoopNodes[] = { { 3000.0, -3900.0 }, { 6200.0, -3900.0 }, { 5800.0, -2500.0 }, { 3400.0, -2500.0 }, { 4200.0, -4200.0 } };
+inline constexpr int32 T63_LoopNodesNum = 5;
+inline constexpr int32 T63_LoopI = 2;
+inline constexpr int32 T63_LoopJ = 22;
+inline constexpr bool T63_LoopOk = false;
+inline const TCHAR* const T63_LoopReason = TEXT("crosses: the curve would cross itself, its 23rd chord over its 3rd");
+inline constexpr double T63_LoopMoneyBefore = 90000.0;
+inline constexpr double T63_LoopMoney = 90000.0;
+inline constexpr int32 T63_LoopRoads = 0;
+inline const FNode T63_OpenNodes[] = { { 3000.0, -3900.0 }, { 6200.0, -3900.0 }, { 5800.0, -2500.0 }, { 3400.0, -2500.0 } };
+inline constexpr int32 T63_OpenNodesNum = 4;
+inline constexpr bool T63_OpenOk = true;
+inline constexpr int32 T63_OpenChords = 18;
+inline const FNode T63_HairpinNodes[] = { { 4000.0, -4200.0 }, { 5200.0, -2400.0 }, { 4300.0, -2400.0 } };
+inline constexpr int32 T63_HairpinNodesNum = 3;
+inline constexpr bool T63_HairpinOk = true;
+inline constexpr int32 T63_HairpinChords = 8;
+inline constexpr double T63_HairpinGap = 288.44410203711914;
+inline constexpr double T63_StraightChordGap = 820.0;
+inline constexpr double T63_CorridorWidth = 2260.0;
 
 } // namespace StacktownRoadsOracle

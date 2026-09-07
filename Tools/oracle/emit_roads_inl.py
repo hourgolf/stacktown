@@ -337,9 +337,12 @@ def main():
     w('inline const FLotDef2 T52_Lot = %s;' % lotdef(t['lot']))
     w('inline const FQuadDef T52_Quad = { { %s }, { %s } };' % (
         ', '.join(n(p[0]) for p in t['quad']), ', '.join(n(p[1]) for p in t['quad'])))
+    w('// The far side is off the PLATE, not off the road - the cost of the')
+    w('// 2026-09-07 pad rule, emitted as the refusal it now is.')
     w('inline constexpr double T52_OtherX = %s;' % n(t['other_side_click'][0]))
     w('inline constexpr double T52_OtherY = %s;' % n(t['other_side_click'][1]))
-    w('inline const FLotDef2 T52_OtherLot = %s;' % lotdef(t['other_side_lot']))
+    w('inline constexpr bool T52_OtherOk = %s;' % b(t['other_side_ok']))
+    w('inline const TCHAR* const T52_OtherReason = %s;' % q(t['other_side_reason']))
     w('inline constexpr bool T52_AgainOk = %s;' % b(t['again_ok']))
     w('inline const TCHAR* const T52_AgainReason = %s;' % q(t['again_reason']))
     w('')
@@ -353,7 +356,11 @@ def main():
     w('};')
     w('inline constexpr int32 T53_SidesNum = %d;' % len(fx['t53_sides']))
     w('')
-    w('// 54: two houses along one diagonal street - pads apart, boxes overlapping.')
+    w('// 54: two lots along one diagonal street - pads apart, boxes overlapping.')
+    w('// Both are placed for real, the second click derived one lot-width along')
+    w('// the same frame so the spans are adjacent by construction. The plate')
+    w('// rule of 2026-09-07 does NOT cost this case; what it costs is a 45')
+    w('// degree road with lots on BOTH sides, which is test 52\'s.')
     t = fx['t54_two_lots']
     w('inline const FSegDef T54_Segment = %s;' % segdef(t['segment']))
     w('inline constexpr double T54_Clicks[2][2] = { { %s, %s }, { %s, %s } };' % (
@@ -502,6 +509,95 @@ def main():
     w('inline constexpr double T61_FrontedX = %s;' % n(t['fronted'][0]['click'][0]))
     w('inline constexpr double T61_FrontedY = %s;' % n(t['fronted'][0]['click'][1]))
     w('inline const FLotDef2 T61_FrontedLot = %s;' % lotdef(t['fronted'][0]['lot']))
+    w('')
+    w('// 62: a lot\'s PAD may not leave the plate. The witness is a click 779 uu')
+    w('// INSIDE the plate\'s north edge whose pad reaches y = 4542; the control is')
+    w('// the same 45 degree shape where the board has room. T62_Swept is the')
+    w('// REDUCTION: the C++ runs the identical sweep and must reach the same count')
+    w('// with every pad inside the plate, so the rule is free for both built-ins by')
+    w('// measurement rather than by argument.')
+    t = fx['t62_plate']
+    w('inline constexpr double T62_Road[4] = { %s };'
+      % ', '.join(n(v) for v in t['road']))
+    w('inline constexpr double T62_ClickX = %s;' % n(t['click'][0]))
+    w('inline constexpr double T62_ClickY = %s;' % n(t['click'][1]))
+    w('inline constexpr bool T62_Ok = %s;' % b(t['ok']))
+    w('inline const TCHAR* const T62_Reason = %s;' % q(t['reason']))
+    w('inline constexpr double T62_PadBox[4] = { %s };'
+      % ', '.join(n(v) for v in t['pad_box']))
+    w('inline constexpr double T62_RoomRoad[4] = { %s };'
+      % ', '.join(n(v) for v in t['room_road']))
+    w('inline constexpr double T62_RoomClickX = %s;' % n(t['room_click'][0]))
+    w('inline constexpr double T62_RoomClickY = %s;' % n(t['room_click'][1]))
+    w('inline const FLotDef2 T62_RoomLot = %s;' % lotdef(t['room_lot']))
+    w('inline constexpr double T62_Widths[] = { %s };'
+      % ', '.join(n(v) for v in t['widths']))
+    w('inline constexpr int32 T62_WidthsNum = %d;' % len(t['widths']))
+    w('inline constexpr int32 T62_Swept = %d;' % t['swept'])
+    w('// ALL FOUR EDGES: a mutation that dropped the x edges survived the first')
+    w('// version of this test, because north and south were the only edges the')
+    w('// cases above ever reached.')
+    w('struct FEdgeCase { const TCHAR* Edge; double Road[4]; double OutX, OutY;')
+    w('\tbool bOutOk; const TCHAR* OutReason; double InX, InY; bool bInOk; };')
+    w('inline const FEdgeCase T62_Edges[] = {')
+    for r in t['edges']:
+        w('\t{ %s, { %s }, %s, %s, %s, %s, %s, %s, %s },' % (
+            q(r['edge']), ', '.join(n(v) for v in r['road']),
+            n(r['out_click'][0]), n(r['out_click'][1]), b(r['out_ok']),
+            q(r['out_reason']), n(r['in_click'][0]), n(r['in_click'][1]),
+            b(r['in_ok'])))
+    w('};')
+    w('inline constexpr int32 T62_EdgesNum = %d;' % len(t['edges']))
+    w('// AND THE EDGE ITSELF IS INSIDE: a pad flush with the plate is on it.')
+    w('inline constexpr double T62_FlushXClick[2] = { %s, %s };'
+      % (n(t['flush_x_click'][0]), n(t['flush_x_click'][1])))
+    w('inline const FLotDef2 T62_FlushXLot = %s;' % lotdef(t['flush_x_lot']))
+    w('inline constexpr double T62_FlushXBox[4] = { %s };'
+      % ', '.join(n(v) for v in t['flush_x_box']))
+    w('inline constexpr double T62_FlushYClick[2] = { %s, %s };'
+      % (n(t['flush_y_click'][0]), n(t['flush_y_click'][1])))
+    w('inline const FLotDef2 T62_FlushYLot = %s;' % lotdef(t['flush_y_lot']))
+    w('inline constexpr double T62_FlushYBox[4] = { %s };'
+      % ', '.join(n(v) for v in t['flush_y_box']))
+    w('')
+    w('// 63: a path may not cross itself. CENTRELINES, not corridors - a')
+    w('// corridor rule cannot be stated for this at all, because chords two')
+    w('// apart on a perfectly STRAIGHT road are T63_StraightChordGap apart')
+    w('// against a T63_CorridorWidth corridor. The hairpin is what the exact')
+    w('// rule costs: it draws, and its own arms come within T63_HairpinGap.')
+    t = fx['t63_self_crossing']
+    w('struct FSegPair { const TCHAR* Label; double A0X, A0Y, A1X, A1Y;')
+    w('\tdouble B0X, B0Y, B1X, B1Y; bool bCross; };')
+    w('inline const FSegPair T63_Pairs[] = {')
+    for r in t['pairs']:
+        w('\t{ %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },' % (
+            q(r['label']), n(r['a0'][0]), n(r['a0'][1]), n(r['a1'][0]), n(r['a1'][1]),
+            n(r['b0'][0]), n(r['b0'][1]), n(r['b1'][0]), n(r['b1'][1]), b(r['cross'])))
+    w('};')
+    w('inline constexpr int32 T63_PairsNum = %d;' % len(t['pairs']))
+    w('inline const FNode T63_LoopNodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['loop_nodes']))
+    w('inline constexpr int32 T63_LoopNodesNum = %d;' % len(t['loop_nodes']))
+    w('inline constexpr int32 T63_LoopI = %d;' % t['loop_i'])
+    w('inline constexpr int32 T63_LoopJ = %d;' % t['loop_j'])
+    w('inline constexpr bool T63_LoopOk = %s;' % b(t['loop_ok']))
+    w('inline const TCHAR* const T63_LoopReason = %s;' % q(t['loop_reason']))
+    w('inline constexpr double T63_LoopMoneyBefore = %s;' % n(t['loop_money_before']))
+    w('inline constexpr double T63_LoopMoney = %s;' % n(t['loop_money']))
+    w('inline constexpr int32 T63_LoopRoads = %d;' % t['loop_roads'])
+    w('inline const FNode T63_OpenNodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['open_nodes']))
+    w('inline constexpr int32 T63_OpenNodesNum = %d;' % len(t['open_nodes']))
+    w('inline constexpr bool T63_OpenOk = %s;' % b(t['open_ok']))
+    w('inline constexpr int32 T63_OpenChords = %d;' % t['open_chords'])
+    w('inline const FNode T63_HairpinNodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['hairpin_nodes']))
+    w('inline constexpr int32 T63_HairpinNodesNum = %d;' % len(t['hairpin_nodes']))
+    w('inline constexpr bool T63_HairpinOk = %s;' % b(t['hairpin_ok']))
+    w('inline constexpr int32 T63_HairpinChords = %d;' % t['hairpin_chords'])
+    w('inline constexpr double T63_HairpinGap = %s;' % n(t['hairpin_gap']))
+    w('inline constexpr double T63_StraightChordGap = %s;' % n(t['straight_chord_gap']))
+    w('inline constexpr double T63_CorridorWidth = %s;' % n(t['corridor_width']))
     w('')
     w('} // namespace StacktownRoadsOracle')
 

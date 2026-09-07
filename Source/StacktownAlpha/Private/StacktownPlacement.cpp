@@ -364,6 +364,84 @@ FLotRect QuadRect(const FQuad& Q)
 	return Rect;
 }
 
+namespace
+{
+/** Sign of (B - A) x (C - A): +1 if C is left of AB, -1 right, 0 on the line.
+ *  The tolerance is RELATIVE to the two vectors' own sizes, because these are
+ *  board coordinates in the thousands and an absolute epsilon would mean one
+ *  thing at the origin and another at the plate's corner. */
+int32 CrossSign(const FVector2D& A, const FVector2D& B, const FVector2D& C)
+{
+	const double ABx = B.X - A.X, ABy = B.Y - A.Y;
+	const double ACx = C.X - A.X, ACy = C.Y - A.Y;
+	const double V = ABx * ACy - ABy * ACx;
+	const double Tol = 1e-9 * (FMath::Abs(ABx) + FMath::Abs(ABy))
+	                        * (FMath::Abs(ACx) + FMath::Abs(ACy));
+	if (V > Tol) { return 1; }
+	if (V < -Tol) { return -1; }
+	return 0;
+}
+
+bool SamePoint(const FVector2D& P, const FVector2D& Q)
+{
+	return FMath::Abs(P.X - Q.X) < 1e-9 && FMath::Abs(P.Y - Q.Y) < 1e-9;
+}
+
+/** P is known to be ON the infinite line AB - is it inside the segment? */
+bool InExtent(const FVector2D& A, const FVector2D& B, const FVector2D& P)
+{
+	return FMath::Min(A.X, B.X) - 1e-9 <= P.X && P.X <= FMath::Max(A.X, B.X) + 1e-9 &&
+	       FMath::Min(A.Y, B.Y) - 1e-9 <= P.Y && P.Y <= FMath::Max(A.Y, B.Y) + 1e-9;
+}
+} // namespace
+
+bool SegmentsCross(const FVector2D& A0, const FVector2D& A1,
+	const FVector2D& B0, const FVector2D& B1)
+{
+	const int32 D1 = CrossSign(B0, B1, A0);
+	const int32 D2 = CrossSign(B0, B1, A1);
+	const int32 D3 = CrossSign(A0, A1, B0);
+	const int32 D4 = CrossSign(A0, A1, B1);
+	if (D1 * D2 < 0 && D3 * D4 < 0)
+	{
+		return true;
+	}
+	// An endpoint of one lying ON the other - a T, or a collinear overlap.
+	// Excluded only when that point is the other segment's own endpoint too,
+	// which is the nose-to-tail case every joined pair of chords is.
+	const FVector2D Ends[4][3] = {
+		{ A0, B0, B1 }, { A1, B0, B1 }, { B0, A0, A1 }, { B1, A0, A1 } };
+	for (int32 k = 0; k < 4; ++k)
+	{
+		const FVector2D& P = Ends[k][0];
+		const FVector2D& X = Ends[k][1];
+		const FVector2D& Y = Ends[k][2];
+		if (CrossSign(X, Y, P) == 0 && InExtent(X, Y, P)
+			&& !SamePoint(P, X) && !SamePoint(P, Y))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool PathSelfCrossing(const TArray<FVector2D>& Pts, int32& OutI, int32& OutJ)
+{
+	for (int32 i = 0; i + 1 < Pts.Num(); ++i)
+	{
+		for (int32 j = i + 2; j + 1 < Pts.Num(); ++j)
+		{
+			if (SegmentsCross(Pts[i], Pts[i + 1], Pts[j], Pts[j + 1]))
+			{
+				OutI = i;
+				OutJ = j;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool QuadsOverlap(const FQuad& A, const FQuad& B)
 {
 	const FQuad* Polys[2] = { &A, &B };
@@ -856,6 +934,49 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	// to RectsOverlap while everything is axis-aligned.
 	const FQuad Mine = LotQuad(R, E, *Road, Candidate);
 
+	// THE PAD MUST BE ON THE PLATE (2026-09-07, the second gap, decided as a
+	// working default). The span bound above keeps a lot inside its ROAD, and
+	// for the two built-ins the road spans the plate, so those were the same
+	// sentence and nothing could tell them apart. They come apart the moment a
+	// road is drawn near an edge or at an angle: the first curve drawn along
+	// the southern margin put a pad at y = -5740 against a plate that stops at
+	// -4230, and the oracle's own 45 degree lot in test 52 reached y = 5150.
+	//
+	// THE BOX, not the quad, and this is the one place where the box is the
+	// right instrument rather than the lazy one: the plate is axis-aligned, so
+	// a rotated pad's bounding box is inside it exactly when all four corners
+	// are, and the box IS the extent that has to fit.
+	//
+	// The reason names the edge and the distance, because that is the whole of
+	// what the player has to do about it. Largest overshoot wins when a corner
+	// leaves two edges at once, so the message is the same every run.
+	{
+		const FLotRect Pad = QuadRect(Mine);
+		double Over = Board.PlateYMin - Pad.YMin;
+		const TCHAR* Edge = TEXT("south");
+		if (Pad.YMax - Board.PlateYMax > Over)
+		{
+			Over = Pad.YMax - Board.PlateYMax;
+			Edge = TEXT("north");
+		}
+		if (Board.PlateXMin - Pad.XMin > Over)
+		{
+			Over = Board.PlateXMin - Pad.XMin;
+			Edge = TEXT("west");
+		}
+		if (Pad.XMax - Board.PlateXMax > Over)
+		{
+			Over = Pad.XMax - Board.PlateXMax;
+			Edge = TEXT("east");
+		}
+		if (Over > 0.0)
+		{
+			return Refuse(FString::Printf(
+				TEXT("off-board: the lot would hang %.0f uu past the plate's %s edge"),
+				Over, Edge));
+		}
+	}
+
 	// NO LOT MAY OVERLAP ANY ROAD'S CORRIDOR. Every other refusal here is
 	// reached THROUGH the road a lot faces, so any other road is unguarded by
 	// construction: it is not a candidate in ResolveRoad, is not a lot, and is
@@ -1346,6 +1467,26 @@ FRoadPathResult ResolveRoadPath(const FPlacementBoard& Board, const FCityState& 
 		{
 			return RefusePath(FString::Printf(
 				TEXT("off-board: the curve leaves the plate at [%.0f, %.0f]"), P.X, P.Y));
+		}
+	}
+
+	// A PATH MAY NOT CROSS ITSELF (2026-09-07, the loop-back case the oracle's
+	// own docstring named as open). Checked here, before anything is asked of
+	// the board, because it is a property of the gesture alone - the player
+	// gets the reason about the shape they drew rather than about whatever it
+	// happened to land on.
+	//
+	// CENTRELINES, NOT CORRIDORS, and that is not a preference: a corridor
+	// rule cannot be stated for this at all. Chords two apart on a perfectly
+	// STRAIGHT road are 410 uu apart (they are 410 long) and the corridor is
+	// 2260 wide, so every straight road would cross itself by that measure.
+	{
+		int32 Ci = 0, Cj = 0;
+		if (PathSelfCrossing(Pts, Ci, Cj))
+		{
+			return RefusePath(FString::Printf(
+				TEXT("crosses: the curve would cross itself, its %d%s chord over its %d%s"),
+				Cj + 1, Ordinal(Cj + 1), Ci + 1, Ordinal(Ci + 1)));
 		}
 	}
 

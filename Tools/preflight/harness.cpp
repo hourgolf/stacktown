@@ -1432,14 +1432,17 @@ int main()
 					FMath::RadiansToDegrees(FMath::Atan2(T52_Quad.Y[1] - T52_Quad.Y[0],
 						T52_Quad.X[1] - T52_Quad.X[0])), 0.01);
 
+				// AND ONLY ON ONE SIDE, which is a fact about the BOARD: a 45
+				// degree road needs about 2440 uu each way for its pads, the
+				// plate is 8460 tall, and the arterial's corridor takes 2260
+				// out of the middle. The far side refuses since 2026-09-07,
+				// with the reason that says why; before it, it placed and hung
+				// off the plate.
 				FCityState Other = S;
 				const FPlaceResult P2 = Place(Board, Other, T52_OtherX, T52_OtherY, true, Board.Rules.V0Width);
-				CheckBool("the other side of the same span places", P2.bOk, true);
-				if (P2.bOk)
-				{
-					CheckStr("other side", Other.Parcels[P2.Pid].Placement.GetValue().Side,
-						FString(T52_OtherLot.Side));
-				}
+				CheckBool("the far side of a margin diagonal is off the plate",
+					P2.bOk, T52_OtherOk);
+				CheckStr("and says so", P2.Reason, FString(T52_OtherReason));
 				FCityState Again = S;
 				const FPlaceResult P3 = Place(Board, Again, T52_ClickX, T52_ClickY, true, Board.Rules.V0Width);
 				CheckBool("the same span twice refuses", P3.bOk, T52_AgainOk);
@@ -1471,11 +1474,18 @@ int main()
 
 		CASE("Roads.TwoLotsOnADiagonal");
 		{
-			// 54: two houses along one diagonal street. Their pads miss and
+			// 54: two lots along one diagonal street. Their pads miss and
 			// their boxes overlap, so a bounding-box scan refuses the second
 			// click on visibly empty ground. Empty mode, because the pinned
 			// frontage is wall to wall and a diagonal long enough for two lots
 			// cannot avoid it on this board.
+			//
+			// RELOCATED 2026-09-07 with the plate rule, and the second click
+			// DERIVED one lot-width along the same frame, so the spans are
+			// adjacent by construction. The plate rule does NOT cost this case
+			// - a first answer said two lots along one diagonal fit nowhere,
+			// and the mutation table caught that; what does not fit anywhere is
+			// a 45 degree road with lots on BOTH sides, which is 52's.
 			FCityState S = RoadSeed();
 			S.Money = 9000.0;
 			const FRoadDrawResult D = DrawRoad(Board, S, T54_Segment.StartX, T54_Segment.StartY,
@@ -1495,6 +1505,7 @@ int main()
 			{
 				const FLotPlacement& A = S.Parcels[FString(TEXT("P1"))].Placement.GetValue();
 				const FLotPlacement& B2 = S.Parcels[FString(TEXT("P2"))].Placement.GetValue();
+				CheckNear("the spans are adjacent", B2.X0, A.X1, Tol);
 				const FRoad Rd = RoadOf(S, LotRoadId(A));
 				const FQuad QA = LotQuad(Board.Rules, Board.Econ, Rd, A);
 				const FQuad QB = LotQuad(Board.Rules, Board.Econ, Rd, B2);
@@ -1718,6 +1729,250 @@ int main()
 				CheckNear("lot x1", OnCurve.Lot.X1, T61_FrontedLot.X1, Tol);
 				CheckStr("lot road", LotRoadId(OnCurve.Lot), FString(T61_FrontedLot.RoadId));
 			}
+		}
+
+		CASE("Roads.PadOnThePlate");
+		{
+			auto PlateSeed = [&R]() { FCityState St = SeedState(R); St.Money = 40000.0; return St; };
+			auto RoadOf = [&Board](const FCityState& St, const FString& Id) {
+				const TArray<FRoad> Rs = Board.AllRoads(St);
+				return *FindRoad(Rs, Id);
+			};
+			// 62: a lot's PAD may not leave the plate. ResolveClick already
+			// refused a span that ran off the end of its ROAD; for the two
+			// built-ins the road spans the plate, so that WAS this rule and
+			// nothing could tell them apart. They come apart the moment a road
+			// is drawn near an edge or at an angle.
+
+			// (a) REDUCTION FIRST, by sweep rather than by argument: every
+			// snapped span at every catalogue width, both built-ins, both
+			// sides. The COUNT is the oracle's, so a sweep that quietly covered
+			// less ground fails here rather than passing emptily.
+			{
+				const FCityState S = SeedState(R);
+				const TArray<FRoad> Built = Board.AllRoads(S);
+				int32 Swept = 0;
+				int32 OffPlate = 0;
+				for (const FRoad& Road : Built)
+				{
+					const FRoadFrame F = RoadFrameOf(Road);
+					for (int32 wi = 0; wi < T62_WidthsNum; ++wi)
+					{
+						const double W = T62_Widths[wi];
+						for (double X0 = F.S0; X0 + W <= F.S0 + F.Length + 1e-9;
+						     X0 += Board.Rules.PositionQuantum)
+						{
+							for (int32 si = 0; si < 2; ++si)
+							{
+								FLotPlacement Lot;
+								Lot.X0 = X0;
+								Lot.X1 = X0 + W;
+								Lot.Side = si == 0 ? Road.SidePlus : Road.SideMinus;
+								Lot.RoadId = Road.Id;
+								const FLotRect B = QuadRect(
+									LotQuad(Board.Rules, Board.Econ, Road, Lot));
+								if (B.XMin < Board.PlateXMin || B.XMax > Board.PlateXMax ||
+								    B.YMin < Board.PlateYMin || B.YMax > Board.PlateYMax)
+								{
+									++OffPlate;
+								}
+								++Swept;
+							}
+						}
+					}
+				}
+				CheckInt("the sweep covered the oracle's ground", Swept, T62_Swept);
+				CheckInt("the plate rule costs a built-in road no lot at all", OffPlate, 0);
+			}
+
+			// (b) THE WITNESS, and it is the PAD that leaves, not the click:
+			// this road is entirely on the plate and the click is 779 uu inside
+			// its northern edge, and the pad reaches y = 4542.
+			FCityState S = PlateSeed();
+			const FRoadDrawResult D = DrawRoad(Board, S, T62_Road[0], T62_Road[1],
+				T62_Road[2], T62_Road[3], FString(TEXT("avenue")), false);
+			CheckBool("the road itself is on the plate", D.bOk, true);
+			CheckBool("and so is the click",
+				T62_ClickY > Board.PlateYMin && T62_ClickY < Board.PlateYMax, true);
+			const FClickResult C = ResolveClick(Board, S, T62_ClickX, T62_ClickY,
+				false, Board.Rules.V0Width);
+			CheckBool("the pad hangs off, so the click refuses", C.bOk, T62_Ok);
+			CheckStr("and says which edge, and by how much", C.Reason, FString(T62_Reason));
+
+			// (c) THE BOX IS EXACTLY THE CORNER TEST HERE, which is why the box
+			// is the right instrument in this one place: the plate is
+			// axis-aligned, so a rotated pad's box is inside it exactly when
+			// all four corners are.
+			if (D.bOk)
+			{
+				FLotPlacement Would;
+				Would.X0 = 5590.0;
+				Would.X1 = 6410.0;
+				Would.Side = TEXT("north");
+				Would.RoadId = D.Id;
+				const FQuad Q = LotQuad(Board.Rules, Board.Econ, RoadOf(S, D.Id), Would);
+				const FLotRect B = QuadRect(Q);
+				CheckNear("box x min", B.XMin, T62_PadBox[0], 0.01);
+				CheckNear("box x max", B.XMax, T62_PadBox[1], 0.01);
+				CheckNear("box y min", B.YMin, T62_PadBox[2], 0.01);
+				CheckNear("box y max", B.YMax, T62_PadBox[3], 0.01);
+				bool bCornersOn = true;
+				for (int32 k = 0; k < 4; ++k)
+				{
+					bCornersOn = bCornersOn &&
+						Q.X[k] >= Board.PlateXMin && Q.X[k] <= Board.PlateXMax &&
+						Q.Y[k] >= Board.PlateYMin && Q.Y[k] <= Board.PlateYMax;
+				}
+				const bool bBoxOn = B.XMin >= Board.PlateXMin && B.XMax <= Board.PlateXMax &&
+					B.YMin >= Board.PlateYMin && B.YMax <= Board.PlateYMax;
+				CheckBool("the box agrees with the corners", bBoxOn, bCornersOn);
+				CheckBool("and both say off", bBoxOn, false);
+			}
+
+			// (d) AND IT IS THE PLATE, NOT THE SHAPE: the same 45 degree pad,
+			// the same width, the same angle, where the board has room.
+			FCityState Room = PlateSeed();
+			const FRoadDrawResult DR = DrawRoad(Board, Room, T62_RoomRoad[0], T62_RoomRoad[1],
+				T62_RoomRoad[2], T62_RoomRoad[3], FString(TEXT("avenue")), false);
+			CheckBool("drawn", DR.bOk, true);
+			const FClickResult CR = ResolveClick(Board, Room, T62_RoomClickX, T62_RoomClickY,
+				false, Board.Rules.V0Width);
+			CheckBool("the same shape places where there is room", CR.bOk, true);
+			if (CR.bOk)
+			{
+				CheckNear("x0", CR.Lot.X0, T62_RoomLot.X0, Tol);
+				CheckNear("x1", CR.Lot.X1, T62_RoomLot.X1, Tol);
+				CheckStr("side", CR.Lot.Side, FString(T62_RoomLot.Side));
+				const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ,
+					RoadOf(Room, LotRoadId(CR.Lot)), CR.Lot));
+				CheckBool("and its pad is on the plate",
+					B.XMin >= Board.PlateXMin && B.XMax <= Board.PlateXMax &&
+					B.YMin >= Board.PlateYMin && B.YMax <= Board.PlateYMax, true);
+			}
+
+			// (e) ALL FOUR EDGES HOLD, not only the two the cases above happen
+			// to reach. A vertical road 1250 uu inside each side margin: the
+			// click on the outward side is ON THE PLATE and its pad is not, and
+			// the same click mirrored inward places. Written because a mutation
+			// that dropped the x edges SURVIVED the first version of this test.
+			for (int32 i = 0; i < T62_EdgesNum; ++i)
+			{
+				const FEdgeCase& Ec = T62_Edges[i];
+				FCityState Es = PlateSeed();
+				const FRoadDrawResult Ed = DrawRoad(Board, Es, Ec.Road[0], Ec.Road[1],
+					Ec.Road[2], Ec.Road[3], FString(TEXT("avenue")), false);
+				CheckBool("margin road drawn", Ed.bOk, true);
+				CheckBool("the click is on the plate",
+					Ec.OutX >= Board.PlateXMin && Ec.OutX <= Board.PlateXMax, true);
+				const FClickResult Out = ResolveClick(Board, Es, Ec.OutX, Ec.OutY,
+					false, Board.Rules.V0Width);
+				CheckBool("the pad is not", Out.bOk, Ec.bOutOk);
+				CheckStr("and the reason names the edge", Out.Reason, FString(Ec.OutReason));
+				const FClickResult In = ResolveClick(Board, Es, Ec.InX, Ec.InY,
+					false, Board.Rules.V0Width);
+				CheckBool("the inward side places", In.bOk, Ec.bInOk);
+			}
+
+			// (f) AND THE EDGE ITSELF IS INSIDE: a pad FLUSH with the plate is
+			// on the plate. The rule is stated with a strict >, and both of
+			// these are lots the board has always allowed.
+			{
+				FCityState Fs = SeedState(R);
+				const FClickResult Fx = ResolveClick(Board, Fs, T62_FlushXClick[0],
+					T62_FlushXClick[1], true, Board.Rules.V0Width);
+				CheckBool("the arterial's outermost lot places", Fx.bOk, true);
+				if (Fx.bOk)
+				{
+					CheckNear("x0", Fx.Lot.X0, T62_FlushXLot.X0, Tol);
+					const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ,
+						RoadOf(Fs, LotRoadId(Fx.Lot)), Fx.Lot));
+					CheckNear("and its box is ON the west edge", B.XMin, Board.PlateXMin, Tol);
+				}
+				const FClickResult Fy = ResolveClick(Board, Fs, T62_FlushYClick[0],
+					T62_FlushYClick[1], true, Board.Rules.V0Width);
+				CheckBool("the cross street's outermost lot places", Fy.bOk, true);
+				if (Fy.bOk)
+				{
+					CheckNear("x0", Fy.Lot.X0, T62_FlushYLot.X0, Tol);
+					const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ,
+						RoadOf(Fs, LotRoadId(Fy.Lot)), Fy.Lot));
+					CheckNear("and its box is ON the south edge", B.YMin, Board.PlateYMin, Tol);
+				}
+			}
+		}
+
+		CASE("Roads.PathDoesNotCrossItself");
+		{
+			// 63: the loop-back case the oracle's own docstring named as open
+			// until 2026-09-07. A path that looped back over itself drew, and
+			// its pavement lay across its pavement.
+			auto NodesOf63 = [](const FNode* Src, int32 Count) {
+				TArray<FVector2D> Out;
+				for (int32 i = 0; i < Count; ++i) { Out.Add(FVector2D(Src[i].X, Src[i].Y)); }
+				return Out;
+			};
+
+			// (a) THE PRIMITIVE, on hand-built segments: meeting END TO END is
+			// not a crossing, which is what every joined pair of chords does.
+			for (int32 i = 0; i < T63_PairsNum; ++i)
+			{
+				const FSegPair& Pr = T63_Pairs[i];
+				CheckBool(std::string(Pr.Label),
+					SegmentsCross(FVector2D(Pr.A0X, Pr.A0Y), FVector2D(Pr.A1X, Pr.A1Y),
+						FVector2D(Pr.B0X, Pr.B0Y), FVector2D(Pr.B1X, Pr.B1Y)), Pr.bCross);
+			}
+
+			// (b) THE CASE, refused by THIS rule rather than by the board: the
+			// loop sits clear of both built-ins and inside the plate.
+			int32 Ci = -1, Cj = -1;
+			const TArray<FVector2D> LoopPts = SamplePath(Board.Rules,
+				NodesOf63(T63_LoopNodes, T63_LoopNodesNum), Board.Rules.WidthQuantum);
+			CheckBool("the polyline crosses itself", PathSelfCrossing(LoopPts, Ci, Cj), true);
+			CheckInt("the first chord of the pair", Ci, T63_LoopI);
+			CheckInt("and the second", Cj, T63_LoopJ);
+
+			FCityState S = SeedState(R);
+			S.Money = T63_LoopMoneyBefore;
+			const FRoadPathResult L = DrawRoadPath(Board, S,
+				NodesOf63(T63_LoopNodes, T63_LoopNodesNum), Avenue, false);
+			CheckBool("the loop-back refuses", L.bOk, T63_LoopOk);
+			CheckStr("naming the two chords", L.Reason, FString(T63_LoopReason));
+			CheckNear("nothing spent", S.Money, T63_LoopMoney, Tol);
+			CheckInt("no road added", S.Roads.Num(), T63_LoopRoads);
+
+			FCityState Open = SeedState(R);
+			Open.Money = T63_LoopMoneyBefore;
+			const FRoadPathResult O = DrawRoadPath(Board, Open,
+				NodesOf63(T63_OpenNodes, T63_OpenNodesNum), Avenue, false);
+			CheckBool("the same gesture without the loop-back draws", O.bOk, T63_OpenOk);
+			CheckInt("and is one road of the oracle's length",
+				O.Segments.Num(), T63_OpenChords);
+
+			// (c) every curve already tested still draws - the rule is exact.
+			CheckBool("the probe curve does not cross itself",
+				PathSelfCrossing(SamplePath(Board.Rules, NodesOf63(Curve, CurveNum),
+					Board.Rules.WidthQuantum), Ci, Cj), false);
+			CheckBool("nor does the open gesture",
+				PathSelfCrossing(SamplePath(Board.Rules,
+					NodesOf63(T63_OpenNodes, T63_OpenNodesNum),
+					Board.Rules.WidthQuantum), Ci, Cj), false);
+
+			// (d) AND A HAIRPIN AS TIGHT AS THE SAMPLER CAN MAKE ONE DRAWS,
+			// which is the whole reason the test is on CENTRELINES: chords two
+			// apart on a perfectly STRAIGHT road are T63_StraightChordGap apart
+			// against a T63_CorridorWidth corridor, so a corridor rule would
+			// refuse every straight road ever drawn.
+			FCityState Hair = SeedState(R);
+			Hair.Money = T63_LoopMoneyBefore;
+			const FRoadPathResult H = DrawRoadPath(Board, Hair,
+				NodesOf63(T63_HairpinNodes, T63_HairpinNodesNum), Avenue, false);
+			CheckBool("the hairpin draws", H.bOk, T63_HairpinOk);
+			CheckInt("as one road", H.Segments.Num(), T63_HairpinChords);
+			// The hole this rule leaves, on the record rather than in a remark.
+			CheckBool("its own arms are closer than a corridor is wide",
+				T63_HairpinGap < T63_CorridorWidth, true);
+			CheckBool("and a corridor rule would refuse a straight road",
+				T63_StraightChordGap < T63_CorridorWidth, true);
 		}
 
 		CASE("Roads.PathIsOneDecision");

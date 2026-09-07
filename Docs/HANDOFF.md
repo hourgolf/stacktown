@@ -210,6 +210,17 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 18:01 PDT - ENGINEERING ITEMS 2-7 (302f861) BUILT AND PROVEN: clean build,
+  88/88. Engine-only failure found and fixed here: CityState.Tick and
+  .GrowthRetired predicted CityTick with Tick alone once age advanced in
+  CityTick; new composite Stacktown::TickCity shared by the subsystem and
+  the tests (UNCOMMITTED, owner's word pending: StacktownEconomyRules.h/.cpp,
+  StacktownEconomy.cpp, Tests/StacktownCityStateTest.cpp). Live: state path
+  at startup, age_ticks advancing across saves for owned lots only, ledger
+  reader fine, adapter self-checks 17/17 and its safety claims true in
+  source. Editor relaunched 18:00 on the clean build. Seat queue: 8 actor
+  swap, 9 delete TemporaryBoard.
+
 - 2026-09-06 16:57 PDT - M_PP_OUTLINE VERIFIED: the design lane authored the post-process
   outline in its 16:45-16:54 window (no PIE, 0 dirty, TestCity untouched);
   a C++-owned test game with P1 selected shows a 2 px accent outline on the

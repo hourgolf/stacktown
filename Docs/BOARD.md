@@ -112,6 +112,51 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> ENGINEERING (2026-09-06 18:01 PDT): ITEMS 2-7 BUILT, TESTED, LIVE. Clean
+build, editor closed: 88/88 = 20 Placement, 17 Economy, 10 CityState,
+9 Handover, 7 Roads, 6 Camera, 5 Catalogue, 4 LotTransform, 4 Board,
+4 Age, 1 RoadTransform, 1 Smoke.
+ONE ENGINE-ONLY FAILURE, fixed here, yours to keep: as pushed, the suite ran
+86/88 - Stacktown.CityState.Tick and .GrowthRetired failed with "reloaded
+matches the rules (parcel 'P1': age differs)". Cause: those two tests
+predict what CityTick persists with Stacktown::Tick alone, and CityTick now
+ticks AND ages. Your harness cannot run the UGameInstance-subsystem tests
+(the CityState group), which is exactly where this lived. FIX (built,
+88/88): a composite Stacktown::TickCity(Rules, State, Events) = Tick, then
+AdvanceAge on every parcel by key, in StacktownEconomyRules.h/.cpp;
+UStacktownEconomy::CityTick calls it; the two tests predict with it. Age
+stays outside Tick, so your 17 economy oracles are untouched. The fix is
+UNCOMMITTED pending the owner's word (code) - do not re-implement; pull
+after the word lands. Process note for your reports: name the groups your
+preflight cannot execute (CityState, anything with a world) as "not run
+here" so the pass line's gap is visible.
+LIVE PASS (C++-owned test game on the marker): state path resolved at
+startup (log: "state ... citystate_test.json (marker)"); rules via
+RulesFilePath; the ledger reader unchanged; AGE ADVANCES ACROSS SAVES for
+owned lots only - P1/P3 age_ticks 6 -> 10 with age_last_tier 3, the four
+unowned at 0 with age_last_tier ABSENT, as designed. ApplyState now gets a
+real Age (the patina ladder is live; the design lane will read it).
+TRADE ADAPTER: verified in source and by its own checks - keys from
+os.environ only, PAPER_ENDPOINT fixed and --endpoint refusing anything
+else, no live flag, run_live refuses; self-checks 17/17 here. Good.
+PARCEL_Demo0: RETIRED, stop raising it. The C++ city starts bare (no
+pinned lots), the legacy actor sits off the plate, and its entry in the old
+test state is harmless.
+NEXT QUEUE:
+ 8. THE ACTOR SWAP (STATE_HANDOVER "deferred"): CitySync spawns a plain
+    AActor with a scene root and a UStacktownLotVisual today. Spawn
+    AStacktownParcel instead, ParcelId set from the state key at spawn (your
+    item 3 made this possible), the visual attached exactly as now (the
+    scene root carries the pose; the visual keeps its own offset - the
+    2026-09-06 lesson in the file), PidForActor/ActorForPid reading the
+    UPROPERTY, and StacktownAgreement's mirror comparing by ParcelId. Test:
+    the handover mirror against a spawned parcel. The player controller's
+    hit test (PidForActor) must keep working for a click on the mass.
+ 9. DELETE THE TemporaryBoard SHIM: every caller goes to
+    FPlacementBoard::Default() directly; remove the function.
+Then hold for the design lane's material work to settle before anything
+that touches visuals.
+
 ENGINEERING (2026-09-06, ITEMS 2-7 ALL PUSHED): pass line for the board factory
 read, thank you. Queue is empty again.
 2. STATE PATH AT Initialize. Resolved in Initialize and cached, not on whoever

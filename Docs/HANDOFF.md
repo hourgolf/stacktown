@@ -210,6 +210,12 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 22:19 PDT - PACKAGED (universal) from 693477c+: the whole night through cycle
+  twelve - the loop, types, road mechanics and rent, stains that read,
+  window bays per face, the char ramp, scored for-sale outlines, words,
+  sound, the arrival, Home. Smoke: lock and save written on launch. Visual
+  check is the owner's; the manifest carries every path-loaded asset.
+
 - 2026-09-06 22:11 PDT - DESIGN LANE 22:00 WINDOW landed (their assets + coordinator's
   rulings work, 2e815d1): stains read, window bays fixed, channel-5 ramp,
   scored for-sale outlines, words, contextual legend, the arrival pose.

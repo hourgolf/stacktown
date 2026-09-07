@@ -61,13 +61,13 @@ bool FStacktownRoadMitreTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a gap in the chain is not a joint"), JB[0].TanEnd, 0.0, 1e-12);
 
 	// PathJoints: a three-chord path held out of order in a map, plus a lone road.
-	TMap<FString, FRoadSegment> Roads;
+	TMap<FString, FRoadSegment> RoadMap;   // not "Roads": the unity build leaks the placement oracle namespace, whose Roads[] this would shadow
 	FRoadSegment C; C.StartX = 100; C.StartY = 100; C.EndX = 0; C.EndY = 100;   // west after the north chord
 	A.Path = B.Path = C.Path = TEXT("C1");
-	Roads.Add(TEXT("R9"), C); Roads.Add(TEXT("R7"), A); Roads.Add(TEXT("R8"), B);
+	RoadMap.Add(TEXT("R9"), C); RoadMap.Add(TEXT("R7"), A); RoadMap.Add(TEXT("R8"), B);
 	FRoadSegment Lone; Lone.StartX = 5000; Lone.StartY = 5000; Lone.EndX = 6000; Lone.EndY = 5000;
-	Roads.Add(TEXT("R3"), Lone);
-	const TMap<FString, RoadFrame::FJoint> PJ = RoadFrame::PathJoints(Roads);
+	RoadMap.Add(TEXT("R3"), Lone);
+	const TMap<FString, RoadFrame::FJoint> PJ = RoadFrame::PathJoints(RoadMap);
 	TestEqual(TEXT("path: first chord start free"), PJ[TEXT("R7")].TanStart, 0.0, 1e-12);
 	TestEqual(TEXT("path: first chord end"), PJ[TEXT("R7")].TanEnd, 1.0, 1e-9);
 	TestEqual(TEXT("path: middle chord start"), PJ[TEXT("R8")].TanStart, 1.0, 1e-9);

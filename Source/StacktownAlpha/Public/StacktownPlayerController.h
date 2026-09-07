@@ -121,6 +121,8 @@ private:
 	void PlayCue(const TCHAR* Name);
 	TMap<FString, TObjectPtr<class USoundBase>> Cues;
 	TSet<FString> CuesMissing;
+	/** A save from before goals_reached existed is primed silently on the first owning tick, never congratulated. */
+	bool bGoalsPrimed = false;
 	/** A bar message that holds for a minimum time (LOOK 4: an announcement, 3 s or the next input, whichever is longer). */
 	FString PinnedBarMessage;
 	double PinnedBarUntil = 0.0;

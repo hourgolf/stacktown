@@ -17,6 +17,8 @@
 #include "StacktownRoad.h"
 #include "StacktownNight.h"
 #include "Kismet/GameplayStatics.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 #include "Sound/SoundBase.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -541,6 +543,16 @@ FString AStacktownPlayerController::CityReset()
 	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
 	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
 	CitySelect(FString());
+	// A reset never destroys a city: the save is archived beside itself first
+	// (Saved/Stacktown/archive/citystate_<stamp>.json), so a stranger who starts over
+	// can be given their old board back by hand. Slots proper are MONDAY_DECISIONS 6.
+	if (!Econ->GetStatePath().IsEmpty() && FPaths::FileExists(Econ->GetStatePath()) && Econ->GetState().Parcels.Num() > 0)
+	{
+		const FString Archive = FPaths::GetPath(Econ->GetStatePath()) / TEXT("archive") / FString::Printf(TEXT("%s_%s.json"), *FPaths::GetBaseFilename(Econ->GetStatePath()), *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+		IFileManager::Get().MakeDirectory(*FPaths::GetPath(Archive), true);
+		IFileManager::Get().Copy(*Archive, *Econ->GetStatePath());
+		UE_LOG(LogStacktown, Log, TEXT("RESET: archived the city to %s"), *Archive);
+	}
 	Econ->ResetCity();
 	Econ->SaveState();
 	return FString::Printf(TEXT("city reset; money %.2f; %s"), Econ->GetState().Money, *Sync->Reconcile(false));
@@ -651,6 +663,14 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	{
 		// Persisted in the city (goals_reached): a reloaded city is not congratulated twice.
 		const int32 Goals = Stacktown::GoalsReached(HudModel->Score);
+		if (!bGoalsPrimed)
+		{
+			// A save written before goals_reached existed carries 0: adopt the rungs it
+			// already stands on silently, so a loaded city is never congratulated for
+			// its past (frame_arrival 20:20 showed "GOAL 2 REACHED" on load).
+			if (Goals > EconForGoals->GetState().GoalsReached) { EconForGoals->SetGoalsReached(Goals); }
+			bGoalsPrimed = true;
+		}
 		const int32 Already = EconForGoals->GetState().GoalsReached;
 		if (Goals > Already)
 		{

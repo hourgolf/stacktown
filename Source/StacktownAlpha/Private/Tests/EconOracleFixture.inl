@@ -45,7 +45,7 @@ struct FRoadTypeRow { const TCHAR* Type; double CostPer100uu; double RentMult;
 inline const FRoadTypeRow RoadTypeRows[] = {
 	{ TEXT("dirt"), 5.0, 0.75, 900.0, true },
 	{ TEXT("avenue"), 10.0, 1.0, 1400.0, true },
-	{ TEXT("boulevard"), 20.0, 1.25, 1400.0, true },
+	{ TEXT("boulevard"), 20.0, 1.25, 1700.0, true },
 	{ TEXT("highway"), 30.0, 1.1, 2000.0, false },
 };
 inline constexpr int32 RoadTypeRowsNum = 4;

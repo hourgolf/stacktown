@@ -1,4 +1,5 @@
 #include "StacktownLotTransform.h"
+#include "StacktownPlacement.h"   // RoadFrame / PointAt: the pose is off the road's own frame now
 
 namespace Stacktown
 {
@@ -19,16 +20,29 @@ namespace LotFrame
 		}
 		if (!Road) { Road = Arterial; }
 		if (!Road) { return false; }
-		if (!Road->bAxisX)
-		{
-			const double Cx = Road->StartX;
-			if (L.Side == Road->SidePlus) { Out = { Cx - PadCentre, L.X0, 90.0 }; }
-			else                          { Out = { Cx + PadCentre, L.X1, -90.0 }; }
-			return true;
-		}
-		const double Cy = Road->StartY;
-		if (L.Side == Road->SidePlus) { Out = { L.X0, Cy + PadCentre, 0.0 }; }
-		else                          { Out = { L.X1, Cy - PadCentre, 180.0 }; }
+
+		// ANY DIRECTION, 2026-09-06 (item 11). The anchor is the end of the
+		// span the pad's own +x runs FROM - the span's start on the plus side,
+		// its end on the minus side - offset to the pad's centre line, and the
+		// yaw is the road's own direction (turned round on the minus side).
+		//
+		// REDUCES EXACTLY to the four axis-aligned cases this replaced, which
+		// is what keeps every pose already in the world where it was:
+		// horizontal plus -> (X0, Cy + PadCentre) yaw 0; minus -> (X1,
+		// Cy - PadCentre) yaw 180; vertical plus -> (Cx - PadCentre, X0) yaw
+		// 90; minus -> (Cx + PadCentre, X1) yaw -90. The yaw is normalized
+		// into (-180, 180] so the minus-side vertical reads -90 rather than
+		// the 270 that is the same rotation and a different number.
+		const FRoadFrame F = RoadFrame(*Road);
+		const bool bPlus = L.Side == Road->SidePlus;
+		const double Sign = bPlus ? 1.0 : -1.0;
+		const double SAnchor = bPlus ? L.X0 : L.X1;
+		double Px = 0.0, Py = 0.0;
+		PointAt(F, SAnchor, Sign * PadCentre, Px, Py);
+		double Yaw = FMath::RadiansToDegrees(FMath::Atan2(F.Uy, F.Ux)) + (bPlus ? 0.0 : 180.0);
+		while (Yaw > 180.0)  { Yaw -= 360.0; }
+		while (Yaw <= -180.0) { Yaw += 360.0; }
+		Out = { Px, Py, Yaw };
 		return true;
 	}
 

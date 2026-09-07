@@ -254,6 +254,71 @@ generalization is therefore backward-compatible with every lot already
 saved, which it would not have been while the direction could point
 either way.
 
+## 6b. Roads at any direction (2026-09-06) — section 2's limit lifted
+
+Section 2 named the axis-alignment limit honestly and said what it would
+take to remove: *"a true diagonal road would need `along` recovered as a
+full 2D point, along the road's own direction vector, which nothing in
+`resolve_click` does today."* That is exactly what changed.
+
+**The resolver works in projection space.** A lot's `x0`/`x1` have always
+been world coordinates on its road's axis. Generalized, they are the
+**scalar projection of the span onto the road's own unit direction**, and
+the world point at projection `s` is `start + u * (s - s0)`, where `s0`
+is the projection of the road's start onto itself. For the arterial `u`
+is `+X` and `s0` is `PLATE_X_MIN`, so `s0 + along` **is** the world `x` —
+the identity self-test 13 already checked, unchanged — and the same holds
+in `y` for the cross street. One line different from the `world_coord` it
+replaces, and **no lot already saved changes meaning**.
+
+That backward compatibility is only true because §6a ordered a drawn
+segment's endpoints. With the direction free to point either way, `s`
+would be the world coordinate *negated* on half the roads.
+
+**Footprints are quads, compared by a separating-axis test.** A 45° lot's
+pad is an 820 × 1500 rectangle turned 45°; its bounding box is about 1640
+square and the empty corners are most of it. A box scan therefore refuses
+real ground — two houses along one diagonal street have boxes that
+overlap and pads that do not. `quads_overlap` reduces **exactly** to
+`rects_overlap` while everything is axis-aligned (touching is a miss,
+matching the strict `<`), and that reduction is checked against the old
+function on real lot pairs rather than argued. All five scans compare
+pads: lot-vs-lot, road-vs-lot, road-vs-road, road-vs-pin, and
+lot-vs-highway-corridor.
+
+**Side names come off the normal.** Not off a same-X / same-Y test, and
+not off the dominant axis of the *run*: whichever component of the normal
+dominates picks the pair of names and its sign picks which is
+`side_plus`. This reduces exactly to the two conventions the built-ins
+already use, and it is the only rule that stays right for a road running
+down and to the right at, say, 2:1 — whose direction is Y-dominant (so a
+dominant-axis rule says "west") while its normal points **east**, which
+is where those lots are.
+
+**"Too diagonal" is gone.** The 3× dominance test survives as a *snap
+threshold* rather than a refusal: a drag within about 18° of an axis
+still snaps to exactly that axis, because a player aiming down a street
+should get a straight one and not a road two degrees out. Anything else
+is now the road they drew.
+
+**Length is the centreline's.** Axis-aligned roads gave the same answer
+as the sum of the two deltas; a diagonal does not, and it is the
+centreline that a lot must fit along and that the type prices. A 500 × 500
+drag is 707 uu — under the 820 a lot needs — where the sum says 1000.
+
+**The pad poses.** `LotFrame::Pose` takes its anchor and yaw off the
+road's own frame, and reduces exactly to the four axis-aligned cases it
+replaced. Without it a diagonal lot would resolve correctly and still
+stand in the wrong place.
+
+**Still not built:** `DrawRoadPath` — the Catmull-Rom through committed
+nodes, sampled at the 410 quantum into straight segments (section 5's
+own shape). The resolver is ready for it; the open question it needs
+answered first is that adjacent samples of one path share endpoints, so
+their corridors overlap and the crossing refusal (§3) would reject the
+path against itself. Intersections are the same question one step
+further out and are still open.
+
 ## 7. Road types as mechanics (2026-09-06)
 
 `MONDAY_DECISIONS.md` section 2 decided the four types on 2026-09-01 —

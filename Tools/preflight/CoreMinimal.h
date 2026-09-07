@@ -264,6 +264,10 @@ struct FMath
 	static double Sqrt(double V) { return std::sqrt(V); }
 	template <typename T> static T Min(T A, T B) { return A < B ? A : B; }
 	template <typename T> static T Max(T A, T B) { return A > B ? A : B; }
+	/** UE's argument order, which is (Y, X) - the same as std::atan2. The lot
+	 *  pose reads a yaw off the road's own direction now. */
+	static double Atan2(double Y, double X) { return std::atan2(Y, X); }
+	static double RadiansToDegrees(double R) { return R * (180.0 / 3.14159265358979323846); }
 };
 
 // ESearchCase exists so the call sites read the same in both worlds; the shim's

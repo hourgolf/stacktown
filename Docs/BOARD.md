@@ -217,6 +217,61 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+ENGINEERING (2026-09-06 22:09 PDT, ITEM 11 STAGE TWO PUSHED - ROADS AT ANY
+DIRECTION): pulled to 2e815d1; both your rulings taken and in.
+BOULEVARD MEDIAN 300 uu: road_width_boulevard is 1700, so its corridor half is
+1280 and it is the one type whose SHAPE differs from the avenue's - it was a
+price and a rent until your ruling, and it is a road now. HIGHWAY BONUS
+MULTIPLIES: as built, nothing to change; the flag comes off.
+THE AXIS-ALIGNED LIMIT IS GONE. What removed it is the resolver moving into
+PROJECTION SPACE. A lot's x0/x1 have always been world coordinates on its
+road's axis; generalized they are the SCALAR PROJECTION of the span onto the
+road's own unit direction, and the world point at projection s is
+start + u * (s - s0). For the arterial s0 is PLATE_X_MIN and along is
+x - PLATE_X_MIN, so s0 + along IS x - the identity self-test 13 already checked
+- and the same holds in y for the cross street. ONE LINE different from the
+world_coord it replaces, and NO LOT ALREADY SAVED CHANGES MEANING. That is only
+true because last night's endpoint ordering landed first: with the direction
+free to point either way, s would be the world coordinate NEGATED on half the
+roads. The fix I found on the way in is what made the generalization safe.
+FOOTPRINTS ARE QUADS, compared by a separating-axis test. A 45 degree lot's pad
+is an 820 x 1500 rectangle turned 45 degrees; its box is about 1640 square and
+the empty corners are most of it, so a box scan refuses REAL GROUND - two houses
+along one diagonal street have boxes that overlap and pads that do not. All five
+scans compare pads now (lot-vs-lot, road-vs-lot, road-vs-road, road-vs-pin,
+lot-vs-highway), and each is tested against the box test that would have refused
+it. quads_overlap REDUCES EXACTLY to rects_overlap while everything is
+axis-aligned - checked against the old function on real lot pairs, including a
+pair that only TOUCHES, not argued.
+SIDE NAMES COME OFF THE NORMAL, not off a same-X/same-Y test and not off the
+dominant axis of the RUN. The discriminating case is a road running down and to
+the right at 2:1: its direction is Y-dominant, so a dominant-axis rule says
+'west', and the normal points EAST, which is where those lots are. Reduces
+exactly to the two conventions the built-ins already use.
+ALSO: "too diagonal" is gone (the 3x dominance test survives as a SNAP
+THRESHOLD, so a drag within ~18 degrees of an axis still snaps to it - a player
+aiming down a street should get a straight one); length is the CENTRELINE's, so
+a 500x500 drag is 707 uu and too short where the sum of the deltas says 1000;
+and LotFrame::Pose takes its anchor and yaw off the road's own frame, reducing
+exactly to the four axis-aligned cases, because a diagonal lot that resolved
+correctly and still stood in the wrong place would be worse than no diagonal.
+PROVEN HERE: oracle 55/55 (50-55 new), pre-flight 1071 checks / 0 failures,
+mutation sweep clean apart from the two long-declared survivors. Eight patterns
+went stale against the refactor and were refreshed, not dropped; one of my own
+new mutations turned out to be a NO-OP (|Ny| >= |Nx| is the same test as
+|Dx| >= |Dy|, since the normal is the direction rotated 90 degrees) so its
+survival said nothing - replaced with swapping the branches, which is the real
+defect.
+YOUR FILES: nothing new touched this stage. The controller and CitySync changes
+from item 10 stand as you took them.
+NOT BUILT YET, and it is the next thing: DrawRoadPath. The resolver is ready for
+it. The question it needs answered first is real - adjacent samples of one
+Catmull-Rom share endpoints, so their corridors overlap and the crossing refusal
+rejects the path against itself. My plan is to exempt a path's own consecutive
+segments from that one check and nothing else, so two SEPARATE roads still
+refuse to cross; if you would rather intersections were designed first, say so
+and I will hold the path there. Starting it now either way.
+
 ENGINEERING (2026-09-06 21:50 PDT, A DEFECT FOUND AND FIXED ON THE WAY INTO 11):
 A ROAD DRAWN RIGHT TO LEFT MIRRORED EVERY LOT PLACED ON IT. resolve_click
 recovers a lot's world position as road['start'][axis] + along, and `along` runs

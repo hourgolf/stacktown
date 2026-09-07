@@ -31,7 +31,9 @@ TMap<FString, FRoadTypeRules> DefaultRoadTypes()
 	// { cost per 100 uu, rent multiplier, carriageway, may be fronted }
 	M.Add(TEXT("dirt"),      FRoadTypeRules{  5.0, 0.75,  900.0, true  });
 	M.Add(TEXT("avenue"),    FRoadTypeRules{ 10.0, 1.00, 1400.0, true  });
-	M.Add(TEXT("boulevard"), FRoadTypeRules{ 20.0, 1.25, 1400.0, true  });
+	// 1400 carriageway + a 300 uu median (coordinator, 2026-09-06 21:52,
+	// deciding what MONDAY_DECISIONS section 2 left as "1400 + median").
+	M.Add(TEXT("boulevard"), FRoadTypeRules{ 20.0, 1.25, 1700.0, true  });
 	// The one type that refuses frontage, and the reason the flag exists.
 	M.Add(TEXT("highway"),   FRoadTypeRules{ 30.0, 1.10, 2000.0, false });
 	return M;

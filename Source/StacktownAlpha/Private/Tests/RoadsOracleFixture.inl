@@ -51,7 +51,7 @@ inline const FSegDef T30_Drawn = { TEXT("R1"), 0.0, 100.0, 500.0, 100.0, TEXT("a
 
 // 31-37: every accept and every named refusal.
 inline const FDrawCase T31 = { 6200.0, 3000.0, 7600.0, 3000.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") } };
-inline const FDrawCase T32 = { 0.0, 3000.0, 1000.0, 3800.0, true, false, TEXT("too diagonal: roads must run close to north-south or east-west in this version"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
+inline const FDrawCase T32 = { 0.0, 3000.0, 1000.0, 3800.0, true, false, TEXT("crosses: the drawn road would cross the cross road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
 inline const FDrawCase T33 = { 6200.0, 3000.0, 6700.0, 3000.0, true, false, TEXT("too short: 500 uu is under the 820 uu a single lot needs"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
 inline const FDrawCase T34 = { 7000.0, 3000.0, 8000.0, 3000.0, true, false, TEXT("off-board: the drawn road would leave the plate"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
 inline const FDrawCase T35 = { 6200.0, 0.0, 7600.0, 0.0, true, false, TEXT("crosses: the drawn road would cross the arterial road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
@@ -98,7 +98,7 @@ inline constexpr int32 OracleTypeNamesNum = 4;
 inline const FTypeRow T40_Types[] = {
 	{ TEXT("dirt"), 5.0, 0.75, 900.0, true, 880.0, 2980.0, 70.0, TEXT("MI_road_dirt") },
 	{ TEXT("avenue"), 10.0, 1.0, 1400.0, true, 1130.0, 3230.0, 140.0, TEXT("MI_road_avenue") },
-	{ TEXT("boulevard"), 20.0, 1.25, 1400.0, true, 1130.0, 3230.0, 280.0, TEXT("MI_road_boulevard") },
+	{ TEXT("boulevard"), 20.0, 1.25, 1700.0, true, 1280.0, 3380.0, 280.0, TEXT("MI_road_boulevard") },
 	{ TEXT("highway"), 30.0, 1.1, 2000.0, false, 1430.0, 3530.0, 420.0, TEXT("MI_road_highway") },
 };
 inline constexpr int32 T40_TypesNum = 4;
@@ -177,5 +177,86 @@ inline const FDragCase T49_Drag[] = {
 	{ 7300.0, -4230.0, 7300.0, -3000.0, 5500.0, -3600.0, { TEXT("R1"), 7300.0, -4230.0, 7300.0, -3000.0, TEXT("avenue") }, { -4010.0, -3190.0, TEXT("west"), TEXT("R1") }, 877.0 },
 };
 inline constexpr int32 T49_DragNum = 2;
+
+// ---- ROADS AT ANY DIRECTION, self-tests 50-55 (item 11) --------------
+struct FQuadPair { FLotDef2 A; FLotDef2 B; bool bQuads; bool bRects; };
+struct FProjRow  { double World; double X; double Y; double Along; };
+struct FProjCase { const TCHAR* Road; double S0; double Length;
+                   double Ux; double Uy; double Nx; double Ny;
+                   FProjRow Points[5]; };
+struct FSideRow  { const TCHAR* Label; double StartX; double StartY;
+                   double EndX; double EndY; const TCHAR* Plus;
+                   const TCHAR* Minus; bool bAxisX; double Nx; double Ny; };
+struct FQuadDef  { double X[4]; double Y[4]; };
+
+// 32b/33b: a diagonal DRAWS now, and is measured along its centreline.
+inline const FDrawCase T32b_Diagonal = { 6200.0, 2500.0, 7200.0, 3500.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue") } };
+inline const FDrawCase T33b_DiagonalTooShort = { 6200.0, 3000.0, 6700.0, 3500.0, true, false, TEXT("too short: 707 uu is under the 820 uu a single lot needs"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
+
+// 50: QuadsOverlap against RectsOverlap on real axis-aligned lot pairs.
+inline const FQuadPair T50_Pairs[] = {
+	{ { 100.0, 900.0, TEXT("north"), TEXT("arterial") }, { 500.0, 1300.0, TEXT("north"), TEXT("arterial") }, true, true },
+	{ { 100.0, 900.0, TEXT("north"), TEXT("arterial") }, { 900.0, 1700.0, TEXT("north"), TEXT("arterial") }, false, false },
+	{ { 100.0, 900.0, TEXT("north"), TEXT("arterial") }, { 100.0, 900.0, TEXT("south"), TEXT("arterial") }, false, false },
+	{ { 1640.0, 2460.0, TEXT("north"), TEXT("arterial") }, { 1130.0, 2630.0, TEXT("west"), TEXT("cross") }, false, false },
+};
+inline constexpr int32 T50_PairsNum = 4;
+
+// 51: the projection identity - S0 + Along IS the world coordinate for
+// both built-ins, which is why no lot already saved changes meaning.
+inline const FProjCase T51_Projection[] = {
+	{ TEXT("arterial"), -7650.0, 15300.0, 1.0, 0.0, -0.0, 1.0, { { -7000.0, -7000.0, 3000.0, 650.0 }, { -410.0, -410.0, 3000.0, 7240.0 }, { 0.0, 0.0, 3000.0, 7650.0 }, { 2350.0, 2350.0, 3000.0, 10000.0 }, { 7000.0, 7000.0, 3000.0, 14650.0 } } },
+	{ TEXT("cross"), -4230.0, 8460.0, 0.0, 1.0, -1.0, 0.0, { { -4000.0, 3000.0, -4000.0, 230.0 }, { -410.0, 3000.0, -410.0, 3820.0 }, { 0.0, 3000.0, 0.0, 4230.0 }, { 1500.0, 3000.0, 1500.0, 5730.0 }, { 4000.0, 3000.0, 4000.0, 8230.0 } } },
+};
+inline constexpr int32 T51_ProjectionNum = 2;
+
+// 52: a lot on a 45 degree road, end to end, priced by its true length.
+inline const FSegDef T52_Segment = { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue") };
+inline constexpr double T52_MoneyBefore = 5000.0;
+inline constexpr double T52_MoneyAfter = 4858.57864376269;
+inline constexpr double T52_ClickX = 5639.4;
+inline constexpr double T52_ClickY = 4060.6;
+inline const FLotDef2 T52_Lot = { 6450.0, 7270.0, TEXT("north"), TEXT("R1") };
+inline const FQuadDef T52_Quad = { { 5611.808075912432, 6191.635636485402, 5130.9754647055815, 4551.147904132611 }, { 3509.86940139403, 4089.696961966999, 5150.35713374682, 4570.5295731738515 } };
+inline constexpr double T52_OtherX = 7760.6;
+inline constexpr double T52_OtherY = 1939.4;
+inline const FLotDef2 T52_OtherLot = { 6450.0, 7270.0, TEXT("south"), TEXT("R1") };
+inline constexpr bool T52_AgainOk = false;
+inline const TCHAR* const T52_AgainReason = TEXT("overlap: [6450.0, 7270.0] on the R1 crosses an existing lot at [6450.0, 7270.0] on the R1");
+
+// 53: side names come off the NORMAL, not the dominant axis of the run.
+inline const FSideRow T53_Sides[] = {
+	{ TEXT("drawn-2to1"), 6800.0, 4230.0, 7650.0, 2530.0, TEXT("east"), TEXT("west"), false, 0.8944271909999159, 0.4472135954999579 },
+	{ TEXT("reversed-diagonal"), 7200.0, 3500.0, 6200.0, 2500.0, TEXT("south"), TEXT("north"), true, 0.7071067811865475, -0.7071067811865475 },
+	{ TEXT("reversed-vertical"), 3000.0, 4230.0, 3000.0, 2000.0, TEXT("east"), TEXT("west"), false, 1.0, 0.0 },
+	{ TEXT("arterial"), -7650.0, 0.0, 7650.0, 0.0, TEXT("north"), TEXT("south"), true, -0.0, 1.0 },
+	{ TEXT("cross"), 0.0, -4230.0, 0.0, 4230.0, TEXT("west"), TEXT("east"), false, -1.0, 0.0 },
+};
+inline constexpr int32 T53_SidesNum = 5;
+
+// 54: two houses along one diagonal street - pads apart, boxes overlapping.
+inline const FSegDef T54_Segment = { TEXT("R1"), 5700.0, 2000.0, 7650.0, 3950.0, TEXT("avenue") };
+inline constexpr double T54_Clicks[2][2] = { { 5029.339828220179, 3450.660171779821 }, { 6199.339828220179, 4620.660171779821 } };
+inline const FLotDef2 T54_Lots[2] = { { 5590.0, 6410.0, TEXT("north"), TEXT("R1") }, { 7240.0, 8060.0, TEXT("north"), TEXT("R1") } };
+inline constexpr bool T54_Quads = false;
+inline constexpr bool T54_Rects = true;
+
+// 55: the other three scans compare pads too.
+inline constexpr double T55_RvL_Click[2] = { 7000.0, 1500.0 };
+inline const FLotDef2 T55_RvL_Lot = { 6590.0, 7410.0, TEXT("north"), TEXT("arterial") };
+inline constexpr double T55_RvL_Draw[4] = { 4400.0, 3600.0, 5900.0, 2100.0 };
+inline constexpr bool T55_RvL_Quads = false;
+inline constexpr bool T55_RvL_Rects = true;
+inline constexpr double T55_RvR_First[4] = { 4400.0, 3600.0, 5900.0, 2100.0 };
+inline constexpr double T55_RvR_Second[4] = { 2500.0, 1200.0, 2500.0, 2100.0 };
+inline constexpr bool T55_RvR_Quads = false;
+inline constexpr bool T55_RvR_Rects = true;
+inline constexpr double T55_LvH_Road[4] = { 5700.0, 2000.0, 7650.0, 3950.0 };
+inline constexpr double T55_LvH_Click[2] = { 5029.339828220179, 3450.660171779821 };
+inline const FLotDef2 T55_LvH_Lot = { 5590.0, 6410.0, TEXT("north"), TEXT("R1") };
+inline constexpr double T55_LvH_Highway[4] = { 2600.0, 1800.0, 2600.0, 3000.0 };
+inline constexpr bool T55_LvH_Quads = false;
+inline constexpr bool T55_LvH_Rects = true;
+inline constexpr bool T55_LvH_StillPlaces = true;
 
 } // namespace StacktownRoadsOracle

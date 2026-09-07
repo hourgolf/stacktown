@@ -125,9 +125,11 @@ MUTATIONS = [
      'if (Pin.Side != Local.Side)\n\t\t\t{\n\t\t\t\tcontinue;\n\t\t\t}',
      'if (false)\n\t\t\t{\n\t\t\t\tcontinue;\n\t\t\t}', False, 'placement'),
 
-    ('lot-rect-vertical-uses-the-wrong-axis', 'the corner overlap check stops working',
-     'Rect.YMin = Lot.X0;\n\t\tRect.YMax = Lot.X1;',
-     'Rect.YMin = Lot.X0 - 10000.0;\n\t\tRect.YMax = Lot.X1 - 10000.0;', True, 'placement'),
+    ('lot-span-shifted', 'the corner overlap check stops working',
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'return BandQuad(F, Lot.X0, Lot.X1, Sign * Near, Sign * Far);',
+     'return BandQuad(F, Lot.X0 - 10000.0, Lot.X1 - 10000.0, Sign * Near, Sign * Far);',
+     True, 'placement'),
 
     ('pool-cap-off-by-one', 'one lot more than the pool has actors for',
      'if (Placed >= Board.Rules.PoolSize)', 'if (Placed > Board.Rules.PoolSize)', True, 'placement'),
@@ -155,8 +157,9 @@ MUTATIONS = [
     # the integer part - so Snap(start + t) != start + Snap(t) at a tie even when
     # start is on the grid. The reasoning in the spec is stale; the code is right.
     ('snap-before-world-space', 'the grid shifts at a tie, and on any off-grid road start',
-     'const double X0 = Snap(R, WorldCoord - Width / 2.0);',
-     'const double X0 = RoadStartOnAxis + Snap(R, Local.Along - Width / 2.0);', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);',
+     'const double X0 = AxisMin + Snap(R, Local.Along - Width / 2.0);', True, 'placement'),
 
     ('overlap-scan-unsorted', 'a refusal names whichever lot was added first',
      'TArray<FString> Ids;\n\tState.Parcels.GetKeys(Ids);\n\tIds.Sort([](const FString& A, const FString& B) { return A < B; });',
@@ -215,7 +218,8 @@ MUTATIONS = [
      'if (false && !(Board.PlateXMin <= SX0 && SX0 <= Board.PlateXMax &&', True, 'placement'),
 
     ('road-crossing-not-checked', 'a drawn road runs straight over another road',
-     'if (RectsOverlap(Mine, RoadRect(R, E, Road)))', 'if (false)', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'if (QuadsOverlap(Mine, RoadQuad(R, E, Road)))', 'if (false)', True, 'placement'),
 
     ('road-pin-scan-not-mode-gated', 'empty mode still refuses on a dormant pin',
      'if (bPinsActive)\n\t{\n\t\tconst FRoad* Arterial = FindRoad(Roads, Board.PinnedRoadId);',
@@ -223,12 +227,13 @@ MUTATIONS = [
      True, 'placement'),
 
     ('road-pin-scan-removed', 'a drawn road runs through a standing pinned building',
-     'if (RectsOverlap(Mine, LotRect(R, E, *Arterial, PinLot)))', 'if (false)', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'if (QuadsOverlap(Mine, LotQuad(R, E, *Arterial, PinLot)))', 'if (false)', True, 'placement'),
 
     ('road-corridor-full-width', 'a road corridor is measured at twice its half-width',
-     # REFRESHED 2026-09-06: the corridor half became the road's own (RoadHalf()).
-     'Rect.YMin = Road.StartY - Half;\n\t\tRect.YMax = Road.StartY + Half;',
-     'Rect.YMin = Road.StartY - Half * 2.0;\n\t\tRect.YMax = Road.StartY + Half * 2.0;',
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'return BandQuad(F, F.S0, F.S0 + F.Length, -Half, Half);',
+     'return BandQuad(F, F.S0, F.S0 + F.Length, -Half * 2.0, Half * 2.0);',
      True, 'placement'),
 
     ('road-ids-start-at-zero', 'the first drawn road is R0, not R1',
@@ -236,8 +241,9 @@ MUTATIONS = [
      True, 'placement'),
 
     ('horizontal-gets-the-vertical-convention', 'north and south become west and east',
-     'Road.bAxisX = true;\n\t\tRoad.SidePlus = TEXT("north");\n\t\tRoad.SideMinus = TEXT("south");',
-     'Road.bAxisX = true;\n\t\tRoad.SidePlus = TEXT("west");\n\t\tRoad.SideMinus = TEXT("east");',
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'Road.SidePlus  = Ny >= 0.0 ? TEXT("north") : TEXT("south");',
+     'Road.SidePlus  = Ny >= 0.0 ? TEXT("west") : TEXT("east");',
      True, 'placement'),
 
     ('road-ids-sorted-lexicographically', 'R10 is treated as coming before R2',
@@ -365,8 +371,9 @@ MUTATIONS = [
      'if (const FRoad* Near = nullptr)', True, 'placement'),
 
     ('lot-may-cross-a-highway', 'the no-frontage corridor scan stops running',
-     '\t\tif (RoadHasFrontage(E, Other))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectsOverlap(Mine, RoadRect(R, E, Other)))',
-     '\t\tif (true)\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectsOverlap(Mine, RoadRect(R, E, Other)))', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     '\t\tif (RoadHasFrontage(E, Other))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (QuadsOverlap(Mine, RoadQuad(R, E, Other)))',
+     '\t\tif (true)\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (QuadsOverlap(Mine, RoadQuad(R, E, Other)))', True, 'placement'),
 
     ('lot-rect-near-is-the-constant', 'the frontage line stops moving with the type',
      'const double Near = RoadHalf(R, E, Road);',
@@ -421,8 +428,9 @@ MUTATIONS = [
      '\t\tif (false)\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectDistance(Mine, RoadRect(R, E, Road)) <= E.RoadHighwayReach)', True, 'placement'),
 
     ('rect-distance-ignores-y', 'proximity measured on one axis only',
-     'return FMath::Sqrt(Dx * Dx + Dy * Dy);\n}\n\nFLotRect RoadRect',
-     'return Dx;\n}\n\nFLotRect RoadRect', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
+     'const double Dy = FMath::Max(0.0, FMath::Max(A.YMin - B.YMax, B.YMin - A.YMax));\n\treturn FMath::Sqrt(Dx * Dx + Dy * Dy);',
+     'const double Dy = 0.0;\n\treturn FMath::Sqrt(Dx * Dx + Dy * Dy);', True, 'placement'),
 
     ('material-name-drops-the-type', 'every road wears the avenue stain',
      'return FString::Printf(TEXT("MI_road_%s"), *Type);',
@@ -447,6 +455,87 @@ MUTATIONS = [
     ('drag-direction-x-only', 'a vertical road drawn downward still mirrors',
      'if (SX1 < SX0 || (SX1 == SX0 && SY1 < SY0))',
      'if (SX1 < SX0)', True, 'placement'),
+
+    # ---- roads at any direction (item 11, self-tests 50-55) --------------
+    # WAS 'side-names-from-the-run', comparing |Dx| >= |Dy| instead - which is
+    # the SAME test (the normal is the direction rotated 90 degrees, so
+    # |Ny| = |Ux| and |Nx| = |Uy|), so the mutation was a no-op and its survival
+    # said nothing. Swapping the branches is the real defect.
+    ('side-name-pairs-swapped', 'a road gets the other axis pair of side names',
+     'if (FMath::Abs(Ny) >= FMath::Abs(Nx))',
+     'if (FMath::Abs(Ny) < FMath::Abs(Nx))', True, 'placement'),
+
+    ('side-plus-sign-ignored', 'the plus side is always north',
+     "Road.SidePlus  = Ny >= 0.0 ? TEXT(\"north\") : TEXT(\"south\");\n\t\tRoad.SideMinus = Ny >= 0.0 ? TEXT(\"south\") : TEXT(\"north\");",
+     "Road.SidePlus  = TEXT(\"north\");\n\t\tRoad.SideMinus = TEXT(\"south\");", True, 'placement'),
+
+    ('side-plus-sign-ignored-x', 'the plus side is always east',
+     "Road.SidePlus  = Nx >= 0.0 ? TEXT(\"east\") : TEXT(\"west\");\n\t\tRoad.SideMinus = Nx >= 0.0 ? TEXT(\"west\") : TEXT(\"east\");",
+     "Road.SidePlus  = TEXT(\"east\");\n\t\tRoad.SideMinus = TEXT(\"west\");", True, 'placement'),
+
+    ('normal-rotated-minus-90', 'the normal is rotated the other way',
+     '\tF.Nx = -F.Uy;\n\tF.Ny =  F.Ux;',
+     '\tF.Nx =  F.Uy;\n\tF.Ny = -F.Ux;', True, 'placement'),
+
+    ('frame-s0-dropped', 'the projection origin is lost',
+     '\tF.S0 = F.Ox * F.Ux + F.Oy * F.Uy;',
+     '\tF.S0 = 0.0;', True, 'placement'),
+
+    ('point-at-ignores-the-offset', 'every point lands on the centreline',
+     '\tOutX = F.Ox + F.Ux * T + F.Nx * Offset;\n\tOutY = F.Oy + F.Uy * T + F.Ny * Offset;',
+     '\tOutX = F.Ox + F.Ux * T;\n\tOutY = F.Oy + F.Uy * T;', True, 'placement'),
+
+    ('quad-corners-figure-eight', 'the pad is wound as a bow-tie, which SAT cannot separate',
+     '\tPointAt(F, S1, Off1, Q.X[2], Q.Y[2]);\n\tPointAt(F, S0, Off1, Q.X[3], Q.Y[3]);',
+     '\tPointAt(F, S0, Off1, Q.X[2], Q.Y[2]);\n\tPointAt(F, S1, Off1, Q.X[3], Q.Y[3]);', True, 'placement'),
+
+    ('sat-touching-counts-as-overlap', 'two pads that touch are called overlapping',
+     'if (AMax <= BMin || BMax <= AMin)',
+     'if (AMax < BMin || BMax < AMin)', True, 'placement'),
+
+    ('sat-one-polygon-only', "only one shape's axes are tested",
+     'for (int32 P = 0; P < 2; ++P)',
+     'for (int32 P = 0; P < 1; ++P)', True, 'placement'),
+
+    ('lot-side-sign-always-plus', 'every lot sits on the plus side',
+     'const double Sign = Lot.Side == Road.SidePlus ? 1.0 : -1.0;',
+     'const double Sign = 1.0;', True, 'placement'),
+
+    ('lot-quad-near-far-swapped', 'the pad is laid from the block edge inward',
+     'return BandQuad(F, Lot.X0, Lot.X1, Sign * Near, Sign * Far);',
+     'return BandQuad(F, Lot.X0, Lot.X1, Sign * Far, Sign * Near);', True, 'placement'),
+
+    ('road-quad-half-length', 'a corridor covers half its road',
+     'return BandQuad(F, F.S0, F.S0 + F.Length, -Half, Half);',
+     'return BandQuad(F, F.S0, F.S0 + F.Length / 2.0, -Half, Half);', True, 'placement'),
+
+    ('click-span-not-projected', 'the span is recovered as a world x again',
+     'const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);',
+     'const double X0 = Snap(R, Road->StartX + Local.Along - Width / 2.0);', True, 'placement'),
+
+    ('diagonal-length-manhattan', 'a diagonal is measured along the axes',
+     'const double Length = FMath::Sqrt((SX1 - SX0) * (SX1 - SX0) + (SY1 - SY0) * (SY1 - SY0));',
+     'const double Length = FMath::Abs(SX1 - SX0) + FMath::Abs(SY1 - SY0);', True, 'placement'),
+
+    ('diagonal-snapped-to-an-axis', 'a diagonal is straightened anyway',
+     '\t\tSX0 = Snap(R, X0); SY0 = Snap(R, Y0); SX1 = Snap(R, X1); SY1 = Snap(R, Y1);\n\t}',
+     '\t\tSX0 = Snap(R, X0); SY0 = Snap(R, Y0); SX1 = Snap(R, X1); SY1 = Snap(R, Y0);\n\t}', True, 'placement'),
+
+    ('click-lot-scan-uses-boxes', 'the click overlap scan compares bounding boxes',
+     'if (QuadsOverlap(Mine, LotQuad(R, E, *OtherRoad, Other)))',
+     'if (RectsOverlap(QuadRect(Mine), LotRect(R, E, *OtherRoad, Other)))', True, 'placement'),
+
+    ('no-frontage-scan-uses-boxes', 'the highway scan compares bounding boxes',
+     'if (QuadsOverlap(Mine, RoadQuad(R, E, Other)))',
+     'if (RectsOverlap(QuadRect(Mine), RoadRect(R, E, Other)))', True, 'placement'),
+
+    ('draw-lot-scan-uses-boxes', 'the road-vs-lot scan compares bounding boxes',
+     'if (QuadsOverlap(Mine, LotQuad(R, E, *Road, Lot)))',
+     'if (RectsOverlap(QuadRect(Mine), LotRect(R, E, *Road, Lot)))', True, 'placement'),
+
+    ('draw-crossing-scan-uses-boxes', 'the road-vs-road scan compares bounding boxes',
+     'if (QuadsOverlap(Mine, RoadQuad(R, E, Road)))',
+     'if (RectsOverlap(QuadRect(Mine), RoadRect(R, E, Road)))', True, 'placement'),
 
     ('type-order-scrambled', 'the T-key cycle stops matching the decided order',
      'TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };',

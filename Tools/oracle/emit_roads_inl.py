@@ -278,6 +278,114 @@ def main():
     w('};')
     w('inline constexpr int32 T49_DragNum = %d;' % len(fx['t49_drag_direction']))
     w('')
+    w('// ---- ROADS AT ANY DIRECTION, self-tests 50-55 (item 11) --------------')
+    w('struct FQuadPair { FLotDef2 A; FLotDef2 B; bool bQuads; bool bRects; };')
+    w('struct FProjRow  { double World; double X; double Y; double Along; };')
+    w('struct FProjCase { const TCHAR* Road; double S0; double Length;')
+    w('                   double Ux; double Uy; double Nx; double Ny;')
+    w('                   FProjRow Points[5]; };')
+    w('struct FSideRow  { const TCHAR* Label; double StartX; double StartY;')
+    w('                   double EndX; double EndY; const TCHAR* Plus;')
+    w('                   const TCHAR* Minus; bool bAxisX; double Nx; double Ny; };')
+    w('struct FQuadDef  { double X[4]; double Y[4]; };')
+    w('')
+    c = fx['t32b_diagonal_draws']
+    w('// 32b/33b: a diagonal DRAWS now, and is measured along its centreline.')
+    w('inline const FDrawCase T32b_Diagonal = { %s, %s, %s, %s, %s, %s, %s, %s };' % (
+        n(c['x0']), n(c['y0']), n(c['x1']), n(c['y1']),
+        b(c['pins_active']), b(c['ok']), q(c['reason']), segdef(c['road'])))
+    c = fx['t33b_diagonal_too_short']
+    w('inline const FDrawCase T33b_DiagonalTooShort = { %s, %s, %s, %s, %s, %s, %s, %s };' % (
+        n(c['x0']), n(c['y0']), n(c['x1']), n(c['y1']),
+        b(c['pins_active']), b(c['ok']), q(c['reason']), segdef(c['road'])))
+    w('')
+    w('// 50: QuadsOverlap against RectsOverlap on real axis-aligned lot pairs.')
+    w('inline const FQuadPair T50_Pairs[] = {')
+    for p in fx['t50_quad_vs_rect']:
+        w('\t{ %s, %s, %s, %s },' % (lotdef(p['a']), lotdef(p['b']),
+                                     b(p['quads']), b(p['rects'])))
+    w('};')
+    w('inline constexpr int32 T50_PairsNum = %d;' % len(fx['t50_quad_vs_rect']))
+    w('')
+    w('// 51: the projection identity - S0 + Along IS the world coordinate for')
+    w('// both built-ins, which is why no lot already saved changes meaning.')
+    w('inline const FProjCase T51_Projection[] = {')
+    for pc in fx['t51_projection']:
+        rows = ', '.join('{ %s, %s, %s, %s }' % (n(r['world']), n(r['x']),
+                                                 n(r['y']), n(r['along']))
+                         for r in pc['points'])
+        w('\t{ %s, %s, %s, %s, %s, %s, %s, { %s } },' % (
+            q(pc['road']), n(pc['s0']), n(pc['length']), n(pc['ux']), n(pc['uy']),
+            n(pc['nx']), n(pc['ny']), rows))
+    w('};')
+    w('inline constexpr int32 T51_ProjectionNum = %d;' % len(fx['t51_projection']))
+    w('')
+    w('// 52: a lot on a 45 degree road, end to end, priced by its true length.')
+    t = fx['t52_diagonal_lot']
+    w('inline const FSegDef T52_Segment = %s;' % segdef(t['segment']))
+    w('inline constexpr double T52_MoneyBefore = %s;' % n(t['money_before']))
+    w('inline constexpr double T52_MoneyAfter = %s;' % n(t['money_after']))
+    w('inline constexpr double T52_ClickX = %s;' % n(t['click'][0]))
+    w('inline constexpr double T52_ClickY = %s;' % n(t['click'][1]))
+    w('inline const FLotDef2 T52_Lot = %s;' % lotdef(t['lot']))
+    w('inline const FQuadDef T52_Quad = { { %s }, { %s } };' % (
+        ', '.join(n(p[0]) for p in t['quad']), ', '.join(n(p[1]) for p in t['quad'])))
+    w('inline constexpr double T52_OtherX = %s;' % n(t['other_side_click'][0]))
+    w('inline constexpr double T52_OtherY = %s;' % n(t['other_side_click'][1]))
+    w('inline const FLotDef2 T52_OtherLot = %s;' % lotdef(t['other_side_lot']))
+    w('inline constexpr bool T52_AgainOk = %s;' % b(t['again_ok']))
+    w('inline const TCHAR* const T52_AgainReason = %s;' % q(t['again_reason']))
+    w('')
+    w('// 53: side names come off the NORMAL, not the dominant axis of the run.')
+    w('inline const FSideRow T53_Sides[] = {')
+    for r in fx['t53_sides']:
+        w('\t{ %s, %s, %s, %s, %s, %s, %s, %s, %s, %s },' % (
+            q(r['label']), n(r['start'][0]), n(r['start'][1]),
+            n(r['end'][0]), n(r['end'][1]), q(r['side_plus']), q(r['side_minus']),
+            b(r['axis'] == 'x'), n(r['nx']), n(r['ny'])))
+    w('};')
+    w('inline constexpr int32 T53_SidesNum = %d;' % len(fx['t53_sides']))
+    w('')
+    w('// 54: two houses along one diagonal street - pads apart, boxes overlapping.')
+    t = fx['t54_two_lots']
+    w('inline const FSegDef T54_Segment = %s;' % segdef(t['segment']))
+    w('inline constexpr double T54_Clicks[2][2] = { { %s, %s }, { %s, %s } };' % (
+        n(t['clicks'][0][0]), n(t['clicks'][0][1]),
+        n(t['clicks'][1][0]), n(t['clicks'][1][1])))
+    w('inline const FLotDef2 T54_Lots[2] = { %s, %s };'
+      % (lotdef(t['lots'][0]), lotdef(t['lots'][1])))
+    w('inline constexpr bool T54_Quads = %s;' % b(t['quads']))
+    w('inline constexpr bool T54_Rects = %s;' % b(t['rects']))
+    w('')
+    w('// 55: the other three scans compare pads too.')
+    t = fx['t55_scans']
+    rl = t['road_vs_lot']
+    w('inline constexpr double T55_RvL_Click[2] = { %s, %s };'
+      % (n(rl['lot_click'][0]), n(rl['lot_click'][1])))
+    w('inline const FLotDef2 T55_RvL_Lot = %s;' % lotdef(rl['lot']))
+    w('inline constexpr double T55_RvL_Draw[4] = { %s };'
+      % ', '.join(n(v) for v in rl['draw']))
+    w('inline constexpr bool T55_RvL_Quads = %s;' % b(rl['quads']))
+    w('inline constexpr bool T55_RvL_Rects = %s;' % b(rl['rects']))
+    rr = t['road_vs_road']
+    w('inline constexpr double T55_RvR_First[4] = { %s };'
+      % ', '.join(n(v) for v in rr['first']))
+    w('inline constexpr double T55_RvR_Second[4] = { %s };'
+      % ', '.join(n(v) for v in rr['second']))
+    w('inline constexpr bool T55_RvR_Quads = %s;' % b(rr['quads']))
+    w('inline constexpr bool T55_RvR_Rects = %s;' % b(rr['rects']))
+    lh = t['lot_vs_highway']
+    w('inline constexpr double T55_LvH_Road[4] = { %s };'
+      % ', '.join(n(v) for v in lh['road']))
+    w('inline constexpr double T55_LvH_Click[2] = { %s, %s };'
+      % (n(lh['click'][0]), n(lh['click'][1])))
+    w('inline const FLotDef2 T55_LvH_Lot = %s;' % lotdef(lh['lot']))
+    w('inline constexpr double T55_LvH_Highway[4] = { %s };'
+      % ', '.join(n(v) for v in lh['highway']))
+    w('inline constexpr bool T55_LvH_Quads = %s;' % b(lh['quads']))
+    w('inline constexpr bool T55_LvH_Rects = %s;' % b(lh['rects']))
+    w('inline constexpr bool T55_LvH_StillPlaces = %s;' % b(lh['still_places']))
+    w('')
     w('} // namespace StacktownRoadsOracle')
 
     with open(OUT, 'w') as f:

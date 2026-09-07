@@ -320,6 +320,175 @@ def main():
             'money': seen[0][2],
         })
 
+    # ---- ROADS AT ANY DIRECTION, self-tests 50-55 (item 11, first half) ----
+    # The resolver, the lot frame and every overlap scan generalize off the
+    # road's own unit direction. The axis-aligned cases above are the same
+    # numbers they always were - that reduction is the thing worth checking,
+    # and it is captured here rather than argued.
+    fx['t32b_diagonal_draws'] = cap_draw(funded(), 6200.0, 2500.0, 7200.0, 3500.0)
+    fx['t33b_diagonal_too_short'] = cap_draw(funded(), 6200.0, 3000.0, 6700.0, 3500.0)
+
+    # 50: quads_overlap against rects_overlap on real axis-aligned lot pairs -
+    # an overlapping pair, a pair that only TOUCHES (a miss, because a lot sits
+    # exactly on its own road's frontage line), opposite sides, and the corner.
+    _r50 = P._all_roads(citytick.seed_state())
+    fx['t50_quad_vs_rect'] = []
+    for a, b in (
+            ({'x0': 100.0, 'x1': 900.0, 'side': 'north', 'road_id': 'arterial'},
+             {'x0': 500.0, 'x1': 1300.0, 'side': 'north', 'road_id': 'arterial'}),
+            ({'x0': 100.0, 'x1': 900.0, 'side': 'north', 'road_id': 'arterial'},
+             {'x0': 900.0, 'x1': 1700.0, 'side': 'north', 'road_id': 'arterial'}),
+            ({'x0': 100.0, 'x1': 900.0, 'side': 'north', 'road_id': 'arterial'},
+             {'x0': 100.0, 'x1': 900.0, 'side': 'south', 'road_id': 'arterial'}),
+            ({'x0': 1640.0, 'x1': 2460.0, 'side': 'north', 'road_id': 'arterial'},
+             {'x0': 1130.0, 'x1': 2630.0, 'side': 'west', 'road_id': 'cross'})):
+        qa, qb = P.lot_quad(a, _r50), P.lot_quad(b, _r50)
+        fx['t50_quad_vs_rect'].append({
+            'a': a, 'b': b, 'quads': P.quads_overlap(qa, qb),
+            'rects': P.rects_overlap(P.lot_rect(a, _r50), P.lot_rect(b, _r50))})
+
+    # 51: the projection identity - s0 + along IS the world coordinate for both
+    # built-ins, which is why no lot already saved changes meaning.
+    fx['t51_projection'] = []
+    for road, pts in ((P.ARTERIAL, (-7000.0, -410.0, 0.0, 2350.0, 7000.0)),
+                      (P.CROSS_STREET, (-4000.0, -410.0, 0.0, 1500.0, 4000.0))):
+        f = P.road_frame(road)
+        idx = 0 if road['axis'] == 'x' else 1
+        rows = []
+        for w in pts:
+            pt = (w, 3000.0) if idx == 0 else (3000.0, w)
+            along, _across, _len = P._project_to_road(road, pt[0], pt[1])
+            rows.append({'world': w, 'x': pt[0], 'y': pt[1], 'along': along})
+        fx['t51_projection'].append({
+            'road': road['id'], 's0': f[7], 'length': f[6],
+            'ux': f[2], 'uy': f[3], 'nx': f[4], 'ny': f[5], 'points': rows})
+
+    # 52: a lot on a 45 degree road, end to end, priced by its true length.
+    s52 = citytick.seed_state()
+    s52['money'] = 5000.0
+    s52, rid52, ok52, why52 = P.draw_road(s52, 6200.0, 2500.0, 7200.0, 3500.0)
+    assert ok52, why52
+    s52, pid52, okl52, whyl52 = P.place(s52, 5639.4, 4060.6)
+    assert okl52, whyl52
+    lot52 = s52['parcels'][pid52]['placement']
+    s52b, pid52b, oks52, _ = P.place(json.loads(json.dumps(s52)), 7760.6, 1939.4)
+    _, _, again52, why52c = P.place(json.loads(json.dumps(s52)), 5639.4, 4060.6)
+    fx['t52_diagonal_lot'] = {
+        'money_before': 5000.0, 'money_after': s52['money'],
+        'segment': seg(s52['roads'][rid52]),
+        'click': [5639.4, 4060.6], 'pid': pid52, 'lot': lot52,
+        'quad': [list(pt) for pt in P.lot_quad(lot52, P._all_roads(s52))],
+        'other_side_click': [7760.6, 1939.4], 'other_side_ok': oks52,
+        'other_side_lot': s52b['parcels'][pid52b]['placement'] if oks52 else None,
+        'again_ok': again52, 'again_reason': why52c,
+    }
+
+    # 53: side names come off the NORMAL. The discriminating case runs down and
+    # to the right at 2:1 - Y-dominant, so a dominant-axis rule would say
+    # 'west', and the normal points east. Plus the reversed segments, which the
+    # draw path can no longer produce but _road_dict must still answer.
+    s53 = citytick.seed_state()
+    s53['money'] = 5000.0
+    s53, rid53, ok53, why53 = P.draw_road(s53, 6800.0, 4230.0, 7650.0, 2530.0)
+    assert ok53, why53
+    fx['t53_sides'] = []
+    for label, sg in (('drawn-2to1', s53['roads'][rid53]),
+                      ('reversed-diagonal',
+                       {'id': 'X', 'start': (7200.0, 3500.0),
+                        'end': (6200.0, 2500.0), 'width_class': 'avenue'}),
+                      ('reversed-vertical',
+                       {'id': 'X', 'start': (3000.0, 4230.0),
+                        'end': (3000.0, 2000.0), 'width_class': 'avenue'}),
+                      ('arterial', P.ARTERIAL), ('cross', P.CROSS_STREET)):
+        d = P._road_dict(sg)
+        f = P.road_frame(d)
+        fx['t53_sides'].append({
+            'label': label, 'segment': seg(sg) if 'width_class' in sg else None,
+            'start': list(sg['start']), 'end': list(sg['end']),
+            'side_plus': d['side_plus'], 'side_minus': d['side_minus'],
+            'axis': d['axis'], 'nx': f[4], 'ny': f[5]})
+
+    # 54: two houses along one diagonal street - pads apart, boxes overlapping.
+    s54 = citytick.seed_state()
+    s54['money'] = 9000.0
+    s54, rid54, ok54, why54 = P.draw_road(s54, 5700.0, 2000.0, 7650.0, 3950.0,
+                                          pins_active=False)
+    assert ok54, why54
+    f54 = P.road_frame(P._road_dict(s54['roads'][rid54]))
+    clicks54, lots54 = [], []
+    for t in (0.20, 0.80):
+        al = f54[6] * t
+        px = f54[0] + f54[2] * al + f54[4] * 1500.0
+        py = f54[1] + f54[3] * al + f54[5] * 1500.0
+        s54, pid, okp, whyp = P.place(s54, px, py, pins_active=False)
+        assert okp, whyp
+        clicks54.append([px, py])
+        lots54.append(s54['parcels'][pid]['placement'])
+    qa54 = P.lot_quad(lots54[0], P._all_roads(s54))
+    qb54 = P.lot_quad(lots54[1], P._all_roads(s54))
+    fx['t54_two_lots'] = {
+        'segment': seg(s54['roads'][rid54]), 'clicks': clicks54, 'lots': lots54,
+        'quads': P.quads_overlap(qa54, qb54),
+        'rects': P.rects_overlap(P.quad_rect(qa54), P.quad_rect(qb54))}
+
+    # 55: the other three scans compare pads too - something axis-aligned
+    # standing in one of a diagonal's empty box corners.
+    a55 = citytick.seed_state(); a55['money'] = 40000.0
+    a55, pa55, oka55, whya55 = P.place(a55, 7000.0, 1500.0, pins_active=False)
+    assert oka55, whya55
+    lota55 = a55['parcels'][pa55]['placement']
+    oka55, whya55, roada55 = P.resolve_road_draw(a55, 4400.0, 3600.0, 5900.0,
+                                                 2100.0, pins_active=False)
+    assert oka55, whya55
+    qra55 = P.road_quad(P._road_dict(roada55))
+    qla55 = P.lot_quad(lota55, P._all_roads(a55))
+
+    b55 = citytick.seed_state(); b55['money'] = 40000.0
+    b55, rb55, okb55, whyb55 = P.draw_road(b55, 4400.0, 3600.0, 5900.0, 2100.0,
+                                           pins_active=False)
+    assert okb55, whyb55
+    okb55, whyb55, roadb55 = P.resolve_road_draw(b55, 2500.0, 1200.0, 2500.0,
+                                                 2100.0, pins_active=False)
+    assert okb55, whyb55
+    qab55 = P.road_quad(P._road_dict(b55['roads'][rb55]))
+    qbb55 = P.road_quad(P._road_dict(roadb55))
+
+    c55 = citytick.seed_state(); c55['money'] = 40000.0
+    c55, rc55, okc55, whyc55 = P.draw_road(c55, 5700.0, 2000.0, 7650.0, 3950.0,
+                                           pins_active=False)
+    assert okc55, whyc55
+    f55 = P.road_frame(P._road_dict(c55['roads'][rc55]))
+    al55 = f55[6] * 0.20
+    px55 = f55[0] + f55[2] * al55 + f55[4] * 1500.0
+    py55 = f55[1] + f55[3] * al55 + f55[5] * 1500.0
+    okc55, whyc55, lotc55 = P.resolve_click(c55, px55, py55, pins_active=False)
+    assert okc55, whyc55
+    c55, rh55, okh55, whyh55 = P.draw_road(c55, 2600.0, 1800.0, 2600.0, 3000.0,
+                                           'highway', pins_active=False)
+    assert okh55, whyh55
+    qh55 = P.road_quad(P._road_dict(c55['roads'][rh55]))
+    ql55 = P.lot_quad(lotc55, P._all_roads(c55))
+    fx['t55_scans'] = {
+        'road_vs_lot': {
+            'lot_click': [7000.0, 1500.0], 'lot': lota55,
+            'draw': [4400.0, 3600.0, 5900.0, 2100.0],
+            'quads': P.quads_overlap(qra55, qla55),
+            'rects': P.rects_overlap(P.quad_rect(qra55), P.quad_rect(qla55))},
+        'road_vs_road': {
+            'first': [4400.0, 3600.0, 5900.0, 2100.0],
+            'second': [2500.0, 1200.0, 2500.0, 2100.0],
+            'quads': P.quads_overlap(qab55, qbb55),
+            'rects': P.rects_overlap(P.quad_rect(qab55), P.quad_rect(qbb55))},
+        'lot_vs_highway': {
+            'road': [5700.0, 2000.0, 7650.0, 3950.0],
+            'click': [px55, py55], 'lot': lotc55,
+            'highway': [2600.0, 1800.0, 2600.0, 3000.0],
+            'quads': P.quads_overlap(ql55, qh55),
+            'rects': P.rects_overlap(P.quad_rect(ql55), P.quad_rect(qh55)),
+            'still_places': P.resolve_click(c55, px55, py55,
+                                            pins_active=False)[0]},
+    }
+
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_PATH, 'w') as f:
         json.dump(fx, f, indent=2, sort_keys=True)

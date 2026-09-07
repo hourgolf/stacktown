@@ -918,7 +918,9 @@ int main()
 		{
 			const FCityState S = RoadSeed();
 			CheckDraw("happy horizontal", S, T31);
-			CheckDraw("too diagonal", S, T32);
+			// WAS "too diagonal", until item 11 removed that refusal; these
+			// coordinates start on the cross street and refuse for that.
+			CheckDraw("starts on the cross street", S, T32);
 			CheckDraw("too short", S, T33);
 			CheckDraw("off board", S, T34);
 			CheckDraw("crosses a built-in", S, T35);
@@ -1281,6 +1283,281 @@ int main()
 				TArray<FRoad> BuiltIns; BuiltIns.Add(*Arterial); BuiltIns.Add(*Cross);
 				CheckBool("the built-in crossing is still a crossing",
 					InCrossing(Board.Rules, Board.Econ, BuiltIns, 0.0, 0.0), T48_BuiltinsAtOrigin);
+			}
+		}
+	}
+
+	// =====================================================================
+	// ROADS AT ANY DIRECTION (queue item 11, first half). placement.py
+	// self-tests 50-55. The resolver works in PROJECTION space, lot and road
+	// footprints are quads with a separating-axis test, and side names come
+	// off the normal - all of which reduce EXACTLY to the axis-aligned
+	// answers above, which is the check that matters.
+	// =====================================================================
+	{
+		using namespace StacktownRoadsOracle;
+		const FPlacementBoard Board = OracleBoard();
+		auto RoadSeed = [&R]() { FCityState S = SeedState(R); S.Money = GeometryMoney; return S; };
+		auto LotOf = [](const FLotDef2& D) {
+			FLotPlacement L;
+			L.X0 = D.X0; L.X1 = D.X1; L.Side = FString(D.Side);
+			if (D.RoadId != nullptr) { L.RoadId = FString(D.RoadId); }
+			return L;
+		};
+		auto RoadOf = [&Board](const FCityState& S, const FString& Id) {
+			const TArray<FRoad> Rs = Board.AllRoads(S);
+			return *FindRoad(Rs, Id);
+		};
+
+		CASE("Roads.DiagonalAccepted");
+		{
+			// 32b/33b: the "too diagonal" refusal is gone, and a diagonal is
+			// measured along its CENTRELINE - 500 by 500 is 707 uu, under the
+			// 820 a lot needs, where the sum of the deltas would say 1000.
+			FCityState S = RoadSeed();
+			const FRoadDrawResult D = ResolveRoadDraw(Board, S, T32b_Diagonal.X0,
+				T32b_Diagonal.Y0, T32b_Diagonal.X1, T32b_Diagonal.Y1,
+				FString(TEXT("avenue")), T32b_Diagonal.bPinsActive);
+			CheckBool("a 45 degree road draws", D.bOk, T32b_Diagonal.bOk);
+			CheckNear("start x kept", D.Segment.StartX, T32b_Diagonal.Road.StartX, Tol);
+			CheckNear("start y kept", D.Segment.StartY, T32b_Diagonal.Road.StartY, Tol);
+			CheckNear("end x not pulled onto an axis", D.Segment.EndX, T32b_Diagonal.Road.EndX, Tol);
+			CheckNear("end y not pulled onto an axis", D.Segment.EndY, T32b_Diagonal.Road.EndY, Tol);
+			const FRoadDrawResult Sh = ResolveRoadDraw(Board, S, T33b_DiagonalTooShort.X0,
+				T33b_DiagonalTooShort.Y0, T33b_DiagonalTooShort.X1, T33b_DiagonalTooShort.Y1,
+				FString(TEXT("avenue")), T33b_DiagonalTooShort.bPinsActive);
+			CheckBool("707 uu is too short", Sh.bOk, T33b_DiagonalTooShort.bOk);
+			CheckStr("and says 707", Sh.Reason, FString(T33b_DiagonalTooShort.Reason));
+		}
+
+		CASE("Roads.QuadsReduceToRects");
+		{
+			// 50: not an argument about separating axes - the two functions run
+			// against each other on real lot geometry, including a pair that
+			// only TOUCHES, which must be a miss.
+			FCityState S = RoadSeed();
+			for (int32 i = 0; i < T50_PairsNum; ++i)
+			{
+				const FQuadPair& C = T50_Pairs[i];
+				const FLotPlacement A = LotOf(C.A), B2 = LotOf(C.B);
+				const FRoad RA = RoadOf(S, LotRoadId(A));
+				const FRoad RB = RoadOf(S, LotRoadId(B2));
+				const FQuad QA = LotQuad(Board.Rules, Board.Econ, RA, A);
+				const FQuad QB = LotQuad(Board.Rules, Board.Econ, RB, B2);
+				CheckBool("quads agree with the oracle", QuadsOverlap(QA, QB), C.bQuads);
+				CheckBool("rects agree with the oracle",
+					RectsOverlap(LotRect(Board.Rules, Board.Econ, RA, A),
+						LotRect(Board.Rules, Board.Econ, RB, B2)), C.bRects);
+				CheckBool("and with each other", QuadsOverlap(QA, QB), C.bRects);
+			}
+		}
+
+		CASE("Roads.ProjectionIdentity");
+		{
+			// 51: S0 + Along IS the world coordinate for both built-ins, which
+			// is why no lot already saved changes meaning.
+			FCityState S = RoadSeed();
+			for (int32 i = 0; i < T51_ProjectionNum; ++i)
+			{
+				const FProjCase& C = T51_Projection[i];
+				const FRoad Road = RoadOf(S, FString(C.Road));
+				const FRoadFrame F = RoadFrame(Road);
+				CheckNear("s0", F.S0, C.S0, Tol);
+				CheckNear("length", F.Length, C.Length, Tol);
+				CheckNear("ux", F.Ux, C.Ux, Tol);
+				CheckNear("uy", F.Uy, C.Uy, Tol);
+				CheckNear("nx", F.Nx, C.Nx, Tol);
+				CheckNear("ny", F.Ny, C.Ny, Tol);
+				for (int32 k = 0; k < 5; ++k)
+				{
+					const FProjRow& Row = C.Points[k];
+					const FRoadProjection Pr = ProjectToRoad(Road, Row.X, Row.Y);
+					CheckNear("along", Pr.Along, Row.Along, Tol);
+					CheckNear("s0 + along IS the world coordinate",
+						F.S0 + Pr.Along, Row.World, Tol);
+					double Wx = 0.0, Wy = 0.0;
+					PointAt(F, F.S0 + Pr.Along, 0.0, Wx, Wy);
+					CheckNear("and recovers the point", Road.bAxisX ? Wx : Wy, Row.World, Tol);
+				}
+			}
+		}
+
+		CASE("Roads.DiagonalLot");
+		{
+			// 52: a lot on a 45 degree road, end to end. Before this the world
+			// position was recovered as start[axis] + along and could not have
+			// produced these corners at all.
+			FCityState S = SeedState(R);
+			S.Money = T52_MoneyBefore;
+			const FRoadDrawResult D = DrawRoad(Board, S, T52_Segment.StartX, T52_Segment.StartY,
+				T52_Segment.EndX, T52_Segment.EndY, FString(T52_Segment.WidthClass), true);
+			CheckBool("diagonal drawn", D.bOk, true);
+			CheckNear("priced by its true length", S.Money, T52_MoneyAfter, Tol);
+			const FPlaceResult P = Place(Board, S, T52_ClickX, T52_ClickY, true, Board.Rules.V0Width);
+			CheckBool("lot placed", P.bOk, true);
+			if (P.bOk)
+			{
+				const FLotPlacement& Lot = S.Parcels[P.Pid].Placement.GetValue();
+				CheckNear("x0", Lot.X0, T52_Lot.X0, Tol);
+				CheckNear("x1", Lot.X1, T52_Lot.X1, Tol);
+				CheckStr("side", Lot.Side, FString(T52_Lot.Side));
+				const FQuad Q = LotQuad(Board.Rules, Board.Econ, RoadOf(S, LotRoadId(Lot)), Lot);
+				for (int32 k = 0; k < 4; ++k)
+				{
+					CheckNear("pad corner x", Q.X[k], T52_Quad.X[k], 0.01);
+					CheckNear("pad corner y", Q.Y[k], T52_Quad.Y[k], 0.01);
+				}
+				// AND IT POSES. The pad's anchor is the midpoint of the quad
+				// edge the pad's own +x runs FROM (corners 0-3 on the plus
+				// side), and the yaw is the direction from corner 0 to corner
+				// 1 - both read off the oracle's OWN corners, so this ties the
+				// world transform to the fixture rather than to a second
+				// hand-computed answer. Without it a diagonal lot would resolve
+				// correctly and still stand in the wrong place.
+				LotFrame::FPose Pose;
+				const TArray<FRoad> PoseRoads = Board.AllRoads(S);
+				const FRoad* Own = FindRoad(PoseRoads, LotRoadId(Lot));
+				CheckBool("pose resolves", Own != nullptr && LotFrame::Pose(Lot, PoseRoads, Pose,
+					RoadHalf(Board.Rules, Board.Econ, *Own)), true);
+				CheckNear("pose x is the pad edge midpoint",
+					Pose.X, (T52_Quad.X[0] + T52_Quad.X[3]) * 0.5, 0.01);
+				CheckNear("pose y is the pad edge midpoint",
+					Pose.Y, (T52_Quad.Y[0] + T52_Quad.Y[3]) * 0.5, 0.01);
+				CheckNear("pose yaw is the road's own direction", Pose.Yaw,
+					FMath::RadiansToDegrees(FMath::Atan2(T52_Quad.Y[1] - T52_Quad.Y[0],
+						T52_Quad.X[1] - T52_Quad.X[0])), 0.01);
+
+				FCityState Other = S;
+				const FPlaceResult P2 = Place(Board, Other, T52_OtherX, T52_OtherY, true, Board.Rules.V0Width);
+				CheckBool("the other side of the same span places", P2.bOk, true);
+				if (P2.bOk)
+				{
+					CheckStr("other side", Other.Parcels[P2.Pid].Placement.GetValue().Side,
+						FString(T52_OtherLot.Side));
+				}
+				FCityState Again = S;
+				const FPlaceResult P3 = Place(Board, Again, T52_ClickX, T52_ClickY, true, Board.Rules.V0Width);
+				CheckBool("the same span twice refuses", P3.bOk, T52_AgainOk);
+				CheckStr("and says why", P3.Reason, FString(T52_AgainReason));
+			}
+		}
+
+		CASE("Roads.SideNames");
+		{
+			// 53: the names come off the NORMAL. The 2:1 case is where a
+			// dominant-axis rule would say 'west' and the lots are east; the
+			// reversed segments are unreachable through the draw path (the
+			// endpoints are ordered) but RoadDictFromSegment must still answer.
+			for (int32 i = 0; i < T53_SidesNum; ++i)
+			{
+				const FSideRow& Row = T53_Sides[i];
+				FRoadSegment Seg;
+				Seg.StartX = Row.StartX; Seg.StartY = Row.StartY;
+				Seg.EndX = Row.EndX;     Seg.EndY = Row.EndY;
+				const FRoad Road = RoadDictFromSegment(FString(TEXT("X")), Seg);
+				CheckStr("side plus", Road.SidePlus, FString(Row.Plus));
+				CheckStr("side minus", Road.SideMinus, FString(Row.Minus));
+				CheckBool("dominant axis", Road.bAxisX, Row.bAxisX);
+				const FRoadFrame F = RoadFrame(Road);
+				CheckNear("normal x", F.Nx, Row.Nx, 1e-6);
+				CheckNear("normal y", F.Ny, Row.Ny, 1e-6);
+			}
+		}
+
+		CASE("Roads.TwoLotsOnADiagonal");
+		{
+			// 54: two houses along one diagonal street. Their pads miss and
+			// their boxes overlap, so a bounding-box scan refuses the second
+			// click on visibly empty ground. Empty mode, because the pinned
+			// frontage is wall to wall and a diagonal long enough for two lots
+			// cannot avoid it on this board.
+			FCityState S = RoadSeed();
+			S.Money = 9000.0;
+			const FRoadDrawResult D = DrawRoad(Board, S, T54_Segment.StartX, T54_Segment.StartY,
+				T54_Segment.EndX, T54_Segment.EndY, FString(T54_Segment.WidthClass), false);
+			CheckBool("diagonal drawn", D.bOk, true);
+			for (int32 i = 0; i < 2; ++i)
+			{
+				const FPlaceResult P = Place(Board, S, T54_Clicks[i][0], T54_Clicks[i][1],
+					false, Board.Rules.V0Width);
+				CheckBool("lot placed", P.bOk, true);
+				if (!P.bOk) { continue; }
+				const FLotPlacement& Lot = S.Parcels[P.Pid].Placement.GetValue();
+				CheckNear("x0", Lot.X0, T54_Lots[i].X0, Tol);
+				CheckNear("x1", Lot.X1, T54_Lots[i].X1, Tol);
+			}
+			if (S.Parcels.Contains(FString(TEXT("P2"))))
+			{
+				const FLotPlacement& A = S.Parcels[FString(TEXT("P1"))].Placement.GetValue();
+				const FLotPlacement& B2 = S.Parcels[FString(TEXT("P2"))].Placement.GetValue();
+				const FRoad Rd = RoadOf(S, LotRoadId(A));
+				const FQuad QA = LotQuad(Board.Rules, Board.Econ, Rd, A);
+				const FQuad QB = LotQuad(Board.Rules, Board.Econ, Rd, B2);
+				CheckBool("pads miss", QuadsOverlap(QA, QB), T54_Quads);
+				CheckBool("boxes do not", RectsOverlap(QuadRect(QA), QuadRect(QB)), T54_Rects);
+			}
+		}
+
+		CASE("Roads.ScansComparePads");
+		{
+			// 55: the other three scans compare pads too - something
+			// axis-aligned standing in one of a diagonal's empty box corners.
+			// (a) a drawn road against an existing lot
+			FCityState A = RoadSeed();
+			A.Money = 40000.0;
+			const FPlaceResult PA = Place(Board, A, T55_RvL_Click[0], T55_RvL_Click[1],
+				false, Board.Rules.V0Width);
+			CheckBool("arterial lot placed", PA.bOk, true);
+			const FRoadDrawResult DA = ResolveRoadDraw(Board, A, T55_RvL_Draw[0], T55_RvL_Draw[1],
+				T55_RvL_Draw[2], T55_RvL_Draw[3], FString(TEXT("avenue")), false);
+			CheckBool("the diagonal draws past it", DA.bOk, true);
+			if (PA.bOk && DA.bOk)
+			{
+				const FLotPlacement& Lot = A.Parcels[PA.Pid].Placement.GetValue();
+				const FQuad QR = RoadQuad(Board.Rules, Board.Econ,
+					RoadDictFromSegment(DA.Id, DA.Segment));
+				const FQuad QL = LotQuad(Board.Rules, Board.Econ, RoadOf(A, LotRoadId(Lot)), Lot);
+				CheckBool("corridor misses the pad", QuadsOverlap(QR, QL), T55_RvL_Quads);
+				CheckBool("boxes overlap", RectsOverlap(QuadRect(QR), QuadRect(QL)), T55_RvL_Rects);
+			}
+			// (b) a drawn road against another road
+			FCityState B3 = RoadSeed();
+			B3.Money = 40000.0;
+			const FRoadDrawResult D1 = DrawRoad(Board, B3, T55_RvR_First[0], T55_RvR_First[1],
+				T55_RvR_First[2], T55_RvR_First[3], FString(TEXT("avenue")), false);
+			CheckBool("diagonal drawn", D1.bOk, true);
+			const FRoadDrawResult D2 = ResolveRoadDraw(Board, B3, T55_RvR_Second[0], T55_RvR_Second[1],
+				T55_RvR_Second[2], T55_RvR_Second[3], FString(TEXT("avenue")), false);
+			CheckBool("a road in its box corner draws", D2.bOk, true);
+			if (D1.bOk && D2.bOk)
+			{
+				const FQuad Q1 = RoadQuad(Board.Rules, Board.Econ,
+					RoadDictFromSegment(D1.Id, B3.Roads[D1.Id]));
+				const FQuad Q2 = RoadQuad(Board.Rules, Board.Econ,
+					RoadDictFromSegment(D2.Id, D2.Segment));
+				CheckBool("corridors miss", QuadsOverlap(Q1, Q2), T55_RvR_Quads);
+				CheckBool("boxes overlap", RectsOverlap(QuadRect(Q1), QuadRect(Q2)), T55_RvR_Rects);
+			}
+			// (c) a lot against a highway's corridor - the no-frontage scan
+			FCityState C = RoadSeed();
+			C.Money = 40000.0;
+			const FRoadDrawResult DC = DrawRoad(Board, C, T55_LvH_Road[0], T55_LvH_Road[1],
+				T55_LvH_Road[2], T55_LvH_Road[3], FString(TEXT("avenue")), false);
+			CheckBool("diagonal drawn", DC.bOk, true);
+			const FRoadDrawResult DH = DrawRoad(Board, C, T55_LvH_Highway[0], T55_LvH_Highway[1],
+				T55_LvH_Highway[2], T55_LvH_Highway[3], FString(TEXT("highway")), false);
+			CheckBool("highway drawn", DH.bOk, true);
+			const FClickResult CR = ResolveClick(Board, C, T55_LvH_Click[0], T55_LvH_Click[1],
+				false, Board.Rules.V0Width);
+			CheckBool("the click still places", CR.bOk, T55_LvH_StillPlaces);
+			if (CR.bOk && DH.bOk)
+			{
+				CheckNear("x0", CR.Lot.X0, T55_LvH_Lot.X0, Tol);
+				const FQuad QL = LotQuad(Board.Rules, Board.Econ, RoadOf(C, LotRoadId(CR.Lot)), CR.Lot);
+				const FQuad QH = RoadQuad(Board.Rules, Board.Econ,
+					RoadDictFromSegment(DH.Id, C.Roads[DH.Id]));
+				CheckBool("pad misses the motorway", QuadsOverlap(QL, QH), T55_LvH_Quads);
+				CheckBool("boxes overlap", RectsOverlap(QuadRect(QL), QuadRect(QH)), T55_LvH_Rects);
 			}
 		}
 	}

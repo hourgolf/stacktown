@@ -140,19 +140,34 @@ FRoad RoadDictFromSegment(const FString& Id, const FRoadSegment& Seg)
 	// rather than stored; the width class is the one thing a segment genuinely
 	// carries that its shape cannot say.
 	Road.WidthClass = Seg.WidthClass;
-	if (Seg.StartY == Seg.EndY)
+	// ANY DIRECTION since 2026-09-06 (item 11). The names come off the NORMAL,
+	// not off a same-X / same-Y test: the normal is the direction rotated +90
+	// degrees, whichever of its components dominates decides which pair of
+	// names applies, and its sign decides which is SidePlus. Not a third
+	// convention - it REDUCES EXACTLY to the two the built-ins already use (a
+	// horizontal road's normal is +Y, so plus is north; a vertical one's is -X,
+	// so plus is west) - and it is the only rule that stays correct for a road
+	// running down and to the right, where the dominant axis of the DIRECTION
+	// and the side the normal actually points to disagree.
+	//
+	// bAxisX is now the dominant axis of the run, kept because the lot frame
+	// and the fixtures still read it; nothing decides geometry from it.
+	const double Dx = Seg.EndX - Seg.StartX;
+	const double Dy = Seg.EndY - Seg.StartY;
+	const double Len = FMath::Sqrt(Dx * Dx + Dy * Dy);
+	const double Nx = Len > 0.0 ? -Dy / Len : 0.0;
+	const double Ny = Len > 0.0 ?  Dx / Len : 1.0;
+	if (FMath::Abs(Ny) >= FMath::Abs(Nx))
 	{
-		// Horizontal: the arterial's own convention.
 		Road.bAxisX = true;
-		Road.SidePlus = TEXT("north");
-		Road.SideMinus = TEXT("south");
+		Road.SidePlus  = Ny >= 0.0 ? TEXT("north") : TEXT("south");
+		Road.SideMinus = Ny >= 0.0 ? TEXT("south") : TEXT("north");
 	}
 	else
 	{
-		// Vertical: the cross street's.
 		Road.bAxisX = false;
-		Road.SidePlus = TEXT("west");
-		Road.SideMinus = TEXT("east");
+		Road.SidePlus  = Nx >= 0.0 ? TEXT("east") : TEXT("west");
+		Road.SideMinus = Nx >= 0.0 ? TEXT("west") : TEXT("east");
 	}
 	return Road;
 }
@@ -262,23 +277,116 @@ double RectDistance(const FLotRect& A, const FLotRect& B)
 	return FMath::Sqrt(Dx * Dx + Dy * Dy);
 }
 
+FRoadFrame RoadFrame(const FRoad& Road)
+{
+	FRoadFrame F;
+	F.Ox = Road.StartX;
+	F.Oy = Road.StartY;
+	const double Dx = Road.EndX - Road.StartX;
+	const double Dy = Road.EndY - Road.StartY;
+	F.Length = FMath::Sqrt(Dx * Dx + Dy * Dy);
+	F.Ux = Dx / F.Length;
+	F.Uy = Dy / F.Length;
+	F.Nx = -F.Uy;
+	F.Ny =  F.Ux;
+	F.S0 = F.Ox * F.Ux + F.Oy * F.Uy;
+	return F;
+}
+
+void PointAt(const FRoadFrame& F, double S, double Offset, double& OutX, double& OutY)
+{
+	const double T = S - F.S0;
+	OutX = F.Ox + F.Ux * T + F.Nx * Offset;
+	OutY = F.Oy + F.Uy * T + F.Ny * Offset;
+}
+
+/** The band between two projections and two offsets, corners in order ROUND
+ *  the shape - which the separating-axis test needs; a figure-eight is not a
+ *  convex hull and would separate on axes it should not. */
+static FQuad BandQuad(const FRoadFrame& F, double S0, double S1, double Off0, double Off1)
+{
+	FQuad Q;
+	PointAt(F, S0, Off0, Q.X[0], Q.Y[0]);
+	PointAt(F, S1, Off0, Q.X[1], Q.Y[1]);
+	PointAt(F, S1, Off1, Q.X[2], Q.Y[2]);
+	PointAt(F, S0, Off1, Q.X[3], Q.Y[3]);
+	return Q;
+}
+
+FQuad LotQuad(const FPlacementRules& R, const FEconRules& E, const FRoad& Road,
+	const FLotPlacement& Lot)
+{
+	const FRoadFrame F = RoadFrame(Road);
+	const double Near = RoadHalf(R, E, Road);
+	const double Far  = Near + R.BlockDepth;
+	const double Sign = Lot.Side == Road.SidePlus ? 1.0 : -1.0;
+	return BandQuad(F, Lot.X0, Lot.X1, Sign * Near, Sign * Far);
+}
+
+FQuad RoadQuad(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
+{
+	const FRoadFrame F = RoadFrame(Road);
+	const double Half = RoadHalf(R, E, Road);
+	return BandQuad(F, F.S0, F.S0 + F.Length, -Half, Half);
+}
+
+FLotRect QuadRect(const FQuad& Q)
+{
+	FLotRect Rect;
+	Rect.XMin = Rect.XMax = Q.X[0];
+	Rect.YMin = Rect.YMax = Q.Y[0];
+	for (int32 i = 1; i < 4; ++i)
+	{
+		Rect.XMin = FMath::Min(Rect.XMin, Q.X[i]);
+		Rect.XMax = FMath::Max(Rect.XMax, Q.X[i]);
+		Rect.YMin = FMath::Min(Rect.YMin, Q.Y[i]);
+		Rect.YMax = FMath::Max(Rect.YMax, Q.Y[i]);
+	}
+	return Rect;
+}
+
+bool QuadsOverlap(const FQuad& A, const FQuad& B)
+{
+	const FQuad* Polys[2] = { &A, &B };
+	for (int32 P = 0; P < 2; ++P)
+	{
+		const FQuad& Poly = *Polys[P];
+		for (int32 i = 0; i < 4; ++i)
+		{
+			const int32 j = (i + 1) % 4;
+			double Ax = -(Poly.Y[j] - Poly.Y[i]);
+			double Ay =   Poly.X[j] - Poly.X[i];
+			const double N = FMath::Sqrt(Ax * Ax + Ay * Ay);
+			if (N == 0.0)
+			{
+				continue;
+			}
+			Ax /= N;
+			Ay /= N;
+			double AMin = A.X[0] * Ax + A.Y[0] * Ay, AMax = AMin;
+			double BMin = B.X[0] * Ax + B.Y[0] * Ay, BMax = BMin;
+			for (int32 k = 1; k < 4; ++k)
+			{
+				const double Pa = A.X[k] * Ax + A.Y[k] * Ay;
+				AMin = FMath::Min(AMin, Pa);
+				AMax = FMath::Max(AMax, Pa);
+				const double Pb = B.X[k] * Ax + B.Y[k] * Ay;
+				BMin = FMath::Min(BMin, Pb);
+				BMax = FMath::Max(BMax, Pb);
+			}
+			// Touching is separated, matching RectsOverlap's strict <.
+			if (AMax <= BMin || BMax <= AMin)
+			{
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 FLotRect RoadRect(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
 {
-	const double Half = RoadHalf(R, E, Road);
-	FLotRect Rect;
-	if (Road.StartY == Road.EndY)
-	{
-		Rect.XMin = FMath::Min(Road.StartX, Road.EndX);
-		Rect.XMax = FMath::Max(Road.StartX, Road.EndX);
-		Rect.YMin = Road.StartY - Half;
-		Rect.YMax = Road.StartY + Half;
-		return Rect;
-	}
-	Rect.XMin = Road.StartX - Half;
-	Rect.XMax = Road.StartX + Half;
-	Rect.YMin = FMath::Min(Road.StartY, Road.EndY);
-	Rect.YMax = FMath::Max(Road.StartY, Road.EndY);
-	return Rect;
+	return QuadRect(RoadQuad(R, E, Road));
 }
 
 FString NextRoadId(const FCityState& State)
@@ -455,43 +563,12 @@ const FRoad* FindRoad(const TArray<FRoad>& Roads, const FString& Id)
 FLotRect LotRect(const FPlacementRules& R, const FEconRules& E, const FRoad& Road,
 	const FLotPlacement& Lot)
 {
-	// PER-TYPE FRONTAGE LINE: a lot on a dirt track sits 880 uu off its
-	// centreline. BlockDepth is unchanged and deliberately so - the block
-	// behind a lot is the same block whatever road it faces.
-	const double Near = RoadHalf(R, E, Road);
-	const double Far  = Near + R.BlockDepth;
-	FLotRect Rect;
-	if (!Road.bAxisX)
-	{
-		// Vertical road: the span runs in Y, the depth in X off the centreline.
-		// Read off the road's own start rather than the literal 0 this used to
-		// hard-code for "cross" - a vertical road a player draws is not
-		// structurally different from the built-in one.
-		const double Cx = Road.StartX;
-		Rect.YMin = Lot.X0;
-		Rect.YMax = Lot.X1;
-		if (Lot.Side == TEXT("west"))
-		{
-			Rect.XMin = Cx - Far;  Rect.XMax = Cx - Near;
-		}
-		else
-		{
-			Rect.XMin = Cx + Near; Rect.XMax = Cx + Far;
-		}
-		return Rect;
-	}
-	const double Cy = Road.StartY;
-	Rect.XMin = Lot.X0;
-	Rect.XMax = Lot.X1;
-	if (Lot.Side == TEXT("north"))
-	{
-		Rect.YMin = Cy + Near; Rect.YMax = Cy + Far;
-	}
-	else
-	{
-		Rect.YMin = Cy - Far;  Rect.YMax = Cy - Near;
-	}
-	return Rect;
+	// NOW THE BOUNDING BOX of LotQuad, which is the same rectangle for an
+	// axis-aligned road and the honest envelope for a diagonal one. Every
+	// existing caller keeps its four numbers; the OVERLAP scans moved to the
+	// quads, because a diagonal lot's box is much bigger than the lot and
+	// would refuse clicks that are fine.
+	return QuadRect(LotQuad(R, E, Road, Lot));
 }
 
 bool RectsOverlap(const FLotRect& A, const FLotRect& B)
@@ -549,18 +626,24 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 			FMath::Abs(Local.Across), *Road->Id, Half));
 	}
 
-	// WORLD SPACE FIRST, THEN SNAP. Neither plate minimum is a multiple of the
-	// quantum, so snapping the road-relative offset would shift the grid
-	// off-quantum silently. This way the arterial reduces exactly to the
-	// pre-multi-road math and the cross street generalizes correctly.
-	const double RoadStartOnAxis = Road->bAxisX ? Road->StartX : Road->StartY;
-	const double RoadEndOnAxis   = Road->bAxisX ? Road->EndX   : Road->EndY;
-	const double WorldCoord = RoadStartOnAxis + Local.Along;
-	const double X0 = Snap(R, WorldCoord - Width / 2.0);
+	// PROJECTION SPACE, THEN SNAP (2026-09-06, item 11). X0/X1 have always
+	// been world coordinates on the road's axis; generalized, they are the
+	// scalar projection of the span onto the road's own unit direction, and
+	// the world point at projection S is Start + U * (S - S0). For the
+	// arterial S0 is PlateXMin and Along is x - PlateXMin, so S0 + Along IS x -
+	// the identity the fixture checks - and the same holds in y for the cross
+	// street. So this is one line different from the world coordinate it
+	// replaces and no lot already saved changes meaning.
+	//
+	// The snap still happens in this space rather than on Along, and for the
+	// same reason as before: round-half-to-even breaks ties on the parity of
+	// the integer part, so snapping road-relative can land a quantum away.
+	const FRoadFrame Frame = RoadFrame(*Road);
+	const double AxisMin = Frame.S0;
+	const double AxisMax = Frame.S0 + Frame.Length;
+	const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);
 	const double X1 = X0 + Width;
 
-	const double AxisMin = FMath::Min(RoadStartOnAxis, RoadEndOnAxis);
-	const double AxisMax = FMath::Max(RoadStartOnAxis, RoadEndOnAxis);
 	if (X0 < AxisMin || X1 > AxisMax)
 	{
 		return Refuse(FString::Printf(
@@ -589,7 +672,10 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	Candidate.X1 = X1;
 	Candidate.Side = Local.Side;
 	Candidate.RoadId = Road->Id;
-	const FLotRect Mine = LotRect(R, E, *Road, Candidate);
+	// QUADS, not bounding boxes: a diagonal lot's box is much bigger than the
+	// lot and would refuse clicks that are fine. QuadsOverlap reduces exactly
+	// to RectsOverlap while everything is axis-aligned.
+	const FQuad Mine = LotQuad(R, E, *Road, Candidate);
 
 	// NO-FRONTAGE CORRIDORS. Every other refusal here is reached THROUGH the
 	// road a lot faces, so a road nothing may face is unguarded by
@@ -609,7 +695,7 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 		{
 			continue;
 		}
-		if (RectsOverlap(Mine, RoadRect(R, E, Other)))
+		if (QuadsOverlap(Mine, RoadQuad(R, E, Other)))
 		{
 			return Refuse(FString::Printf(
 				TEXT("in the road: [%.1f, %.1f] would run across the %s, a %s"),
@@ -645,7 +731,7 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 		// WORLD footprints, not per-road spans: the corner is where a
 		// cross-street lot and an arterial lot share ground while their spans
 		// never compare, because they live on different axes.
-		if (RectsOverlap(Mine, LotRect(R, E, *OtherRoad, Other)))
+		if (QuadsOverlap(Mine, LotQuad(R, E, *OtherRoad, Other)))
 		{
 			return Refuse(FString::Printf(
 				TEXT("overlap: [%.1f, %.1f] on the %s crosses an existing lot at [%.1f, %.1f] on the %s"),
@@ -775,6 +861,14 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 	// same way a lot's own span does. Neither dominant is a genuinely diagonal
 	// gesture, and reinterpreting one as a straight road the player did not draw
 	// is worse than refusing it.
+	// ANY DIRECTION since 2026-09-06 (item 11). What used to be a REFUSAL is
+	// now a SNAP THRESHOLD, at the same 3x dominance (about 18 degrees off an
+	// axis): a drag that close to horizontal or vertical still snaps to
+	// exactly that, because a player aiming down a street should get a
+	// straight one and not a road two degrees out. Anything else is now the
+	// road they drew. The snap branches are UNCHANGED, which is what keeps
+	// every earlier case answering exactly as before; only the else arm moved
+	// from a refusal to a free-direction road.
 	double SX0, SY0, SX1, SY1;
 	if (FMath::Abs(Dx) >= 3.0 * FMath::Abs(Dy))
 	{
@@ -786,8 +880,7 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 	}
 	else
 	{
-		return RefuseRoad(TEXT(
-			"too diagonal: roads must run close to north-south or east-west in this version"));
+		SX0 = Snap(R, X0); SY0 = Snap(R, Y0); SX1 = Snap(R, X1); SY1 = Snap(R, Y1);
 	}
 
 	// CANONICAL DIRECTION, 2026-09-06. Which WAY the player dragged must not
@@ -813,8 +906,10 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 		Swap(SY0, SY1);
 	}
 
-	// Axis-aligned, so exactly one term is non-zero.
-	const double Length = FMath::Abs(SX1 - SX0) + FMath::Abs(SY1 - SY0);
+	// The CENTRELINE's length. Axis-aligned roads gave the same answer as the
+	// sum of the two deltas; a diagonal does not, and it is the centreline
+	// that a lot needs to fit along and that the type prices.
+	const double Length = FMath::Sqrt((SX1 - SX0) * (SX1 - SX0) + (SY1 - SY0) * (SY1 - SY0));
 	if (Length < R.V0Width)
 	{
 		// A road shorter than one lot answers no question a player would ask it.
@@ -839,11 +934,11 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 	Result.Segment.WidthClass = WidthClass;
 
 	const TArray<FRoad> Roads = Board.AllRoads(State);
-	const FLotRect Mine = RoadRect(R, E, RoadDictFromSegment(Result.Id, Result.Segment));
+	const FQuad Mine = RoadQuad(R, E, RoadDictFromSegment(Result.Id, Result.Segment));
 
 	for (const FRoad& Road : Roads)
 	{
-		if (RectsOverlap(Mine, RoadRect(R, E, Road)))
+		if (QuadsOverlap(Mine, RoadQuad(R, E, Road)))
 		{
 			return RefuseRoad(FString::Printf(
 				TEXT("crosses: the drawn road would cross the %s road"), *Road.Id));
@@ -869,7 +964,7 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 			return RefuseRoad(FString::Printf(
 				TEXT("stale lot: '%s' names road '%s', which no longer exists"), *Pid, *LotRoad));
 		}
-		if (RectsOverlap(Mine, LotRect(R, E, *Road, Lot)))
+		if (QuadsOverlap(Mine, LotQuad(R, E, *Road, Lot)))
 		{
 			return RefuseRoad(FString::Printf(
 				TEXT("overlap: the drawn road would cross an existing lot at [%.1f, %.1f] on the %s"),
@@ -892,7 +987,7 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 				PinLot.X1 = Pin.X1;
 				PinLot.Side = Pin.Side;
 				PinLot.RoadId = Board.PinnedRoadId;
-				if (RectsOverlap(Mine, LotRect(R, E, *Arterial, PinLot)))
+				if (QuadsOverlap(Mine, LotQuad(R, E, *Arterial, PinLot)))
 				{
 					return RefuseRoad(FString::Printf(
 						TEXT("overlap: the drawn road would cross a pinned lot at [%.1f, %.1f]"),

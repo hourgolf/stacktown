@@ -177,9 +177,12 @@ STACKTOWN_ROADS_TEST(FStacktownRoadsDrawRules, "Stacktown.Roads.DrawRules")
 	const FCityState S = RoadSeed();
 
 	CheckDraw(*this, TEXT("happy horizontal"), Board, S, T31);
-	// Neither delta dominant: a genuinely diagonal gesture is refused rather
-	// than reinterpreted as a straight road the player did not draw.
-	CheckDraw(*this, TEXT("too diagonal"), Board, S, T32);
+	// WAS "too diagonal", until roads at any direction (2026-09-06, item 11)
+	// removed that refusal. These coordinates still refuse - they start on the
+	// cross street's own centreline - but for the reason they should, and the
+	// fixture carries whichever reason the oracle gave. The gate opening is
+	// asserted in Stacktown.Roads.DiagonalAccepted.
+	CheckDraw(*this, TEXT("starts on the cross street"), Board, S, T32);
 	CheckDraw(*this, TEXT("too short"), Board, S, T33);
 	CheckDraw(*this, TEXT("off board"), Board, S, T34);
 	CheckDraw(*this, TEXT("crosses a built-in"), Board, S, T35);

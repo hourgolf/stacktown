@@ -308,20 +308,33 @@ def _road_dict(seg):
     expected shape - +side_plus/side_minus/axis, read off the segment's
     own geometry rather than stored a second time in state (one more
     place a stored copy could drift from the geometry it describes).
-    ORIENTATION IS AXIS-ALIGNED ONLY in this pass (a segment's start/end
-    share either their X or their Y - draw_road below is what actually
-    enforces this before a segment ever reaches state; this function
-    trusts that already holds, it does not re-check it) - a horizontal
-    segment (same Y) gets the arterial's own north/south convention, a
-    vertical one (same X) gets the cross street's own west/east
-    convention: NOT two conventions this function invents, the same two
-    every self-test already exercises against the two built-ins,
-    extended to whichever road a segment's own shape says it matches."""
+    ANY DIRECTION since 2026-09-06 (curved roads, item 11). The names come
+    off the NORMAL, not off a same-X / same-Y test: the normal is the
+    direction rotated +90 degrees, and whichever of its components
+    dominates decides which pair of names applies and its sign decides
+    which is `side_plus`. That is not a third convention - it REDUCES
+    EXACTLY to the two the built-ins already use (a horizontal road's
+    normal is +Y, so plus is north; a vertical one's is -X, so plus is
+    west), and it is the only rule that stays correct for a road running
+    down and to the right, where the dominant axis of the DIRECTION and
+    the side the normal actually points to disagree.
+
+    `axis` is now the dominant axis of the road's run, kept because the
+    fixtures and the lot frame still read it; nothing decides geometry
+    from it any more."""
     sx, sy = seg['start']
     ex, ey = seg['end']
-    if sy == ey:
-        return dict(seg, side_plus='north', side_minus='south', axis='x')
-    return dict(seg, side_plus='west', side_minus='east', axis='y')
+    dx, dy = ex - sx, ey - sy
+    length = (dx * dx + dy * dy) ** 0.5
+    ux, uy = dx / length, dy / length
+    nx, ny = -uy, ux                      # +90 degrees, the same normal
+    if abs(ny) >= abs(nx):
+        plus, minus = ('north', 'south') if ny >= 0.0 else ('south', 'north')
+        axis = 'x'
+    else:
+        plus, minus = ('east', 'west') if nx >= 0.0 else ('west', 'east')
+        axis = 'y'
+    return dict(seg, side_plus=plus, side_minus=minus, axis=axis)
 
 
 def _all_roads(state):
@@ -500,6 +513,26 @@ def _find_road(roads, road_id):
     raise KeyError(road_id)
 
 
+def lot_quad(lot, roads=ROADS, rules=None):
+    """The four world corners of a lot's PAD, for a road of ANY direction
+    (2026-09-06, item 11). The band between the lot's two projections
+    (x0, x1) and its road's frontage line and block back edge, on the
+    lot's own side.
+
+    THE SIDE IS READ OFF THE ROAD'S OWN NAMES, never off the literal
+    'north' or 'west': `side_plus` is whichever way the normal points for
+    THIS road (_road_dict), so a lot recorded 'north' against a road whose
+    plus side is south sits on the minus side - which is the same ground,
+    named from the other end."""
+    road = _find_road(roads, lot_road_id(lot))
+    frame = road_frame(road)
+    near = road_half(road, rules)
+    far = near + BLOCK_DEPTH
+    sign = 1.0 if lot['side'] == road['side_plus'] else -1.0
+    return _quad(frame, float(lot['x0']), float(lot['x1']),
+                 sign * near, sign * far)
+
+
 def lot_rect(lot, roads=ROADS, rules=None):
     """World-space footprint (xmin, xmax, ymin, ymax) of a lot's PAD from
     its placement dict, ANY axis-aligned road (generalized 2026-09-04,
@@ -525,24 +558,93 @@ def lot_rect(lot, roads=ROADS, rules=None):
     (road_half), so a lot on a dirt track sits 880 uu off its centreline
     and one on a highway would sit 1430 - if a highway could be fronted,
     which it cannot. BLOCK_DEPTH is unchanged and deliberately so: the
-    block behind a lot is the same block whatever road it faces."""
-    road = _find_road(roads, lot_road_id(lot))
-    near = road_half(road, rules)
-    far = near + BLOCK_DEPTH
-    x0, x1 = float(lot['x0']), float(lot['x1'])
-    if road['axis'] == 'y':
-        cx = road['start'][0]
-        if lot['side'] == 'west':
-            return (cx - far, cx - near, x0, x1)
-        return (cx + near, cx + far, x0, x1)
-    cy = road['start'][1]
-    if lot['side'] == 'north':
-        return (x0, x1, cy + near, cy + far)
-    return (x0, x1, cy - far, cy - near)
+    block behind a lot is the same block whatever road it faces.
+
+    NOW THE BOUNDING BOX of lot_quad, which is the same rectangle for an
+    axis-aligned road and the honest envelope for a diagonal one. Every
+    existing caller keeps its four-number answer; the OVERLAP scans moved
+    to the quads themselves, because a diagonal lot's bounding box is much
+    bigger than the lot and would refuse clicks that are fine."""
+    return quad_rect(lot_quad(lot, roads, rules))
 
 
 def rects_overlap(a, b):
     return a[0] < b[1] and b[0] < a[1] and a[2] < b[3] and b[2] < a[3]
+
+
+def road_frame(road):
+    """(ox, oy, ux, uy, nx, ny, length, s0) for a road - its start point, its
+    unit direction, its unit normal, its length, and s0, the scalar
+    projection of its start onto its own direction.
+
+    s0 IS WHAT MAKES A LOT'S SPAN MEAN SOMETHING ON A DIAGONAL. A placed
+    lot stores x0/x1, which have always been world coordinates on the
+    road's axis; generalized, they are the scalar projection of the span
+    onto the road's unit direction, and a point at projection s sits at
+    `start + u * (s - s0)`. For the arterial u is +X and s0 is
+    PLATE_X_MIN, so s IS the world x and the recovery is the identity -
+    checked in self-test 51, not asserted here. For the cross street u is
+    +Y and s is the world y, likewise. So no lot already saved changes
+    meaning, which is only true because a drawn segment's endpoints are
+    ORDERED (resolve_road_draw): u could otherwise point either way and s
+    would be the world coordinate NEGATED on half the roads."""
+    ox, oy = road['start']
+    ex, ey = road['end']
+    dx, dy = ex - ox, ey - oy
+    length = (dx * dx + dy * dy) ** 0.5
+    ux, uy = dx / length, dy / length
+    return ox, oy, ux, uy, -uy, ux, length, ox * ux + oy * uy
+
+
+def _point_at(frame, s, offset):
+    """World point at projection `s` along the road, `offset` off its
+    centreline on the +normal side."""
+    ox, oy, ux, uy, nx, ny, _length, s0 = frame
+    t = s - s0
+    return (ox + ux * t + nx * offset, oy + uy * t + ny * offset)
+
+
+def _quad(frame, s0, s1, off0, off1):
+    """The four corners of a band between two projections and two offsets,
+    in order round the shape (which SAT needs; a figure-eight is not a
+    convex hull and would separate on axes it should not)."""
+    return (_point_at(frame, s0, off0), _point_at(frame, s1, off0),
+            _point_at(frame, s1, off1), _point_at(frame, s0, off1))
+
+
+def quad_rect(quad):
+    """The axis-aligned bounding box of a quad, in rects_overlap's shape."""
+    xs = [p[0] for p in quad]
+    ys = [p[1] for p in quad]
+    return (min(xs), max(xs), min(ys), max(ys))
+
+
+def quads_overlap(a, b):
+    """Separating-axis test on two convex quads. Touching is NOT
+    overlapping, the same strictness rects_overlap has - which is what
+    lets a lot sit exactly on its own road's frontage line.
+
+    REDUCES EXACTLY TO rects_overlap for two axis-aligned quads: their
+    edge normals are the world axes, the projections are the same numbers,
+    and a separation found with >= is the same as rects_overlap's strict
+    <. Self-test 50 checks that against the existing lot rectangles rather
+    than trusting the argument."""
+    for poly in (a, b):
+        for i in range(len(poly)):
+            x0, y0 = poly[i]
+            x1, y1 = poly[(i + 1) % len(poly)]
+            ax, ay = -(y1 - y0), x1 - x0        # edge normal
+            n = (ax * ax + ay * ay) ** 0.5
+            if n == 0.0:
+                continue
+            ax, ay = ax / n, ay / n
+            amin = min(p[0] * ax + p[1] * ay for p in a)
+            amax = max(p[0] * ax + p[1] * ay for p in a)
+            bmin = min(p[0] * ax + p[1] * ay for p in b)
+            bmax = max(p[0] * ax + p[1] * ay for p in b)
+            if amax <= bmin or bmax <= amin:
+                return False
+    return True
 
 
 def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
@@ -621,13 +723,20 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
         return False, (
             'in the road: |across|=%.0f is inside the %s corridor '
             '(half %.0f)' % (abs(across), road['id'], half)), None
-    axis_idx = 0 if road['axis'] == 'x' else 1
-    world_coord = road['start'][axis_idx] + along
-    x0 = _snap(world_coord - width / 2.0)
+    # PROJECTION SPACE, 2026-09-06 (item 11). x0/x1 have always been world
+    # coordinates on the road's axis; generalized, they are the scalar
+    # projection of the span onto the road's own unit direction, and the
+    # world point at projection s is start + u * (s - s0). For the arterial
+    # s0 is PLATE_X_MIN and along is x - PLATE_X_MIN, so s0 + along IS x -
+    # the identity self-test 13 already checks, unchanged; for the cross
+    # street the same holds in y. So this is one line different from the
+    # world_coord it replaces, and no lot already saved changes meaning.
+    frame = road_frame(road)
+    s_min = frame[7]
+    s_max = s_min + frame[6]
+    x0 = _snap(s_min + along - width / 2.0)
     x1 = x0 + width
-    axis_min = min(road['start'][axis_idx], road['end'][axis_idx])
-    axis_max = max(road['start'][axis_idx], road['end'][axis_idx])
-    if x0 < axis_min or x1 > axis_max:
+    if x0 < s_min or x1 > s_max:
         return False, (
             'off-board: snapped span [%.1f, %.1f] exceeds the %s road'
             % (x0, x1, road['id'])), None
@@ -640,7 +749,10 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
                     'overlap: [%.1f, %.1f] crosses a pinned lot at '
                     '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
     candidate = {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
-    mine = lot_rect(candidate, roads, r)
+    # QUADS, not bounding boxes: a diagonal lot's box is much bigger than the
+    # lot and would refuse clicks that are fine. quads_overlap reduces exactly
+    # to rects_overlap while everything is axis-aligned (self-test 50).
+    mine = lot_quad(candidate, roads, r)
     # NO-FRONTAGE CORRIDORS, added 2026-09-06 with road types. Every
     # other refusal here is reached THROUGH the road a lot faces, so a
     # road nothing may face is unguarded by construction: the highway is
@@ -659,7 +771,7 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
     for other in roads:
         if road_has_frontage(other, r):
             continue
-        if rects_overlap(mine, road_rect(other, r)):
+        if quads_overlap(mine, road_quad(other, r)):
             return False, (
                 'in the road: [%.1f, %.1f] would run across the %s, a %s'
                 % (x0, x1, other['id'], road_type(other))), None
@@ -673,7 +785,7 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
         # onto a standing building there. The rectangle test contains the
         # old same-road same-side span test, so nothing it refused is
         # allowed now.
-        if rects_overlap(mine, lot_rect(lot, roads, r)):
+        if quads_overlap(mine, lot_quad(lot, roads, r)):
             return False, (
                 'overlap: [%.1f, %.1f] on the %s crosses an existing lot at '
                 '[%.1f, %.1f] on the %s' % (x0, x1, road['id'], lot['x0'],
@@ -736,6 +848,15 @@ def place(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
 MIN_ROAD_LENGTH = V0_WIDTH
 
 
+def road_quad(road, rules=None):
+    """The four world corners of a road's own corridor - its half either
+    side of its centreline, for its full length, at any direction."""
+    frame = road_frame(road)
+    half = road_half(road, rules)
+    length, s0 = frame[6], frame[7]
+    return _quad(frame, s0, s0 + length, -half, half)
+
+
 def road_rect(road, rules=None):
     """World-space footprint (xmin, xmax, ymin, ymax) of a road's OWN
     corridor - road_half either side of its centreline (its own type's,
@@ -744,12 +865,7 @@ def road_rect(road, rules=None):
     compares a candidate road against an existing road OR an existing
     lot with the one comparison function, nothing road-specific in
     rects_overlap itself."""
-    half = road_half(road, rules)
-    sx, sy = road['start']
-    ex, ey = road['end']
-    if sy == ey:
-        return (min(sx, ex), max(sx, ex), sy - half, sy + half)
-    return (sx - half, sx + half, min(sy, ey), max(sy, ey))
+    return quad_rect(road_quad(road, rules))
 
 
 def _next_road_id(state):
@@ -842,23 +958,23 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
     into the placed-lot scan. `pins_active` mirrors resolve_click's own
     mode gate exactly, for the same empty-mode reason.
 
-    AXIS-ALIGNED ONLY in this pass - a named v0 limit, not an oversight.
-    resolve_click's own world-coordinate recovery (`road['start']
-    [axis_idx] + along`) only recovers a correct WORLD POINT when a
-    road's direction actually IS one world axis; a true diagonal road
-    would need `along` recovered as a full 2D point, along the road's
-    own direction vector, which nothing in resolve_click does today.
-    Solving that is real, separate work (Docs/ROAD_BUILD_CONTRACT.md
-    names it) - not attempted here, so this function does not accept
-    input that would need it. Orientation is decided from whichever
-    delta dominates (>= 3x the other, a deadzone roughly 18-72 degrees
-    off each axis where neither wins): a click-pair close to horizontal
-    or vertical SNAPS to exactly that (the minor coordinate set equal
-    to the start point's own, then both endpoints rounded to
-    POSITION_QUANTUM same as a lot's own snap); a click-pair with
-    neither axis dominant REFUSES rather than silently reinterpreting a
-    genuinely diagonal gesture as a straight one the player did not
-    draw.
+    ANY DIRECTION since 2026-09-06 (item 11). The axis-aligned limit this
+    docstring used to name is gone, and what removed it was
+    resolve_click's world recovery moving into PROJECTION SPACE: a lot's
+    x0/x1 are the scalar projection of its span onto the road's own unit
+    direction, and the point at projection s is start + u * (s - s0),
+    which is a correct world point at any angle. That change is
+    backward-compatible only because a drawn segment's endpoints are
+    ORDERED (below) - u could otherwise point either way.
+
+    The 3x dominance test survives as a SNAP THRESHOLD rather than a
+    refusal: a click-pair close to horizontal or vertical SNAPS to exactly
+    that (the minor coordinate set equal to the start point's own, then
+    both endpoints rounded to
+    POSITION_QUANTUM same as a lot's own snap), because a player aiming
+    down a street should get a straight one and not a road two degrees
+    out; a click-pair with neither axis dominant is now taken AS DRAWN,
+    which is the whole of item 11's first half.
 
     TYPE AND PRICE 2026-09-06 (MONDAY_DECISIONS section 2). `width_class`
     was already carried on every segment and its one existing value,
@@ -876,14 +992,22 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
             'unknown road type %r: expected one of %s'
             % (width_class, ', '.join(ROAD_TYPES))), None
     dx, dy = x1 - x0, y1 - y0
+    # ANY DIRECTION since 2026-09-06 (item 11). What used to be a REFUSAL is
+    # now a SNAP THRESHOLD, at the same 3x dominance (about 18 degrees off an
+    # axis): a drag that close to horizontal or vertical still snaps to exactly
+    # that, because a player aiming down a street should get a straight one and
+    # not a road two degrees out. Anything else is now the road they drew,
+    # instead of a refusal telling them the version cannot do it.
+    #
+    # The snap branches are UNCHANGED, which is what keeps every case from 28
+    # on answering exactly as before; only the else arm moved from a refusal to
+    # a free-direction road.
     if abs(dx) >= 3.0 * abs(dy):
         sx0, sy0, sx1, sy1 = _snap(x0), _snap(y0), _snap(x1), _snap(y0)
     elif abs(dy) >= 3.0 * abs(dx):
         sx0, sy0, sx1, sy1 = _snap(x0), _snap(y0), _snap(x0), _snap(y1)
     else:
-        return False, (
-            'too diagonal: roads must run close to north-south or '
-            'east-west in this version'), None
+        sx0, sy0, sx1, sy1 = _snap(x0), _snap(y0), _snap(x1), _snap(y1)
     # CANONICAL DIRECTION, 2026-09-06. Which WAY the player dragged must not
     # change where the road's lots go, and until this line it did - badly.
     # resolve_click recovers a lot's world position as
@@ -903,7 +1027,7 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
     # reads orientation off the shape. The player gets the road they drew.
     if (sx1, sy1) < (sx0, sy0):
         sx0, sy0, sx1, sy1 = sx1, sy1, sx0, sy0
-    length = abs(sx1 - sx0) + abs(sy1 - sy0)  # axis-aligned: one term is 0
+    length = ((sx1 - sx0) ** 2 + (sy1 - sy0) ** 2) ** 0.5
     if length < MIN_ROAD_LENGTH:
         return False, (
             'too short: %.0f uu is under the %.0f uu a single lot needs'
@@ -916,9 +1040,9 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
     candidate = {'id': _next_road_id(state), 'start': (sx0, sy0),
                  'end': (sx1, sy1), 'width_class': width_class}
     roads = _all_roads(state)
-    mine = road_rect(_road_dict(candidate), r)
+    mine = road_quad(_road_dict(candidate), r)
     for road in roads:
-        if rects_overlap(mine, road_rect(road, r)):
+        if quads_overlap(mine, road_quad(road, r)):
             return False, (
                 'crosses: the drawn road would cross the %s road'
                 % road['id']), None
@@ -926,7 +1050,7 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
         lot = p.get('placement')
         if not lot:
             continue
-        if rects_overlap(mine, lot_rect(lot, roads, r)):
+        if quads_overlap(mine, lot_quad(lot, roads, r)):
             return False, (
                 'overlap: the drawn road would cross an existing lot at '
                 '[%.1f, %.1f] on the %s'
@@ -935,7 +1059,7 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
         for pin_x0, pin_x1, pin_side in PINNED_SPANS:
             pin_lot = {'x0': pin_x0, 'x1': pin_x1, 'side': pin_side,
                        'road_id': 'arterial'}
-            if rects_overlap(mine, lot_rect(pin_lot, roads, r)):
+            if quads_overlap(mine, lot_quad(pin_lot, roads, r)):
                 return False, (
                     'overlap: the drawn road would cross a pinned lot at '
                     '[%.1f, %.1f]' % (pin_x0, pin_x1)), None
@@ -1530,18 +1654,37 @@ if __name__ == '__main__':
     assert road31 == {'id': 'R1', 'start': (6200.0, 3000.0),
                        'end': (7600.0, 3000.0), 'width_class': 'avenue'}, road31
 
-    # 32. TOO DIAGONAL: dx=1000, dy=800 - neither delta reaches 3x the
-    #     other (1000 < 3*800=2400; 800 < 3*1000=3000), so this refuses
-    #     rather than silently picking an axis the player did not draw.
+    # 32. DIAGONAL, and no longer refused (2026-09-06, item 11). dx=1000,
+    #     dy=800 reaches neither 3x, so before curves this was the
+    #     'too diagonal' refusal; the version limit it named is gone. The
+    #     OLD coordinates still refuse - they start on the cross street's
+    #     own centreline - but for the REASON THEY SHOULD, which is the
+    #     assertion that proves the gate opened rather than moved.
     ok32, reason32, road32 = resolve_road_draw(s31, 0.0, 3000.0, 1000.0, 3800.0)
-    assert not ok32 and road32 is None and 'too diagonal' in reason32, (
-        ok32, reason32)
+    assert not ok32 and road32 is None, (ok32, reason32)
+    assert 'too diagonal' not in reason32, reason32
+    assert 'crosses' in reason32 and 'cross' in reason32, reason32
+    #     A 45 degree road on clear ground draws, unsnapped, exactly as the
+    #     player drew it - neither endpoint pulled onto an axis.
+    ok32b, reason32b, road32b = resolve_road_draw(s31, 6200.0, 2500.0, 7200.0, 3500.0)
+    assert ok32b and reason32b == '', (ok32b, reason32b)
+    assert road32b == {'id': 'R1', 'start': (6200.0, 2500.0),
+                        'end': (7200.0, 3500.0), 'width_class': 'avenue'}, road32b
 
     # 33. TOO SHORT: a valid horizontal orientation, but only 500 uu -
     #     under MIN_ROAD_LENGTH (820, one lot's own narrowest width).
     ok33, reason33, road33 = resolve_road_draw(s31, 6200.0, 3000.0, 6700.0, 3000.0)
     assert not ok33 and road33 is None and 'too short' in reason33, (
         ok33, reason33)
+    #     A DIAGONAL IS MEASURED ALONG ITS CENTRELINE (2026-09-06, item 11),
+    #     which only shows up here: 500 by 500 is 707 uu long and under the
+    #     820 a lot needs, while the sum of the two deltas is 1000 and would
+    #     let it through. The two ways of measuring agree on every
+    #     axis-aligned road, so nothing before this could tell them apart.
+    ok33b, reason33b, road33b = resolve_road_draw(s31, 6200.0, 3000.0, 6700.0, 3500.0)
+    assert not ok33b and road33b is None and 'too short' in reason33b, (
+        ok33b, reason33b)
+    assert '707 uu' in reason33b, reason33b
 
     # 34. OFF-BOARD: past PLATE_X_MAX (7650).
     ok34, reason34, road34 = resolve_road_draw(s31, 7000.0, 3000.0, 8000.0, 3000.0)
@@ -1644,11 +1787,15 @@ if __name__ == '__main__':
     #     is what both built-ins are - is EXACTLY the old ROAD_HALF
     #     constant, so every one of tests 1-39 above measures the same
     #     board it always did. dirt 900/2+430=880, avenue 1400/2+430=1130,
-    #     boulevard 1400/2+430=1130 (the median is not in the number - see
-    #     the flag on Docs/BOARD.md), highway 2000/2+430=1430.
+    #     boulevard 1700/2+430=1280, highway 2000/2+430=1430.
+    #     THE BOULEVARD'S MEDIAN IS 300 uu (coordinator, 2026-09-06 21:52,
+    #     deciding the question this table left open: MONDAY_DECISIONS
+    #     section 2 says "1400 + median" and never says how wide). So its
+    #     carriageway is 1700 and it is the one type whose corridor differs
+    #     from the avenue's - it is a shape now, not only a price.
     assert road_type(ARTERIAL) == 'avenue' and road_type(CROSS_STREET) == 'avenue'
     assert road_half(ARTERIAL, R) == ROAD_HALF == 1130.0
-    _halves = {'dirt': 880.0, 'avenue': 1130.0, 'boulevard': 1130.0,
+    _halves = {'dirt': 880.0, 'avenue': 1130.0, 'boulevard': 1280.0,
                'highway': 1430.0}
     for _t, _h in _halves.items():
         assert road_half({'width_class': _t}, R) == _h, (_t, _h)
@@ -1884,7 +2031,243 @@ if __name__ == '__main__':
         assert _seen[0] == _seen[1], _seen
         assert _seen[0][2] == _want, _seen[0][2]
 
-    print('placement self-check: 49/49 pass (pure-Python click->lot->state '
+    # ---- ROADS AT ANY DIRECTION, 2026-09-06 (50-53) --------------------
+    # Item 11's first half. The resolver, the lot frame and the overlap scans
+    # generalize off the road's own unit direction; the axis-aligned cases
+    # above are the same numbers they always were, which is the check that
+    # matters and is asserted rather than argued.
+
+    # 50. quads_overlap REDUCES EXACTLY TO rects_overlap while everything is
+    #     axis-aligned. Not an argument about separating axes - the two
+    #     functions are run against each other on real lot geometry: an
+    #     overlapping pair, a pair that only TOUCHES (which must be a miss,
+    #     because a lot sits exactly on its own road's frontage line), one
+    #     clear, and the corner case where an arterial lot and a cross-street
+    #     lot share ground while their spans never compare.
+    _r50 = _all_roads(citytick.seed_state())
+    _lots50 = (
+        ({'x0': 100.0, 'x1': 900.0, 'side': 'north', 'road_id': 'arterial'},
+         {'x0': 500.0, 'x1': 1300.0, 'side': 'north', 'road_id': 'arterial'}),
+        ({'x0': 100.0, 'x1': 900.0, 'side': 'north', 'road_id': 'arterial'},
+         {'x0': 900.0, 'x1': 1700.0, 'side': 'north', 'road_id': 'arterial'}),
+        ({'x0': 100.0, 'x1': 900.0, 'side': 'north', 'road_id': 'arterial'},
+         {'x0': 100.0, 'x1': 900.0, 'side': 'south', 'road_id': 'arterial'}),
+        ({'x0': 1640.0, 'x1': 2460.0, 'side': 'north', 'road_id': 'arterial'},
+         {'x0': 1130.0, 'x1': 2630.0, 'side': 'west', 'road_id': 'cross'}),
+    )
+    for _a, _b in _lots50:
+        _qa, _qb = lot_quad(_a, _r50), lot_quad(_b, _r50)
+        assert quads_overlap(_qa, _qb) == rects_overlap(
+            lot_rect(_a, _r50), lot_rect(_b, _r50)), (_a, _b)
+    #     and the touching pair really is a miss, not both-true by accident
+    assert not quads_overlap(lot_quad(_lots50[1][0], _r50),
+                             lot_quad(_lots50[1][1], _r50))
+    assert quads_overlap(lot_quad(_lots50[0][0], _r50),
+                         lot_quad(_lots50[0][1], _r50))
+
+    # 51. THE PROJECTION IDENTITY, the generalization of test 13's own. A
+    #     lot's x0/x1 are the scalar projection of its span onto the road's
+    #     unit direction; for the two built-ins that IS the world coordinate
+    #     they have always been, so no lot already saved changes meaning.
+    #     s0 + along == the world coordinate, exactly, for both.
+    for _road, _pts in ((ARTERIAL, (-7000.0, -410.0, 0.0, 2350.0, 7000.0)),
+                        (CROSS_STREET, (-4000.0, -410.0, 0.0, 1500.0, 4000.0))):
+        _f = road_frame(_road)
+        _idx = 0 if _road['axis'] == 'x' else 1
+        for _w in _pts:
+            _p = (_w, 3000.0) if _idx == 0 else (3000.0, _w)
+            _along, _across, _len = _project_to_road(_road, _p[0], _p[1])
+            assert abs((_f[7] + _along) - _w) < 1e-9, (_road['id'], _w,
+                                                       _f[7] + _along)
+        # and the road's own span in projection space is its plate bounds
+        assert abs(_f[7] - min(_road['start'][_idx], _road['end'][_idx])) < 1e-9
+        assert abs((_f[7] + _f[6]) - max(_road['start'][_idx],
+                                          _road['end'][_idx])) < 1e-9
+
+    # 52. A LOT ON A 45 DEGREE ROAD, end to end through place(). The road is
+    #     stored exactly as drawn (no endpoint pulled onto an axis), the lot
+    #     resolves and snaps in PROJECTION space, and its pad is a rotated
+    #     quad whose corners are the road frame's - which is the whole point:
+    #     before this, resolve_click recovered a world position as
+    #     start[axis] + along and could not have produced these at all.
+    #     Both sides of the same span are placeable (they share no ground);
+    #     the SAME span twice on the SAME side is refused.
+    s52 = citytick.seed_state()
+    s52['money'] = 5000.0
+    s52, rid52, ok52, why52 = draw_road(s52, 6200.0, 2500.0, 7200.0, 3500.0)
+    assert ok52 and rid52 == 'R1', (rid52, ok52, why52)
+    assert s52['roads']['R1'] == {'id': 'R1', 'start': (6200.0, 2500.0),
+                                   'end': (7200.0, 3500.0),
+                                   'width_class': 'avenue'}, s52['roads']['R1']
+    #     AND IT IS PRICED BY ITS TRUE LENGTH. sqrt(1000^2 + 1000^2) = 1414.21,
+    #     so an avenue costs 141.42 - not the 200 a manhattan length would
+    #     charge. The two only differ on a diagonal, which is why no case
+    #     before this one could tell them apart.
+    assert abs(s52['money'] - (5000.0 - 141.4213562373095)) < 1e-9, s52['money']
+    s52, pid52, ok52b, why52b = place(s52, 5639.4, 4060.6)
+    assert ok52b and pid52 == 'P1', (pid52, ok52b, why52b)
+    assert s52['parcels']['P1']['placement'] == {
+        'x0': 6450.0, 'x1': 7270.0, 'side': 'north', 'road_id': 'R1'
+    }, s52['parcels']['P1']['placement']
+    _q52 = lot_quad(s52['parcels']['P1']['placement'], _all_roads(s52))
+    _want52 = ((5611.81, 3509.87), (6191.64, 4089.70),
+               (5130.98, 5150.36), (4551.15, 4570.53))
+    for _got, _exp in zip(_q52, _want52):
+        assert abs(_got[0] - _exp[0]) < 0.01 and abs(_got[1] - _exp[1]) < 0.01, \
+            (_got, _exp)
+    s52b, pid52b, ok52c, why52c = place(s52, 7760.6, 1939.4)
+    assert ok52c and s52b['parcels'][pid52b]['placement'] == {
+        'x0': 6450.0, 'x1': 7270.0, 'side': 'south', 'road_id': 'R1'
+    }, (ok52c, why52c)
+    _, _, ok52d, why52d = place(s52, 5639.4, 4060.6)
+    assert not ok52d and 'overlap' in why52d, (ok52d, why52d)
+
+    # 53. THE SIDE NAMES COME OFF THE NORMAL, not off the dominant axis of
+    #     the road's run - the one case where the two disagree, and the
+    #     reason _road_dict is written the way it is. (6800, 4230) ->
+    #     (7650, 2530) runs down and to the right at a 2:1 slope: its
+    #     direction is Y-dominant, so a dominant-axis rule would call the
+    #     plus side 'west', but the normal points EAST (+0.894, +0.447) and
+    #     east is where those lots actually are. A road at 2:1 also stays
+    #     inside the 3x snap threshold, so it is not quietly straightened.
+    s53 = citytick.seed_state()
+    s53['money'] = 5000.0
+    s53, rid53, ok53, why53 = draw_road(s53, 6800.0, 4230.0, 7650.0, 2530.0)
+    assert ok53, why53
+    _d53 = _road_dict(s53['roads'][rid53])
+    assert _d53['side_plus'] == 'east' and _d53['side_minus'] == 'west', _d53
+    _f53 = road_frame(_d53)
+    assert abs(_f53[4] - 0.8944) < 1e-3 and abs(_f53[5] - 0.4472) < 1e-3, _f53
+    #     THE OTHER SIGN, tested directly on a hand-built segment because
+    #     resolve_road_draw's endpoint ordering makes it unreachable through
+    #     the draw path: a canonical segment always has ux >= 0, so the
+    #     normal's y component (which IS ux) is never negative and the
+    #     'south'-plus branch cannot be reached from a player's drag. It is
+    #     still the correct answer for a segment handed in the other way
+    #     round - the built-ins are never canonicalized either - so it is
+    #     written, and tested here rather than left as a claim.
+    _rev53 = _road_dict({'id': 'X', 'start': (7200.0, 3500.0),
+                          'end': (6200.0, 2500.0), 'width_class': 'avenue'})
+    assert _rev53['side_plus'] == 'south' and _rev53['side_minus'] == 'north', _rev53
+    _revv53 = _road_dict({'id': 'X', 'start': (3000.0, 4230.0),
+                           'end': (3000.0, 2000.0), 'width_class': 'avenue'})
+    assert _revv53['side_plus'] == 'east' and _revv53['side_minus'] == 'west', _revv53
+
+    #     and the two built-ins still get exactly the names they always had
+    assert _road_dict(ARTERIAL)['side_plus'] == 'north'
+    assert _road_dict(ARTERIAL)['side_minus'] == 'south'
+    assert _road_dict(CROSS_STREET)['side_plus'] == 'west'
+    assert _road_dict(CROSS_STREET)['side_minus'] == 'east'
+
+    # 54. TWO HOUSES ALONG A DIAGONAL STREET - the case that makes the
+    #     overlap scan's choice of QUAD rather than bounding box a player
+    #     -facing fact rather than a nicety. A 45 degree lot's pad is an
+    #     820 x 1500 rectangle turned 45 degrees; its bounding box is about
+    #     1640 square, and the empty corners are most of it. Two lots along
+    #     the same street, spans well apart, have boxes that overlap and
+    #     pads that do not - so a bounding-box scan refuses the second
+    #     click on visibly empty ground.
+    #
+    #     Empty mode, because the pinned frontage is wall to wall from
+    #     |x| 1130 to 6050 and a diagonal long enough for two lots cannot
+    #     avoid it on this board. That is the same mode gate the click path
+    #     already has, not a special case invented for this test.
+    s54 = citytick.seed_state()
+    s54['money'] = 9000.0
+    s54, rid54, ok54, why54 = draw_road(s54, 5700.0, 2000.0, 7650.0, 3950.0,
+                                         pins_active=False)
+    assert ok54, why54
+    _f54 = road_frame(_road_dict(s54['roads'][rid54]))
+    _pids54 = []
+    for _t in (0.20, 0.80):
+        _al = _f54[6] * _t
+        _px = _f54[0] + _f54[2] * _al + _f54[4] * 1500.0
+        _py = _f54[1] + _f54[3] * _al + _f54[5] * 1500.0
+        s54, _pid, _ok, _why = place(s54, _px, _py, pins_active=False)
+        assert _ok, (_t, _why)
+        _pids54.append(_pid)
+    assert _pids54 == ['P1', 'P2'], _pids54
+    assert s54['parcels']['P1']['placement'] == {
+        'x0': 5590.0, 'x1': 6410.0, 'side': 'north', 'road_id': 'R1'
+    }, s54['parcels']['P1']['placement']
+    assert s54['parcels']['P2']['placement'] == {
+        'x0': 7240.0, 'x1': 8060.0, 'side': 'north', 'road_id': 'R1'
+    }, s54['parcels']['P2']['placement']
+    #     and the DISCRIMINATION itself, stated rather than implied: the pads
+    #     miss, the boxes do not.
+    _qa54 = lot_quad(s54['parcels']['P1']['placement'], _all_roads(s54))
+    _qb54 = lot_quad(s54['parcels']['P2']['placement'], _all_roads(s54))
+    assert not quads_overlap(_qa54, _qb54)
+    assert rects_overlap(quad_rect(_qa54), quad_rect(_qb54))
+
+    # 55. THE OTHER THREE SCANS ALSO COMPARE PADS, not boxes. 54 proves it
+    #     for the lot-vs-lot scan; there are three more call sites, and a
+    #     diagonal's bounding box is so much bigger than the thing inside it
+    #     that each one would refuse real ground if it compared boxes. All
+    #     three are the SAME shape of case: something axis-aligned standing in
+    #     one of a diagonal's empty box corners. Empty mode throughout, for
+    #     the reason 54 gives.
+
+    #     (a) A DRAWN ROAD vs an existing LOT. An arterial lot at
+    #     [6590, 7410]; a 45 degree road from (4400, 3600) whose box reaches
+    #     x 6699 - over the lot - while its corridor stays west of it.
+    _a55 = citytick.seed_state()
+    _a55['money'] = 40000.0
+    _a55, _p55, _ok55, _why55 = place(_a55, 7000.0, 1500.0, pins_active=False)
+    assert _ok55, _why55
+    _lot55 = _a55['parcels'][_p55]['placement']
+    _ok55, _why55, _road55 = resolve_road_draw(_a55, 4400.0, 3600.0, 5900.0,
+                                                2100.0, pins_active=False)
+    assert _ok55, _why55
+    _q55 = road_quad(_road_dict(_road55))
+    _ql55 = lot_quad(_lot55, _all_roads(_a55))
+    assert not quads_overlap(_q55, _ql55)
+    assert rects_overlap(quad_rect(_q55), quad_rect(_ql55))
+
+    #     (b) A DRAWN ROAD vs another ROAD. The same diagonal, drawn; then a
+    #     short vertical road at x=2500 standing in its box's west corner.
+    _b55 = citytick.seed_state()
+    _b55['money'] = 40000.0
+    _b55, _rb55, _ok55, _why55 = draw_road(_b55, 4400.0, 3600.0, 5900.0, 2100.0,
+                                            pins_active=False)
+    assert _ok55, _why55
+    _ok55, _why55, _road55b = resolve_road_draw(_b55, 2500.0, 1200.0, 2500.0,
+                                                 2100.0, pins_active=False)
+    assert _ok55, _why55
+    _qa55 = road_quad(_road_dict(_b55['roads'][_rb55]))
+    _qb55 = road_quad(_road_dict(_road55b))
+    assert not quads_overlap(_qa55, _qb55)
+    assert rects_overlap(quad_rect(_qa55), quad_rect(_qb55))
+
+    #     (c) A LOT vs a HIGHWAY's corridor - the no-frontage scan, which is a
+    #     refusal rather than a nicety. Test 54's diagonal street and its
+    #     first lot, plus a vertical HIGHWAY at x=2600 whose corridor
+    #     (1170..4030) clips the lot's box (which starts at 3943) and misses
+    #     the pad entirely. The click must still place, with the highway
+    #     standing there.
+    _c55 = citytick.seed_state()
+    _c55['money'] = 40000.0
+    _c55, _rc55, _ok55, _why55 = draw_road(_c55, 5700.0, 2000.0, 7650.0, 3950.0,
+                                            pins_active=False)
+    assert _ok55, _why55
+    _f55 = road_frame(_road_dict(_c55['roads'][_rc55]))
+    _al55 = _f55[6] * 0.20
+    _px55 = _f55[0] + _f55[2] * _al55 + _f55[4] * 1500.0
+    _py55 = _f55[1] + _f55[3] * _al55 + _f55[5] * 1500.0
+    _ok55, _why55, _lotc55 = resolve_click(_c55, _px55, _py55, pins_active=False)
+    assert _ok55 and _lotc55 == {'x0': 5590.0, 'x1': 6410.0, 'side': 'north',
+                                  'road_id': 'R1'}, (_ok55, _why55, _lotc55)
+    _c55, _rh55, _ok55, _why55 = draw_road(_c55, 2600.0, 1800.0, 2600.0, 3000.0,
+                                            'highway', pins_active=False)
+    assert _ok55, _why55
+    _qh55 = road_quad(_road_dict(_c55['roads'][_rh55]))
+    _qlc55 = lot_quad(_lotc55, _all_roads(_c55))
+    assert not quads_overlap(_qlc55, _qh55)
+    assert rects_overlap(quad_rect(_qlc55), quad_rect(_qh55))
+    _ok55, _why55, _again55 = resolve_click(_c55, _px55, _py55, pins_active=False)
+    assert _ok55 and _again55 == _lotc55, (_ok55, _why55, _again55)
+
+    print('placement self-check: 55/55 pass (pure-Python click->lot->state '
           'contract; resolve_road multi-road frontage; cross-street and '
           'corner-overlap coverage; save/load round-trip; free placement '
           'along the road (1-27, prior sessions) PLUS drawn roads, '
@@ -1917,7 +2300,23 @@ if __name__ == '__main__':
           'right to left mirrored every lot placed on it about the start '
           'point and flipped its side name - a real defect reachable today, '
           'found while generalizing the resolver to arbitrary directions; '
-          'live cursor-trace '
+          'PLUS roads at ANY DIRECTION, 2026-09-06 (50-53, item 11 first '
+          'half): the resolver works in PROJECTION space (a lot\'s x0/x1 '
+          'are the scalar projection of its span onto the road\'s unit '
+          'direction, which for both built-ins IS the world coordinate '
+          'already stored, asserted as an identity), lot and road '
+          'footprints are quads with a separating-axis test that reduces '
+          'exactly to rects_overlap while everything is axis-aligned '
+          '(checked against it, not argued), side names come off the '
+          'NORMAL rather than the dominant axis of the run - the case '
+          'where the two disagree is tested - and the "too diagonal" '
+          'refusal is gone: a 45 degree road draws unsnapped and a lot '
+          'placed on it gets a rotated pad, priced by its true length, and '
+          'two lots along one diagonal street both stand where a '
+          'bounding-box scan would have refused the second on empty '
+          'ground - and the same for the road-vs-lot, road-vs-road and '
+          'lot-vs-highway scans, each shown against the box test that '
+          'would have refused it; live cursor-trace '
           'coordinates, actor spawn/resolve, and the feel itself are NOT '
           'provable here - see module docstring, and PLACEMENT_GRID.md '
           'section 8 - the owner\'s own click on empty board is the real '

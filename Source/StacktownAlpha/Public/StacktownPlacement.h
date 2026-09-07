@@ -176,6 +176,37 @@ struct STACKTOWNALPHA_API FRoadLocal
 	FString Side;
 };
 
+/** A road's own frame: its start, unit direction, unit normal, length, and S0 -
+ *  the scalar projection of its start onto its own direction.
+ *
+ *  S0 IS WHAT MAKES A LOT'S SPAN MEAN SOMETHING ON A DIAGONAL. A placed lot
+ *  stores X0/X1, which have always been world coordinates on the road's axis;
+ *  generalized, they are the scalar projection of the span onto the road's unit
+ *  direction, and a point at projection S sits at Start + U * (S - S0). For the
+ *  arterial U is +X and S0 is PlateXMin, so S IS the world x and the recovery is
+ *  the identity; for the cross street U is +Y and S is the world y. So no lot
+ *  already saved changes meaning - which is only true because a drawn segment's
+ *  endpoints are ORDERED (ResolveRoadDraw): U could otherwise point either way
+ *  and S would be the world coordinate NEGATED on half the roads. */
+struct STACKTOWNALPHA_API FRoadFrame
+{
+	double Ox = 0.0, Oy = 0.0;
+	double Ux = 1.0, Uy = 0.0;
+	double Nx = 0.0, Ny = 1.0;
+	double Length = 0.0;
+	double S0 = 0.0;
+};
+
+/** Four world corners, in order round the shape. A lot's pad and a road's
+ *  corridor are both quads now: axis-aligned ones are exactly the rectangles
+ *  they always were, and a diagonal's is the pad itself rather than the much
+ *  larger box around it. */
+struct STACKTOWNALPHA_API FQuad
+{
+	double X[4] = { 0.0, 0.0, 0.0, 0.0 };
+	double Y[4] = { 0.0, 0.0, 0.0, 0.0 };
+};
+
 struct STACKTOWNALPHA_API FLotRect
 {
 	double XMin = 0.0, XMax = 0.0, YMin = 0.0, YMax = 0.0;
@@ -246,6 +277,35 @@ STACKTOWNALPHA_API FLotRect LotRect(const FPlacementRules& R, const FEconRules& 
 	const FLotPlacement& Lot);
 
 STACKTOWNALPHA_API bool RectsOverlap(const FLotRect& A, const FLotRect& B);
+
+// ---- ANY DIRECTION (item 11, 2026-09-06) ---------------------------------
+
+/** The road's own frame. See FRoadFrame for why S0 is the interesting part. */
+STACKTOWNALPHA_API FRoadFrame RoadFrame(const FRoad& Road);
+
+/** The world point at projection `S` along the road, `Offset` off its
+ *  centreline on the +normal side. */
+STACKTOWNALPHA_API void PointAt(const FRoadFrame& F, double S, double Offset,
+	double& OutX, double& OutY);
+
+/** A lot's PAD as four world corners, for a road of ANY direction. The side is
+ *  read off the ROAD'S OWN names, never off the literal "north": SidePlus is
+ *  whichever way the normal points for this road. */
+STACKTOWNALPHA_API FQuad LotQuad(const FPlacementRules& R, const FEconRules& E,
+	const FRoad& Road, const FLotPlacement& Lot);
+
+/** A road's own corridor as four world corners. */
+STACKTOWNALPHA_API FQuad RoadQuad(const FPlacementRules& R, const FEconRules& E,
+	const FRoad& Road);
+
+/** The axis-aligned bounding box of a quad. */
+STACKTOWNALPHA_API FLotRect QuadRect(const FQuad& Q);
+
+/** Separating-axis test on two convex quads. Touching is NOT overlapping, the
+ *  same strictness RectsOverlap has - which is what lets a lot sit exactly on
+ *  its own road's frontage line. REDUCES EXACTLY to RectsOverlap for two
+ *  axis-aligned quads, checked against it rather than argued. */
+STACKTOWNALPHA_API bool QuadsOverlap(const FQuad& A, const FQuad& B);
 
 /** The click -> lot decision. Road and side selection and the outer reach bound
  *  are ResolveRoad's; this adds what it deliberately leaves open: the

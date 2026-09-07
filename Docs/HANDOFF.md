@@ -210,6 +210,13 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 21:22 PDT - ENGINEERING ITEM 10 (bea384c) BUILT AND PROVEN: road types are
+  mechanics (cost per 100 uu charged at draw, corridor widths, the highway
+  refuses frontage, rent multiplier built but unwired). Two engine-only
+  fixes (c216fd3). 105/105. Live: avenue refused on $100, dirt bought for
+  $70, highway/boulevard drawn, frontage refused beside the highway, widths
+  1760/2260/2860. Rent wiring next.
+
 - 2026-09-06 20:37 PDT - NIGHT CYCLE TWO: recipe choice (R) with price/rent per recipe;
   SetView on the camera; engine notices silenced; the arrival at the wide
   stop. 96/96, preflight 771/771. Frames for the design lane: the stains

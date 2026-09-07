@@ -24,9 +24,9 @@ inline Stacktown::FPlacementBoard OracleBoard()
 	Board.Rules.V0Width         = V0Width;
 	Board.Rules.V0Recipe        = FString(V0Recipe);
 	Board.Rules.PoolSize        = PoolSize;
-	Board.Rules.RoadHalf        = RoadHalf;
+	Board.Rules.RoadHalf        = StacktownPlacementOracle::RoadHalf;       // the fixture constant, not Stacktown::RoadHalf(...)
 	Board.Rules.BlockDepth      = BlockDepth;
-	Board.Rules.RoadMaxReach    = RoadMaxReach;
+	Board.Rules.RoadMaxReach    = StacktownPlacementOracle::RoadMaxReach;
 	Board.Rules.Verge           = Verge;
 	Board.Rules.ReachSlack      = ReachSlack;
 	// The road-type table the ORACLE read, not the one FEconRules compiles in.

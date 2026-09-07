@@ -11,5 +11,9 @@ class STACKTOWNALPHA_API AStacktownGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 public:
+	/** Runs before any actor exists: the place to silence the engine's on-screen notices in a game, before the sound streaming prints one. */
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+
+public:
 	AStacktownGameMode();
 };

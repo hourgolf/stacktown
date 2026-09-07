@@ -30,6 +30,7 @@
 
 namespace Stacktown
 {
+struct FPlacementBoard;   // the roads around a placed lot multiply its rent (StacktownPlacement.h)
 
 /** What one road TYPE costs, earns, measures and allows. Ported from
  *  MONDAY_DECISIONS.md section 2's table, whose numbers live in econrules.json
@@ -394,7 +395,7 @@ STACKTOWNALPHA_API FVerbResult TierUpAllowed(const ICatalogue& Catalogue,
  *  floating-point addition is not associative, so an unsorted walk would make
  *  Money depend on hash order - a difference that hides until the oracle
  *  comparison runs on a big save. */
-STACKTOWNALPHA_API void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents);
+STACKTOWNALPHA_API void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents, const FPlacementBoard* Board = nullptr);
 
 /** ONE CITY TICK as the game performs it: the economy's Tick, then AdvanceAge on
  *  every parcel by key. Age stays outside Tick (the economy oracles assert exact
@@ -402,7 +403,7 @@ STACKTOWNALPHA_API void Tick(const FEconRules& R, FCityState& State, TArray<FEco
  *  predicts what the subsystem persists must call the SAME composite - the engine
  *  suite found the two CityState round-trip tests predicting with Tick alone
  *  (2026-09-06: "reloaded matches the rules (parcel 'P1': age differs)"). */
-STACKTOWNALPHA_API void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents);
+STACKTOWNALPHA_API void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents, const FPlacementBoard* Board = nullptr);
 
 STACKTOWNALPHA_API FVerbResult Buy(const FEconRules& R, FCityState& State, const FString& Pid);
 

@@ -78,6 +78,9 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
   everything through cycle three.
 - 20:46: waiting on engineering's item 10 and the design lane's 22:00
   window; both watchers armed.
+- 21:20 cycle six: engineering's item 10 (road types as mechanics) built,
+  fixed for the engine, proven live; 21:29 the rent multiplier wired on
+  both sides. 105/105. Package rebuilt after.
 
 ## The morning report
 

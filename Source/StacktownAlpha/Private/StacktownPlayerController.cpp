@@ -621,6 +621,17 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 		if (R.bOk) { G->ShowSegment(TEXT("ghost"), R.Segment, Stacktown::RoadCorridor(
 			Stacktown::FPlacementBoard::Default().Rules, Econ->GetRules(), R.Segment.WidthClass)); }
 		else { G->Show(TEXT("ghost"), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y); }
+		// The quote, while the ghost is valid: a stranger decides with the price in view
+		// (the seat's RoadCost is the same function the draw charges). Wording is the
+		// design lane's; the refusal words stay CONTENT 2's.
+		if (HudModel && PinnedBarMessage.IsEmpty())
+		{
+			double Cost = 0.0;
+			if (R.bOk && Stacktown::RoadCost(Econ->GetRules(), R.Segment, Cost))
+			{
+				HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 %.0f uu \u00b7 $%.0f \u00b7 click to draw"), *RoadClass, Stacktown::RoadLength(R.Segment), Cost);
+			}
+		}
 		G->SetGhost(true, R.bOk);
 		G->SetActorHiddenInGame(false);
 	}

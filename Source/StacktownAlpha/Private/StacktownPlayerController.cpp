@@ -737,6 +737,11 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (bRoadMode && WasInputKeyJustPressed(EKeys::T)) { UE_LOG(LogStacktown, Log, TEXT("ROAD CLASS: %s"), *CityCycleRoadClass()); }
 	if (!bRoadMode && WasInputKeyJustPressed(EKeys::P)) { UE_LOG(LogStacktown, Log, TEXT("PRESET: %s"), *CityPreset()); }
 	if (!bRoadMode && WasInputKeyJustPressed(EKeys::R)) { UE_LOG(LogStacktown, Log, TEXT("RECIPE: %s"), *CityCycleRecipe()); }
+	if (WasInputKeyJustPressed(EKeys::Home) || WasInputKeyJustPressed(EKeys::BackSpace))
+	{
+		// A stranger who has lost the board gets it back: the arrival pose, exactly.
+		if (AStacktownCameraPawn* Cam = Cast<AStacktownCameraPawn>(GetPawn())) { Cam->SetView(FVector(0.0, 0.0, 0.0), 35.0, -42.0, 21024.0); }
+	}
 	if (bRoadMode)
 	{
 		HideGhost();

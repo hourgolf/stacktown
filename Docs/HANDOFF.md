@@ -1144,6 +1144,11 @@ was asking the wrong question and returning "ok".**
   opened by the double-click path: lock in 10 s, a 1600x932 window rendering
   the board (capture: scratchpad packaged_window_0720.png). This is the app
   for Monday. The editor was relaunched for the design lane's next window.
+- 2026-09-07 07:30 PDT (coordinator): a cursor beyond the plate no longer wears
+  "Off the board" (bcbd264; the board plane is infinite, so every idle mouse
+  on the backdrop had been a refused placement). Suite 120/120, plain dylib
+  linked, editor relaunched. The package still stands at d8e54a3 - this fix
+  goes into the next rebuild, batched with the engineering seat's gap 2 push.
 
 ## 6. The recipe — measured numbers
 

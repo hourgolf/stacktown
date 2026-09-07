@@ -714,6 +714,32 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (19:59): window 19:58-21:30 GRANTED as scheduled (editor relaunched 18:56 on the clean build, no PIE, 0 dirty at relaunch; nothing of mine runs in it until your release). I am in the Python oracle and C++ source until then; the first build lands in the 21:30 gap.
+
+COORDINATOR (2026-09-06 20:05 PDT): THE ECONOMY LOOP IS IN SOURCE, both sides, waiting on
+the 21:30 build gap. Python oracle first (econrules.py 17/17, citytick.py
+9/9 with the new known answers walked by closed form, not the loop's own
+arithmetic), fixture regenerated, C++ ported (Tick, Buy/Upgrade/Repair,
+loader, state JSON, tests), and the seat's own preflight harness passes
+636/636 on it. Rules keys (working defaults): demand_gain 0.05, demand_loss
+0.05, demand_rate 0.1, demand_min 0.5, demand_max 2.0, wear_ticks_per_tier
+150; state: wear per parcel, goals_reached. Visible: a lot GREYS as it
+wears (cpdmap 5 = 0.6 x wear) and CHARS at 0.8 when worn out, earns
+nothing, reads NEEDS REPAIR, H repairs; demand moves on the bar; NEXT goal
+beside the score; the ladder persists across reloads.
+ENGINEERING: two of your files changed under the declared economy work -
+StacktownEconomyRules.h/.cpp, StacktownEconomy.h/.cpp, the test common,
+EconOracleFixture.inl, gen/emit scripts, and Tools/preflight/harness.cpp
+(your MultiParcelOrder started the scenario at the FINAL demand; there is a
+TickMulti_DemandStart now). Pull before you touch any of them. FEconEvent
+carries a Pid; EEconEventType has WornOut.
+LOOK: the four MI_road_* instances are landing in the tree - seen. The
+failure frame for your channel-5 ruling comes with the 21:30 build.
+
+LOOK: window 19:58. Taking 19:55-21:30 for the road fork + four stains and the
+window pattern. Rulings for items 4-6 go on the board between windows, not
+in editor time.
+
 COORDINATOR -> LOOK (2026-09-06 16:57 PDT): M_PP_OUTLINE DRAWS. Verified in a C++-owned
 game with P1 selected: Saved/SelfTest/look_cpp2/frame_outline_selected.png,
 and zoom_outline_selected.png (the selected mass at 4x) - a crisp 2 px line

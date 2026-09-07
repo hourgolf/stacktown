@@ -1220,6 +1220,85 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK: released 06:58. SAVED BY EXPLICIT PATH:
+  /Game/Stacktown/Materials/M_WoodMaster            (chamfer gate, 501 -> 503)
+  /Game/Stacktown/Materials/MI_road_dirt            (BaseColour only)
+  /Game/Stacktown/Materials/MI_road_avenue          (BaseColour only)
+  /Game/Stacktown/Materials/MI_road_boulevard       (BaseColour only)
+  /Game/Stacktown/Materials/MI_road_highway         (BaseColour only)
+No PIE, no marker needed, nothing else touched.
+
+=== CHAMFER GATE IS IN. === Window mask now gated on max(|n.x|,|n.y|) > 0.85
+- 1.0 on a flat wall, 0.707 on a 45-degree chamfer - so windows cannot land
+on a corner bevel and the triplanar pick's ambiguous zone is masked to zero
+where it is undecided. Your frame agrees with the prediction (missing windows
+ending AT a corner strip, not mid-face) as far as one frame can say. Needs a
+night frame with two masses to close.
+
+=== ROAD TONE: THE FRAME OVERTURNED MY OWN PREDICTION. Ladder WIDENED. ===
+AT 06:40 I ARGUED FROM NUMBERS THAT HIGHWAY WOULD VANISH into the plate -
+BaseColour 0.48 against the plate's 0.53 - and asked to compress the whole
+ladder upward. frame_stains_adjacent_wide shows highway reading perfectly
+clearly against the plate. I compared raw parameter values as if they were
+screen values; the plate and the road are lit and modulated quite
+differently. THE COMPRESS-UPWARD FIX IS WITHDRAWN - the anchors were never
+wrong. That is the third time I have reasoned from a proxy with a frame
+available, and the proxy has lost every time.
+WHAT THE FRAME DOES SHOW: side by side the four are distinguishable, but only
+just, and ROAD TYPE IS A MECHANIC - a player must name a road looking at ONE
+road, not by comparing five. Comparison is the easiest test there is and the
+ladder only just passed it. So I moved the ENDS apart, evenly spaced:
+  dirt .84 .79 .70   avenue .70 .64 .55   boulevard .54 .48 .40   highway .38 .34 .28
+Saved. Frame it adjacent again and in isolation - the isolation frame is the
+one that matters and we have not taken it.
+=== AND THE "ALL FOUR BELOW THE PLATE" ALTERNATIVE IS NOT NEEDED. ===
+For the owner, MONDAY_DECISIONS section 9: the board's dominance problem is
+NOT my stains. In both frames the PINNED roads - the cross street and the
+arterial - are near-white and are the brightest objects in the picture, well
+above every stain. Fix the pinned roads and the dominance goes away without
+the radical change. I have raised roads out-reading the timber four times;
+this is the first frame that says exactly which roads.
+
+=== THE ARRIVAL: ACCEPTED. Closed. ===
+Three species of timber reading as carved blocks, the pads readable at 90 uu
+without dominating, board whole, masses off-centre at the crossing. That is
+the frame a stranger should meet.
+28.5 percent against my third-of-frame floor: ACCEPT. The floor was a guess
+and the 5-percent corner rule is the binding constraint; I would rather have
+the corners safe than the area number. Drop the floor from the criterion.
+NW3 / SE0 / NE0 is a good spread - round the junction, so the eye reads a
+settlement rather than a row. Keep them. ONE ASK: all three are tier 1 low
+blocks, so the silhouette is flat. If a tier 2 is available, make ONE of the
+three a tier 2 - it varies the skyline and says the city GROWS, which is the
+one thing the arrival cannot otherwise tell a stranger.
+
+=== SAVE SLOTS: RIGHT IDEA, WRONG CLUSTER. ===
+"SLOT 2" must not live where NIGHT lives. That cluster has one grammar - a
+word appears while a mode is ON and is ABSENT otherwise - and SLOT 2 is
+always true, so it would be the only permanent occupant of a cluster whose
+entire meaning is transience. It also collides with NIGHT: both want the
+same place and only one can have it.
+RULE: SHOW IT ONLY WHEN IT CHANGES. A bar message, body, dim, cleared on the
+next input: "Saved to slot 2." / "Loaded slot 2." Absent the rest of the
+time. LOOK 1 - nothing is added that does not carry information the player
+needs AT THAT MOMENT, and which slot you are in matters when you save or
+load, not while you are placing lots.
+IF THE OWNER WANTS IT PERMANENT, it goes at the END of the LEFT cluster with
+money / score / next - the persistent facts - never on the right.
+LEGEND WORDING: "1-3 slot" is cryptic. If those keys SAVE, "1-3 save"; if
+they LOAD, "1-3 load". If one key does both, two words cannot carry it and
+the gesture needs splitting - that is a mechanics question, not a wording
+one. I do not know which it is, so I am ruling conditionally rather than
+guessing.
+
+=== SMALL, REPEATED: the middle dot is still a Roboto fallback. ===
+It is back in the bar hint ("3 built - 11 lots for sale - click one"). Same
+reason I dropped it from the legend: Tomorrow has no U+00B7, so Slate
+satisfies it from Roboto and there are two typefaces inside one line. A
+wider gap does the same work with no glyph.
+
+LOOK: window 06:56. Running the chamfer gate.
+
 LOOK: released 06:40. NOTHING SAVED - I could not run: THE EDITOR IS NOT
 RUNNING (only UnrealEditorServices; Tools/rung.sh returns "NO NODE FOUND").
 The chamfer fix is written and will run in one shot when an editor is up.
@@ -2301,3 +2380,36 @@ one test). Pass line 120/120 at f126c83. Your gap 2 and the self-crossing
 path stand as your next push; I build it against the engine when it lands -
 if the design lane holds the editor at that moment I will say so and wait for
 their release rather than build against an open editor.
+
+COORDINATOR (2026-09-07 07:10 PDT) - LOOK: YOUR 06:58 IS BUILT AND YOUR FIVE SAVES ARE IN.
+Committed on proof at d8e54a3 (M_WoodMaster with the chamfer gate; MI_road_dirt /
+avenue / boulevard / highway with the widened ladder). Suite 120/120. The
+package is rebuilding from that head; the editor is CLOSED for it and I will
+relaunch it before your next window - say "LOOK: window <time>" and I open it.
+Frames in Saved/SelfTest/look_cpp2/:
+
+- CHAMFER GATE, the night frame you asked for: frame_night_pair_chamfer_wide.png
+  (the three built lots at night from the south; NE0 tall at left, SE0 low at
+  bottom left, NW3 at right) and frame_night_nw3_corner.png (NW3's corner
+  close: both faces lit, the arris itself carries no window, no window is
+  cut by the edge). Every discontinuity I can find is at an arris and none
+  mid-face - your prediction holds in two frames.
+- THE LADDER, adjacent and in isolation: frame_stains_adjacent_wide_v2.png
+  (from LEFT: highway, boulevard, the PINNED cross street, avenue, dirt; the
+  PINNED arterial across the middle) and frame_stain_isolation_dirt / _avenue
+  / _boulevard / _highway.png, one road each, reach 8,500. The four are
+  nameable one at a time now; the two pinned map roads are still the
+  brightest things on the board, and that is with the owner (MONDAY_DECISIONS
+  section 9, rewritten to say exactly that).
+- THE ARRIVAL with your one ask: NE0 stands at tier 2 -
+  frame_arrival_tier2_0710.png. The bar reads "3 built   11 lots for sale
+  click one, B to buy" with gaps, no middle dot anywhere in bar or panel text
+  now (all thirty of them are gone).
+- SAVE SLOTS as you ruled: no slot word on the bar; "Loaded slot 2." as a
+  body message cleared on the next input (frame_slot_loaded_message.png);
+  the legend says "1-3 load" - the keys LOAD, the save is continuous, so the
+  gesture did not need splitting. The area floor is dropped from the
+  arrival tool; the 5-percent corner rule is the one it enforces.
+
+TO ENGINEERING: still nothing of yours moved; the tier-2 lot is set after
+SeedPresetState like the other two. Pass line 120/120 at d8e54a3.

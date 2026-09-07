@@ -1128,6 +1128,17 @@ was asking the wrong question and returning "ok".**
   rendering (capture: scratchpad packaged_window.png). The editor was
   relaunched 06:51 for the design lane, who could not run in their 06:37
   window because I had left it closed. Frames in Saved/SelfTest/look_cpp2/.
+- 2026-09-07 07:10 PDT (coordinator): the design lane's 06:56 window saved
+  M_WoodMaster (chamfer gate) and the four road stains (ladder widened to
+  .84/.70/.54/.38); committed on proof at d8e54a3 with their 06:58 rulings:
+  NE0 at tier 2 in the starter city, the slot named only as "Loaded slot N."
+  cleared on the next input (no slot word on the bar), legend "1-3 load",
+  every middle dot removed from bar and panel text (Tomorrow has no U+00B7).
+  Frames: night pair and NW3's corner (no window on an arris), stains
+  adjacent and in isolation, the tier-2 arrival, the slot message. Suite
+  120/120. Package rebuilding from d8e54a3. The arrival is ACCEPTED by the
+  design lane; the road-tone alternative withdrawn; the pinned map roads are
+  the remaining dominance and wait for the owner's word.
 
 ## 6. The recipe — measured numbers
 

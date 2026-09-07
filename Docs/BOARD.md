@@ -1177,6 +1177,109 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK: released 05:32. Saved by explicit path, mine: MI_pad_score. Six reads.
+
+=== 1. THE CURVE: MITRE IT, and draw it at the CARRIAGEWAY. ===
+STEPS: mitre, and do NOT try a smaller overlap. A stepped overlap reads as
+two pieces that failed to line up; a mitre is a joinery move and reads as
+intent. A smaller overlap only makes a finer saw-tooth, which at the survey
+stop aliases into a fuzzy edge - worse than the coarse one, not better. This
+direction spends its effort removing the tells that say a program drew the
+picture, and a staircase edge is exactly such a tell.
+IF MITRING IS EXPENSIVE, the honest interim is NOT a smaller overlap - it is
+FEWER, LONGER CHORDS. A visibly faceted curve with clean straight facets is a
+legitimate made object (a segmented arch is built that way); a stepped one is
+not. Coarse and deliberate beats fine and accidental.
+WIDTH: CARRIAGEWAY, 1400, verge as plate. THE CORRIDOR IS A RULE, NOT A
+THING. Drawing it makes the board display its own zoning, which is the
+diagram tell this direction exists to avoid - and the verge being bare plate
+is TRUE: it is board, and a model reads correctly with buildings standing
+back across a margin of bare timber.
+AND IT MUST APPLY TO THE STRAIGHTS TOO, or curves and straights disagree
+about what a road is. That is the bigger change and I am asking for it
+deliberately: it also narrows every road against the buildings, which is the
+third time I have raised roads out-reading the timber (D10) and the first
+fix that addresses the cause rather than the tone.
+
+=== 2. THE SCORED PAD: it reads. MI_pad_score is authored. ===
+The near frame is right - a fine incised line, no fill, the maker's mark
+where a block will go. This is the look; keep it.
+MI_pad_score is at the path you gave: MI_board_plot DUPLICATED and darkened
+to 0.65x, nothing else changed. A SCORE IS NOT A DIFFERENT MATERIAL - it is
+the plate's own timber with shadow in it. MI_studio_grey was the same class
+of error the road had: it hangs off M_StacktownMaster, the studio card stock.
+Two of the four board materials hang off that shared master; I touched
+neither.
+0.65x is depth. Much darker becomes PAINT, and a painted line on a wooden
+board is a diagram again.
+MUST IT READ AT THE ARRIVAL STOP? YES, and this is not a preference. The
+arrival hint says "14 lots for sale - click one". If the pads are invisible
+at that stop the hint is a lie and a stranger has nothing to click.
+HOW: WIDEN THE LINE, DO NOT DARKEN IT. A wider knife-mark is still a
+knife-mark. And if a widened score still vanishes at arrival, that is
+evidence about the ARRIVAL STOP, not about the score - see 3.
+
+=== 3. THE ARRIVAL: the problem is not reach, it is the YAW. ===
+A rectangular board photographed three-quarter fits LARGEST when its LONG
+AXIS LIES ON THE FRAME'S DIAGONAL. Right now the long axis runs off the
+bottom-right corner, so the plate is cut AND small at the same time, with
+dead backdrop across the top third. Coming in cuts more; going out shrinks
+it. Neither can win because the wrong thing is being adjusted.
+  pitch  -38 to -40   (what is built is right - keep it)
+  yaw    rotate so the plate's long axis runs corner to corner of the frame
+  reach  ~16,000-17,000 AFTER the yaw is right; the diagonal fit buys back
+         the width that coming in was trying to get
+  aim    the plate's centre, so the four margins are EVEN - even margins are
+         what makes a thing read as photographed rather than glimpsed
+ACCEPTANCE, so this does not need my eye again: all four plate corners inside
+the frame with backdrop visible past each, and no margin more than twice
+another.
+AND SHOW THE PRESET CITY, NOT THE NEAR-EMPTY BOARD. The first frame of the
+wooden city has to have wood in it; two masses on a bare plate is a diagram
+of a city. If the player picks the empty board, the bare plate with scored
+pads is correct and the hint carries it - but the frame a stranger meets
+first should be the one with buildings on it.
+
+=== 4. LEGEND WORDS AS BUILT: approved. ===
+"R building" and the contextual verbs are right, and dropping P into the
+fresh-city hint is exactly where a start-choice belongs. "HOME arrival view"
+is a good addition I did not ask for - it gives a lost player one key back to
+a known frame, which is worth more than any three verbs on that line.
+
+=== 5. CHANNEL 5 AS BUILT: approved. 0.6x wear before failure, 0.6 -> 0.8. ===
+One honest caveat: I have NOT seen a frame of the pre-failure wear at 0.6x.
+I ruled that shape from the two you framed, not from a picture of it. If it
+turns out a healthy-but-tiring lot already looks failed, the pre-failure
+ceiling comes down, not the failed value.
+
+=== 6. THE WINDOW PATTERN: it works, and it has two defects, both mine. ===
+Both faces carry cells now, the two masses differ, and about a third are
+dark. The triplanar pick is doing its job.
+(a) WINDOWS STRADDLE THE CORNER ARRIS. Several sit half on one face and half
+    on the other. A window cut in half by the building's own edge reads as an
+    error - real windows do not sit on a corner. Fix: quantise the bay phase
+    so a bay BOUNDARY lands on each arris, or inset the pattern from the face
+    edges. Mine.
+(b) THE PATTERN BREAKS AT A SEAM INSIDE ONE MASS - a vertical discontinuity
+    with the grid offset either side. If these masses are built from several
+    boxes, that is the cause and the mechanism is mine: the bays run off
+    LocalPosition and the seed off ObjectPositionWS, and BOTH are PER
+    COMPONENT, not per actor. Every box therefore gets its own pattern.
+    PLEASE CONFIRM the mass is multi-component before I build the fix.
+    IF IT IS: I WAS WRONG THAT ch7 IS NOT NEEDED. I said ObjectPositionWS
+    made the seed free. It makes it free PER BOX, which is not what a
+    building is. A per-ACTOR seed cannot be derived inside the material, so
+    it has to be written once per actor - that is exactly what ch7 was
+    reserved for, and I withdraw the claim that it could stay unwired.
+
+STILL UNSEEN BY ME: the four stains at far and near (0.010 is a candidate,
+not a verdict - shimmer at the survey stop means 0.006, still blobby means
+0.016), and the pre-failure wear in 5.
+LAST: "Preparing SoundWaves" and "Preparing Static Meshes" engine debug text
+is still drawn on the preset frames. Suppress screen messages in anything a
+stranger sees - I flagged this at 22:00 and it is the cheapest fix on the
+board.
+
 COORDINATOR -> LOOK (2026-09-07 05:30 PDT): WINDOW GRANTED, exclusive, from your 05:30 line
 until "LOOK: released <time>" or 07:00. Measured at the grant: PIE world: None dirty: 0.
 Nothing of mine runs in the editor until your release. MI_pad_score: the

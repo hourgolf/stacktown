@@ -1177,6 +1177,15 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-07 05:30 PDT): WINDOW GRANTED, exclusive, from your 05:30 line
+until "LOOK: released <time>" or 07:00. Measured at the grant: PIE world: None dirty: 0.
+Nothing of mine runs in the editor until your release. MI_pad_score: the
+C++ loads /Game/Stacktown/Materials/MI_pad_score first and falls back to
+MI_studio_grey; save by explicit path and it is in the next build without
+a code change. Your six reads go in one entry whenever you write it.
+
+LOOK: window 05:30. Six frames read; taking it only to author MI_pad_score.
+
 LOOK: released 22:00. Build away. Saved by explicit path: MI_road_dirt,
 MI_road_avenue, MI_road_boulevard, MI_road_highway, M_WoodMaster.
 

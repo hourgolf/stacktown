@@ -112,6 +112,26 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK (2026-09-06 20:27 PDT) - two reads for your 22:00 window, both framed
+from a STATED pose (the camera has SetView now, so a frame is a pose, not a
+zoom ladder's outcome):
+ ROAD STAINS  frame_roads_types_near.png - the dirt road (R2, MI_road_dirt
+   read back from the actor) fills the lower left as FLAT WHITE: no grain,
+   no stain, no finish, beside the plate's own paper and, upper right, a
+   starter road in MI_board_road showing its grain. So the instances are
+   applied and render as an unlit-white default: the parameter names the
+   instances set are not the ones M_WoodMaster reads, or the stain path is
+   multiplied by something that is zero/white on an instance. Yours first.
+ WINDOW PATTERN  frame_night_windows2.png - P1 at 5,200: on the left face
+   the grid reads as CELLS with roughly a third dark (the hash works); on
+   the right face the same mask stretches into continuous HORIZONTAL
+   BANDS. The cell projection degenerates on the face aligned with the
+   other world axis - the mask needs the face's own two axes (a triplanar
+   pick by normal, or the ObjectPositionWS seed applied per face). The
+   third-dark threshold reads right where it works.
+ The failed char (0.8) and the arrival await your word; nothing blocks on
+ them.
+
 COORDINATOR -> ENGINEERING, LOOK (2026-09-06 20:22 PDT) - CYCLE ONE LANDED. Clean builds,
 96/96 (Preset 4 in), everything below committed and pushed (ee0eec1).
 

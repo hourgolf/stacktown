@@ -107,10 +107,14 @@ That is the pipeline a stranger's download will use.
     worth + a road bonus - a penalty per failed building; NEXT n POINTS is
     the rung you are chasing; crossing one announces GOAL n REACHED for
     three seconds. Reloading does not re-announce it.
-23. ROAD TYPES: in road mode (G) press T to cycle dirt / avenue /
-    boulevard / highway - the mode word on the bar changes; each type wears
-    its own stain (the design lane is fixing the stains rendering white).
-    Costs and frontage rules per type are engineering's item 10.
+23. ROAD TYPES AND CURVES: in road mode (G) press T to cycle dirt / avenue /
+    boulevard / highway - the mode word on the bar names the type, each type
+    wears its own stain, and the ghost quotes the length and price. Click
+    two nodes and press ENTER for a straight road; click three or more and
+    ENTER draws a CURVE through them as one road (BACKSPACE drops the last
+    node). A fresh $100 city can only afford a dirt track; the highway
+    refuses buildings beside it; a lot on a dirt track earns 0.75x, on a
+    boulevard 1.25x.
 24. THE ARRIVAL: the first frame shows the whole board, three-quarter,
     roads diagonal, thick edge visible, nothing moving. Say if it reads as a
     model on a table.
@@ -129,3 +133,14 @@ once from a terminal and it will open:
 
 and tell the coordinator; that would mean the windowed default is not
 being read in a cooked build and the app needs it forced in code.
+
+## Added 2026-09-07 before dawn
+
+25. HOME (or Backspace outside road mode) returns the camera to the arrival
+    view. N held resets the city, but the old one is archived first under
+    Saved/Stacktown/archive/, never destroyed.
+26. THE STARTER CITY'S PADS are scored outlines on the plate (no fill); the
+    cursor's own ghost keeps its fill. If the outlines are too faint at the
+    arrival stop, say so - the design lane owns the line.
+27. THE ROAD GESTURE CHANGED: a road is drawn with ENTER after its nodes,
+    not on the second click. Items 14 and 23 describe it.

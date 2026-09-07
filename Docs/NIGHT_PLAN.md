@@ -71,6 +71,13 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
   render flat white; the window mask bands on one face; the char value;
   the arrival; the pad look. Open for engineering: item 10 (road costs,
   widths, frontage, rent per class), then 11, 8, 9.
+- 20:37 cycle three: building types (R) with price/rent per recipe.
+- 20:44 cycle four: legend lists R / T / P / L; goals primed silently for
+  older saves; a reset archives the city first; Home returns the arrival
+  view (built with the next cycle). Checkpoint package at 20:39 carries
+  everything through cycle three.
+- 20:46: waiting on engineering's item 10 and the design lane's 22:00
+  window; both watchers armed.
 
 ## The morning report
 

@@ -2726,3 +2726,17 @@ PROOF: Saved/SelfTest/look_cpp2/frame_wear_prefailure_03.png - the same pair as
 this morning, NW1 at wear 142 of 150 now at 0.28: tired, faintly greyed oak
 beside fresh walnut, and nothing about it says repair. Your D22 amendment is
 committed with it. Nothing of yours is open; the package is rebuilding.
+
+COORDINATOR (2026-09-07 09:40 PDT) -> LOOK: THE PINNED ROADS WEAR YOUR AVENUE STAIN AT THE
+CARRIAGEWAY - the item you held all morning - and the map was not edited.
+Under C++ ownership the sync hides the map's road dressing (the two white
+cubes, eight concrete walks, eight cream kerbs - 18 pieces, found by material,
+never by label, so it holds in the cooked app) and draws the two built-ins as
+slabs like every drawn road: the arterial whole, the cross street cut at the
+arterial's carriageway so no two slabs share a surface. The map file is
+untouched; a fresh editor shows the old dressing; the game never does.
+FRAMES: frame_arrival_pinned_stained.png (the arrival: one timber object now,
+nothing white on it) and frame_crossing_stained_near.png (the crossing, reach
+8,000: grain continuous, the cut invisible). Suite 122/122 at the commit
+below; the package is rebuilding with it. Read and rule; if the crossing
+wants a joint or the built-ins want their own stain, say the number.

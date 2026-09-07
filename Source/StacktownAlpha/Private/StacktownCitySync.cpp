@@ -12,6 +12,9 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
+#include "Materials/MaterialInterface.h"
 #include "EngineUtils.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformMisc.h"
@@ -303,6 +306,11 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			RoadSignatures.Add(Id, Sig);
 		}
 	}
+	if (bOwnsCity)
+	{
+		HidePinnedRoadDressing();
+		EnsurePinnedRoads(Board, RoadsSeen);
+	}
 	for (auto It = RoadActors.CreateIterator(); It; ++It)
 	{
 		if (!RoadsSeen.Contains(It.Key()))
@@ -314,6 +322,102 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		}
 	}
 	return FString::Printf(TEXT("reconcile: %d lots standing (%d spawned, %d updated, %d removed, %d without a pose), %d roads (%d spawned, %d removed), owner=%s"), Lots.Num(), Spawned, Updated, Removed, Skipped, RoadActors.Num(), RoadsSpawned, RoadsRemoved, bOwnsCity ? TEXT("C++") : TEXT("Python"));
+}
+
+void UStacktownCitySync::HidePinnedRoadDressing()
+{
+	UWorld* World = GetWorld();
+	if (!World || bPinnedDressingHidden) { return; }
+	// Found by what they are made of, not by label: labels do not exist in a
+	// cooked game, material asset names do. Only pieces lying on the plate.
+	int32 N = 0;
+	for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+	{
+		UStaticMeshComponent* C = It->GetStaticMeshComponent();
+		if (!C) { continue; }
+		const FVector L = It->GetActorLocation();
+		if (FMath::Abs(L.X) > 7700.0 || FMath::Abs(L.Y) > 4300.0 || L.Z < -50.0 || L.Z > 50.0) { continue; }
+		UMaterialInterface* M = C->GetMaterial(0);
+		const FString Name = M ? M->GetName() : FString();
+		if (Name == TEXT("MI_board_road") || Name == TEXT("MI_concrete") || Name == TEXT("MI_paint_cream"))
+		{
+			It->SetActorHiddenInGame(true);
+			It->SetActorEnableCollision(false);
+			++N;
+		}
+	}
+	bPinnedDressingHidden = true;
+	UE_LOG(LogStacktown, Log, TEXT("CitySync: hid %d pieces of the map's road dressing (the stained slabs stand in their place)"), N);
+}
+
+void UStacktownCitySync::EnsurePinnedRoads(const Stacktown::FPlacementBoard& Board, TSet<FString>& RoadsSeen)
+{
+	UWorld* World = GetWorld();
+	if (!World) { return; }
+	const double Width = Stacktown::RoadCarriageway(Board.Econ, TEXT("avenue"));
+	const double Half = Width * 0.5;
+	TArray<Stacktown::FRoadSegment> Pieces;
+	TArray<FString> Ids;
+	for (int32 i = 0; i < Board.Roads.Num(); ++i)
+	{
+		const Stacktown::FRoad& R = Board.Roads[i];
+		double S0 = R.bAxisX ? R.StartX : R.StartY;
+		double S1 = R.bAxisX ? R.EndX : R.EndY;
+		if (S0 > S1) { Swap(S0, S1); }
+		const double Fixed = R.bAxisX ? R.StartY : R.StartX;
+		TArray<TPair<double, double>> Spans;
+		Spans.Add(TPair<double, double>(S0, S1));
+		// Cut where an EARLIER built-in crosses this one, by that road's carriageway.
+		for (int32 j = 0; j < i; ++j)
+		{
+			const Stacktown::FRoad& O = Board.Roads[j];
+			if (O.bAxisX == R.bAxisX) { continue; }
+			const double C  = R.bAxisX ? O.StartX : O.StartY;
+			const double O0 = O.bAxisX ? FMath::Min(O.StartX, O.EndX) : FMath::Min(O.StartY, O.EndY);
+			const double O1 = O.bAxisX ? FMath::Max(O.StartX, O.EndX) : FMath::Max(O.StartY, O.EndY);
+			if (Fixed < O0 || Fixed > O1) { continue; }
+			TArray<TPair<double, double>> Next;
+			for (const TPair<double, double>& Sp : Spans)
+			{
+				if (Sp.Value <= C - Half || Sp.Key >= C + Half) { Next.Add(Sp); continue; }
+				if (Sp.Key < C - Half)   { Next.Add(TPair<double, double>(Sp.Key, C - Half)); }
+				if (Sp.Value > C + Half) { Next.Add(TPair<double, double>(C + Half, Sp.Value)); }
+			}
+			Spans = Next;
+		}
+		for (int32 k = 0; k < Spans.Num(); ++k)
+		{
+			Stacktown::FRoadSegment Seg;
+			Seg.WidthClass = TEXT("avenue");
+			if (R.bAxisX) { Seg.StartX = Spans[k].Key; Seg.EndX = Spans[k].Value; Seg.StartY = Seg.EndY = Fixed; }
+			else          { Seg.StartY = Spans[k].Key; Seg.EndY = Spans[k].Value; Seg.StartX = Seg.EndX = Fixed; }
+			Pieces.Add(Seg);
+			Ids.Add(FString::Printf(TEXT("pin:%s:%d"), *R.Id, k));
+		}
+	}
+	for (int32 p = 0; p < Pieces.Num(); ++p)
+	{
+		const FString& Id = Ids[p];
+		const Stacktown::FRoadSegment& Seg = Pieces[p];
+		RoadsSeen.Add(Id);
+		const FString Sig = FString::Printf(TEXT("%.0f|%.0f|%.0f|%.0f|pin|%.0f"), Seg.StartX, Seg.StartY, Seg.EndX, Seg.EndY, Width);
+		TObjectPtr<AActor>* Existing = RoadActors.Find(Id);
+		AStacktownRoad* Road = (Existing && IsValid(*Existing)) ? Cast<AStacktownRoad>(Existing->Get()) : nullptr;
+		if (!Road)
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			Road = World->SpawnActor<AStacktownRoad>(AStacktownRoad::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
+			if (!Road) { continue; }
+			RoadActors.Add(Id, Road);
+			RoadSignatures.Remove(Id);
+		}
+		if (RoadSignatures.FindRef(Id) != Sig)
+		{
+			Road->ShowSegment(Id, Seg, Width);
+			RoadSignatures.Add(Id, Sig);
+		}
+	}
 }
 
 FString UStacktownCitySync::SlotFilePath() const

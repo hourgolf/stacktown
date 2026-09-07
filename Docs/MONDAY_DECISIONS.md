@@ -100,13 +100,13 @@ chase a number, and hear the board answer.
 - ROAD TONE: RESOLVED by the design lane at 06:58 without you - the frame
   showed their ladder reads; they widened its ends (dirt .84 to highway .38)
   and WITHDREW the "all four below the plate" alternative.
-- THE PINNED MAP ROADS are the real dominance problem, by that same frame:
-  the arterial and the cross street are near-white, the brightest things in
-  the picture, well above every stain. Every drawn road is now the
-  carriageway on bare plate in a stain; the two map roads still draw the
-  corridor with footway strips in the old white. Making the map match - the
-  same stain and width as a drawn avenue - is a map edit: YOUR WORD, and the
-  design lane says it is the one change that ends "roads out-read the timber".
+- THE PINNED MAP ROADS: DONE BY CODE, NOT BY A MAP EDIT (09:40). Under C++
+  ownership the game hides the map's white road cubes, concrete walks and
+  cream kerbs and draws the two built-ins as avenue-stained slabs at the
+  carriageway, like every drawn road. The map file is untouched, so the
+  editor still shows the old dressing; the game never does. Still yours if you
+  want it: cleaning those 18 actors out of TestCity for good (a map edit), or
+  a stain of their own for the built-ins.
 - THE STARTER CITY starts with THREE BUILT LOTS (NW3, SE0 at tier 1, NE0 at
   tier 2, the player's) so the first frame shows timber and a skyline that
   says the city grows. The design lane accepted the spread. Which three, or

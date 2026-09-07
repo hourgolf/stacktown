@@ -1172,6 +1172,11 @@ was asking the wrong question and returning "ok".**
   BRIEF the owner asked for is Docs/ONE_SHOT_PROMPT.md (c4d25ed). Open on the
   design lane: nothing. Open on engineering: the corridor-off-plate rule. Open
   on the owner: seven decisions in MONDAY_DECISIONS section 9.
+- 2026-09-07 09:40 PDT (coordinator): the pinned roads wear the avenue stain
+  at the carriageway - CitySync hides the map's road dressing by material
+  (18 pieces) and draws the arterial and the cut cross street as slabs; no map
+  edit. Frames frame_arrival_pinned_stained.png / frame_crossing_stained_near.png.
+  Suite 122/122. Package rebuilding.
 
 ## 6. The recipe — measured numbers
 

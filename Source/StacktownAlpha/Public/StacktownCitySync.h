@@ -5,6 +5,7 @@
 #include "StacktownCitySync.generated.h"
 
 class UStacktownEconomy;
+namespace Stacktown { struct FPlacementBoard; }
 
 /**
  * The world side of the city in C++ (Docs/STATE_HANDOVER.md). Keeps one actor
@@ -78,5 +79,14 @@ private:
 	UStacktownEconomy* Economy() const;
 	void OnTimer();
 	void HideBlueprintLots();
+	/** THE PINNED ROADS WEAR THE AVENUE'S STAIN AT THE CARRIAGEWAY. The map's white
+	 *  road cubes, concrete walks and cream kerbs were the brightest things on the
+	 *  board (design lane, 2026-09-07, held all morning). Under C++ ownership they
+	 *  are hidden - never edited, never saved - and the built-ins are drawn as
+	 *  slabs like every drawn road, the cross street cut at the arterial's
+	 *  carriageway so no two slabs share a surface. */
+	void HidePinnedRoadDressing();
+	void EnsurePinnedRoads(const Stacktown::FPlacementBoard& Board, TSet<FString>& RoadsSeen);
+	bool bPinnedDressingHidden = false;
 	bool BeginOwning(FString& OutWhy);
 };

@@ -179,6 +179,7 @@ void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents,
 		++Owned;
 		if (P.bFailed)
 		{
+			P.Wear += 1.0;   // earns nothing, keeps counting: how long it has been left (the wood ramps 0.6 -> 0.8)
 			continue;
 		}
 		double Earned = RentFor(R, P.Rid, P.Tier, Demand);

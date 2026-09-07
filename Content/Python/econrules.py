@@ -123,6 +123,10 @@ def tick(state):
             continue
         owned += 1
         if p.get('failed'):
+            # A failed lot earns nothing but keeps counting: wear past the limit is
+            # how long it has been left, which the wood shows (channel 5 ramps
+            # 0.6 -> 0.8, design lane 22:00). Repair resets it.
+            p['wear'] = p.get('wear', 0) + 1
             continue
         earned = rent(p['rid'], p['tier'], demand, r)
         lot = p.get('placement')
@@ -504,7 +508,7 @@ if __name__ == '__main__':
     assert abs(st8['parcels']['P1']['accum'] - 0.75 * sum_d150) < 1e-6, \
         st8['parcels']['P1']
     assert st8['parcels']['P1']['tier'] == 0, st8['parcels']['P1']
-    assert st8['parcels']['P1']['failed'] is True and st8['parcels']['P1']['wear'] == 150, st8['parcels']['P1']
+    assert st8['parcels']['P1']['failed'] is True and st8['parcels']['P1']['wear'] == 1000, st8['parcels']['P1']   # failed at 150, then left for 850 more
     assert evs8 == [{'type': 'worn_out', 'pid': 'P1', 'amount': 0.0}], evs8
     # 8b. repair brings it back: pay repair_price(0) = 50, wear resets,
     #     rent flows again on the next tick at the demand the city holds.

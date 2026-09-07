@@ -270,7 +270,17 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 	}
 
 	SetText(LegendCameraText, M->LegendCamera);
-	SetText(LegendVerbsText, M->LegendVerbs);
+	// Design lane 22:00: a legend, not a manual - only what is available now. The camera
+	// line is always on; the verbs line follows the mode and the selection, exactly as
+	// the verb row does. P (the starter city) lives in the fresh-city hint, not here.
+	{
+		FString Verbs;
+		if (M->bRoadMode) { Verbs = TEXT("CLICK start / end      T road type      G leave road mode"); }
+		else if (M->bHasSelection && !M->Verb.IsEmpty()) { Verbs = FString::Printf(TEXT("%s %s      CLICK elsewhere      G road      L night      N hold reset"), *M->VerbKey, *M->Verb.ToLower()); }
+		else if (M->bHasSelection) { Verbs = TEXT("CLICK elsewhere      G road      L night      N hold reset"); }
+		else { Verbs = TEXT("CLICK place      TAB width      R building      G road      L night      N hold reset"); }
+		SetText(LegendVerbsText, Verbs);
+	}
 
 	if (!M->PlaceRefusal.IsEmpty() && bCursorValid)
 	{

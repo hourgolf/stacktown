@@ -25,7 +25,11 @@ public:
 
 	/** The uncarved pad for an unbought lot: the ghost pad mesh for the width, offset half a width along +x. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Lot")
-	bool ShowPad(double Width, FString& OutError);
+	bool ShowPad(double Width, FString& OutError, bool bScored = false);
+
+	/** The four thin bars of a scored (for-sale) outline; cleared when the lot shows anything else. */
+	UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> ScoreBars;
+	void ClearScoreBars();
 
 	/** The per-instance state channels the wood master reads (Content/Python/cpdmap.py is
 	 *  the one authority; the values are the Python driver's, init_unreal.py):

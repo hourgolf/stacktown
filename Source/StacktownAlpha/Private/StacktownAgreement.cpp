@@ -165,7 +165,7 @@ FString UStacktownAgreementLibrary::SpawnLotVisualFor(const UObject* WorldContex
 	V->AttachToComponent(Root, FAttachmentTransformRules::KeepRelativeTransform);
 	V->RegisterComponent();
 	FString Err;
-	const bool bShown = P->bOwned ? V->ShowMass(P->Rid, P->Tier, P->Width, false, Err) : V->ShowPad(P->Width, Err);
+	const bool bShown = P->bOwned ? V->ShowMass(P->Rid, P->Tier, P->Width, false, Err) : V->ShowPad(P->Width, Err, true);
 	TArray<FString> Lines;
 	const FVector AL = A->GetActorLocation();
 	Lines.Add(FString::Printf(TEXT("C++ lot %s: actor READ BACK at (%.0f, %.0f, yaw %.0f) shows %s%s%s"), *Pid, AL.X, AL.Y, A->GetActorRotation().Yaw,

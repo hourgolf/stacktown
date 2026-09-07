@@ -196,7 +196,7 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			if (UStacktownLotVisual* V = A->FindComponentByClass<UStacktownLotVisual>())
 			{
 				FString Err;
-				const bool bShown = P.bOwned ? V->ShowMass(P.Rid, P.Tier, P.Width, false, Err) : V->ShowPad(P.Width, Err);
+				const bool bShown = P.bOwned ? V->ShowMass(P.Rid, P.Tier, P.Width, false, Err) : V->ShowPad(P.Width, Err, true);
 				if (!bShown) { UE_LOG(LogStacktown, Warning, TEXT("CitySync: %s visual: %s"), *Pid, *Err); }
 			}
 			if (Signatures.Contains(Pid)) { ++Updated; }

@@ -378,8 +378,8 @@ FString AStacktownPlayerController::ClassifyPlaceRefusal(const FString& R)
 	// through to "Can't build here", which says nothing a player can act on.
 	// Before the "in the road" row on purpose: the across-a-highway refusal
 	// starts with the same words and is a different thing to be told.
-	if (R.Contains(TEXT("would run across"))) { return TEXT("That would cross the highway"); }
-	if (R.StartsWith(TEXT("no frontage"))) { return TEXT("Nothing can face a highway"); }
+	if (R.Contains(TEXT("would run across"))) { return TEXT("Roads can't cross a highway"); }
+	if (R.StartsWith(TEXT("no frontage"))) { return TEXT("Buildings can't face a highway"); }
 	if (R.StartsWith(TEXT("in the road"))) { return TEXT("That's the road - click the block beside it"); }
 	if (R.StartsWith(TEXT("too far from a road"))) { return TEXT("Too far from a road"); }
 	if (R.Contains(TEXT("crossing"))) { return TEXT("That's the crossing - pick one road's frontage"); }
@@ -575,7 +575,7 @@ FString AStacktownPlayerController::ClassifyRoadRefusal(const FString& R)
 	// PLACEHOLDER WORDING, design lane's to rule: roads cost money since road
 	// types, and a player who cannot pay must be told that and not "Can't build
 	// here". First, because it is the one refusal a player can fix by waiting.
-	if (R.StartsWith(TEXT("can't afford"))) { return TEXT("Not enough money"); }
+	if (R.StartsWith(TEXT("can't afford"))) { return TEXT("Can't afford it"); }
 	if (R.Contains(TEXT("diagonal")) || R.Contains(TEXT("straight"))) { return TEXT("Roads run straight"); }
 	if (R.Contains(TEXT("short"))) { return TEXT("Too short for a road"); }
 	if (R.Contains(TEXT("cross"))) { return TEXT("Roads can't cross yet"); }
@@ -767,7 +767,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (WasInputKeyJustPressed(EKeys::Home) || WasInputKeyJustPressed(EKeys::BackSpace))
 	{
 		// A stranger who has lost the board gets it back: the arrival pose, exactly.
-		if (AStacktownCameraPawn* Cam = Cast<AStacktownCameraPawn>(GetPawn())) { Cam->SetView(FVector(0.0, 0.0, 0.0), 35.0, -42.0, 21024.0); }
+		if (AStacktownCameraPawn* Cam = Cast<AStacktownCameraPawn>(GetPawn())) { Cam->SetArrivalView(); }
 	}
 	if (bRoadMode)
 	{

@@ -82,6 +82,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
 	void SetView(FVector InFocus, double InYaw, double InPitch, double InDistance);
 
+	/** THE ARRIVAL (design lane 22:00): three-quarter at pitch -40, a rung in from the wide stop, the
+	 *  crossing lower-right so the wood sits in the upper-left third. Home returns here. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
+	void SetArrivalView();
+
 	/** Zoom by Notches (positive closes in) toward a board point. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
 	void ZoomToward(const FVector& BoardPoint, int32 Notches);

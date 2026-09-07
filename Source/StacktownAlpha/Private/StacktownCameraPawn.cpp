@@ -71,8 +71,7 @@ void AStacktownCameraPawn::BeginPlay()
 	// THE ARRIVAL (design lane, 2026-09-06 20:06): the board whole in frame, one rung in
 	// from the wide end (~14,500), three-quarter so the starter roads run diagonal
 	// (yaw 35), pitch 42 so the plate's thick edge and shadow show, and STATIC.
-	TargetYaw = 35.0; TargetPitch = -42.0; TargetDistance = 21024.0;   // the wide stop: this model lengthens the lens as it closes, so 14,500 already framed a third of the plate (frame_arrival, 20:12)
-	SnapToTargets();
+	SetArrivalView();
 	UE_LOG(LogStacktown, Log, TEXT("StacktownCameraPawn: focus (%.0f, %.0f) yaw %.1f pitch %.1f distance %.0f board x[%.0f..%.0f] y[%.0f..%.0f]"),
 		Focus.X, Focus.Y, Yaw, Pitch, Distance, BoardMin.X, BoardMax.X, BoardMin.Y, BoardMax.Y);
 }
@@ -151,4 +150,13 @@ void AStacktownCameraPawn::SetView(FVector InFocus, double InYaw, double InPitch
 {
 	TargetFocus = InFocus; TargetYaw = InYaw; TargetPitch = InPitch; TargetDistance = InDistance;
 	SnapToTargets();
+}
+
+void AStacktownCameraPawn::SetArrivalView()
+{
+	// Design lane 22:00: pitch 38-42 not steeper; a rung in from the wide stop so the
+	// plate is about three quarters of the frame; the masses (the NE quadrant, where
+	// both the test city and the preset put their first blocks) in the upper-left
+	// third, the crossing leading the eye to them. Numbers found by frames.
+	SetView(FVector(1400.0, -900.0, 0.0), 35.0, -40.0, 16500.0);
 }

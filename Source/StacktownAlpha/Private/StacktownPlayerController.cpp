@@ -405,6 +405,15 @@ void AStacktownPlayerController::HoverGhost(const FVector& BoardPoint, bool bOve
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
 	const Stacktown::FPlacementBoard Board = Stacktown::FPlacementBoard::Default(Econ->GetRules());
+	// A cursor resting on the backdrop is not a placement being refused - it is
+	// nowhere. The board plane is infinite, so without this every idle mouse
+	// outside the plate wore a red "Off the board" (every arrival frame this
+	// morning showed it). Beyond the plate: no ghost, no word.
+	if (BoardPoint.X < Board.PlateXMin || BoardPoint.X > Board.PlateXMax || BoardPoint.Y < Board.PlateYMin || BoardPoint.Y > Board.PlateYMax)
+	{
+		HideGhost();
+		return;
+	}
 	const Stacktown::FClickResult R = Stacktown::ResolveClick(Board, Econ->GetState(), BoardPoint.X, BoardPoint.Y, (!CityOwned() && PinsActive(GetGameInstance())), CurrentLotWidth());
 	if (!R.bOk)
 	{

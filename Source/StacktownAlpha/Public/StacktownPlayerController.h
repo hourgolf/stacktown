@@ -4,6 +4,8 @@
 #include "GameFramework/PlayerController.h"
 #include "StacktownPlayerController.generated.h"
 
+class USoundBase;
+
 class AStacktownCameraPawn;
 class UStacktownHudModel;
 class UStacktownHud;
@@ -67,6 +69,10 @@ public:
 	 *  as for-sale lots at their pinned poses (the engineering seat's SeedPresetState). */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityPreset();
+	/** SAVE SLOTS (MONDAY_DECISIONS 6): open slot 1-3; the city being left is saved
+	 *  first, a slot never written is a fresh board. Keys 1, 2, 3 outside road mode. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CitySlot(int32 Slot);
 	UFUNCTION(BlueprintPure, Category = "Stacktown|City")
 	double CurrentLotWidth() const;
 	/** Road mode on/off (G). */
@@ -128,12 +134,18 @@ private:
 	/** Placeholder sound cues (MONDAY_DECISIONS section 5): wood taps in /Game/Stacktown/Audio,
 	 *  loaded by path once and cached; a missing asset plays nothing and logs once. */
 	void PlayCue(const TCHAR* Name);
-	TMap<FString, TObjectPtr<class USoundBase>> Cues;
+	/** A UPROPERTY, or the collector frees the cached cue behind the map's back:
+	 *  the test game of 2026-09-07 05:51 crashed in PlaySound2D on the first cue
+	 *  after a reset, a minute after the cue was loaded - the reset's garbage
+	 *  pass had taken the sound this raw map could not vouch for. */
+	UPROPERTY() TMap<FString, TObjectPtr<USoundBase>> Cues;
 	TSet<FString> CuesMissing;
 	/** A save from before goals_reached existed is primed silently on the first owning tick, never congratulated. */
 	bool bGoalsPrimed = false;
 	/** A bar message that holds for a minimum time (LOOK 4: an announcement, 3 s or the next input, whichever is longer). */
 	FString PinnedBarMessage;
+	/** "Loaded slot 2." is on the bar until the next input (design lane 06:58). */
+	bool bSlotMessageShowing = false;
 	double PinnedBarUntil = 0.0;
 	/** The recipe of the next placed lot (vernacular | office | tower); R cycles it. */
 	FString NextRecipe = TEXT("vernacular");

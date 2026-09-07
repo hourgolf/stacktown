@@ -1102,6 +1102,49 @@ was asking the wrong question and returning "ok".**
   reaches for when a reload call keeps failing. A refusal branch that
   names the tempting wrong move is worth more than the guess it replaces.
 
+- 2026-09-07 06:15 PDT (coordinator): LOOK's 05:32 rulings built and framed;
+  ENGINEERING's gap 1 merged. Mitred curved roads (procedural slab per chord,
+  bisector cuts, shared joint edges), every drawn road at its carriageway with
+  the verge as plate, the stain continuous along a path, the scored line 60 uu
+  with MI_pad_score in, the arrival measured (Tools/measure/arrival_margins.py:
+  aim 1,500 short of centre, yaw 45, pitch -38, reach 21,000; 2.26x is the
+  floor for this lens), the sound-cue cache made a UPROPERTY after a GC crash
+  in PlaySound2D. Mass confirmed single-component (one section, one slot).
+  Suite 119/119 at 4f104ef; frames in Saved/SelfTest/look_cpp2/. Pinned map
+  roads still at corridor width - a map edit for the owner's word. Package
+  rebuilt from 4f104ef at 06:24 PDT: Saved/Packaged/Mac/StacktownAlpha.app, 1.6 GB,
+  x86_64 + arm64, manifest 2,686 files carrying MI_pad_score and the four road
+  stains. The owner's test state was restored after the frames.
+- 2026-09-07 06:55 PDT (coordinator): the design lane's 06:40 rulings built at
+  f126c83 - the preset seeds three BUILT lots (NW3, SE0, NE0) so the arrival
+  shows timber; the arrival follows their replacement rule (yaw 49, pitch
+  -38, reach 18,500, aim 2,000 short: 28.5 percent of the frame, the ceiling
+  under the 5-percent-edge rule; their third-of-frame floor is unreachable);
+  the scored line is 90 uu. SAVE SLOTS built on MONDAY_DECISIONS 6 (keys
+  1-3, slot.txt, SlotStatePath/ParseSlot, one test). Suite 120/120. Proven
+  live in a test game: preset 3 built (score 461), slot 2 fresh, four stains
+  drawn side by side there, slot 1 reopened with its 14 lots. THE PACKAGED
+  APP opened by the double-click path at 06:37: a 1600x900 window in 10 s,
+  rendering (capture: scratchpad packaged_window.png). The editor was
+  relaunched 06:51 for the design lane, who could not run in their 06:37
+  window because I had left it closed. Frames in Saved/SelfTest/look_cpp2/.
+- 2026-09-07 07:10 PDT (coordinator): the design lane's 06:56 window saved
+  M_WoodMaster (chamfer gate) and the four road stains (ladder widened to
+  .84/.70/.54/.38); committed on proof at d8e54a3 with their 06:58 rulings:
+  NE0 at tier 2 in the starter city, the slot named only as "Loaded slot N."
+  cleared on the next input (no slot word on the bar), legend "1-3 load",
+  every middle dot removed from bar and panel text (Tomorrow has no U+00B7).
+  Frames: night pair and NW3's corner (no window on an arris), stains
+  adjacent and in isolation, the tier-2 arrival, the slot message. Suite
+  120/120. Package rebuilding from d8e54a3. The arrival is ACCEPTED by the
+  design lane; the road-tone alternative withdrawn; the pinned map roads are
+  the remaining dominance and wait for the owner's word.
+- 2026-09-07 07:20 PDT (coordinator): PACKAGE rebuilt from d8e54a3 (universal,
+  x86_64 + arm64, manifest 2,686 files with the five design-lane assets) and
+  opened by the double-click path: lock in 10 s, a 1600x932 window rendering
+  the board (capture: scratchpad packaged_window_0720.png). This is the app
+  for Monday. The editor was relaunched for the design lane's next window.
+
 ## 6. The recipe — measured numbers
 
 Full detail in `Docs/MINIATURE_RECIPE.md`. Essentials:

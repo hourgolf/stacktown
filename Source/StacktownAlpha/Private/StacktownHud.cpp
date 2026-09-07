@@ -278,7 +278,7 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 		if (M->bRoadMode) { Verbs = TEXT("CLICK nodes      ENTER draw      BACKSPACE undo      T road type      G leave road mode"); }
 		else if (M->bHasSelection && !M->Verb.IsEmpty()) { Verbs = FString::Printf(TEXT("%s %s      CLICK elsewhere      G road      L night      N hold reset"), *M->VerbKey, *M->Verb.ToLower()); }
 		else if (M->bHasSelection) { Verbs = TEXT("CLICK elsewhere      G road      L night      N hold reset"); }
-		else { Verbs = TEXT("CLICK place      TAB width      R building      G road      L night      N hold reset"); }
+		else { Verbs = TEXT("CLICK place      TAB width      R building      G road      L night      N hold reset      1-3 load"); }   // design lane 06:58: the keys LOAD (the save is continuous), so say load
 		SetText(LegendVerbsText, Verbs);
 	}
 

@@ -64,11 +64,15 @@ None exists. PROPOSED: four placeholder tones generated in-repo (place,
 buy/upgrade, refuse, goal reached), wired now so the loop has feedback,
 replaced by real sounds when there is a sound direction. Yes/no.
 
-## 6. Save slots
+## 6. Save slots  (BUILT 2026-09-07 on the proposed default)
 
-One save per install today (the packaged app keeps its own). PROPOSED for
-the beta: three named slots and a "new game" that does not overwrite,
-chosen by key from the fresh-city bar. Or defer until the loop exists.
+One save per install until 2026-09-07. BUILT as proposed: three slots, keys
+1, 2 and 3 at any time outside road mode; the city being left is saved
+first; a slot never written opens as a fresh board; slot 1 is the file that
+always existed, so no save written before slots moved. The choice is
+remembered beside the saves (Saved/Stacktown/slot.txt; the packaged app's
+own container). Not built: NAMING a slot - they are 1, 2, 3. Owner's call
+whether names matter for the beta.
 
 ## 7. Already moving, no decision needed
 
@@ -90,3 +94,32 @@ sound (5). Building variety exists already (20 masses x 7 species); what it
 lacks is the design lane's patina and windows reading at the far stop,
 which is their queue. A 15 becomes a 30 when a stranger can lose points,
 chase a number, and hear the board answer.
+
+## 9. New since the night, for the owner (2026-09-07 morning)
+
+- ROAD TONE: RESOLVED by the design lane at 06:58 without you - the frame
+  showed their ladder reads; they widened its ends (dirt .84 to highway .38)
+  and WITHDREW the "all four below the plate" alternative.
+- THE PINNED MAP ROADS are the real dominance problem, by that same frame:
+  the arterial and the cross street are near-white, the brightest things in
+  the picture, well above every stain. Every drawn road is now the
+  carriageway on bare plate in a stain; the two map roads still draw the
+  corridor with footway strips in the old white. Making the map match - the
+  same stain and width as a drawn avenue - is a map edit: YOUR WORD, and the
+  design lane says it is the one change that ends "roads out-read the timber".
+- THE STARTER CITY starts with THREE BUILT LOTS (NW3, SE0 at tier 1, NE0 at
+  tier 2, the player's) so the first frame shows timber and a skyline that
+  says the city grows. The design lane accepted the spread. Which three, or
+  how many, stays yours to move; the score starts near 480 because of them.
+- SLOTS are 1, 2, 3 - unnamed, named on the bar only when one is loaded
+  (the design lane's rule). Say if names, or a permanent slot word in the
+  left cluster of the bar, matter for the beta.
+- THE FIRST FRAME OF A FRESH INSTALL. The packaged app opens on the EMPTY
+  board with the hint "Click the board to place your first lot, or press P
+  for the starter city" - your BOTH-starts decision. The frame the design
+  lane approved as "what a stranger should meet" is the STARTER CITY (three
+  built lots, eleven marked). Two ways to honour both: (a) a fresh install
+  opens with the starter city already seeded and the hint offers "hold N for
+  an empty board"; (b) leave it as it is and let the hint carry it. (a) puts
+  wood in the first frame; (b) keeps the empty board as the default start.
+  Your call; either is a small change.

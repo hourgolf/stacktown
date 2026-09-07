@@ -161,5 +161,16 @@ void AStacktownCameraPawn::SetArrivalView()
 	// 16,500 cut the plate's far edge (frame_arrival 22:05); 18,500-19,500 still did.
 	// 20,000 keeps the board whole with the masses a little left of centre-top; the
 	// three-quarter width the lane asked for is not reachable whole at this lens ramp.
-	SetView(FVector(800.0, 300.0, 0.0), 35.0, -40.0, 20000.0);
+	// Design lane 05:32: the problem was yaw, not reach. A rectangular board fits
+	// largest when its long axis lies on the frame's diagonal: aim at the plate's
+	// centre so the four margins are even, yaw so the long (x) axis runs corner to
+	// corner, pitch -40, then come in. Acceptance: all four corners inside the frame
+	// with backdrop past each, no margin more than twice another.
+	// The design lane's rule of 2026-09-07 06:40 ("photographed, not glimpsed"):
+	// all four plate corners inside the frame, none within 5 percent of an edge
+	// (the HUD bar's bottom is the top edge), and the plate as large as that
+	// allows - Tools/measure/arrival_margins.py --look finds the largest plate
+	// on the diagonal at pitch -38. The margin-symmetry rule it replaces was
+	// withdrawn: a three-quarter view of a rectangle is a trapezoid.
+	SetView(FVector(-1312.1, -1509.4, 0.0), 49.0, -38.0, 18500.0);
 }

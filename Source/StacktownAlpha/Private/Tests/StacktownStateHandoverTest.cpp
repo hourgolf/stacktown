@@ -432,6 +432,27 @@ STACKTOWN_HANDOVER_TEST(FStacktownHandoverParcelId, "Stacktown.Handover.ParcelId
 	return true;
 }
 
+// SAVE SLOTS (MONDAY_DECISIONS 6, 2026-09-07): the slot's file beside the
+// first, and the remembered choice read leniently.
+STACKTOWN_HANDOVER_TEST(FStacktownSlotPathTest, "Stacktown.Handover.SlotPath")
+{
+	TestEqual(TEXT("slot 1 is the file that always existed"), SlotStatePath(TEXT("/a/b/citystate.json"), 1), FString(TEXT("/a/b/citystate.json")));
+	TestEqual(TEXT("slot 2 sits beside it"), SlotStatePath(TEXT("/a/b/citystate.json"), 2), FString(TEXT("/a/b/citystate_s2.json")));
+	TestEqual(TEXT("the lanes' test file slots the same way"), SlotStatePath(TEXT("/a/b/citystate_test.json"), 3), FString(TEXT("/a/b/citystate_test_s3.json")));
+	TestEqual(TEXT("no extension"), SlotStatePath(TEXT("/a/b/citystate"), 2), FString(TEXT("/a/b/citystate_s2")));
+	TestEqual(TEXT("a dot in a folder is not an extension"), SlotStatePath(TEXT("/a.b/citystate"), 3), FString(TEXT("/a.b/citystate_s3")));
+	TestEqual(TEXT("out of range is slot 1"), SlotStatePath(TEXT("/a/b/citystate.json"), 7), FString(TEXT("/a/b/citystate.json")));
+	TestEqual(TEXT("zero is slot 1"), SlotStatePath(TEXT("/a/b/citystate.json"), 0), FString(TEXT("/a/b/citystate.json")));
+	TestEqual(TEXT("parse 2 with a newline"), ParseSlot(TEXT("2\n")), 2);
+	TestEqual(TEXT("parse 3 padded"), ParseSlot(TEXT("  3 ")), 3);
+	TestEqual(TEXT("parse junk = 1"), ParseSlot(TEXT("banana")), 1);
+	TestEqual(TEXT("parse empty = 1"), ParseSlot(FString()), 1);
+	TestEqual(TEXT("parse 0 = 1"), ParseSlot(TEXT("0")), 1);
+	TestEqual(TEXT("parse 9 = 1"), ParseSlot(TEXT("9")), 1);
+	TestEqual(TEXT("parse 12 = 1 (out of range, not truncated)"), ParseSlot(TEXT("12")), 1);
+	return true;
+}
+
 #undef STACKTOWN_HANDOVER_TEST
 
 #endif // WITH_DEV_AUTOMATION_TESTS

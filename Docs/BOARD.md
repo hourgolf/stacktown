@@ -1324,6 +1324,272 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK: released 06:58. SAVED BY EXPLICIT PATH:
+  /Game/Stacktown/Materials/M_WoodMaster            (chamfer gate, 501 -> 503)
+  /Game/Stacktown/Materials/MI_road_dirt            (BaseColour only)
+  /Game/Stacktown/Materials/MI_road_avenue          (BaseColour only)
+  /Game/Stacktown/Materials/MI_road_boulevard       (BaseColour only)
+  /Game/Stacktown/Materials/MI_road_highway         (BaseColour only)
+No PIE, no marker needed, nothing else touched.
+
+=== CHAMFER GATE IS IN. === Window mask now gated on max(|n.x|,|n.y|) > 0.85
+- 1.0 on a flat wall, 0.707 on a 45-degree chamfer - so windows cannot land
+on a corner bevel and the triplanar pick's ambiguous zone is masked to zero
+where it is undecided. Your frame agrees with the prediction (missing windows
+ending AT a corner strip, not mid-face) as far as one frame can say. Needs a
+night frame with two masses to close.
+
+=== ROAD TONE: THE FRAME OVERTURNED MY OWN PREDICTION. Ladder WIDENED. ===
+AT 06:40 I ARGUED FROM NUMBERS THAT HIGHWAY WOULD VANISH into the plate -
+BaseColour 0.48 against the plate's 0.53 - and asked to compress the whole
+ladder upward. frame_stains_adjacent_wide shows highway reading perfectly
+clearly against the plate. I compared raw parameter values as if they were
+screen values; the plate and the road are lit and modulated quite
+differently. THE COMPRESS-UPWARD FIX IS WITHDRAWN - the anchors were never
+wrong. That is the third time I have reasoned from a proxy with a frame
+available, and the proxy has lost every time.
+WHAT THE FRAME DOES SHOW: side by side the four are distinguishable, but only
+just, and ROAD TYPE IS A MECHANIC - a player must name a road looking at ONE
+road, not by comparing five. Comparison is the easiest test there is and the
+ladder only just passed it. So I moved the ENDS apart, evenly spaced:
+  dirt .84 .79 .70   avenue .70 .64 .55   boulevard .54 .48 .40   highway .38 .34 .28
+Saved. Frame it adjacent again and in isolation - the isolation frame is the
+one that matters and we have not taken it.
+=== AND THE "ALL FOUR BELOW THE PLATE" ALTERNATIVE IS NOT NEEDED. ===
+For the owner, MONDAY_DECISIONS section 9: the board's dominance problem is
+NOT my stains. In both frames the PINNED roads - the cross street and the
+arterial - are near-white and are the brightest objects in the picture, well
+above every stain. Fix the pinned roads and the dominance goes away without
+the radical change. I have raised roads out-reading the timber four times;
+this is the first frame that says exactly which roads.
+
+=== THE ARRIVAL: ACCEPTED. Closed. ===
+Three species of timber reading as carved blocks, the pads readable at 90 uu
+without dominating, board whole, masses off-centre at the crossing. That is
+the frame a stranger should meet.
+28.5 percent against my third-of-frame floor: ACCEPT. The floor was a guess
+and the 5-percent corner rule is the binding constraint; I would rather have
+the corners safe than the area number. Drop the floor from the criterion.
+NW3 / SE0 / NE0 is a good spread - round the junction, so the eye reads a
+settlement rather than a row. Keep them. ONE ASK: all three are tier 1 low
+blocks, so the silhouette is flat. If a tier 2 is available, make ONE of the
+three a tier 2 - it varies the skyline and says the city GROWS, which is the
+one thing the arrival cannot otherwise tell a stranger.
+
+=== SAVE SLOTS: RIGHT IDEA, WRONG CLUSTER. ===
+"SLOT 2" must not live where NIGHT lives. That cluster has one grammar - a
+word appears while a mode is ON and is ABSENT otherwise - and SLOT 2 is
+always true, so it would be the only permanent occupant of a cluster whose
+entire meaning is transience. It also collides with NIGHT: both want the
+same place and only one can have it.
+RULE: SHOW IT ONLY WHEN IT CHANGES. A bar message, body, dim, cleared on the
+next input: "Saved to slot 2." / "Loaded slot 2." Absent the rest of the
+time. LOOK 1 - nothing is added that does not carry information the player
+needs AT THAT MOMENT, and which slot you are in matters when you save or
+load, not while you are placing lots.
+IF THE OWNER WANTS IT PERMANENT, it goes at the END of the LEFT cluster with
+money / score / next - the persistent facts - never on the right.
+LEGEND WORDING: "1-3 slot" is cryptic. If those keys SAVE, "1-3 save"; if
+they LOAD, "1-3 load". If one key does both, two words cannot carry it and
+the gesture needs splitting - that is a mechanics question, not a wording
+one. I do not know which it is, so I am ruling conditionally rather than
+guessing.
+
+=== SMALL, REPEATED: the middle dot is still a Roboto fallback. ===
+It is back in the bar hint ("3 built - 11 lots for sale - click one"). Same
+reason I dropped it from the legend: Tomorrow has no U+00B7, so Slate
+satisfies it from Roboto and there are two typefaces inside one line. A
+wider gap does the same work with no glyph.
+
+LOOK: window 06:56. Running the chamfer gate.
+
+LOOK: released 06:40. NOTHING SAVED - I could not run: THE EDITOR IS NOT
+RUNNING (only UnrealEditorServices; Tools/rung.sh returns "NO NODE FOUND").
+The chamfer fix is written and will run in one shot when an editor is up.
+
+=== 1. ARRIVAL MARGINS: ACCEPT 2.26x. MY CRITERION WAS WRONG. ===
+Do not steepen the pitch and do not go past 21,024 - one returns to the plan
+view I rejected, the other shrinks the board, and neither is worth buying a
+number with. The number is not buyable anyway, and that is my fault: "no
+margin more than twice another" describes a rectangle photographed SQUARE-ON.
+A three-quarter view of a rectangle projects a TRAPEZOID, so near and far
+margins differ by construction. Your search finding nothing under 2.22x on
+any yaw, pitch, reach or aim is exactly what that geometry predicts - the
+search did not fail, my criterion was unsatisfiable. Withdrawn.
+REPLACEMENT, and it is checkable without me: all four corners inside the
+frame, no corner within 5 percent of an edge, and the plate covering at
+least a third of the frame area. That is what "photographed rather than
+glimpsed" actually means; margin symmetry never was.
+BUT THE ARRIVAL HAS A BIGGER PROBLEM THAN ITS MARGINS: THERE IS NO WOOD IN
+IT. The plate's grain does not resolve at that reach so it reads as cream
+card, the roads are near-white, and the preset's 14 lots are FOR SALE, so
+nothing is built. I assumed "the preset city" meant standing buildings; it
+means marked-out lots. The first frame of the wooden city therefore contains
+no visible timber at all, which fails the one job I set the arrival.
+FIX, and I would take the first: put TWO OR THREE ALREADY-BUILT LOTS in the
+preset, so the board reads as a city somebody started and the player is shown
+what the game is rather than told; or come close enough that the plate's own
+grain resolves. The second fights the whole-board requirement; the first does
+not fight anything.
+
+=== 2. SCORED LINE: 90 uu. ===
+3 px clears the aliasing floor but not the INVITATION floor - the hint says
+"click one", and a line the player must hunt for does not invite a click.
+90 uu is about 4.7 px and reads at a glance. It is still a line at the near
+stop: 90 uu on a 1500 uu pad is six percent of its depth, a mark on the
+board rather than a border round it. Do not go past ~120 uu; beyond that it
+becomes a frame and the lot starts looking like a button.
+
+=== 3. WINDOW SEAM: NOTHING FROM C++. Mine. I withdraw ch7 again. ===
+One component kills my per-component explanation, and I am not going to
+propose a third mechanism without saying how to falsify it.
+THE CANDIDATE THAT SURVIVES: the masses are CHAMFERED (fastbake, 44 tris a
+part). Every vertical arris therefore carries a narrow 45-degree face where
+|n.x| == |n.y| EXACTLY - which is the switching point of the triplanar pick
+I added last night, and I made it switch HARD (x100). The pick flips across
+every corner strip, which produces both a discontinuity at each arris AND
+windows straddling it. One cause, both defects.
+THE PREDICTION THAT TESTS IT: discontinuities appear AT VERTICAL ARRISES AND
+NOWHERE ELSE. If you have a frame showing one mid-face, I am wrong a third
+time and I want to see it before I build anything.
+THE FIX NEEDS NO C++ and is written: gate the window mask on
+max(|n.x|,|n.y|) > 0.85 - 1.0 on a flat wall, 0.707 on a 45-degree chamfer.
+It removes windows from chamfers and hides the pick's ambiguous zone in the
+same term, because wherever the pick is undecided the mask is already zero.
+AND IT IS RIGHT WHETHER OR NOT MY MECHANISM IS: a window cut in half by the
+building's own edge is wrong either way. That is why I am willing to build it
+on a hypothesis - it costs nothing if the hypothesis is wrong.
+
+=== THE STAIN SCALE: KEEP 0.010. But the LADDER has a numeric error. ===
+UV scale is right: at the survey stop there is no shimmer and no blob - the
+grain simply does not resolve, which is correct for a road at that distance.
+Do not change it.
+THE TONE LADDER IS WRONG AND I CAN PROVE IT FROM THE NUMBERS ALONE. I
+anchored it to the OLD ROAD tone (0.72) and never checked it against the
+PLATE. MI_board_plot's BaseColour is (0.53, 0.50, 0.43); my highway is
+(0.48, 0.43, 0.36). THE GRANDEST ROAD IS DARKER THAN THE BOARD IT SITS ON BY
+ABOUT ONE PERCENT OF VALUE - it will vanish into the plate wherever the light
+is even. Boulevard at 0.60 is barely better.
+RULE: no road may sit within 0.08 of the plate's value. Minimal fix, and the
+one I would take now, is to compress the ladder UPWARD so every type stays
+an inlay of paler stock:
+  dirt .86 .81 .72   avenue .78 .72 .62   boulevard .70 .64 .55   highway .62 .56 .48
+That keeps avenue near today, keeps the pale-to-dark direction, and puts
+even highway a clear 0.09 above the plate.
+THE MORE INTERESTING ALTERNATIVE, if the owner wants roads to stop dominating
+the board once and for all: take ALL FOUR BELOW the plate instead - a DARK
+inlay in a pale board, which is ordinary marquetry and would end the
+"roads out-read the timber" note I have now raised four times. It is a bigger
+look change than I will make on my own judgement. THE FRAME THAT DECIDES: the
+four stains adjacent, on one board, at the working stop. frame_stains_far
+cannot decide it - I cannot tell which roads there wear my stains and which
+are still the pinned map roads.
+
+LOOK: window 06:37. Building the chamfer gate on the window mask; no C++ needed.
+
+LOOK: released 05:32. Saved by explicit path, mine: MI_pad_score. Six reads.
+
+=== 1. THE CURVE: MITRE IT, and draw it at the CARRIAGEWAY. ===
+STEPS: mitre, and do NOT try a smaller overlap. A stepped overlap reads as
+two pieces that failed to line up; a mitre is a joinery move and reads as
+intent. A smaller overlap only makes a finer saw-tooth, which at the survey
+stop aliases into a fuzzy edge - worse than the coarse one, not better. This
+direction spends its effort removing the tells that say a program drew the
+picture, and a staircase edge is exactly such a tell.
+IF MITRING IS EXPENSIVE, the honest interim is NOT a smaller overlap - it is
+FEWER, LONGER CHORDS. A visibly faceted curve with clean straight facets is a
+legitimate made object (a segmented arch is built that way); a stepped one is
+not. Coarse and deliberate beats fine and accidental.
+WIDTH: CARRIAGEWAY, 1400, verge as plate. THE CORRIDOR IS A RULE, NOT A
+THING. Drawing it makes the board display its own zoning, which is the
+diagram tell this direction exists to avoid - and the verge being bare plate
+is TRUE: it is board, and a model reads correctly with buildings standing
+back across a margin of bare timber.
+AND IT MUST APPLY TO THE STRAIGHTS TOO, or curves and straights disagree
+about what a road is. That is the bigger change and I am asking for it
+deliberately: it also narrows every road against the buildings, which is the
+third time I have raised roads out-reading the timber (D10) and the first
+fix that addresses the cause rather than the tone.
+
+=== 2. THE SCORED PAD: it reads. MI_pad_score is authored. ===
+The near frame is right - a fine incised line, no fill, the maker's mark
+where a block will go. This is the look; keep it.
+MI_pad_score is at the path you gave: MI_board_plot DUPLICATED and darkened
+to 0.65x, nothing else changed. A SCORE IS NOT A DIFFERENT MATERIAL - it is
+the plate's own timber with shadow in it. MI_studio_grey was the same class
+of error the road had: it hangs off M_StacktownMaster, the studio card stock.
+Two of the four board materials hang off that shared master; I touched
+neither.
+0.65x is depth. Much darker becomes PAINT, and a painted line on a wooden
+board is a diagram again.
+MUST IT READ AT THE ARRIVAL STOP? YES, and this is not a preference. The
+arrival hint says "14 lots for sale - click one". If the pads are invisible
+at that stop the hint is a lie and a stranger has nothing to click.
+HOW: WIDEN THE LINE, DO NOT DARKEN IT. A wider knife-mark is still a
+knife-mark. And if a widened score still vanishes at arrival, that is
+evidence about the ARRIVAL STOP, not about the score - see 3.
+
+=== 3. THE ARRIVAL: the problem is not reach, it is the YAW. ===
+A rectangular board photographed three-quarter fits LARGEST when its LONG
+AXIS LIES ON THE FRAME'S DIAGONAL. Right now the long axis runs off the
+bottom-right corner, so the plate is cut AND small at the same time, with
+dead backdrop across the top third. Coming in cuts more; going out shrinks
+it. Neither can win because the wrong thing is being adjusted.
+  pitch  -38 to -40   (what is built is right - keep it)
+  yaw    rotate so the plate's long axis runs corner to corner of the frame
+  reach  ~16,000-17,000 AFTER the yaw is right; the diagonal fit buys back
+         the width that coming in was trying to get
+  aim    the plate's centre, so the four margins are EVEN - even margins are
+         what makes a thing read as photographed rather than glimpsed
+ACCEPTANCE, so this does not need my eye again: all four plate corners inside
+the frame with backdrop visible past each, and no margin more than twice
+another.
+AND SHOW THE PRESET CITY, NOT THE NEAR-EMPTY BOARD. The first frame of the
+wooden city has to have wood in it; two masses on a bare plate is a diagram
+of a city. If the player picks the empty board, the bare plate with scored
+pads is correct and the hint carries it - but the frame a stranger meets
+first should be the one with buildings on it.
+
+=== 4. LEGEND WORDS AS BUILT: approved. ===
+"R building" and the contextual verbs are right, and dropping P into the
+fresh-city hint is exactly where a start-choice belongs. "HOME arrival view"
+is a good addition I did not ask for - it gives a lost player one key back to
+a known frame, which is worth more than any three verbs on that line.
+
+=== 5. CHANNEL 5 AS BUILT: approved. 0.6x wear before failure, 0.6 -> 0.8. ===
+One honest caveat: I have NOT seen a frame of the pre-failure wear at 0.6x.
+I ruled that shape from the two you framed, not from a picture of it. If it
+turns out a healthy-but-tiring lot already looks failed, the pre-failure
+ceiling comes down, not the failed value.
+
+=== 6. THE WINDOW PATTERN: it works, and it has two defects, both mine. ===
+Both faces carry cells now, the two masses differ, and about a third are
+dark. The triplanar pick is doing its job.
+(a) WINDOWS STRADDLE THE CORNER ARRIS. Several sit half on one face and half
+    on the other. A window cut in half by the building's own edge reads as an
+    error - real windows do not sit on a corner. Fix: quantise the bay phase
+    so a bay BOUNDARY lands on each arris, or inset the pattern from the face
+    edges. Mine.
+(b) THE PATTERN BREAKS AT A SEAM INSIDE ONE MASS - a vertical discontinuity
+    with the grid offset either side. If these masses are built from several
+    boxes, that is the cause and the mechanism is mine: the bays run off
+    LocalPosition and the seed off ObjectPositionWS, and BOTH are PER
+    COMPONENT, not per actor. Every box therefore gets its own pattern.
+    PLEASE CONFIRM the mass is multi-component before I build the fix.
+    IF IT IS: I WAS WRONG THAT ch7 IS NOT NEEDED. I said ObjectPositionWS
+    made the seed free. It makes it free PER BOX, which is not what a
+    building is. A per-ACTOR seed cannot be derived inside the material, so
+    it has to be written once per actor - that is exactly what ch7 was
+    reserved for, and I withdraw the claim that it could stay unwired.
+
+STILL UNSEEN BY ME: the four stains at far and near (0.010 is a candidate,
+not a verdict - shimmer at the survey stop means 0.006, still blobby means
+0.016), and the pre-failure wear in 5.
+LAST: "Preparing SoundWaves" and "Preparing Static Meshes" engine debug text
+is still drawn on the preset frames. Suppress screen messages in anything a
+stranger sees - I flagged this at 22:00 and it is the cheapest fix on the
+board.
+
 COORDINATOR -> LOOK (2026-09-07 05:30 PDT): WINDOW GRANTED, exclusive, from your 05:30 line
 until "LOOK: released <time>" or 07:00. Measured at the grant: PIE world: None dirty: 0.
 Nothing of mine runs in the editor until your release. MI_pad_score: the
@@ -2082,3 +2348,176 @@ Owner's answers (2026-09-05): 1. camera = right-drag orbit, wheel zoom,
 edge/arrow pan (PLAN_CPP_PORT.md §6). 2. universal builds. 3. Mondays are
 the milestone-test day. 4. discard the 32 unsaved packages. 5. Phase 0
 committed on the owner's word.
+
+COORDINATOR (2026-09-07 06:15 PDT) - LOOK'S 05:32 RULINGS BUILT, ENGINEERING'S GAP 1 IN.
+PASS LINE 119/119 at 4f104ef (your 1060af4 merged): Roads 27, Placement 20,
+Economy 17, Handover 10, CityState 10, Camera 6, Catalogue 5, Score 4, Preset 4,
+LotTransform 4, Board 4, Age 4, RoadTransform 3, Smoke 1. Frames for LOOK are in
+Saved/SelfTest/look_cpp2/ (named below). The editor is CLOSED; the package is
+rebuilding from this head. Take a window the usual way.
+
+TO LOOK, your six, in your order:
+
+1. MITRED, AND AT THE CARRIAGEWAY. Each chord of a drawn road is now a slab of
+   its own (ProceduralMeshComponent) whose ends are cut along the bisector of
+   the turn into the next chord, so consecutive chords share one edge - no fan,
+   no wedge, no overlap ribbon, no z stagger (Stacktown::RoadFrame::JointTangent,
+   Corners, PathJoints; two tests). Every DRAWN road, straight or curved, is
+   drawn at road_width_<type> - 900 / 1400 / 1700 / 2000 - with the verge as
+   bare plate. FRAMES: frame_curve_mitred.png (the avenue, 12 chords, reach
+   9,000); frame_stain_near_dirt / _avenue / _boulevard / _highway.png (one
+   each, reach 9,000; the boulevard is a curve too); frame_stains_far.png (all
+   four from the arrival). NOT DONE, and visible in the far frame: the two
+   PINNED map roads still draw the corridor with the footway strips - that is
+   a map edit and waits for the owner's word, as you said.
+   The stain's UV is unchanged in kind (the cube's 0..1, now over the whole
+   path along and the carriageway across); the frames show the pattern is
+   world-projected anyway, so nothing in it moved. Say if you want a scale.
+
+2. THE SCORED LINE is 60 uu, widened not darkened, and your MI_pad_score is
+   in (committed 5693708). At the arrival that ships (3) one pixel is about
+   19 uu, so the line is about 3 px - frame_arrival_0620.png shows it as a
+   hairline. Widen again if you want it to carry; your number.
+
+3. THE ARRIVAL, measured rather than eyeballed. Tools/measure/arrival_margins.py
+   projects the plate's four corners through the C++ camera model (checked
+   against a real frame: predicted (259,350) for the left corner at 19,000,
+   seen (260,350)). Two facts it gives:
+   - aimed at the plate's CENTRE at pitch -38, the NEAR corner cannot come
+     inside the frame at any reach up to the wide stop (21,024); at 19,000 it
+     sits 127 px below the frame, at 21,000 it just clears by 53 px while the
+     far side has 315.
+   - your 16,000-17,000 is at 39 mm on the ramp and cuts three corners.
+   WHAT SHIPS: aim 1,500 uu short of the centre toward the camera, yaw 45,
+   pitch -38, reach 21,000 (the wide stop, 24 mm). All four corners in with
+   backdrop past each; the margins are 158 / 278 / 159 / 357 px = 2.26x, and
+   the sweep (yaw 38-49, pitch -38 to -45, every reach, every aim) finds
+   nothing under 2.22x - the rule's 2x is out of this lens's reach because the
+   plate projects 1.57:1 in a 1.78:1 frame. The preset city is in the first
+   frame (frame_arrival_0620.png: "14 lots for sale"). If it must be closer,
+   the rule gives, or the wide stop moves past 21,024 - your call, one number.
+
+4. MULTI-COMPONENT? NO - MEASURED. A lot is one actor: a scene root plus ONE
+   UStacktownLotVisual (a UStaticMeshComponent). The mass meshes SM_WMass_* have
+   one LOD, one section, one material slot (MI_wood_oak) - read in the editor
+   at 05:45 before I closed it. So the window-pattern seam is INSIDE one mesh,
+   not between components; a per-actor seed in ch7 would not move it.
+   frame_night_two_masses.png shows what you described: on the worn mass
+   (right, NW1) the top row's left half has no windows; the fresh mass beside
+   it has full rows. Both are single components.
+
+5. THE FRAMES YOU STILL NEEDED: frame_wear_prefailure_day.png - NW1 at wear
+   142 of 150 (channel 5 = 0.57) beside NW2 fresh, day, reach 7,500;
+   frame_night_two_masses.png - the same pair at night. The stains far and
+   near are in (1).
+
+6. "Preparing..." - as posted: editor asset compiling in the uncooked test
+   game; the cooked app shows none.
+
+ALSO IN THIS CYCLE, mine: the sound-cue cache was a raw map the collector could
+not see, and the 05:51 test game crashed in PlaySound2D on the first cue after
+a reset, a minute after the cue loaded. It is a UPROPERTY now (5693708). A
+stranger who reset the city and then placed a lot would have hit this.
+
+TO ENGINEERING: GAP 1 (b4b5eec, merge 1060af4) built CLEAN on the merged tree -
+no engine-only fix in your files this time; the one -Wshadow at the merged head
+was in my own new test (a local named Roads), fixed at 9684c8e. Your move of
+econrules 6b to y=-3800 is taken as mine. The mitre and the carriageway width
+are display only - your resolver's chords and corridors are untouched, and the
+frames above are drawn from your DrawRoadPath output. Next, as you said: gap 2
+(a pad may not leave the plate), then the self-crossing path. Same terms:
+push, and I build it against the engine and post the line.
+
+COORDINATOR (2026-09-07 06:25 PDT): the package is rebuilt from 4f104ef - universal,
+1.6 GB, MI_pad_score and the four road stains in the manifest. The editor is
+free. (The entry above was stamped 06:45 by mistake; it went up at 06:15.)
+
+COORDINATOR (2026-09-07 06:55 PDT) - LOOK: THE EDITOR IS RUNNING NOW (my fault: I had
+closed it for the builds and told you it was "free"; it is up on TestCity, no
+PIE, nothing dirty). WINDOW GRANTED from 06:55 - take it the usual way, same
+terms. Your 06:40 rulings are built at f126c83, suite 120/120, frames in
+Saved/SelfTest/look_cpp2/:
+
+1. THE ARRIVAL, by your replacement rule: all four corners in, none within 5
+   percent of an edge (the bar's bottom is the top edge), the plate as large
+   as that allows. arrival_margins.py --look finds the largest plate on the
+   diagonal at pitch -38: yaw 49, reach 18,500, aimed 2,000 short of the
+   centre - 28.5 percent of the frame. Said plainly: your third-of-frame
+   floor is not reachable with the 5-percent rule at this pitch; 28.5 is the
+   ceiling. AND THERE IS WOOD IN IT: the preset now seeds three of its
+   fourteen lots BUILT at tier 1 - NW3, SE0 and NE0, round the crossing -
+   so the first frame shows three timber masses with eleven marked lots.
+   frame_arrival_built_0700.png. Which three, and whether three, is yours and
+   the owner's to move; the bar reads "3 built, 11 lots for sale".
+2. THE SCORED LINE is 90 uu. Same frame.
+3. THE WINDOW SEAM: yours, understood. The one night frame I have
+   (frame_night_two_masses.png) shows the missing windows on the worn mass
+   ending at a corner strip, not mid-face - consistent with your arris
+   mechanism as far as one frame can be. No C++ moved.
+4. THE FRAME THAT DECIDES THE ROAD TONE: frame_stains_adjacent_wide.png, the
+   four drawn stains side by side on one board, from above the crossing.
+   From LEFT: highway, boulevard, then the PINNED cross street (white, with
+   its footway strips), then avenue, dirt; the PINNED arterial runs across
+   the middle. frame_stains_adjacent_arrival.png is the same board from the
+   arrival. Your tone ladder is your material; the "all four below the
+   plate" alternative is the owner's call and is on the board for them.
+5. The stain scale stays at 0.010 - nothing of mine touched it.
+
+ALSO NEW, mine, MONDAY_DECISIONS section 6 as defaulted: SAVE SLOTS. Keys 1,
+2, 3 open three cities per install; the city being left is saved first, a
+slot never written is a fresh board, slot 1 is the file that always existed.
+The bar names the slot on its right when it is not the first ("SLOT 2", where
+NIGHT sits) and the legend offers "1-3 slot" - both placeholder placement
+and wording, yours to move. Proven live: slot 2 opened fresh, roads drawn,
+slot 1 reopened with its fourteen lots. frame_slot1_back.png.
+
+PACKAGED APP, for Monday: launched by the double-click path at 06:37, it
+opened a 1600x900 window in ten seconds and rendered the board, the bar and
+the legend (a screen capture is in the ledger). The fullscreen stall is gone
+with the windowed default. The package will be rebuilt from f126c83 once
+your window closes.
+
+TO ENGINEERING: nothing of yours moved. The preset's three built lots are set
+in the controller AFTER SeedPresetState, so your seed and its tests are
+untouched. Slots live in CitySync and StateHandover (SlotStatePath, ParseSlot,
+one test). Pass line 120/120 at f126c83. Your gap 2 and the self-crossing
+path stand as your next push; I build it against the engine when it lands -
+if the design lane holds the editor at that moment I will say so and wait for
+their release rather than build against an open editor.
+
+COORDINATOR (2026-09-07 07:10 PDT) - LOOK: YOUR 06:58 IS BUILT AND YOUR FIVE SAVES ARE IN.
+Committed on proof at d8e54a3 (M_WoodMaster with the chamfer gate; MI_road_dirt /
+avenue / boulevard / highway with the widened ladder). Suite 120/120. The
+package is rebuilding from that head; the editor is CLOSED for it and I will
+relaunch it before your next window - say "LOOK: window <time>" and I open it.
+Frames in Saved/SelfTest/look_cpp2/:
+
+- CHAMFER GATE, the night frame you asked for: frame_night_pair_chamfer_wide.png
+  (the three built lots at night from the south; NE0 tall at left, SE0 low at
+  bottom left, NW3 at right) and frame_night_nw3_corner.png (NW3's corner
+  close: both faces lit, the arris itself carries no window, no window is
+  cut by the edge). Every discontinuity I can find is at an arris and none
+  mid-face - your prediction holds in two frames.
+- THE LADDER, adjacent and in isolation: frame_stains_adjacent_wide_v2.png
+  (from LEFT: highway, boulevard, the PINNED cross street, avenue, dirt; the
+  PINNED arterial across the middle) and frame_stain_isolation_dirt / _avenue
+  / _boulevard / _highway.png, one road each, reach 8,500. The four are
+  nameable one at a time now; the two pinned map roads are still the
+  brightest things on the board, and that is with the owner (MONDAY_DECISIONS
+  section 9, rewritten to say exactly that).
+- THE ARRIVAL with your one ask: NE0 stands at tier 2 -
+  frame_arrival_tier2_0710.png. The bar reads "3 built   11 lots for sale
+  click one, B to buy" with gaps, no middle dot anywhere in bar or panel text
+  now (all thirty of them are gone).
+- SAVE SLOTS as you ruled: no slot word on the bar; "Loaded slot 2." as a
+  body message cleared on the next input (frame_slot_loaded_message.png);
+  the legend says "1-3 load" - the keys LOAD, the save is continuous, so the
+  gesture did not need splitting. The area floor is dropped from the
+  arrival tool; the 5-percent corner rule is the one it enforces.
+
+TO ENGINEERING: still nothing of yours moved; the tier-2 lot is set after
+SeedPresetState like the other two. Pass line 120/120 at d8e54a3.
+
+COORDINATOR (2026-09-07 07:20 PDT): the package is rebuilt from d8e54a3 and opens by
+the double-click path (window in ten seconds, rendering). THE EDITOR IS RUNNING
+AGAIN - LOOK, take a window the usual way whenever you are woken.

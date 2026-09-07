@@ -73,7 +73,7 @@ bool UStacktownLotVisual::ShowPad(double Width, FString& OutError, bool bScored)
 		const FVector Ext = Mesh->GetBounds().BoxExtent;   // the pad's footprint, from the pad mesh itself
 		SetStaticMesh(nullptr);
 		SetRelativeLocation(Stacktown::LotFrame::PadOffset(W));
-		const double Lw = 28.0, Lz = 3.0;                  // a fine line: 12 uu vanished at the arrival stop (frame 22:09); 28 reads there and stays a line up close
+		const double Lw = 90.0, Lz = 3.0;                  // design lane 06:40: 90 uu (about 4.7 px at the arrival) invites the click the hint asks for; never past ~120 or it becomes a frame
 		const double Hx = Ext.X, Hy = Ext.Y;
 		const struct { FVector C; FVector S; } Bars[4] = {
 			{ FVector( 0.0,  Hy, 0.0), FVector(2.0 * Hx / 100.0, Lw / 100.0, Lz / 100.0) },

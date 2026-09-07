@@ -119,6 +119,20 @@ That is the pipeline a stranger's download will use.
     roads diagonal, thick edge visible, nothing moving. Say if it reads as a
     model on a table.
 
+## Save slots (built 2026-09-07 06:50)
+
+28. SLOTS: press 2. The bar's right says SLOT 2 and the board is fresh (the
+    hint offers the starter city). Press P, buy a lot. Press 1: your first
+    city is back exactly as you left it. Press 2 again: the second city is
+    back with its bought lot. Nothing is ever overwritten by a switch; hold N
+    still resets only the slot that is open (and archives it first).
+
+## The packaged app - VERIFIED by the double-click path (2026-09-07 06:37)
+
+Launched with `open` on the built .app: a 1600x900 window in ten seconds,
+the board, the bar and the legend rendered (screen capture in the coordinator's
+ledger). The section below stays as the fallback if a Monday launch differs.
+
 ## If the packaged app opens to a blank window and sits there (read before Monday)
 
 Diagnosed 2026-09-06 23:47 PDT: the app itself is sound - headless it reaches the city in

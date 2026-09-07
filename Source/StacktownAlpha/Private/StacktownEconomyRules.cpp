@@ -6,6 +6,7 @@
 // without standing up a game.
 
 #include "StacktownEconomyRules.h"
+#include "StacktownPlacement.h"
 
 namespace Stacktown
 {
@@ -155,7 +156,7 @@ static void SortedParcelIds(const FCityState& State, TArray<FString>& OutIds)
 	OutIds.Sort([](const FString& A, const FString& B) { return A < B; });
 }
 
-void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
+void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents, const FPlacementBoard* Board)
 {
 	// Mirrors econrules.tick() line for line (2026-09-06 night): rent at the demand
 	// the tick STARTED with, only for owned un-failed lots; wear by one, and at
@@ -180,7 +181,13 @@ void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
 		{
 			continue;
 		}
-		const double Earned = RentFor(R, P.Rid, P.Tier, Demand);
+		double Earned = RentFor(R, P.Rid, P.Tier, Demand);
+		if (Board && P.Placement.IsSet())
+		{
+			// econrules.tick: the roads around a placed lot (its own road's type, and any
+			// frontage-refusing road within reach) multiply its rent. Pinned lots earn 1.0.
+			Earned *= RoadRentMultiplier(*Board, State, P.Placement.GetValue());
+		}
 		State.Money += Earned;
 		P.Accum += Earned;
 		P.Wear += 1.0;
@@ -198,9 +205,9 @@ void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
 	State.Demand = NewDemand;
 }
 
-void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
+void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents, const FPlacementBoard* Board)
 {
-	Tick(R, State, OutEvents);
+	Tick(R, State, OutEvents, Board);
 	TArray<FString> Ids;
 	State.Parcels.GetKeys(Ids);
 	for (const FString& Id : Ids)

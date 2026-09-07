@@ -125,6 +125,14 @@ def tick(state):
         if p.get('failed'):
             continue
         earned = rent(p['rid'], p['tier'], demand, r)
+        lot = p.get('placement')
+        if lot:
+            # The roads around a placed lot (item 10, the seat's pure function):
+            # its own road's type, times any frontage-refusing road within reach.
+            # A pinned lot has no placement and earns the avenue's 1.0. Lazy
+            # import: placement imports this module.
+            import placement as _placement
+            earned *= _placement.road_rent_multiplier(s, lot, r)
         s['money'] += earned
         p['accum'] = p.get('accum', 0.0) + earned
         p['wear'] = p.get('wear', 0) + 1
@@ -453,7 +461,21 @@ if __name__ == '__main__':
     assert st2['parcels']['OF']['tier'] == 0
     assert e2 == [], e2
     assert abs(st2['demand'] - 1.005) < 1e-9, st2['demand']   # one owned lot: one step toward 1.05
-    # 7. insufficient funds refuses loudly
+    # 6b. ROADS MULTIPLY RENT (2026-09-06 night, item 10 wired): a lot placed on a
+    #     drawn DIRT road earns rent x road_rent_mult_dirt (0.75) - the placed lot
+    #     and the road are built by the placement spec itself, not by hand.
+    import placement as _pl
+    st6 = {'money': 5000.0, 'demand': 1.0, 'parcels': {}, 'roads': {}}
+    st6, _road6, ok6, why6 = _pl.draw_road(st6, -6500.0, -3000.0, -5100.0, -3000.0, 'dirt', False)
+    assert ok6, why6
+    st6, _pid6, ok6, why6 = _pl.place(st6, -5800.0, -1900.0, False)
+    assert ok6, why6
+    pid6 = [k for k, v in st6['parcels'].items() if v.get('placement')][0]
+    st6, ok6, why6 = buy(st6, pid6)
+    assert ok6, why6
+    money6 = st6['money']
+    st6, _e6 = tick(st6)
+    assert abs((st6['money'] - money6) - 0.75 * rules()['road_rent_mult_dirt']) < 1e-9, st6['money'] - money6
     st3 = {'money': 1.0, 'demand': 1.0, 'parcels': {
         'P': {'rid': 'vernacular', 'tier': 0, 'width': 1230,
               'owned': False}}}

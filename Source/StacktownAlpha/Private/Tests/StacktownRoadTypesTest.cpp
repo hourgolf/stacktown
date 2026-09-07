@@ -93,7 +93,7 @@ STACKTOWN_TYPES_TEST(FStacktownRoadTypeRulesMatchOracle, "Stacktown.Roads.TypeRu
 STACKTOWN_TYPES_TEST(FStacktownRoadTypeGeometry, "Stacktown.Roads.TypeGeometry")
 {
 	const FPlacementBoard Board = OracleBoard();
-	TestEqual(TEXT("verge"), Board.Rules.Verge, Verge, 1e-9);
+	TestEqual(TEXT("verge"), Board.Rules.Verge, StacktownRoadsOracle::Verge, 1e-9);
 	for (int32 i = 0; i < T40_TypesNum; ++i)
 	{
 		const FTypeRow& Row = T40_Types[i];

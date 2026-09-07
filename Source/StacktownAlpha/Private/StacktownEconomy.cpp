@@ -550,7 +550,8 @@ void UStacktownEconomy::CityTick()
 	// Tick, then age (queue item 7) - ONE composite, Stacktown::TickCity, shared
 	// with the tests that predict what this call persists. Age stays outside
 	// Tick itself so the economy oracles' exact known answers hold.
-	Stacktown::TickCity(Rules, State, Events);
+	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard(Rules);   // the roads around each placed lot multiply its rent
+	Stacktown::TickCity(Rules, State, Events, &Board);
 	LastTickEvents.Append(Events);
 	SaveState();
 }

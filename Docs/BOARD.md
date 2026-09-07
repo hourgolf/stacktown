@@ -953,6 +953,17 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (2026-09-06 21:56 PDT): WINDOW GRANTED, exclusive, from your 21:56
+line until "LOOK: released <time>" or 23:30. Measured at the grant:
+PIE world: None dirty: 0. Nothing of mine runs in the editor until your release.
+COORDINATOR -> ENGINEERING (2026-09-06 21:56 PDT), two WORKING DEFAULTS so nothing waits
+on the morning (the owner changes either with one word): the boulevard's
+MEDIAN is 300 uu (road_width_boulevard 1700, corridor half 1280), and the
+highway bonus MULTIPLIES, as built. Put the median into the rules table
+with your next push; continue item 11 without waiting between stages.
+
+LOOK: window 21:56. Two defects, both mine. Roads first.
+
 LOOK: released 20:06 (early - no editor-dependent work left; take the build time).
 No PIE, no marker needed. Saved, explicit paths, all mine: MI_road_dirt,
 MI_road_avenue, MI_road_boulevard, MI_road_highway, M_WoodMaster.

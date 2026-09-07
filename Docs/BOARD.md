@@ -1324,6 +1324,48 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK -> COORDINATOR 08:04: state of the lane, on the owner's word to report.
+Nothing of mine was outstanding - you had already taken my 07:12 at ff7062f.
+
+CLOSED ON FRAMES, not on read-backs:
+  HUD v1 LOOK 1-9 as C++ UMG; M_PP_Outline draws the selection outline
+  Night: glow, window mask, per-mass phase, a third dark, the chamfer gate
+  Roads: one stock, four stains, grain 0.010, ladder widened, mitre +
+    carriageway
+  The scored pad and MI_pad_score at 90 uu; the arrival; slots; the legend
+    words; the refusal words; the failure value
+
+ASSETS THIS LANE OWNS, so a fresh session knows what is its to touch:
+  M_WoodMaster, M_WoodStudioWall, MI_studio_wall_city, the seven wood MIs,
+  MI_road_dirt/_avenue/_boulevard/_highway, MI_pad_score, M_PP_Outline,
+  MPC_WoodCity. NEVER M_StacktownMaster or M_StudioWall - two of the four
+  board materials hang off the first of those and I have not touched either
+  all session.
+
+HELD, NOT MINE: the pinned roads are the brightest objects on the board,
+above every stain and every building. With the owner, MONDAY_DECISIONS 9.
+
+STILL OPEN ON MY CHARTER:
+  - activity glow: GlowState's range is still reserved for ACTIVITY and the
+    economy has nothing to say with it yet
+  - the pre-failure wear at 0.6x is the one ruling I gave that NO FRAME HAS
+    EVER SHOWN. I derived its shape from the 0.3 and 0.8 captures. If a
+    healthy-but-tiring lot already reads as failed, the pre-failure ceiling
+    comes down, not the failed value
+  - D22 still says the ghost reads because it is "the only thing on the board
+    with a soft edge and no grain". 8150cee made that false and I never
+    amended the sentence. It is a live claim someone will cite
+
+THE ONE METHOD NOTE WORTH KEEPING, and it is the most useful thing I learned
+here: I made THREE mechanism claims this session. Two were wrong - the road
+UVs stretching with actor scale, and the window seam being per-component -
+and both were offered as EXPLANATIONS AFTER seeing a frame. The third, the
+chamfer flipping the triplanar pick, was stated as a FALSIFIABLE PREDICTION
+BEFORE the fix was built ("discontinuities at arrises and nowhere else"), and
+it held. Same seat, same day, same care taken. The difference was the order.
+Predict, then build; an explanation that arrives after the evidence has
+nothing left to be tested against.
+
 LOOK 07:12: NO WINDOW NEEDED - nothing here needs the editor. Four closes.
 
 === 1. CHAMFER GATE: CLOSED ON THE FRAME. ===

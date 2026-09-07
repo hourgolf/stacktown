@@ -112,6 +112,49 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK, ENGINEERING (2026-09-06 18:39 PDT) - THE OWNER'S READ, verbatim:
+"we're barely at a 15/100 on the scoreboard." Plumbing is done; from here
+every item must be something a stranger notices. Docs/MONDAY_DECISIONS.md
+is the owner's decision list with proposed defaults; read it, it is the
+shape of the next month.
+
+LOOK: START THE GOAL-LOOP / SCORE ONE-PAGER NOW, not Monday. It is the
+single item gating the score, and it needs no editor. What it must settle,
+in your rulings' form: (1) what a SESSION is; (2) the SCORE as one number a
+stranger can read on the bar, built only from facts the state already
+holds (money, owned lots and tiers, roads drawn, failed lots, age); (3) a
+goal ladder or a win, and whether there is a fail state; (4) where it reads
+per LOOK 5, and what the bar says when a goal lands. MONDAY_DECISIONS §1
+has a proposed default to argue with, not to obey. After that: the road
+fork (four stains of one stock is now also the four road TYPES' look, §2)
+and the window-pattern fix, in your next window.
+
+ENGINEERING, after items 8 and 9, decided mechanics with no new decision
+needed except the numbers in MONDAY_DECISIONS §2 (use its proposed table
+as the rules' defaults, keyed so the owner can change any cell):
+ 10. ROAD TYPES ARE MECHANICS (ROADS_AS_MECHANIC §1.3, §6.2). Python oracle
+     FIRST (placement.py / econrules.py are the spec), then C++: a `type`
+     on every road segment (dirt | avenue | boulevard | highway) beside
+     width_class; carriageway width per type; the HIGHWAY REFUSES FRONTAGE
+     (ResolveClick refusal, its own wording); a cost per 100 uu per type
+     charged at DrawRoad (roads are free today - the refusal when money is
+     short is "can't afford" as for a buy); rent multipliers per type
+     applied in Tick to lots fronting that segment; a type cycle verb. The
+     controller/HUD wiring is mine when your resolver lands.
+ 11. CURVED MULTI-NODE ROADS (ROADS_AS_MECHANIC §5, decided shape): first
+     generalize the resolver and the lot frame to a segment of ANY
+     direction (chord lots along either side, quantized at 410 along the
+     chord, pose yaw from the segment); then DrawRoadPath(nodes): a
+     Catmull-Rom through committed nodes sampled at the 410 quantum into
+     straight segments, each drawn through the same rules. Oracle first,
+     fixtures with a rotated segment and a three-node curve. I wire node
+     clicks in road mode.
+ 12. THE PRESET START (§6.4): SeedPresetState(Rules, Board) = the 14 pinned
+     lots as for-sale parcels at their pinned poses (PinnedPlacementForKey),
+     callable on a fresh city; I wire the P key and the bar offer.
+Report each as before: push, board entry, and name the groups your harness
+cannot run.
+
 COORDINATOR -> ENGINEERING (2026-09-06 18:01 PDT): ITEMS 2-7 BUILT, TESTED, LIVE. Clean
 build, editor closed: 88/88 = 20 Placement, 17 Economy, 10 CityState,
 9 Handover, 7 Roads, 6 Camera, 5 Catalogue, 4 LotTransform, 4 Board,

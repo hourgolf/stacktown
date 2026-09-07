@@ -33,7 +33,7 @@ inlay, flush with the plate (the design lane is still fixing the grain
 tiling: one big swirl per road is known).
 
 THE PACKAGED APP (Saved/Packaged/Mac/StacktownAlpha.app, universal, rebuilt
-2026-09-06 16:26 - rebuild with Tools/package.sh if the date is old) is the
+2026-09-06 18:41 - rebuild with Tools/package.sh if the date is old; if step 1's pad or the selection outline is missing, the cook dropped a path-loaded asset: grep Saved/StagedBuilds/Mac/Manifest_UFSFiles_Mac.txt for it) is the
 whole C++ game, not the camera-only shell it was on the 5th. It keeps its
 OWN city, separate from the editor's, so the first launch is the FRESH
 CITY the rules define: $100, DEMAND 1.00, the plate with its two roads and

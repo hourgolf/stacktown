@@ -210,6 +210,18 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 18:43 PDT - PACKAGE FIXED AND REBUILT (18:41, universal, from 2805448 + an
+  uncommitted config change): the cook manifest showed the C++ game's
+  PATH-LOADED assets were never cooked - no SM_GhostPad_*, no MI_ghost_*, no
+  M_PP_Outline - because nothing in TestCity references them; the 16:26
+  package would have shown NO PAD for a placed-unbought lot and no outline.
+  Fix: DirectoriesToAlwaysCook for /Game/Stacktown/BakedWood, /Materials,
+  /UI in Config/DefaultGame.ini (owner's word pending). Manifest now carries
+  all of them. Smoke: the app took its lock and saved its city at 18:42. NOT
+  verified visually in the packaged app (no screen access from this
+  session) - the evidence is the manifest plus the identical code path
+  framed in the editor game. Monday step 1 is the visual check.
+
 - 2026-09-06 18:01 PDT - ENGINEERING ITEMS 2-7 (302f861) BUILT AND PROVEN: clean build,
   88/88. Engine-only failure found and fixed here: CityState.Tick and
   .GrowthRetired predicted CityTick with Tick alone once age advanced in

@@ -32,5 +32,19 @@
   "road_frontage_avenue": 1,
   "road_frontage_boulevard": 1,
   "road_frontage_highway": 0,
-  "road_highway_reach": 2000
+  "road_highway_reach": 2000,
+  "recipe_mult": {
+    "vernacular": {
+      "price": 1.0,
+      "rent": 1.0
+    },
+    "office": {
+      "price": 1.6,
+      "rent": 1.5
+    },
+    "tower": {
+      "price": 3.0,
+      "rent": 2.5
+    }
+  }
 }

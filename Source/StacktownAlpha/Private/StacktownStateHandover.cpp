@@ -111,7 +111,7 @@ FParcelFacts FactsForLabel(const FEconRules& R, const FCityState& State, const F
 	Facts.bPlaced = P->Placement.IsSet();
 	// Recomputed, never read from state: it depends on Tier, and a stored copy
 	// is one more thing that can disagree with the tier beside it.
-	Facts.Price   = Price(R, P->Tier, P->Width);
+	Facts.Price   = PriceFor(R, P->Rid, P->Tier, P->Width);
 	return Facts;
 }
 

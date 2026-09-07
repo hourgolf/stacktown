@@ -57,6 +57,28 @@ frames, the words (hint, goal, road type names), the arrival frame, and a
 ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
 00:00-01:30, then on request; builds in the gaps.
 
+## Progress ledger (updated as cycles land)
+
+- 20:20 cycle one: the economy loop (demand moves; wear -> failure -> char
+  -> repair; goals persisted; NEXT on the bar), road classes wearing the
+  design lane's four stains, words / sound / arrival per the 20:06
+  rulings, the seat's preset start wired (P). 96/96.
+- 20:37 cycle two: building types (R: vernacular / office / tower with
+  their own price and rent and species), SetView, engine notices silenced,
+  the arrival at the wide stop. 96/96.
+- 2026-09-06 20:39 PDT: checkpoint package of everything above; legend lists R / T / P /
+  L for the next build. Open for the design lane at 22:00: the road stains
+  render flat white; the window mask bands on one face; the char value;
+  the arrival; the pad look. Open for engineering: item 10 (road costs,
+  widths, frontage, rent per class), then 11, 8, 9.
+- 20:37 cycle three: building types (R) with price/rent per recipe.
+- 20:44 cycle four: legend lists R / T / P / L; goals primed silently for
+  older saves; a reset archives the city first; Home returns the arrival
+  view (built with the next cycle). Checkpoint package at 20:39 carries
+  everything through cycle three.
+- 20:46: waiting on engineering's item 10 and the design lane's 22:00
+  window; both watchers armed.
+
 ## The morning report
 
 Filled in at the end of the night, not before.

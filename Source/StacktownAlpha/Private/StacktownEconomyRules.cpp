@@ -80,6 +80,23 @@ double Rent(const FEconRules& R, int32 Tier, double Demand)
 	return R.RentPerTier * (Tier + 1) * Demand;
 }
 
+double RecipeFactor(const FEconRules& R, const FString& Rid, bool bPrice)
+{
+	const FRecipeMult* M = R.RecipeMult.Find(Rid);
+	if (!M) { return 1.0; }
+	return bPrice ? M->Price : M->Rent;
+}
+
+double PriceFor(const FEconRules& R, const FString& Rid, int32 Tier, double Width)
+{
+	return Price(R, Tier, Width) * RecipeFactor(R, Rid, true);
+}
+
+double RentFor(const FEconRules& R, const FString& Rid, int32 Tier, double Demand)
+{
+	return Rent(R, Tier, Demand) * RecipeFactor(R, Rid, false);
+}
+
 int32 Climb(int32 Tier)
 {
 	return Tier + 1;
@@ -163,7 +180,7 @@ void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
 		{
 			continue;
 		}
-		const double Earned = Rent(R, P.Tier, Demand);
+		const double Earned = RentFor(R, P.Rid, P.Tier, Demand);
 		State.Money += Earned;
 		P.Accum += Earned;
 		P.Wear += 1.0;
@@ -203,7 +220,7 @@ FVerbResult Buy(const FEconRules& R, FCityState& State, const FString& Pid)
 	{
 		return FVerbResult::No(TEXT("already owned"));
 	}
-	const double Cost = Price(R, P->Tier, P->Width);
+	const double Cost = PriceFor(R, P->Rid, P->Tier, P->Width);
 	if (State.Money < Cost)
 	{
 		return FVerbResult::No(InsufficientFunds(State.Money, Cost));

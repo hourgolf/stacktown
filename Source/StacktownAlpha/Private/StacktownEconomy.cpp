@@ -86,6 +86,26 @@ bool FEconRules::FromJson(const FString& JsonText, FEconRules& Out, FString& Out
 	{
 		return false;
 	}
+	// recipe_mult (optional, 2026-09-06 night): {"office": {"price": 1.6, "rent": 1.5}, ...}
+	const TSharedPtr<FJsonObject>* Mults = nullptr;
+	if (Root->TryGetObjectField(TEXT("recipe_mult"), Mults) && Mults && Mults->IsValid())
+	{
+		// The three recipes the catalogue knows (5.8's FJsonObject keys are shared
+		// strings, not FStrings; asking by name sidesteps the conversion). A recipe
+		// absent here is vernacular, 1.0 / 1.0.
+		static const TCHAR* Recipes[] = { TEXT("vernacular"), TEXT("office"), TEXT("tower") };
+		for (const TCHAR* Rid : Recipes)
+		{
+			const TSharedPtr<FJsonObject>* One = nullptr;
+			if ((*Mults)->TryGetObjectField(Rid, One) && One && One->IsValid())
+			{
+				FRecipeMult M;
+				(*One)->TryGetNumberField(TEXT("price"), M.Price);
+				(*One)->TryGetNumberField(TEXT("rent"), M.Rent);
+				R.RecipeMult.Add(FString(Rid), M);
+			}
+		}
+	}
 
 	// ROAD TYPES. Four families x four types, read by building the key from the
 	// type name rather than listing sixteen literals - the names come from

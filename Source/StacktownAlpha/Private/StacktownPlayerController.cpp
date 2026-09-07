@@ -17,6 +17,8 @@
 #include "StacktownRoad.h"
 #include "StacktownNight.h"
 #include "Kismet/GameplayStatics.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 #include "Sound/SoundBase.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -41,7 +43,7 @@ void AStacktownPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	// A Development build prints engine notices ("Preparing SoundWaves") over the board; a stranger must never see them.
-	if (GEngine) { GEngine->Exec(GetWorld(), TEXT("DisableAllScreenMessages")); }
+	GAreScreenMessagesEnabled = false;   // the console route ran before the viewport existed (frame 20:20 still showed the notice)
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -461,7 +463,7 @@ void AStacktownPlayerController::RefreshSelection()
 	if (!P->bOwned)
 	{
 		HudModel->SelectedState = TEXT("FOR SALE");
-		HudModel->Verb = TEXT("BUY"); HudModel->VerbKey = TEXT("B"); HudModel->VerbPrice = Stacktown::Price(R, P->Tier, P->Width);
+		HudModel->Verb = TEXT("BUY"); HudModel->VerbKey = TEXT("B"); HudModel->VerbPrice = Stacktown::PriceFor(R, P->Rid, P->Tier, P->Width);
 	}
 	else if (P->bFailed)
 	{
@@ -501,6 +503,7 @@ FString AStacktownPlayerController::CityPlaceAt(double X, double Y)
 		return FString::Printf(TEXT("place refused: %s -> \"%s\""), *R.Reason, *ClassifyPlaceRefusal(R.Reason));
 	}
 	Econ->SaveState();
+		if (Stacktown::FParcelState* NewLot = Econ->GetMutableState().Parcels.Find(R.Pid)) { NewLot->Rid = NextRecipe; }   // the chosen recipe: species and economy follow
 	const FString Rep = Sync->Reconcile(false);
 	CitySelect(R.Pid);
 	PlayCue(TEXT("S_Place"));
@@ -541,8 +544,8 @@ FString AStacktownPlayerController::CityCycleWidth(int32 Step)
 {
 	WidthIndex = ((WidthIndex + Step) % 5 + 5) % 5;
 	LastHoverPoint = FVector(1e9, 1e9, 0.0);
-	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("lot width %d"), (int32)CurrentLotWidth()); }
-	return FString::Printf(TEXT("lot width %d"), (int32)CurrentLotWidth());
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 width %d"), *NextRecipe, (int32)CurrentLotWidth()); }
+	return FString::Printf(TEXT("%s width %d"), *NextRecipe, (int32)CurrentLotWidth());
 }
 
 FString AStacktownPlayerController::CityReset()
@@ -551,6 +554,16 @@ FString AStacktownPlayerController::CityReset()
 	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
 	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
 	CitySelect(FString());
+	// A reset never destroys a city: the save is archived beside itself first
+	// (Saved/Stacktown/archive/citystate_<stamp>.json), so a stranger who starts over
+	// can be given their old board back by hand. Slots proper are MONDAY_DECISIONS 6.
+	if (!Econ->GetStatePath().IsEmpty() && FPaths::FileExists(Econ->GetStatePath()) && Econ->GetState().Parcels.Num() > 0)
+	{
+		const FString Archive = FPaths::GetPath(Econ->GetStatePath()) / TEXT("archive") / FString::Printf(TEXT("%s_%s.json"), *FPaths::GetBaseFilename(Econ->GetStatePath()), *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+		IFileManager::Get().MakeDirectory(*FPaths::GetPath(Archive), true);
+		IFileManager::Get().Copy(*Archive, *Econ->GetStatePath());
+		UE_LOG(LogStacktown, Log, TEXT("RESET: archived the city to %s"), *Archive);
+	}
 	Econ->ResetCity();
 	Econ->SaveState();
 	return FString::Printf(TEXT("city reset; money %.2f; %s"), Econ->GetState().Money, *Sync->Reconcile(false));
@@ -666,6 +679,14 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	{
 		// Persisted in the city (goals_reached): a reloaded city is not congratulated twice.
 		const int32 Goals = Stacktown::GoalsReached(HudModel->Score);
+		if (!bGoalsPrimed)
+		{
+			// A save written before goals_reached existed carries 0: adopt the rungs it
+			// already stands on silently, so a loaded city is never congratulated for
+			// its past (frame_arrival 20:20 showed "GOAL 2 REACHED" on load).
+			if (Goals > EconForGoals->GetState().GoalsReached) { EconForGoals->SetGoalsReached(Goals); }
+			bGoalsPrimed = true;
+		}
 		const int32 Already = EconForGoals->GetState().GoalsReached;
 		if (Goals > Already)
 		{
@@ -731,6 +752,12 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (WasInputKeyJustPressed(EKeys::L)) { UE_LOG(LogStacktown, Log, TEXT("NIGHT: %s"), *CityNight(!(Night && Night->IsNight()))); }
 	if (bRoadMode && WasInputKeyJustPressed(EKeys::T)) { UE_LOG(LogStacktown, Log, TEXT("ROAD CLASS: %s"), *CityCycleRoadClass()); }
 	if (!bRoadMode && WasInputKeyJustPressed(EKeys::P)) { UE_LOG(LogStacktown, Log, TEXT("PRESET: %s"), *CityPreset()); }
+	if (!bRoadMode && WasInputKeyJustPressed(EKeys::R)) { UE_LOG(LogStacktown, Log, TEXT("RECIPE: %s"), *CityCycleRecipe()); }
+	if (WasInputKeyJustPressed(EKeys::Home) || WasInputKeyJustPressed(EKeys::BackSpace))
+	{
+		// A stranger who has lost the board gets it back: the arrival pose, exactly.
+		if (AStacktownCameraPawn* Cam = Cast<AStacktownCameraPawn>(GetPawn())) { Cam->SetView(FVector(0.0, 0.0, 0.0), 35.0, -42.0, 21024.0); }
+	}
 	if (bRoadMode)
 	{
 		HideGhost();
@@ -820,4 +847,15 @@ FString AStacktownPlayerController::CityPreset()
 	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d lots for sale \u00b7 click one, B to buy"), Seeded.Parcels.Num()); bHintShowing = false; }
 	PlayCue(TEXT("S_Place"));
 	return FString::Printf(TEXT("preset seeded: %d lots for sale; %s"), Seeded.Parcels.Num(), *Sync->Reconcile(false));
+}
+
+FString AStacktownPlayerController::CityCycleRecipe()
+{
+	static const TCHAR* Recipes[] = { TEXT("vernacular"), TEXT("office"), TEXT("tower") };
+	int32 Index = 0;
+	for (int32 i = 0; i < 3; ++i) { if (NextRecipe == Recipes[i]) { Index = i; break; } }
+	NextRecipe = Recipes[(Index + 1) % 3];
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 width %d"), *NextRecipe, (int32)CurrentLotWidth()); }
+	PlayCue(TEXT("S_Place"));
+	return NextRecipe;
 }

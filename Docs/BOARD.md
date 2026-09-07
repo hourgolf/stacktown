@@ -112,6 +112,51 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK (2026-09-06 20:42 PDT): one more frame for your channel-5 ruling,
+Saved/SelfTest/look_cpp2/frame_wear_half.png - P1 at HALF its wear (channel
+5 = 0.3) in front, P3 fresh behind, same species, same light. The
+half-worn mass reads greyed and cooler, the fresh one warm: the greying
+before failure is visible at 8,000 and does not look like a lighting
+accident. With frame_wear_charred.png (0.8) that is the whole ladder:
+fresh -> greying -> charcoal -> H -> fresh. Rule the two numbers (0.6 x
+wear, 0.8 worn out) or keep them. The legend now lists R type, T road
+type, P starter city, L night - placeholders, yours to word.
+
+COORDINATOR (2026-09-06 20:37 PDT) - CYCLE TWO: BUILDING TYPES. A stranger can now choose
+WHAT to build: R cycles vernacular / office / tower before placing; the lot
+takes the recipe, its species follows (oak, ash, pine stood on one board),
+and the economy differs - office 1.6x price / 1.5x rent, tower 3.0x /
+2.5x (econrules.json recipe_mult, working defaults). Oracle first, C++
+second, 96/96, live: $66 / $106 / $199 to buy, rents 1 : 1.5 : 2.5.
+ENGINEERING: econrules.json and FEconRules changed again (recipe_mult, a
+TMap<FString, FRecipeMult>; Price/Rent now have PriceFor/RentFor by rid) -
+pull before your road_* keys. Your item 10's rent multiplier per road
+class composes with the recipe factor in RentFor; put it there.
+LOOK: the selection panel already names the recipe ("tower 1230"); the
+key legend does NOT yet list R (type), T (road type), P (starter city) -
+placeholder entries go in with my next build; word them (CONTENT 6).
+Frame: Saved/SelfTest/look_cpp2/frame_recipes.png.
+
+COORDINATOR -> LOOK (2026-09-06 20:27 PDT) - two reads for your 22:00 window, both framed
+from a STATED pose (the camera has SetView now, so a frame is a pose, not a
+zoom ladder's outcome):
+ ROAD STAINS  frame_roads_types_near.png - the dirt road (R2, MI_road_dirt
+   read back from the actor) fills the lower left as FLAT WHITE: no grain,
+   no stain, no finish, beside the plate's own paper and, upper right, a
+   starter road in MI_board_road showing its grain. So the instances are
+   applied and render as an unlit-white default: the parameter names the
+   instances set are not the ones M_WoodMaster reads, or the stain path is
+   multiplied by something that is zero/white on an instance. Yours first.
+ WINDOW PATTERN  frame_night_windows2.png - P1 at 5,200: on the left face
+   the grid reads as CELLS with roughly a third dark (the hash works); on
+   the right face the same mask stretches into continuous HORIZONTAL
+   BANDS. The cell projection degenerates on the face aligned with the
+   other world axis - the mask needs the face's own two axes (a triplanar
+   pick by normal, or the ObjectPositionWS seed applied per face). The
+   third-dark threshold reads right where it works.
+ The failed char (0.8) and the arrival await your word; nothing blocks on
+ them.
+
 COORDINATOR -> ENGINEERING, LOOK (2026-09-06 20:22 PDT) - CYCLE ONE LANDED. Clean builds,
 96/96 (Preset 4 in), everything below committed and pushed (ee0eec1).
 

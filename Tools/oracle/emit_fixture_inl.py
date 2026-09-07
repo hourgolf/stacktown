@@ -68,6 +68,9 @@ def main():
                       ('trade_bonus_per_win', 'TradeBonusPerWin')):
         w('inline constexpr double %s = %s;' % (name, cxx_num(r[key])))
     w('inline constexpr int32 TradeCreditsPerN = %d;' % r['trade_credits_per_n'])
+    for rid in sorted(r.get('recipe_mult', {})):
+        w('inline constexpr double RecipeMult_%s_Price = %s;' % (rid, cxx_num(r['recipe_mult'][rid]['price'])))
+        w('inline constexpr double RecipeMult_%s_Rent = %s;' % (rid, cxx_num(r['recipe_mult'][rid]['rent'])))
     w('')
     w('// ROAD TYPES (MONDAY_DECISIONS section 2), read straight out of')
     w('// econrules.json by the oracle. OracleRules() builds FEconRules::RoadTypes')

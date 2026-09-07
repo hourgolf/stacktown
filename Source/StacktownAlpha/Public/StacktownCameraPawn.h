@@ -77,6 +77,10 @@ public:
 	// ---- verbs the controller (and Python, headless) call ----
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
 	void Orbit(double DeltaYawDeg, double DeltaPitchDeg);
+	/** Instruments only: set the whole view at once (focus, yaw, pitch, distance) and snap, so a
+	 *  probe's frame is a stated pose rather than a zoom ladder's outcome. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")
+	void SetView(FVector InFocus, double InYaw, double InPitch, double InDistance);
 
 	/** Zoom by Notches (positive closes in) toward a board point. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Camera")

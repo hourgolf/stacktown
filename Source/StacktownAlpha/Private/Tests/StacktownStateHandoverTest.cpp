@@ -343,6 +343,73 @@ STACKTOWN_HANDOVER_TEST(FStacktownHandoverSessionPathCached, "Stacktown.Handover
 }
 
 // --- ParcelId is explicit, not derived ----------------------------------------------
+// --- the mirror against a SPAWNED parcel (queue item 8, the actor swap) ------
+STACKTOWN_HANDOVER_TEST(FStacktownHandoverSpawnedParcel, "Stacktown.Handover.SpawnedParcel")
+{
+	// THE ROUND TRIP THE ACTOR SWAP IS FOR. CitySync spawns an AStacktownParcel
+	// and sets ParcelId from the STATE KEY; this walks the same path the sync
+	// walks - state key -> FactsForLabel -> ApplyFacts - and checks the parcel
+	// ends up agreeing with the mirror it was built from.
+	//
+	// The identity is the part that matters. Before ParcelId the id came from
+	// the actor's label, which does not exist in a cooked build, or its name,
+	// which the engine uniquifies on spawn - so the SECOND parcel spawned as
+	// "P1" became "P1_2" and stopped matching its own entry. Two parcels are
+	// built here for exactly that reason.
+	FEconRules R = OracleRules();
+	FCityState S = SeedState(R);
+
+	FParcelState A;
+	A.Rid = TEXT("vernacular"); A.Tier = 2; A.Width = 820.0; A.bOwned = true;
+	A.Accum = 12.5;
+	FLotPlacement APlace;
+	APlace.X0 = 100.0; APlace.X1 = 920.0; APlace.Side = TEXT("north");
+	APlace.RoadId = TEXT("arterial");
+	A.Placement = APlace;
+	S.Parcels.Add(TEXT("P1"), A);
+
+	FParcelState B = A;
+	B.Tier = 0; B.bOwned = false; B.Accum = 0.0;
+	S.Parcels.Add(TEXT("P2"), B);
+
+	TStrongObjectPtr<AStacktownParcel> One(NewObject<AStacktownParcel>(GetTransientPackage()));
+	TStrongObjectPtr<AStacktownParcel> Two(NewObject<AStacktownParcel>(GetTransientPackage()));
+	// Exactly what the sync sets at spawn: the state key, and the actor's own
+	// immutable identity. Nothing else is pushed - the state's copies of RecipeId
+	// and WidthUU came from the actor in the first place.
+	One->ParcelId = TEXT("P1"); One->RecipeId = A.Rid; One->WidthUU = A.Width;
+	Two->ParcelId = TEXT("P2"); Two->RecipeId = B.Rid; Two->WidthUU = B.Width;
+
+	// The engine would have uniquified the second actor's NAME; its ParcelId is
+	// untouched by that, which is the whole point.
+	TestNotEqual(TEXT("the two actors have different ids"), One->GetParcelId(), Two->GetParcelId());
+
+	TestTrue(TEXT("first parcel applies"), One->ApplyFacts(FactsForLabel(R, S, One->GetParcelId())));
+	TestTrue(TEXT("second parcel applies"), Two->ApplyFacts(FactsForLabel(R, S, Two->GetParcelId())));
+
+	TestEqual(TEXT("P1 tier"), One->Tier, 2);
+	TestEqual(TEXT("P1 owned"), BoolStr(One->bOwned), BoolStr(true));
+	TestEqual(TEXT("P1 placed"), BoolStr(One->bPlaced), BoolStr(true));
+	TestEqual(TEXT("P1 accum"), One->Accum, 12.5, 1e-9);
+	// Price is RECOMPUTED from the tier every sync, never stored - so the two
+	// parcels, identical but for their tier, must disagree about it.
+	TestEqual(TEXT("P1 price"), One->Price, PriceFor(R, A.Rid, A.Tier, A.Width), 1e-9);
+	TestEqual(TEXT("P2 tier"), Two->Tier, 0);
+	TestEqual(TEXT("P2 owned"), BoolStr(Two->bOwned), BoolStr(false));
+	TestEqual(TEXT("P2 price"), Two->Price, PriceFor(R, B.Rid, B.Tier, B.Width), 1e-9);
+	TestNotEqual(TEXT("and the two prices differ"),
+		FString::Printf(TEXT("%.4f"), One->Price), FString::Printf(TEXT("%.4f"), Two->Price));
+
+	// A parcel whose id is NOT in the mirror changes nothing. A lot the state
+	// has not registered is not a lot whose facts are zero.
+	TStrongObjectPtr<AStacktownParcel> Ghost(NewObject<AStacktownParcel>(GetTransientPackage()));
+	Ghost->ParcelId = TEXT("P99");
+	TestFalse(TEXT("an unregistered parcel applies nothing"),
+		Ghost->ApplyFacts(FactsForLabel(R, S, Ghost->GetParcelId())));
+	TestFalse(TEXT("and is not marked synced"), Ghost->bSynced);
+	return true;
+}
+
 STACKTOWN_HANDOVER_TEST(FStacktownHandoverParcelId, "Stacktown.Handover.ParcelId")
 {
 	TStrongObjectPtr<AStacktownParcel> P(NewObject<AStacktownParcel>(GetTransientPackage()));

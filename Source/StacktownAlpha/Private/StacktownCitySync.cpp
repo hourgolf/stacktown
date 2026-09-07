@@ -1,4 +1,5 @@
 #include "StacktownCitySync.h"
+#include "StacktownParcel.h"
 #include "StacktownRuntimeSettings.h"
 #include "StacktownAlpha.h"
 #include "StacktownEconomy.h"
@@ -154,7 +155,7 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 	if (!World || !Econ) { return TEXT("reconcile: no world or economy"); }
 	if (bHideBlueprintLots) { HideBlueprintLots(); }
 	const Stacktown::FCityState& State = Econ->GetState();
-	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard(Econ->GetRules());
+	const Stacktown::FPlacementBoard Board = Stacktown::FPlacementBoard::Default(Econ->GetRules());
 	const TArray<Stacktown::FRoad> Roads = Board.AllRoads(State);
 	int32 Spawned = 0, Updated = 0, Removed = 0, Skipped = 0;
 	TSet<FString> Seen;
@@ -174,11 +175,36 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		{
 			FActorSpawnParameters Params;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			A = World->SpawnActor<AActor>(AActor::StaticClass(), FVector(Pose.X, Pose.Y, 0.0), FRotator(0.0, Pose.Yaw, 0.0), Params);
+			// AStacktownParcel, not a plain AActor (queue item 8, the actor swap
+			// STATE_HANDOVER deferred). What it buys is IDENTITY: the parcel
+			// carries its own ParcelId, so every reader that needs to know which
+			// lot an actor is - PidForActor for the click hit test, the mirror
+			// comparison in StacktownAgreement, ApplyFacts - asks the actor
+			// instead of searching a map, and a lot cannot be misidentified
+			// because a spawn order changed.
+			//
+			// ParcelId IS SET AT SPAWN, from the state key, and this is the whole
+			// reason item 3 made it a UPROPERTY: an actor LABEL does not exist in
+			// a cooked build, and a NAME is uniquified by the engine, so the
+			// second parcel spawned as "P1" quietly becomes "P1_2" and stops
+			// matching its own entry in the city state.
+			AStacktownParcel* Parcel = World->SpawnActor<AStacktownParcel>(
+				AStacktownParcel::StaticClass(), FVector(Pose.X, Pose.Y, 0.0),
+				FRotator(0.0, Pose.Yaw, 0.0), Params);
+			A = Parcel;
 			if (!A) { continue; }
-			// A plain root carries the pose; the visual hangs off it with its OWN
-			// local offset. Found live 2026-09-06: with the visual as the root, its
-			// mesh offset overwrote the actor's location and every lot sat at the origin.
+			Parcel->ParcelId = Pid;
+			// The actor's own immutable identity, set once by the builder and
+			// never written back - the sync must not push these, or the state and
+			// the actor start arguing about who a parcel is.
+			Parcel->RecipeId = P.Rid;
+			Parcel->WidthUU = P.Width;
+			// UNCHANGED FROM THE PLAIN ACTOR: a plain root carries the pose and
+			// the visual hangs off it with its OWN local offset. Found live
+			// 2026-09-06 - with the visual as the root, its mesh offset overwrote
+			// the actor's location and every lot sat at the origin. The parcel
+			// class does not create a root of its own, so this is still the one
+			// place the root comes from.
 			USceneComponent* Root = NewObject<USceneComponent>(A, TEXT("Root"));
 			A->SetRootComponent(Root);
 			Root->RegisterComponent();
@@ -212,6 +238,14 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			const double WearLimit = Econ->GetRules().WearTicksPerTier * (double)(P.Tier + 1);
 			const float Wear01 = WearLimit > 0.0 ? (float)(P.Wear / WearLimit) : 0.f;
 			V->ApplyState(P.bOwned, static_cast<float>(Stacktown::AgeFraction(P.AgeTicks)), Wear01, P.bFailed);
+		}
+		// THE PARCEL'S OWN FACTS (queue item 8). ApplyFacts is the same function
+		// a hand-placed BP_Parcel goes through, fed from the same mirror, so a
+		// spawned lot and a placed one answer the agreement instrument
+		// identically. It returns whether anything changed and writes only then.
+		if (AStacktownParcel* Parcel = Cast<AStacktownParcel>(A))
+		{
+			Parcel->ApplyFacts(Stacktown::FactsForLabel(Econ->GetRules(), State, Pid));
 		}
 	}
 	for (auto It = Lots.CreateIterator(); It; ++It)
@@ -279,6 +313,16 @@ void UStacktownCitySync::Deinitialize()
 
 FString UStacktownCitySync::PidForActor(const AActor* Actor) const
 {
+	// THE ACTOR'S OWN ID FIRST (queue item 8). A spawned parcel knows which lot
+	// it is, so a click on the mass does not depend on this subsystem's map
+	// being in step with the world - which it is not, for anything spawned by
+	// something else, and which is exactly the case the map scan below is
+	// still here for (hand-placed actors, and anything a future spawner adds).
+	if (const AStacktownParcel* Parcel = Cast<AStacktownParcel>(Actor))
+	{
+		const FString Id = Parcel->GetParcelId();
+		if (!Id.IsEmpty()) { return Id; }
+	}
 	for (const auto& Pair : Lots)
 	{
 		if (Pair.Value.Get() == Actor) { return Pair.Key; }

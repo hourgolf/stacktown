@@ -5,18 +5,12 @@
 
 namespace Stacktown
 {
-	/** TEMPORARY (board item 5): the placement board with its two built-in roads
-	 *  exactly as the oracle fixture declares them, until the seat's runtime
-	 *  factory lands. Coordinator-owned; delete when FPlacementBoard::Default() exists. */
-	STACKTOWNALPHA_API FPlacementBoard TemporaryBoard();
-
-	/** The same board carrying the LIVE ruleset, for the road-type mechanics:
-	 *  costs, widths, frontage and the rent multiplier are all econrules.json's.
-	 *  FPlacementBoard ships the same table as its default, so the no-argument
-	 *  form measures the city correctly - this form is what makes an edit to
-	 *  econrules.json take effect without a recompile, which is the whole point
-	 *  of the numbers being data. */
-	STACKTOWNALPHA_API FPlacementBoard TemporaryBoard(const FEconRules& Rules);
+	// Stacktown::TemporaryBoard lived here until 2026-09-06 (queue item 9). It
+	// was a one-line shim forwarding to FPlacementBoard::Default() so the
+	// coordinator's call sites could pick up the pinned spans without this seat
+	// editing their files; every one of them now calls Default() - or its
+	// live-ruleset overload - directly, so the shim is gone rather than left as
+	// a second name for the same board.
 
 	/** The one copy of econrules.json: Content/Stacktown/Rules, staged as UFS so a packaged app carries it. */
 	STACKTOWNALPHA_API FString RulesFilePath();

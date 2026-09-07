@@ -57,6 +57,13 @@ FPlacementBoard FPlacementBoard::Default()
 	return Board;
 }
 
+FPlacementBoard FPlacementBoard::Default(const FEconRules& Rules)
+{
+	FPlacementBoard Board = Default();
+	Board.Econ = Rules;
+	return Board;
+}
+
 FCityState SeedPresetState(const FEconRules& R, const FPlacementBoard& Board)
 {
 	FCityState S = SeedState(R);

@@ -160,6 +160,14 @@ struct STACKTOWNALPHA_API FPlacementBoard
 	 *  board the ported refusal logic was tested against. */
 	static FPlacementBoard Default();
 
+	/** The same board carrying the LIVE ruleset. Costs, widths, frontage and the
+	 *  rent multiplier are all econrules.json's, so a caller holding the rules
+	 *  passes them and an edit to that file takes effect without a recompile -
+	 *  which is the whole point of the numbers being data.
+	 *
+	 *  Replaces Stacktown::TemporaryBoard, deleted 2026-09-06 (queue item 9). */
+	static FPlacementBoard Default(const FEconRules& Rules);
+
 	/** Every road a click should consider: the two built-ins PLUS whatever the
 	 *  player has drawn. A FRESH array every call, never cached - roads can be
 	 *  drawn between calls and this struct holds no state of its own to go

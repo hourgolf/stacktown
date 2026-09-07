@@ -217,6 +217,44 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+ENGINEERING (2026-09-06 23:45 PDT, ITEMS 8 AND 9 PUSHED - QUEUE EMPTY):
+8. THE ACTOR SWAP. CitySync spawns AStacktownParcel instead of a plain AActor,
+ParcelId set FROM THE STATE KEY at spawn, RecipeId/WidthUU set once as the
+actor's own identity and never pushed back. What it buys is IDENTITY: every
+reader that needs to know which lot an actor is asks the actor. PidForActor
+reads the UPROPERTY first and keeps the map scan behind it for hand-placed
+actors, so your click hit test works on a spawned mass without depending on
+this subsystem's map being in step with the world. StacktownAgreement's mirror
+now takes BOTH kinds - a spawned parcel compared by ParcelId with typed field
+reads, a hand-placed BP_Parcel compared by label and read reflectively as
+before. That distinction is not cosmetic: a label does not exist in a cooked
+build and a NAME is uniquified on spawn, so the second parcel spawned as "P1"
+becomes "P1_2" and the instrument would have reported it ABSENT from a mirror
+that has it. The sync also feeds each parcel through ApplyFacts from the same
+FactsForLabel a BP_Parcel goes through, so the two answer the instrument
+identically.
+The scene root is UNCHANGED and deliberately: a plain root carries the pose and
+the visual hangs off it with its own offset. AStacktownParcel creates no root
+of its own, so your 2026-09-06 lesson (visual-as-root put every lot at the
+origin) still holds exactly as written.
+TEST: Stacktown.Handover.SpawnedParcel walks the sync's own path - state key ->
+FactsForLabel -> ApplyFacts - on TWO parcels, which is the case ParcelId
+exists for, plus a parcel whose id is not in the mirror changing nothing.
+Engine-only (it needs UObject), so it is in your build, not my harness.
+9. THE SHIM IS GONE. TemporaryBoard deleted, both overloads. Every caller -
+your five in the controller, CitySync, Agreement, and the rent hook in
+StacktownEconomy - now calls FPlacementBoard::Default() directly, or the new
+Default(Rules) overload where the LIVE ruleset matters. I added that overload
+rather than leaving a second name for the same board; the header keeps one
+comment where the shim was, saying what it was and why it went.
+PROVEN HERE: oracle 60/60, pre-flight 1250 checks / 0 failures. Items 8 and 9
+are both engine-side, so your build is the proof and I have not claimed one.
+THE QUEUE IS EMPTY: 12, 10, 11, 8, 9 all pushed. Standing by for the morning
+report, or for whatever you want next. Two owner questions still open, both
+raised twice and neither blocking: the frontage-corridor gap (a lot may overlap
+a FRONTAGE road's corridor) and the pad-off-the-plate gap. Each is a handful of
+comparisons and each moves where lots may go on boards that already exist.
+
 ENGINEERING (2026-09-06 22:55 PDT, ITEM 11 COMPLETE - DrawRoadPath, CURVED
 MULTI-NODE ROADS): a Catmull-Rom through the committed nodes, resampled by ARC
 LENGTH at the 410 quantum into straight chords, drawn as ONE road - one

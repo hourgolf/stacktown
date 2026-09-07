@@ -1,4 +1,5 @@
 #include "StacktownAgreement.h"
+#include "StacktownParcel.h"
 #include "StacktownAlpha.h"
 #include "StacktownEconomy.h"
 #include "StacktownStateHandover.h"
@@ -83,13 +84,29 @@ FString UStacktownAgreementLibrary::CompareMirrorWithWorld(const UObject* WorldC
 	for (TActorIterator<AActor> It(World); It; ++It)
 	{
 		AActor* A = *It;
-		if (!A->GetClass()->GetName().StartsWith(TEXT("BP_Parcel")))
+		// BOTH KINDS (queue item 8, the actor swap). A spawned AStacktownParcel
+		// carries its own ParcelId and typed facts; a hand-placed BP_Parcel is
+		// read reflectively off its label, as before. Comparing by ParcelId
+		// rather than by label is the point: a label does not exist in a cooked
+		// build at all, and a NAME is uniquified on spawn, so the second parcel
+		// spawned as "P1" quietly becomes "P1_2" and this instrument would
+		// report it ABSENT from a mirror that has it.
+		AStacktownParcel* Parcel = Cast<AStacktownParcel>(A);
+		if (Parcel == nullptr && !A->GetClass()->GetName().StartsWith(TEXT("BP_Parcel")))
 		{
 			continue;
 		}
-		const FString Label = A->GetActorNameOrLabel();
+		const FString Label = Parcel ? Parcel->GetParcelId() : A->GetActorNameOrLabel();
 		double Width = 0.0;
-		if (!ReadNumber(A, TEXT("WidthUU"), Width) || Width <= 0.0 || Stacktown::IsPoolLabel(Label))
+		if (Parcel)
+		{
+			Width = Parcel->WidthUU;
+		}
+		else if (!ReadNumber(A, TEXT("WidthUU"), Width))
+		{
+			continue;
+		}
+		if (Width <= 0.0 || Label.IsEmpty() || Stacktown::IsPoolLabel(Label))
 		{
 			continue;
 		}
@@ -102,7 +119,18 @@ FString UStacktownAgreementLibrary::CompareMirrorWithWorld(const UObject* WorldC
 			continue;
 		}
 		FString Rid; double Tier = 0.0, Price = 0.0; bool bOwned = false;
-		ReadString(A, TEXT("RecipeId"), Rid); ReadNumber(A, TEXT("Tier"), Tier); ReadNumber(A, TEXT("Price"), Price); ReadBool(A, TEXT("Owned"), bOwned);
+		if (Parcel)
+		{
+			// Typed, not reflected: the parcel's fields ARE the facts, and the
+			// reflected read of a bool UPROPERTY named bOwned does not answer to
+			// "Owned" anyway - the name the Blueprint path uses.
+			Rid = Parcel->RecipeId; Tier = Parcel->Tier;
+			Price = Parcel->Price;  bOwned = Parcel->bOwned;
+		}
+		else
+		{
+			ReadString(A, TEXT("RecipeId"), Rid); ReadNumber(A, TEXT("Tier"), Tier); ReadNumber(A, TEXT("Price"), Price); ReadBool(A, TEXT("Owned"), bOwned);
+		}
 		TArray<FString> Diffs;
 		if (!Rid.Equals(F.Rid)) { Diffs.Add(FString::Printf(TEXT("rid bp=%s mirror=%s"), *Rid, *F.Rid)); }
 		if (FMath::Abs(Width - F.Width) > 0.5) { Diffs.Add(FString::Printf(TEXT("width bp=%.0f mirror=%.0f"), Width, F.Width)); }
@@ -144,7 +172,7 @@ FString UStacktownAgreementLibrary::SpawnLotVisualFor(const UObject* WorldContex
 	{
 		return FString::Printf(TEXT("%s is a pinned lot with no placement; its transform is the builder's"), *Pid);
 	}
-	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard();
+	const Stacktown::FPlacementBoard Board = Stacktown::FPlacementBoard::Default();
 	Stacktown::LotFrame::FPose Pose;
 	if (!Stacktown::LotFrame::Pose(P->Placement.GetValue(), Board.AllRoads(State), Pose))
 	{

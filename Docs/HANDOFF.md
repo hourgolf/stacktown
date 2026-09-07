@@ -210,6 +210,24 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 23:02 PDT - PACKAGED APP FIRST LAUNCH, diagnosed: with -nullrhi the cooked app
+  reaches the world in 4 s (lock, OWNS, HUD built, Engine initialized), so
+  the multi-minute black window is Metal pipeline compilation at rendering
+  init, not game logic. A clean cook did not change it; native Metal
+  libraries are on (five created) and did not remove it. Measuring one
+  full first launch now to learn the cost and warm this Mac's cache; a
+  second launch is timed after. The 21:31 package opened in 10 s, so the
+  cost is tied to the shader set changing under it.
+
+- 2026-09-06 22:46 PDT - ENGINEERING item 11 stage two (65aafa5) built and proven live
+  (112/112; RoadFrame the function renamed RoadFrameOf - a collision with
+  the road transform namespace). PACKAGING FINDING: the 22:17 package ran
+  a full core for 10+ minutes before its first frame (Metal compiling the
+  whole shader set after the material changes; log silent after the font
+  server). Fix in Config/DefaultGame.ini: bShareMaterialShaderCode +
+  bSharedMaterialNativeLibraries (native Metal libraries at cook); the
+  package is rebuilding with them. Uncommitted config until proven.
+
 - 2026-09-06 22:19 PDT - PACKAGED (universal) from 693477c+: the whole night through cycle
   twelve - the loop, types, road mechanics and rent, stains that read,
   window bays per face, the char ramp, scored for-sale outlines, words,

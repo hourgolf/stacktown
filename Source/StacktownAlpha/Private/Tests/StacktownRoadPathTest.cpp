@@ -138,7 +138,7 @@ STACKTOWN_PATH_TEST(FStacktownRoadPathIsOneRoad, "Stacktown.Roads.PathIsOneRoad"
 	TestEqual(TEXT("lot road"), LotRoadId(CR.Lot), FString(T58_Lot.RoadId));
 	const FRoad* Own = FindRoad(Roads, LotRoadId(CR.Lot));
 	if (!TestNotNull(TEXT("own chord"), Own)) { return false; }
-	const FRoadFrame F = RoadFrame(*Own);
+	const FRoadFrame F = RoadFrameOf(*Own);
 	TestEqual(TEXT("chord length"), F.Length, T58_ChordLength, 1e-9);
 	TestTrue(TEXT("the chord is shorter than a lot"), F.Length < Board.Rules.V0Width);
 	double Lo = 0.0, Hi = 0.0;

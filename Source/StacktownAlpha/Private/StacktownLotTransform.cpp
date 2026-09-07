@@ -33,7 +33,7 @@ namespace LotFrame
 		// 90; minus -> (Cx + PadCentre, X1) yaw -90. The yaw is normalized
 		// into (-180, 180] so the minus-side vertical reads -90 rather than
 		// the 270 that is the same rotation and a different number.
-		const FRoadFrame F = RoadFrame(*Road);
+		const FRoadFrame F = RoadFrameOf(*Road);
 		const bool bPlus = L.Side == Road->SidePlus;
 		const double Sign = bPlus ? 1.0 : -1.0;
 		const double SAnchor = bPlus ? L.X0 : L.X1;

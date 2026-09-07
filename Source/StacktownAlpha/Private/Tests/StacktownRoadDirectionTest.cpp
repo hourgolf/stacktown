@@ -92,14 +92,14 @@ STACKTOWN_DIR_TEST(FStacktownRoadQuadsReduce, "Stacktown.Roads.QuadsReduceToRect
 	// frontage line.
 	const FPlacementBoard Board = OracleBoard();
 	const FCityState S = DirSeed();
-	const TArray<FRoad> Roads = Board.AllRoads(S);
+	const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
 	for (int32 i = 0; i < T50_PairsNum; ++i)
 	{
 		const FQuadPair& C = T50_Pairs[i];
 		const FLotPlacement A = LotOf(C.A);
 		const FLotPlacement B = LotOf(C.B);
-		const FRoad* RA = FindRoad(Roads, LotRoadId(A));
-		const FRoad* RB = FindRoad(Roads, LotRoadId(B));
+		const FRoad* RA = FindRoad(RoadsLocal, LotRoadId(A));
+		const FRoad* RB = FindRoad(RoadsLocal, LotRoadId(B));
 		if (!TestNotNull(TEXT("road a"), RA) || !TestNotNull(TEXT("road b"), RB)) { continue; }
 		const bool bQuads = QuadsOverlap(LotQuad(Board.Rules, Board.Econ, *RA, A),
 			LotQuad(Board.Rules, Board.Econ, *RB, B));
@@ -121,13 +121,13 @@ STACKTOWN_DIR_TEST(FStacktownRoadProjectionIdentity, "Stacktown.Roads.Projection
 	// no lot already in the owner's save changes meaning.
 	const FPlacementBoard Board = OracleBoard();
 	const FCityState S = DirSeed();
-	const TArray<FRoad> Roads = Board.AllRoads(S);
+	const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
 	for (int32 i = 0; i < T51_ProjectionNum; ++i)
 	{
 		const FProjCase& C = T51_Projection[i];
-		const FRoad* Road = FindRoad(Roads, FString(C.Road));
+		const FRoad* Road = FindRoad(RoadsLocal, FString(C.Road));
 		if (!TestNotNull(TEXT("road"), Road)) { continue; }
-		const FRoadFrame F = RoadFrame(*Road);
+		const FRoadFrame F = RoadFrameOf(*Road);
 		TestEqual(TEXT("s0"), F.S0, C.S0, 1e-9);
 		TestEqual(TEXT("length"), F.Length, C.Length, 1e-9);
 		TestEqual(TEXT("ux"), F.Ux, C.Ux, 1e-9);
@@ -172,8 +172,8 @@ STACKTOWN_DIR_TEST(FStacktownRoadDiagonalLot, "Stacktown.Roads.DiagonalLot")
 	// The pad is a ROTATED rectangle. Before this, ResolveClick recovered a
 	// world position as start[axis] + along and could not have produced these
 	// corners at all.
-	const TArray<FRoad> Roads = Board.AllRoads(S);
-	const FRoad* Own = FindRoad(Roads, LotRoadId(Lot));
+	const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+	const FRoad* Own = FindRoad(RoadsLocal, LotRoadId(Lot));
 	if (!TestNotNull(TEXT("own road"), Own)) { return false; }
 	const FQuad Q = LotQuad(Board.Rules, Board.Econ, *Own, Lot);
 	for (int32 k = 0; k < 4; ++k)
@@ -188,8 +188,8 @@ STACKTOWN_DIR_TEST(FStacktownRoadDiagonalLot, "Stacktown.Roads.DiagonalLot")
 	// fixture rather than to a second hand-computed answer. Without this a
 	// diagonal lot would resolve correctly and still stand in the wrong place.
 	LotFrame::FPose Pose;
-	TestTrue(TEXT("pose resolves"), LotFrame::Pose(Lot, Roads, Pose,
-		RoadHalf(Board.Rules, Board.Econ, *Own)));
+	TestTrue(TEXT("pose resolves"), LotFrame::Pose(Lot, RoadsLocal, Pose,
+		Stacktown::RoadHalf(Board.Rules, Board.Econ, *Own)));
 	TestEqual(TEXT("pose x"), Pose.X, (T52_Quad.X[0] + T52_Quad.X[3]) * 0.5, 0.01);
 	TestEqual(TEXT("pose y"), Pose.Y, (T52_Quad.Y[0] + T52_Quad.Y[3]) * 0.5, 0.01);
 	TestEqual(TEXT("pose yaw is the road's own direction"), Pose.Yaw,
@@ -232,7 +232,7 @@ STACKTOWN_DIR_TEST(FStacktownRoadSideNames, "Stacktown.Roads.SideNames")
 		TestEqual(*FString::Printf(TEXT("%s: side plus"), Row.Label), Road.SidePlus, FString(Row.Plus));
 		TestEqual(*FString::Printf(TEXT("%s: side minus"), Row.Label), Road.SideMinus, FString(Row.Minus));
 		TestEqual(TEXT("dominant axis"), BoolStr(Road.bAxisX), BoolStr(Row.bAxisX));
-		const FRoadFrame F = RoadFrame(Road);
+		const FRoadFrame F = RoadFrameOf(Road);
 		TestEqual(TEXT("normal x"), F.Nx, Row.Nx, 1e-6);
 		TestEqual(TEXT("normal y"), F.Ny, Row.Ny, 1e-6);
 	}
@@ -272,8 +272,8 @@ STACKTOWN_DIR_TEST(FStacktownRoadScansComparePads, "Stacktown.Roads.ScansCompare
 		{
 			const FLotPlacement& A = S.Parcels[FString(TEXT("P1"))].Placement.GetValue();
 			const FLotPlacement& B = S.Parcels[FString(TEXT("P2"))].Placement.GetValue();
-			const TArray<FRoad> Roads = Board.AllRoads(S);
-			const FRoad* Rd = FindRoad(Roads, LotRoadId(A));
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(A));
 			if (TestNotNull(TEXT("road"), Rd))
 			{
 				const FQuad QA = LotQuad(Board.Rules, Board.Econ, *Rd, A);
@@ -298,8 +298,8 @@ STACKTOWN_DIR_TEST(FStacktownRoadScansComparePads, "Stacktown.Roads.ScansCompare
 		if (PA.bOk && DA.bOk)
 		{
 			const FLotPlacement& Lot = S.Parcels[PA.Pid].Placement.GetValue();
-			const TArray<FRoad> Roads = Board.AllRoads(S);
-			const FRoad* Rd = FindRoad(Roads, LotRoadId(Lot));
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(Lot));
 			if (TestNotNull(TEXT("road"), Rd))
 			{
 				const FQuad QR = RoadQuad(Board.Rules, Board.Econ,
@@ -353,8 +353,8 @@ STACKTOWN_DIR_TEST(FStacktownRoadScansComparePads, "Stacktown.Roads.ScansCompare
 		if (CR.bOk && DH.bOk)
 		{
 			TestEqual(TEXT("x0"), CR.Lot.X0, T55_LvH_Lot.X0, 1e-9);
-			const TArray<FRoad> Roads = Board.AllRoads(S);
-			const FRoad* Rd = FindRoad(Roads, LotRoadId(CR.Lot));
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(CR.Lot));
 			if (TestNotNull(TEXT("road"), Rd))
 			{
 				const FQuad QL = LotQuad(Board.Rules, Board.Econ, *Rd, CR.Lot);

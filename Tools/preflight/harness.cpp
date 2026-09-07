@@ -1361,7 +1361,7 @@ int main()
 			{
 				const FProjCase& C = T51_Projection[i];
 				const FRoad Road = RoadOf(S, FString(C.Road));
-				const FRoadFrame F = RoadFrame(Road);
+				const FRoadFrame F = RoadFrameOf(Road);
 				CheckNear("s0", F.S0, C.S0, Tol);
 				CheckNear("length", F.Length, C.Length, Tol);
 				CheckNear("ux", F.Ux, C.Ux, Tol);
@@ -1458,7 +1458,7 @@ int main()
 				CheckStr("side plus", Road.SidePlus, FString(Row.Plus));
 				CheckStr("side minus", Road.SideMinus, FString(Row.Minus));
 				CheckBool("dominant axis", Road.bAxisX, Row.bAxisX);
-				const FRoadFrame F = RoadFrame(Road);
+				const FRoadFrame F = RoadFrameOf(Road);
 				CheckNear("normal x", F.Nx, Row.Nx, 1e-6);
 				CheckNear("normal y", F.Ny, Row.Ny, 1e-6);
 			}
@@ -1660,7 +1660,7 @@ int main()
 				CheckBool("own chord", Own != nullptr, true);
 				if (Own != nullptr)
 				{
-					const FRoadFrame F = RoadFrame(*Own);
+					const FRoadFrame F = RoadFrameOf(*Own);
 					CheckNear("the chord is shorter than a lot", F.Length, T58_ChordLength, Tol);
 					CheckBool("shorter than V0Width", F.Length < Board.Rules.V0Width, true);
 					double Lo = 0.0, Hi = 0.0;

@@ -290,7 +290,7 @@ STACKTOWNALPHA_API bool RectsOverlap(const FLotRect& A, const FLotRect& B);
 // ---- ANY DIRECTION (item 11, 2026-09-06) ---------------------------------
 
 /** The road's own frame. See FRoadFrame for why S0 is the interesting part. */
-STACKTOWNALPHA_API FRoadFrame RoadFrame(const FRoad& Road);
+STACKTOWNALPHA_API FRoadFrame RoadFrameOf(const FRoad& Road);
 
 /** The world point at projection `S` along the road, `Offset` off its
  *  centreline on the +normal side. */
@@ -384,7 +384,7 @@ STACKTOWNALPHA_API double RoadHalfForType(const FPlacementRules& R, const FEconR
 	const FString& WidthClass);
 
 /** The full corridor a road occupies on the board - twice its half. What the
- *  road MESH is scaled across, so a highway looks like a highway; RoadFrame's
+ *  road MESH is scaled across, so a highway looks like a highway; RoadFrameOf's
  *  own constant is this number for an avenue. */
 STACKTOWNALPHA_API double RoadCorridor(const FPlacementRules& R, const FEconRules& E,
 	const FString& WidthClass);

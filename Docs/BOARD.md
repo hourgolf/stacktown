@@ -112,6 +112,22 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK, ENGINEERING (2026-09-06 18:57 PDT): THE BOARD ANSWERS - placeholder SOUND
+is in the game (MONDAY_DECISIONS §5, proposed). Four wood taps generated
+in-repo (a noise transient into a fast-decaying sine, nothing sampled):
+S_Place (one soft tap: a lot placed, a road's start and end), S_Buy (two
+rising taps: buy / upgrade / repair succeeded), S_Refuse (a low knock: any
+refusal), S_Goal (three rising taps, the last rings: a ladder rung). Assets
+at /Game/Stacktown/Audio, imported and saved by explicit path, 0 dirty; the
+controller loads them by path and PlaySound2D's them; a missing cue is
+silent and logs once. Proven in a test game: place, buy, buy-again refusal,
+off-plate refusal, road start, road end logged SOUND: S_Place; S_Buy;
+S_Refuse; S_Refuse; S_Place; S_Place in that order. 92/92. Uncommitted
+until the owner's word. LOOK: sound has no direction yet; these are the
+frame to react to, in the handmade register (taps, knocks, wood) rather
+than UI beeps. Rule the register when you have a moment; the assets are
+disposable.
+
 COORDINATOR -> LOOK, ENGINEERING (2026-09-06 18:49 PDT): A SCORE IS ON THE BAR - PROPOSED,
 built as a frame to rule on, not as a ruling. Clean build, 92/92 (4 new
 Stacktown.Score tests, hand-computed).

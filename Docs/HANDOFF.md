@@ -210,6 +210,14 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 18:57 PDT - PLACEHOLDER SOUND (proposed, MONDAY_DECISIONS §5): four generated
+  wood taps at /Game/Stacktown/Audio (S_Place, S_Buy, S_Refuse, S_Goal),
+  played by AStacktownPlayerController::PlayCue on place, verb ok, every
+  refusal, road start/end and a goal rung; the audio folder added to the
+  always-cook list. 92/92; every cue logged in a test game in order.
+  UNCOMMITTED (owner's word): StacktownPlayerController.h/.cpp, the four
+  .uasset files, Config/DefaultGame.ini. Editor relaunched 18:56.
+
 - 2026-09-06 18:49 PDT - THE SCORE, PROPOSED, ON THE BAR: Stacktown::Score (money + owned
   lots' price at tier + $5/100 uu road - $50/failed lot), GoalsReached over
   the 1k/5k/20k/100k ladder, 4 tests; the HUD shows "SCORE n" after DEMAND;

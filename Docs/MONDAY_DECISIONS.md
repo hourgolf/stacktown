@@ -123,3 +123,12 @@ chase a number, and hear the board answer.
   an empty board"; (b) leave it as it is and let the hint carry it. (a) puts
   wood in the first frame; (b) keeps the empty board as the default start.
   Your call; either is a small change.
+- DIAGONAL ROADS AND THE PLATE'S EDGE. With "a pad may not leave the plate"
+  built (engineering, 07:15), a 45-degree road cannot carry lots on BOTH sides
+  anywhere on this board - measured by sweep, not argued: a 45-degree pad
+  reaches about 2,440 uu each way and the arterial's corridor leaves about
+  3,100 either side. Two remedies, neither built: (a) a TOLERANCE - a pad may
+  overhang the playable edge by some margin, since the plate mesh has an apron
+  beyond it; (b) a BIGGER PLATE. Or leave it: diagonals then carry lots on one
+  side. Your pick. (The same rule is being extended to roads: a corridor may
+  not leave the plate either - my word, same shape.)

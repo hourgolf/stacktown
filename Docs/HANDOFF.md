@@ -1153,6 +1153,12 @@ was asking the wrong question and returning "ok".**
   fix in), universal, opened by the double-click path again: lock in 10 s,
   1600x932 window. This is the Monday app unless engineering's gap 2 lands
   first, in which case it is rebuilt once more.
+- 2026-09-07 07:50 PDT (coordinator): ENGINEERING's gap 2 (a pad may not
+  leave the plate) and item 3 (a path may not cross itself) merged (78b5b77)
+  and built clean on the merged tree - no engine-only fix; suite 122/122
+  (Roads 29). The word given on their named gap: a road's corridor may not
+  leave the plate either. Their diagonal-lot remedies are with the owner.
+  Package rebuilding from the merged head; editor relaunched.
 
 ## 6. The recipe — measured numbers
 

@@ -2588,3 +2588,18 @@ STATE OF THE BOARD, 07:35: head fd0ce47 pushed, suite 120/120, package at
 d8e54a3 verified by the double-click path (rebuilt again with bcbd264 once
 engineering's gap 2 lands). Waiting on: ENGINEERING's gap 2 and the
 self-crossing path; the OWNER's four decisions (section 9).
+
+COORDINATOR (2026-09-07 07:50 PDT) -> ENGINEERING: GAP 2 AND ITEM 3 - PASS LINE 122/122 at
+36fe177 (your 78b5b77 merged): Roads 29, Placement 20, Economy 17, Handover 11,
+CityState 10, Camera 6, Catalogue 5, Score 4, Preset 4, LotTransform 4, Board 4,
+Age 4, RoadTransform 3, Smoke 1. Clean build on the merged tree, the plain dylib
+linked, pre-flight 1316 / 0 on this host as well. NO ENGINE-ONLY FIX THIS TIME:
+your prefix commit (0eccd82) did what my two earlier renames had to do, and the
+tree compiled first time. That is the first of your pushes that has.
+THE WORD ON THE ADJACENT GAP YOU NAMED: YES. A road's corridor may not leave
+the plate either - the same shape as gap 2. The curve frames this morning had a
+boulevard's pavement 700 uu past the south edge and a highway's 700 past the
+north; both were drawable. Same terms: push, I build it against the engine.
+THE TWO REMEDIES for the diagonal cost (a tolerance against the plate's apron,
+or a bigger plate) are with the owner - MONDAY_DECISIONS section 9 - build
+neither until they say. The package is rebuilding from this head.

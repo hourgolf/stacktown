@@ -80,13 +80,20 @@ bool UStacktownCitySync::BeginOwning(FString& OutWhy)
 	// Phase B, step 1: the C++ owner writes under Saved/Stacktown, never under
 	// Content/Python; the Python-written file is copied across ONCE, when no
 	// owned file exists yet (the migration; ledgered by the log line).
-	const FString Owned = FPaths::ProjectSavedDir() / TEXT("Stacktown") / FPaths::GetCleanFilename(SessionPath);
-	IFileManager::Get().MakeDirectory(*FPaths::GetPath(Owned), true);
-	if (!FPaths::FileExists(Owned) && FPaths::FileExists(SessionPath))
+	OwnedBase = FPaths::ProjectSavedDir() / TEXT("Stacktown") / FPaths::GetCleanFilename(SessionPath);
+	IFileManager::Get().MakeDirectory(*FPaths::GetPath(OwnedBase), true);
+	if (!FPaths::FileExists(OwnedBase) && FPaths::FileExists(SessionPath))
 	{
-		const bool bCopied = IFileManager::Get().Copy(*Owned, *SessionPath) == COPY_OK;
-		UE_LOG(LogStacktown, Log, TEXT("CitySync: migrated %s -> %s (%s)"), *SessionPath, *Owned, bCopied ? TEXT("copied") : TEXT("COPY FAILED"));
+		const bool bCopied = IFileManager::Get().Copy(*OwnedBase, *SessionPath) == COPY_OK;
+		UE_LOG(LogStacktown, Log, TEXT("CitySync: migrated %s -> %s (%s)"), *SessionPath, *OwnedBase, bCopied ? TEXT("copied") : TEXT("COPY FAILED"));
 	}
+	// SAVE SLOTS: the slot opened last time is remembered beside the saves; the
+	// migrated file above is slot 1, so nothing written before slots moves.
+	{
+		FString SlotText;
+		Slot = FFileHelper::LoadFileToString(SlotText, *SlotFilePath()) ? Stacktown::ParseSlot(SlotText) : 1;
+	}
+	const FString Owned = Stacktown::SlotStatePath(OwnedBase, Slot);
 	Econ->SetStatePath(Owned);
 	if (!Econ->LoadState(Err)) { OutWhy = Err; return false; }
 	// The standalone lock the Python driver used to write at registration: a
@@ -307,6 +314,33 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		}
 	}
 	return FString::Printf(TEXT("reconcile: %d lots standing (%d spawned, %d updated, %d removed, %d without a pose), %d roads (%d spawned, %d removed), owner=%s"), Lots.Num(), Spawned, Updated, Removed, Skipped, RoadActors.Num(), RoadsSpawned, RoadsRemoved, bOwnsCity ? TEXT("C++") : TEXT("Python"));
+}
+
+FString UStacktownCitySync::SlotFilePath() const
+{
+	return FPaths::GetPath(OwnedBase) / TEXT("slot.txt");
+}
+
+bool UStacktownCitySync::SwitchSlot(int32 NewSlot, FString& OutReport)
+{
+	UStacktownEconomy* Econ = Economy();
+	if (!bOwnsCity || !Econ || OwnedBase.IsEmpty()) { OutReport = TEXT("the C++ port is not driving this city"); return false; }
+	NewSlot = FMath::Clamp(NewSlot, 1, Stacktown::SlotCount);
+	if (NewSlot == Slot) { OutReport = FString::Printf(TEXT("slot %d is already open"), Slot); return false; }
+	// The city being left is written first, so a switch can never lose it.
+	Econ->SaveState();
+	Slot = NewSlot;
+	FFileHelper::SaveStringToFile(FString::FromInt(Slot), *SlotFilePath());
+	Econ->SetStatePath(Stacktown::SlotStatePath(OwnedBase, Slot));
+	const bool bExisted = FPaths::FileExists(Econ->GetStatePath());
+	FString Err;
+	if (!Econ->LoadState(Err)) { OutReport = Err; return false; }
+	if (!bExisted) { Econ->SaveState(); }
+	const FString Rep = Reconcile(false);
+	OutReport = FString::Printf(TEXT("slot %d %s: %d lots; %s"), Slot,
+		bExisted ? TEXT("opened") : TEXT("is a fresh board"), Econ->GetState().Parcels.Num(), *Rep);
+	UE_LOG(LogStacktown, Log, TEXT("CitySync: %s"), *OutReport);
+	return true;
 }
 
 void UStacktownCitySync::Deinitialize()

@@ -69,6 +69,10 @@ public:
 	 *  as for-sale lots at their pinned poses (the engineering seat's SeedPresetState). */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityPreset();
+	/** SAVE SLOTS (MONDAY_DECISIONS 6): open slot 1-3; the city being left is saved
+	 *  first, a slot never written is a fresh board. Keys 1, 2, 3 outside road mode. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CitySlot(int32 Slot);
 	UFUNCTION(BlueprintPure, Category = "Stacktown|City")
 	double CurrentLotWidth() const;
 	/** Road mode on/off (G). */

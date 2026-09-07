@@ -790,7 +790,8 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 
 	// any key press clears a showing refusal (LOOK 6: cleared on the next input)
 	const bool bAnyKey = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::B) || WasInputKeyJustPressed(EKeys::U)
-		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G) || WasInputKeyJustPressed(EKeys::L) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::BackSpace);
+		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G) || WasInputKeyJustPressed(EKeys::L) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::BackSpace)
+		|| WasInputKeyJustPressed(EKeys::One) || WasInputKeyJustPressed(EKeys::Two) || WasInputKeyJustPressed(EKeys::Three);
 	if (bAnyKey && bRefusalShowing) { HudModel->ActionRefusal.Reset(); bRefusalShowing = false; }
 
 	// hover: a lot actor under the cursor, or the board point for the ghost
@@ -834,6 +835,12 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (WasInputKeyJustPressed(EKeys::U)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("U"))); }
 	if (WasInputKeyJustPressed(EKeys::H)) { UE_LOG(LogStacktown, Log, TEXT("VERB: %s"), *CityVerb(TEXT("H"))); }
 	if (WasInputKeyJustPressed(EKeys::Tab)) { CityCycleWidth(+1); }
+	if (!bRoadMode)
+	{
+		if (WasInputKeyJustPressed(EKeys::One))   { UE_LOG(LogStacktown, Log, TEXT("SLOT: %s"), *CitySlot(1)); }
+		if (WasInputKeyJustPressed(EKeys::Two))   { UE_LOG(LogStacktown, Log, TEXT("SLOT: %s"), *CitySlot(2)); }
+		if (WasInputKeyJustPressed(EKeys::Three)) { UE_LOG(LogStacktown, Log, TEXT("SLOT: %s"), *CitySlot(3)); }
+	}
 
 	if (IsInputKeyDown(EKeys::N))
 	{
@@ -896,11 +903,54 @@ FString AStacktownPlayerController::CityPreset()
 	const Stacktown::FCityState Fresh = Econ->GetState();
 	Stacktown::FCityState Seeded = Stacktown::SeedPresetState(Econ->GetRules(), Stacktown::FPlacementBoard::Default(Econ->GetRules()));
 	Seeded.Money = Fresh.Money; Seeded.Demand = Fresh.Demand; Seeded.TradesProcessed = Fresh.TradesProcessed; Seeded.GoalsReached = Fresh.GoalsReached; Seeded.Roads = Fresh.Roads;
+	// THE STARTER CITY IS STARTED (design lane 2026-09-07 06:40): a board of
+	// fourteen marked-out lots and no building shows no timber at the arrival,
+	// and the first frame of the wooden city must show wood. Three lots round
+	// the crossing stand built at tier 1 - a city somebody began - so the
+	// player is shown what the game is rather than told. They are the player's
+	// (they earn rent and count for the score); which three is a placeholder
+	// for the owner and the design lane to move.
+	static const TCHAR* Built[] = { TEXT("NW3"), TEXT("SE0"), TEXT("NE0") };
+	int32 NumBuilt = 0;
+	for (const TCHAR* Pin : Built)
+	{
+		if (Stacktown::FParcelState* P = Seeded.Parcels.Find(Pin)) { P->bOwned = true; P->Tier = 1; P->bFailed = false; ++NumBuilt; }
+	}
 	Econ->GetMutableState() = Seeded;
 	Econ->SaveState();
-	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d lots for sale \u00b7 click one, B to buy"), Seeded.Parcels.Num()); bHintShowing = false; }
+	const int32 ForSale = Seeded.Parcels.Num() - NumBuilt;
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d built \u00b7 %d lots for sale \u00b7 click one, B to buy"), NumBuilt, ForSale); bHintShowing = false; }
+	bGoalsPrimed = false;   // the built lots count: the score and the next goal re-read
 	PlayCue(TEXT("S_Place"));
-	return FString::Printf(TEXT("preset seeded: %d lots for sale; %s"), Seeded.Parcels.Num(), *Sync->Reconcile(false));
+	return FString::Printf(TEXT("preset seeded: %d built, %d lots for sale; %s"), NumBuilt, ForSale, *Sync->Reconcile(false));
+}
+
+FString AStacktownPlayerController::CitySlot(int32 Slot)
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	CitySelect(FString());
+	FString Report;
+	const bool bOk = Sync->SwitchSlot(Slot, Report);
+	if (HudModel) { HudModel->Slot = Sync->GetSlot(); }
+	if (!bOk)
+	{
+		if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("SLOT %d \u00b7 already open"), Sync->GetSlot()); }
+		return Report;
+	}
+	// The slot's own goals, hint and score: nothing carried over from the city left.
+	bGoalsPrimed = false;
+	bHintShowing = false;
+	PinnedBarMessage.Reset();
+	if (HudModel)
+	{
+		const int32 Lots = Econ->GetState().Parcels.Num();
+		// A fresh board says nothing here: the fresh-city hint takes the bar on the next tick.
+		HudModel->BarMessage = Lots > 0 ? FString::Printf(TEXT("SLOT %d \u00b7 %d lots"), Sync->GetSlot(), Lots) : FString();
+	}
+	PlayCue(TEXT("S_Place"));
+	return Report;
 }
 
 FString AStacktownPlayerController::CityCycleRecipe()

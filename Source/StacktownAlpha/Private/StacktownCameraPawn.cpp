@@ -166,11 +166,11 @@ void AStacktownCameraPawn::SetArrivalView()
 	// centre so the four margins are even, yaw so the long (x) axis runs corner to
 	// corner, pitch -40, then come in. Acceptance: all four corners inside the frame
 	// with backdrop past each, no margin more than twice another.
-	// Measured against the camera model (2026-09-07 06:05, 1600x900, the plate
-	// 15,300 x 8,460): aimed at the plate's centre the near corner cannot come
-	// inside the frame at any reach up to the wide stop; aimed 1,500 uu toward
-	// the camera, at the wide stop, all four corners are in with backdrop past
-	// each and the margins run 158 / 278 / 159 / 357 px - 2.26x, the closest
-	// this lens gets to the rule's 2x at pitch -38. The design lane rules on it.
-	SetView(FVector(-1061.0, -1061.0, 0.0), 45.0, -38.0, 21000.0);
+	// The design lane's rule of 2026-09-07 06:40 ("photographed, not glimpsed"):
+	// all four plate corners inside the frame, none within 5 percent of an edge
+	// (the HUD bar's bottom is the top edge), and the plate as large as that
+	// allows - Tools/measure/arrival_margins.py --look finds the largest plate
+	// on the diagonal at pitch -38. The margin-symmetry rule it replaces was
+	// withdrawn: a three-quarter view of a rectangle is a trapezoid.
+	SetView(FVector(-1312.1, -1509.4, 0.0), 49.0, -38.0, 18500.0);
 }

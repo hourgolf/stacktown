@@ -75,6 +75,42 @@ bool ResolvePythonDrivers(const FPythonDriversInputs& In)
 	return true;
 }
 
+int32 ParseSlot(const FString& Text)
+{
+	// Digits only, read by hand over the raw characters: this file compiles
+	// under the host pre-flight's mock CoreMinimal, which has no FCString, no
+	// range-for and no FindLastChar.
+	const TCHAR* S = *Text;
+	const int32 Len = Text.Len();
+	int32 N = 0;
+	bool bAny = false;
+	for (int32 i = 0; i < Len; ++i)
+	{
+		const TCHAR C = S[i];
+		if (C >= TEXT('0') && C <= TEXT('9')) { N = N * 10 + (int32)(C - TEXT('0')); bAny = true; if (N > 9) { break; } }
+		else if (bAny) { break; }
+	}
+	return (bAny && N >= 1 && N <= SlotCount) ? N : 1;
+}
+
+FString SlotStatePath(const FString& Path, int32 Slot)
+{
+	if (Slot < 2 || Slot > SlotCount) { return Path; }
+	const TCHAR* S = *Path;
+	const int32 Len = Path.Len();
+	int32 Dot = -1;
+	int32 Slash = -1;
+	for (int32 i = 0; i < Len; ++i)
+	{
+		if (S[i] == TEXT('.')) { Dot = i; }
+		else if (S[i] == TEXT('/')) { Slash = i; }
+	}
+	const bool bHasExt = Dot >= 0 && Dot > Slash;
+	const FString Stem = bHasExt ? Path.Left(Dot) : Path;
+	const FString Ext  = bHasExt ? Path.Mid(Dot) : FString();
+	return FString::Printf(TEXT("%s_s%d%s"), *Stem, Slot, *Ext);
+}
+
 FString StateSourceName(EStateSource Source)
 {
 	switch (Source)

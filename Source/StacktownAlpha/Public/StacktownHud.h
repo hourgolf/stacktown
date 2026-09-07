@@ -36,6 +36,8 @@ public:
 	/** The road class drawn next while road mode is on; the mode word shows it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") FString RoadClass = TEXT("avenue");
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") bool bNight = false;
+	/** The open save slot, 1-3; the bar names it only when it is not the first. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") int32 Slot = 1;
 	/** An action refusal (Docs/HUD_V1.md CONTENT 2): refuse colour, cleared on the next input. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD") FString ActionRefusal;
 	/** A dim bar message that is not a refusal (mode hints, the hold-N countdown). */
@@ -97,6 +99,7 @@ private:
 	UPROPERTY() TObjectPtr<UTextBlock> BarMessageText;
 	UPROPERTY() TObjectPtr<UTextBlock> RoadWord;
 	UPROPERTY() TObjectPtr<UTextBlock> NightWord;
+	UPROPERTY() TObjectPtr<UTextBlock> SlotWord;
 
 	UPROPERTY() TObjectPtr<USizeBox> PanelBox;
 	UPROPERTY() TObjectPtr<UTextBlock> NameText;

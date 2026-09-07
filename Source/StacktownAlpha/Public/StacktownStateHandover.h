@@ -79,6 +79,17 @@ struct STACKTOWNALPHA_API FStatePathResolution
  *  direction. */
 STACKTOWNALPHA_API FStatePathResolution ResolveStatePath(const FStatePathInputs& In);
 
+/** SAVE SLOTS (MONDAY_DECISIONS section 6, built 2026-09-07): three cities per
+ *  install, chosen by the keys 1-3; a slot never written is a fresh board, and
+ *  opening one never touches another. Slot 1 is the file that always existed,
+ *  so every save written before slots is slot 1 and keeps its name. */
+constexpr int32 SlotCount = 3;
+/** "2\n" -> 2. Anything else - junk, 0, 9 - is slot 1, never a refusal. */
+STACKTOWNALPHA_API int32 ParseSlot(const FString& Text);
+/** Slot 1: the path itself. Slots 2 and 3: "<stem>_s<N><ext>" beside it, so the
+ *  owner's citystate.json and the lanes' citystate_test.json slot the same way. */
+STACKTOWNALPHA_API FString SlotStatePath(const FString& Path, int32 Slot);
+
 /** For a log line and the ledger. */
 STACKTOWNALPHA_API FString StateSourceName(EStateSource Source);
 

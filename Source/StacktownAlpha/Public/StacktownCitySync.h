@@ -32,6 +32,13 @@ public:
 	/** Spawn, update and remove lot actors to match the economy's state. Returns a one-line report. */
 	FString Reconcile(bool bHideBlueprintLots);
 
+	/** SAVE SLOTS: the open slot (1-3) and the switch. The city being left is
+	 *  saved first, the choice is remembered beside the saves (slot.txt), a slot
+	 *  never written opens as a fresh board. False, with the reason, when the
+	 *  slot is already open or this subsystem does not own the city. */
+	int32 GetSlot() const { return Slot; }
+	bool SwitchSlot(int32 NewSlot, FString& OutReport);
+
 	/** The Python-drivers switch: STACKTOWN_PYTHON_DRIVERS in the environment wins,
 	 *  then [/Script/StacktownAlpha.StacktownRuntime] bPythonDrivers in the game ini, default true. */
 	static bool PythonDriversEnabled();
@@ -55,6 +62,10 @@ public:
 
 private:
 	bool bOwnsCity = false;
+	int32 Slot = 1;
+	/** The slot-1 owned file; slots 2 and 3 are Stacktown::SlotStatePath of it. */
+	FString OwnedBase;
+	FString SlotFilePath() const;
 	float TickAccum = 0.f;
 	FTimerHandle Timer;
 	UPROPERTY() TMap<FString, TObjectPtr<AActor>> Lots;

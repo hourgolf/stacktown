@@ -1218,6 +1218,46 @@ int main()
 			CheckInt("no road added", S.Roads.Num(), 0);
 		}
 
+		CASE("Roads.DragDirection");
+		{
+			// 49: which way the player dragged must not matter, and until the
+			// endpoint ordering landed it did - a road drawn right to left put
+			// every lot at 2 * StartX - X, a mirror about the start point, and
+			// flipped its side name with it. BOTH orders are run against the
+			// ONE expected answer; a fixture with two answers would be
+			// recording the bug.
+			for (int32 i = 0; i < T49_DragNum; ++i)
+			{
+				const FDragCase& C = T49_Drag[i];
+				for (int32 Order = 0; Order < 2; ++Order)
+				{
+					const double AX = Order == 0 ? C.FX0 : C.FX1;
+					const double AY = Order == 0 ? C.FY0 : C.FY1;
+					const double BX = Order == 0 ? C.FX1 : C.FX0;
+					const double BY = Order == 0 ? C.FY1 : C.FY0;
+					FCityState S = RoadSeed();
+					const FRoadDrawResult D = DrawRoad(Board, S, AX, AY, BX, BY,
+						FString(TEXT("avenue")), true);
+					CheckBool("road drawn", D.bOk, true);
+					if (!D.bOk) { continue; }
+					const FRoadSegment& Seg = S.Roads[D.Id];
+					CheckNear("segment start x", Seg.StartX, C.Segment.StartX, Tol);
+					CheckNear("segment start y", Seg.StartY, C.Segment.StartY, Tol);
+					CheckNear("segment end x", Seg.EndX, C.Segment.EndX, Tol);
+					CheckNear("segment end y", Seg.EndY, C.Segment.EndY, Tol);
+					CheckNear("money", S.Money, C.Money, Tol);
+					const FPlaceResult Pl = Place(Board, S, C.ClickX, C.ClickY, true, Board.Rules.V0Width);
+					CheckBool("lot placed", Pl.bOk, true);
+					if (!Pl.bOk) { continue; }
+					const FLotPlacement& Lot = S.Parcels[Pl.Pid].Placement.GetValue();
+					CheckNear("lot x0", Lot.X0, C.Lot.X0, Tol);
+					CheckNear("lot x1", Lot.X1, C.Lot.X1, Tol);
+					CheckStr("lot side", Lot.Side, FString(C.Lot.Side));
+					CheckStr("lot road", LotRoadId(Lot), FString(C.Lot.RoadId));
+				}
+			}
+		}
+
 		CASE("Roads.CrossingUsesOwnHalf");
 		{
 			// 48: a point 1300 uu from a centreline is ON a highway (half 1430)

@@ -70,6 +70,10 @@
 #include <vector>
 #include <initializer_list>
 
+/** UE's Swap, which the rules layer uses to order a drawn segment's endpoints. */
+template <typename T>
+inline void Swap(T& A, T& B) { T Tmp = A; A = B; B = Tmp; }
+
 typedef char     TCHAR;
 typedef int32_t  int32;
 typedef int64_t  int64;

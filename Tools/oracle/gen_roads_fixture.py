@@ -296,6 +296,30 @@ def main():
                         'end': (7500.0, 4230.0), 'width_class': 'highway'}),
     }
 
+    # 49: WHICH WAY THE PLAYER DRAGGED MUST NOT MATTER. A bug fix, not a new
+    # feature: a road drawn right to left mirrored every lot placed on it about
+    # its start point and flipped its side name. Captured as the ONE answer both
+    # drag orders must produce, plus the two orders as inputs - a fixture with
+    # two expected answers would be recording the bug.
+    fx['t49_drag_direction'] = []
+    for c0, c1, click in (((6200.0, 3000.0), (7600.0, 3000.0), (6900.0, 1700.0)),
+                          ((7300.0, -4230.0), (7300.0, -3000.0), (5500.0, -3600.0))):
+        seen = []
+        for a, b in ((c0, c1), (c1, c0)):
+            st = funded()
+            st, rid, ok, why = P.draw_road(st, a[0], a[1], b[0], b[1])
+            assert ok, (a, b, why)
+            st, pid, ok2, why2 = P.place(st, click[0], click[1])
+            assert ok2, (a, b, why2)
+            seen.append((seg(st['roads'][rid]), st['parcels'][pid]['placement'],
+                         st['money']))
+        assert seen[0] == seen[1], seen
+        fx['t49_drag_direction'].append({
+            'forward': [list(c0), list(c1)], 'reversed': [list(c1), list(c0)],
+            'click': list(click), 'segment': seen[0][0], 'lot': seen[0][1],
+            'money': seen[0][2],
+        })
+
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_PATH, 'w') as f:
         json.dump(fx, f, indent=2, sort_keys=True)

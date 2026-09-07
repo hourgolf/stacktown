@@ -166,4 +166,16 @@ inline constexpr bool T48_Highway = true;
 inline constexpr bool T48_Avenue = false;
 inline constexpr bool T48_BuiltinsAtOrigin = true;
 
+// 49: which way the player dragged must not matter. ONE expected answer
+// per case and two drag orders as inputs - a fixture with two answers
+// would be recording the bug rather than the fix.
+struct FDragCase { double FX0; double FY0; double FX1; double FY1;
+                   double ClickX; double ClickY; FSegDef Segment;
+                   FLotDef2 Lot; double Money; };
+inline const FDragCase T49_Drag[] = {
+	{ 6200.0, 3000.0, 7600.0, 3000.0, 6900.0, 1700.0, { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") }, { 6490.0, 7310.0, TEXT("south"), TEXT("R1") }, 860.0 },
+	{ 7300.0, -4230.0, 7300.0, -3000.0, 5500.0, -3600.0, { TEXT("R1"), 7300.0, -4230.0, 7300.0, -3000.0, TEXT("avenue") }, { -4010.0, -3190.0, TEXT("west"), TEXT("R1") }, 877.0 },
+};
+inline constexpr int32 T49_DragNum = 2;
+
 } // namespace StacktownRoadsOracle

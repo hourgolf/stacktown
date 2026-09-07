@@ -261,6 +261,23 @@ def main():
     w('inline constexpr bool T48_Avenue = %s;' % b(t48['avenue']))
     w('inline constexpr bool T48_BuiltinsAtOrigin = %s;' % b(t48['builtins_at_origin']))
     w('')
+    w('// 49: which way the player dragged must not matter. ONE expected answer')
+    w('// per case and two drag orders as inputs - a fixture with two answers')
+    w('// would be recording the bug rather than the fix.')
+    w('struct FDragCase { double FX0; double FY0; double FX1; double FY1;')
+    w('                   double ClickX; double ClickY; FSegDef Segment;')
+    w('                   FLotDef2 Lot; double Money; };')
+    w('inline const FDragCase T49_Drag[] = {')
+    for c in fx['t49_drag_direction']:
+        l = c['lot']
+        w('\t{ %s, %s, %s, %s, %s, %s, %s, %s, %s },' % (
+            n(c['forward'][0][0]), n(c['forward'][0][1]),
+            n(c['forward'][1][0]), n(c['forward'][1][1]),
+            n(c['click'][0]), n(c['click'][1]), segdef(c['segment']),
+            lotdef(l), n(c['money'])))
+    w('};')
+    w('inline constexpr int32 T49_DragNum = %d;' % len(fx['t49_drag_direction']))
+    w('')
     w('} // namespace StacktownRoadsOracle')
 
     with open(OUT, 'w') as f:

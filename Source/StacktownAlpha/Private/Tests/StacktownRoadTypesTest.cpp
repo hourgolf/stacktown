@@ -386,4 +386,54 @@ STACKTOWN_TYPES_TEST(FStacktownRoadCrossingOwnHalf, "Stacktown.Roads.CrossingUse
 	return true;
 }
 
+// --- 49: which way the player dragged must not matter -------------------------
+STACKTOWN_TYPES_TEST(FStacktownRoadDragDirection, "Stacktown.Roads.DragDirection")
+{
+	// A BUG FIX, not a feature. ResolveClick recovers a lot's world position as
+	// RoadStartOnAxis + Along, and Along runs along the segment's OWN
+	// direction - so a road drawn east-to-west put every lot at 2 * StartX - X,
+	// a mirror image about the start point, and flipped its side name with it
+	// (the normal is the direction rotated +90 degrees). Reachable today by
+	// dragging right to left, and silent whenever the mirrored span still
+	// landed on the road: test 31's own road, drawn the other way, put a south
+	// click's lot at [7890, 8710] instead of [6490, 7310]. Found while
+	// generalizing the resolver to arbitrary directions, where the sign of the
+	// direction stops being an edge case.
+	//
+	// BOTH orders against the ONE expected answer. A fixture carrying two
+	// answers would be recording the bug rather than the fix.
+	const FPlacementBoard Board = OracleBoard();
+	for (int32 i = 0; i < T49_DragNum; ++i)
+	{
+		const FDragCase& C = T49_Drag[i];
+		for (int32 Order = 0; Order < 2; ++Order)
+		{
+			const TCHAR* Which = Order == 0 ? TEXT("as drawn") : TEXT("reversed");
+			const double AX = Order == 0 ? C.FX0 : C.FX1;
+			const double AY = Order == 0 ? C.FY0 : C.FY1;
+			const double BX = Order == 0 ? C.FX1 : C.FX0;
+			const double BY = Order == 0 ? C.FY1 : C.FY0;
+
+			FCityState S = TypeSeed();
+			const FRoadDrawResult D = DrawRoad(Board, S, AX, AY, BX, BY, FString(TEXT("avenue")), true);
+			if (!TestTrue(*FString::Printf(TEXT("%s: road drawn"), Which), D.bOk)) { continue; }
+			const FRoadSegment& Seg = S.Roads[D.Id];
+			TestEqual(TEXT("segment start x"), Seg.StartX, C.Segment.StartX, 1e-9);
+			TestEqual(TEXT("segment start y"), Seg.StartY, C.Segment.StartY, 1e-9);
+			TestEqual(TEXT("segment end x"), Seg.EndX, C.Segment.EndX, 1e-9);
+			TestEqual(TEXT("segment end y"), Seg.EndY, C.Segment.EndY, 1e-9);
+			TestEqual(TEXT("the same road costs the same"), S.Money, C.Money, 1e-9);
+
+			const FPlaceResult P = Place(Board, S, C.ClickX, C.ClickY, true, Board.Rules.V0Width);
+			if (!TestTrue(*FString::Printf(TEXT("%s: lot placed"), Which), P.bOk)) { continue; }
+			const FLotPlacement& Lot = S.Parcels[P.Pid].Placement.GetValue();
+			TestEqual(TEXT("lot x0"), Lot.X0, C.Lot.X0, 1e-9);
+			TestEqual(TEXT("lot x1"), Lot.X1, C.Lot.X1, 1e-9);
+			TestEqual(TEXT("lot side"), Lot.Side, FString(C.Lot.Side));
+			TestEqual(TEXT("lot road"), LotRoadId(Lot), FString(C.Lot.RoadId));
+		}
+	}
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

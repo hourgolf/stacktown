@@ -192,8 +192,10 @@ MUTATIONS = [
      '\t\tFacts.bFound = true;\n\t\treturn Facts;', True, 'handover'),
 
     ('price-not-recomputed-from-tier', 'the price shown stops tracking the tier',
-     'Facts.Price   = Price(R, P->Tier, P->Width);',
-     'Facts.Price   = Price(R, 0, P->Width);', True, 'handover'),
+     # REFRESHED 2026-09-06: the coordinator's building-types pass moved this
+     # to PriceFor, which takes the recipe's own multiplier as well.
+     'Facts.Price   = PriceFor(R, P->Rid, P->Tier, P->Width);',
+     'Facts.Price   = PriceFor(R, P->Rid, 0, P->Width);', True, 'handover'),
 
     # ---- drawn roads (Phase 1 step 4) ---------------------------------------
     ('diagonal-gate-opens', 'a genuinely diagonal gesture becomes a straight road',
@@ -433,6 +435,18 @@ MUTATIONS = [
     ('shipped-table-drifts', 'the compiled default no longer matches econrules.json',
      'M.Add(TEXT("dirt"),      FRoadTypeRules{  5.0, 0.75,  900.0, true  });',
      'M.Add(TEXT("dirt"),      FRoadTypeRules{  5.0, 0.75, 1000.0, true  });', True, 'rules'),
+
+    ('drag-direction-not-canonicalized', 'a road drawn right to left mirrors its lots',
+     'if (SX1 < SX0 || (SX1 == SX0 && SY1 < SY0))\n\t{\n\t\tSwap(SX0, SX1);\n\t\tSwap(SY0, SY1);\n\t}',
+     'if (false)\n\t{\n\t\tSwap(SX0, SX1);\n\t\tSwap(SY0, SY1);\n\t}', True, 'placement'),
+
+    ('drag-direction-always-swapped', 'the ordering runs unconditionally',
+     'if (SX1 < SX0 || (SX1 == SX0 && SY1 < SY0))\n\t{\n\t\tSwap(SX0, SX1);\n\t\tSwap(SY0, SY1);\n\t}',
+     'if (true)\n\t{\n\t\tSwap(SX0, SX1);\n\t\tSwap(SY0, SY1);\n\t}', True, 'placement'),
+
+    ('drag-direction-x-only', 'a vertical road drawn downward still mirrors',
+     'if (SX1 < SX0 || (SX1 == SX0 && SY1 < SY0))',
+     'if (SX1 < SX0)', True, 'placement'),
 
     ('type-order-scrambled', 'the T-key cycle stops matching the decided order',
      'TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };',

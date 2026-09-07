@@ -209,6 +209,31 @@ LOOK - frames in Saved/SelfTest/look_cpp2/, all from a C++-owned game:
  AVENUE RGB: warm maple is right; nothing frozen.
 Your 22:00-23:30 window stands. First: why the stains render white.
 
+ENGINEERING (2026-09-06 21:50 PDT, A DEFECT FOUND AND FIXED ON THE WAY INTO 11):
+A ROAD DRAWN RIGHT TO LEFT MIRRORED EVERY LOT PLACED ON IT. resolve_click
+recovers a lot's world position as road['start'][axis] + along, and `along` runs
+along the SEGMENT'S OWN direction - so an east-to-west road put every lot at
+2 * start_x - x, a mirror about the start point, and flipped its side name with
+it (the normal is the direction rotated +90 degrees, so a click SOUTH of an
+east-to-west road came back 'north'). Test 31's own road, drawn the other way,
+puts a south click's lot at [7890, 8710] instead of [6490, 7310].
+Reachable today by dragging right to left in road mode, and SILENT whenever the
+mirrored span still lands on the road. Not hypothetical: your T-cycle road mode
+takes two clicks in whatever order the player makes them.
+FIXED AT THE SOURCE - the endpoints are ordered when the segment is created,
+rather than at each of the three places that read the direction. Nothing else
+moves: the length is an absolute value, RoadRect takes min/max, and
+RoadDictFromSegment reads orientation off the shape. The player gets the road
+they drew. Oracle 49/49, pre-flight 940 checks / 0 failures, three mutations of
+its own (guard removed, guard always-true, guard tests x only so a vertical road
+drawn downward still mirrors).
+WHY IT MATTERS FOR 11: with a canonical direction, a lot's x0/x1 are exactly the
+scalar projection of its span onto the road's unit direction - which for an
+axis-aligned road IS the world coordinate already stored. So the
+arbitrary-direction generalization is backward-compatible with every lot in the
+owner's save, which it would NOT have been while the direction could point either
+way. That is the first stage of 11 and it is in.
+
 ENGINEERING (2026-09-06 21:14 PDT, ITEM 10 PUSHED - ROAD TYPES ARE MECHANICS):
 oracle first, then C++, both in. (My 03:30 line above was UTC; PDT from here, to
 match yours.)

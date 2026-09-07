@@ -224,6 +224,36 @@ lot-placement channel already uses, not a second mechanism.
   of that list is still open; curves and arbitrary angles are the next
   item.
 
+## 6a. A defect this contract's own v0 shipped, fixed 2026-09-06
+
+**A road drawn right to left mirrored every lot placed on it.**
+`resolve_click` recovers a lot's world position as
+`road['start'][axis] + along`, and `along` runs along the *segment's own*
+direction — so an east-to-west road put every lot at `2 * start_x - x`,
+a mirror image about the start point, and flipped its side name with it
+(the normal is the direction rotated +90°, so a click *south* of an
+east-to-west road came back `'north'`).
+
+Reachable today by dragging right to left. Silent whenever the mirrored
+span still landed on the road; test 31's own road, drawn the other way,
+put a south click's lot at `[7890, 8710]` instead of `[6490, 7310]`.
+
+Found while generalizing `resolve_road_draw` to arbitrary directions,
+where the sign of the direction stops being an edge case. **Fixed at the
+source** — the endpoints are ordered when the segment is created — rather
+than at each of the three places that read the direction. Nothing else
+changes: the length is an absolute value, `road_rect` takes min/max, and
+`_road_dict` reads orientation off the shape. The player gets the road
+they drew.
+
+It also buys something for section 5's curves: with a canonical
+direction, a lot's `x0`/`x1` are exactly the scalar projection of its
+span onto the road's unit direction — which for an axis-aligned road IS
+the world coordinate it already stores. The arbitrary-direction
+generalization is therefore backward-compatible with every lot already
+saved, which it would not have been while the direction could point
+either way.
+
 ## 7. Road types as mechanics (2026-09-06)
 
 `MONDAY_DECISIONS.md` section 2 decided the four types on 2026-09-01 —

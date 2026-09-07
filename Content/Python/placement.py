@@ -884,6 +884,25 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
         return False, (
             'too diagonal: roads must run close to north-south or '
             'east-west in this version'), None
+    # CANONICAL DIRECTION, 2026-09-06. Which WAY the player dragged must not
+    # change where the road's lots go, and until this line it did - badly.
+    # resolve_click recovers a lot's world position as
+    # `road['start'][axis] + along`, and `along` is measured along the
+    # segment's own direction, so a road drawn east-to-west put every lot at
+    # 2 * start_x - x: a MIRROR IMAGE about the start point. The same drag
+    # also flipped the side names, because the normal is the direction rotated
+    # +90 degrees, so a click south of an east-to-west road came back 'north'.
+    # Found while generalizing this function to arbitrary directions (item 11),
+    # where the sign of the direction stops being an edge case; reachable
+    # today by dragging right to left, and silent whenever the mirrored span
+    # still lands on the road.
+    #
+    # Ordering the endpoints is the fix at the SOURCE rather than at each of
+    # the three places that read the direction. It changes nothing else: the
+    # length is an absolute value, road_rect takes min/max, and _road_dict
+    # reads orientation off the shape. The player gets the road they drew.
+    if (sx1, sy1) < (sx0, sy0):
+        sx0, sy0, sx1, sy1 = sx1, sy1, sx0, sy0
     length = abs(sx1 - sx0) + abs(sy1 - sy0)  # axis-aligned: one term is 0
     if length < MIN_ROAD_LENGTH:
         return False, (
@@ -1833,7 +1852,39 @@ if __name__ == '__main__':
     assert _in_crossing([ARTERIAL, _av48], 6200.0, 500.0, R) is False
     assert _in_crossing([ARTERIAL, CROSS_STREET], 0.0, 0.0, R) is True
 
-    print('placement self-check: 48/48 pass (pure-Python click->lot->state '
+    # 49. WHICH WAY THE PLAYER DRAGGED MUST NOT MATTER - a bug fix, found
+    #     while generalizing resolve_road_draw to arbitrary directions and
+    #     reachable today by dragging right to left. resolve_click recovers a
+    #     lot's world position as road['start'][axis] + along, and `along` runs
+    #     along the SEGMENT'S OWN direction, so an east-to-west road put every
+    #     lot at 2 * start_x - x - a mirror image about the start point - and
+    #     flipped its side name with it (the normal is the direction rotated
+    #     +90 degrees). Silent whenever the mirrored span still landed on the
+    #     road; test 31's own road, drawn the other way, put a south click's lot
+    #     at [7890, 8710] instead of [6490, 7310].
+    #
+    #     Both axes, and both the SEGMENT and the LOT, because the two failed
+    #     differently: the stored segment was already fine (road_rect takes
+    #     min/max), and the lot was not.
+    for _c0, _c1, _click, _want in (
+            ((6200.0, 3000.0), (7600.0, 3000.0), (6900.0, 1700.0),
+             {'x0': 6490.0, 'x1': 7310.0, 'side': 'south', 'road_id': 'R1'}),
+            ((7300.0, -4230.0), (7300.0, -3000.0), (5500.0, -3600.0),
+             {'x0': -4010.0, 'x1': -3190.0, 'side': 'west', 'road_id': 'R1'})):
+        _seen = []
+        for _a, _b in ((_c0, _c1), (_c1, _c0)):
+            _s = citytick.seed_state()
+            _s['money'] = 2000.0
+            _s, _rid, _ok, _why = draw_road(_s, _a[0], _a[1], _b[0], _b[1])
+            assert _ok, (_a, _b, _why)
+            _s, _pid, _ok2, _why2 = place(_s, _click[0], _click[1])
+            assert _ok2, (_a, _b, _why2)
+            _seen.append((_s['roads'][_rid]['start'], _s['roads'][_rid]['end'],
+                          _s['parcels'][_pid]['placement'], _s['money']))
+        assert _seen[0] == _seen[1], _seen
+        assert _seen[0][2] == _want, _seen[0][2]
+
+    print('placement self-check: 49/49 pass (pure-Python click->lot->state '
           'contract; resolve_road multi-road frontage; cross-street and '
           'corner-overlap coverage; save/load round-trip; free placement '
           'along the road (1-27, prior sessions) PLUS drawn roads, '
@@ -1861,7 +1912,12 @@ if __name__ == '__main__':
           'from the same candidate that was quoted; the rent multiplier '
           'is pure and TESTED BUT NOT WIRED - citytick.tick() is the '
           'coordinator\'s and applying it there is one line, deliberately '
-          'left; live cursor-trace '
+          'left; PLUS the drag-direction fix, 2026-09-06 (49): ordering a '
+          'drawn segment\'s endpoints at the source, because a road drawn '
+          'right to left mirrored every lot placed on it about the start '
+          'point and flipped its side name - a real defect reachable today, '
+          'found while generalizing the resolver to arbitrary directions; '
+          'live cursor-trace '
           'coordinates, actor spawn/resolve, and the feel itself are NOT '
           'provable here - see module docstring, and PLACEMENT_GRID.md '
           'section 8 - the owner\'s own click on empty board is the real '

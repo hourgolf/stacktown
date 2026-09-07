@@ -790,6 +790,29 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 			"too diagonal: roads must run close to north-south or east-west in this version"));
 	}
 
+	// CANONICAL DIRECTION, 2026-09-06. Which WAY the player dragged must not
+	// change where the road's lots go, and until this line it did - badly.
+	// ResolveClick recovers a lot's world position as RoadStartOnAxis + Along,
+	// and Along runs along the segment's OWN direction, so a road drawn
+	// east-to-west put every lot at 2 * StartX - X: a MIRROR IMAGE about the
+	// start point. The same drag also flipped the side names, because the
+	// normal is the direction rotated +90 degrees, so a click south of an
+	// east-to-west road came back 'north'. Found while generalizing this
+	// function to arbitrary directions (curved roads); reachable today by
+	// dragging right to left, and silent whenever the mirrored span still
+	// landed on the road.
+	//
+	// Ordering the endpoints fixes it at the SOURCE rather than at each of the
+	// three places that read the direction, and changes nothing else: the
+	// length is an absolute value, RoadRect takes min/max, and
+	// RoadDictFromSegment reads orientation off the shape. The player gets the
+	// road they drew.
+	if (SX1 < SX0 || (SX1 == SX0 && SY1 < SY0))
+	{
+		Swap(SX0, SX1);
+		Swap(SY0, SY1);
+	}
+
 	// Axis-aligned, so exactly one term is non-zero.
 	const double Length = FMath::Abs(SX1 - SX0) + FMath::Abs(SY1 - SY0);
 	if (Length < R.V0Width)

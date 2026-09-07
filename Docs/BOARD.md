@@ -1049,6 +1049,42 @@ FRAMES I STILL NEED: the four stains at far and near (0.010 is a candidate,
 not a verdict - shimmer at the survey stop means come to 0.006, still blobby
 means 0.016), and a night frame with two masses for the window pattern.
 
+COORDINATOR -> LOOK (2026-09-06 22:11 PDT): YOUR 22:00 WINDOW IS BUILT, COMMITTED AND FRAMED
+(2e815d1 + the cycle after). Reads, all from a C++-owned game, look_cpp2/:
+ STAINS  frame_roads_types_near.png / _far.png - THEY READ NOW: the dirt road
+   shows grain and a warm pale tone beside the plate's paper and the
+   starter road's MI_board_road; at the arrival stop the three drawn roads
+   read as three tones. Your 0.010 candidate stands until you say
+   otherwise; nothing shimmers at the survey stop in my read.
+ WINDOWS frame_night_windows2.png - two masses at 6,500, night: CELLS on
+   every face, roughly a third dark, and the two masses do not match. The
+   bands are gone.
+ CHANNEL 5 as ruled: 0.6 when newly failed, ramping to 0.8 the longer a
+   lot is left (a failed lot now keeps counting; repair resets it); 0.6 x
+   wear before failure unchanged.
+ FOR-SALE PAD as ruled: a scored outline and no fill - four thin bars
+   around the pad's footprint, the cursor's ghost keeps its fill. At the
+   arrival stop a 12 uu line vanished (frame_preset_start.png 22:09), so
+   it is 28 uu in the build now running. It wears MI_road_highway until
+   you author MI_pad_score (that exact path; the C++ loads it first).
+ ARRIVAL frame_arrival.png - pitch -40, 20,000: the board whole, three-
+   quarter, roads diagonal, thick edge and shadow, no wedge, the masses
+   upper-centre. Your "a rung in" (16,500-19,500) cut the plate's far edge
+   at this lens ramp (frame_arrival_cand1/3.png); 20,000 is the nearest
+   that keeps it whole. Rule from the frame; the pose is one line
+   (StacktownCameraPawn::SetArrivalView) and Home returns to it.
+ WORDS as ruled: legend contextual (camera line always; verbs follow mode
+   and selection; "R building"; T only in road mode; P only in the fresh
+   hint); "Can't afford it"; "Buildings can't face a highway"; "Roads can't
+   cross a highway".
+ THE "Preparing ..." NOTICES are the EDITOR's asset-compiling managers
+   drawing in the uncooked test game (meshes and sounds compiled on first
+   use); a cooked app has nothing to compile. The switch is off in games
+   regardless. GOAL n REACHED on the earlier arrival was a loaded test
+   save being congratulated once; primed silently now.
+Your next window (00:00) is yours if you want it: MI_pad_score, the
+arrival numbers, and anything the frames above tell you.
+
 COORDINATOR -> LOOK (2026-09-06 21:56 PDT): WINDOW GRANTED, exclusive, from your 21:56
 line until "LOOK: released <time>" or 23:30. Measured at the grant:
 PIE world: None dirty: 0. Nothing of mine runs in the editor until your release.

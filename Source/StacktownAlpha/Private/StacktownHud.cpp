@@ -275,7 +275,7 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 	// the verb row does. P (the starter city) lives in the fresh-city hint, not here.
 	{
 		FString Verbs;
-		if (M->bRoadMode) { Verbs = TEXT("CLICK start / end      T road type      G leave road mode"); }
+		if (M->bRoadMode) { Verbs = TEXT("CLICK nodes      ENTER draw      BACKSPACE undo      T road type      G leave road mode"); }
 		else if (M->bHasSelection && !M->Verb.IsEmpty()) { Verbs = FString::Printf(TEXT("%s %s      CLICK elsewhere      G road      L night      N hold reset"), *M->VerbKey, *M->Verb.ToLower()); }
 		else if (M->bHasSelection) { Verbs = TEXT("CLICK elsewhere      G road      L night      N hold reset"); }
 		else { Verbs = TEXT("CLICK place      TAB width      R building      G road      L night      N hold reset"); }

@@ -107,22 +107,22 @@ STACKTOWN_PATH_TEST(FStacktownRoadPathIsOneRoad, "Stacktown.Roads.PathIsOneRoad"
 	// counting chords in InCrossing would call every joint of every curve
 	// "pavement shared by more than one road" - and there is one every 410 uu.
 	// Counting PATHS is what makes a curve carry lots at all.
-	const TArray<FRoad> Roads = Board.AllRoads(S);
+	const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
 	for (int32 j = 0; j < T58_JointsNum; ++j)
 	{
 		int32 Chords = 0;
-		for (const FRoad& Rd : Roads)
+		for (const FRoad& Rd : RoadsLocal)
 		{
 			const FRoadProjection Pr = ProjectToRoad(Rd, T58_Joints[j].X, T58_Joints[j].Y);
 			if (Pr.Along >= 0.0 && Pr.Along <= Pr.Length
-				&& FMath::Abs(Pr.Across) < RoadHalf(Board.Rules, Board.Econ, Rd))
+				&& FMath::Abs(Pr.Across) < Stacktown::RoadHalf(Board.Rules, Board.Econ, Rd))
 			{
 				++Chords;
 			}
 		}
 		TestTrue(TEXT("the joint sits in more than one chord"), Chords > 1);
 		TestFalse(TEXT("and is not the crossing"),
-			InCrossing(Board.Rules, Board.Econ, Roads, T58_Joints[j].X, T58_Joints[j].Y));
+			InCrossing(Board.Rules, Board.Econ, RoadsLocal, T58_Joints[j].X, T58_Joints[j].Y));
 	}
 
 	// A LOT FRONTS THE CURVE, spanning the joined run rather than the one
@@ -136,13 +136,13 @@ STACKTOWN_PATH_TEST(FStacktownRoadPathIsOneRoad, "Stacktown.Roads.PathIsOneRoad"
 	TestEqual(TEXT("lot x0"), CR.Lot.X0, T58_Lot.X0, 1e-9);
 	TestEqual(TEXT("lot x1"), CR.Lot.X1, T58_Lot.X1, 1e-9);
 	TestEqual(TEXT("lot road"), LotRoadId(CR.Lot), FString(T58_Lot.RoadId));
-	const FRoad* Own = FindRoad(Roads, LotRoadId(CR.Lot));
+	const FRoad* Own = FindRoad(RoadsLocal, LotRoadId(CR.Lot));
 	if (!TestNotNull(TEXT("own chord"), Own)) { return false; }
 	const FRoadFrame F = RoadFrameOf(*Own);
 	TestEqual(TEXT("chord length"), F.Length, T58_ChordLength, 1e-9);
 	TestTrue(TEXT("the chord is shorter than a lot"), F.Length < Board.Rules.V0Width);
 	double Lo = 0.0, Hi = 0.0;
-	PathSpan(Roads, *Own, Lo, Hi);
+	PathSpan(RoadsLocal, *Own, Lo, Hi);
 	TestEqual(TEXT("span min"), Lo, T58_SpanMin, 1e-9);
 	TestEqual(TEXT("span max"), Hi, T58_SpanMax, 1e-9);
 	TestTrue(TEXT("the span is wider than the chord"), Hi - Lo > F.Length);

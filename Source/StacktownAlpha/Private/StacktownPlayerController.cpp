@@ -588,13 +588,13 @@ FString AStacktownPlayerController::ClassifyRoadRefusal(const FString& R)
 FString AStacktownPlayerController::CityRoadMode(bool bOn)
 {
 	bRoadMode = bOn;
-	bRoadStartSet = false;
+	RoadNodes.Reset();
 	HideRoadGhost();
 	HideGhost();
 	if (HudModel)
 	{
 		HudModel->bRoadMode = bOn;
-		HudModel->BarMessage = bOn ? TEXT("click start, click end \u00b7 G to leave") : TEXT("");
+		HudModel->BarMessage = bOn ? TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave") : TEXT("");
 	}
 	return bOn ? TEXT("road mode on") : TEXT("road mode off");
 }
@@ -602,40 +602,56 @@ FString AStacktownPlayerController::CityRoadMode(bool bOn)
 void AStacktownPlayerController::HideRoadGhost()
 {
 	if (RoadGhostActor) { RoadGhostActor->SetActorHiddenInGame(true); }
+	for (AActor* G : RoadGhostChain) { if (G) { G->SetActorHiddenInGame(true); } }
 }
 
 void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 {
-	if (!bRoadStartSet) { HideRoadGhost(); return; }
+	if (RoadNodes.Num() == 0) { HideRoadGhost(); return; }
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
-	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::FPlacementBoard::Default(Econ->GetRules()), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
-	if (!RoadGhostActor)
+	// The committed nodes plus the cursor as the tentative next one, resolved as the
+	// seat resolves the gesture: a Catmull-Rom sampled at the quantum into chords, all
+	// or nothing. Refused: the straight chords between nodes, in the refuse ghost.
+	TArray<FVector2D> Nodes = RoadNodes; Nodes.Add(FVector2D(BoardPoint.X, BoardPoint.Y));
+	const Stacktown::FPlacementBoard Board = Stacktown::FPlacementBoard::Default(Econ->GetRules());
+	const Stacktown::FRoadPathResult R = Stacktown::ResolveRoadPath(Board, Econ->GetState(), Nodes, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
+	TArray<Stacktown::FRoadSegment> Chords = R.Segments;
+	if (!R.bOk)
+	{
+		Chords.Reset();
+		for (int32 k = 1; k < Nodes.Num(); ++k)
+		{
+			Stacktown::FRoadSegment C; C.StartX = Nodes[k - 1].X; C.StartY = Nodes[k - 1].Y; C.EndX = Nodes[k].X; C.EndY = Nodes[k].Y; C.WidthClass = RoadClass;
+			Chords.Add(C);
+		}
+	}
+	while (RoadGhostChain.Num() < Chords.Num())
 	{
 		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		RoadGhostActor = GetWorld()->SpawnActor<AStacktownRoad>(AStacktownRoad::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
+		RoadGhostChain.Add(GetWorld()->SpawnActor<AStacktownRoad>(AStacktownRoad::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params));
 	}
-	if (AStacktownRoad* G = Cast<AStacktownRoad>(RoadGhostActor))
+	const double Corridor = Stacktown::RoadCorridor(Stacktown::FPlacementBoard::Default().Rules, Econ->GetRules(), RoadClass);
+	double Length = 0.0, Cost = 0.0;
+	for (int32 k = 0; k < RoadGhostChain.Num(); ++k)
 	{
-		// the chord as drawn when refused, the validated segment when accepted
-		if (R.bOk) { G->ShowSegment(TEXT("ghost"), R.Segment, Stacktown::RoadCorridor(
-			Stacktown::FPlacementBoard::Default().Rules, Econ->GetRules(), R.Segment.WidthClass)); }
-		else { G->Show(TEXT("ghost"), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y); }
-		// The quote, while the ghost is valid: a stranger decides with the price in view
-		// (the seat's RoadCost is the same function the draw charges). Wording is the
-		// design lane's; the refusal words stay CONTENT 2's.
-		if (HudModel && PinnedBarMessage.IsEmpty())
+		AStacktownRoad* G = Cast<AStacktownRoad>(RoadGhostChain[k]);
+		if (!G) { continue; }
+		if (k < Chords.Num())
 		{
-			double Cost = 0.0;
-			if (R.bOk && Stacktown::RoadCost(Econ->GetRules(), R.Segment, Cost))
-			{
-				HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 %.0f uu \u00b7 $%.0f \u00b7 click to draw"), *RoadClass, Stacktown::RoadLength(R.Segment), Cost);
-			}
+			G->ShowSegment(TEXT("ghost"), Chords[k], Corridor);
+			G->SetGhost(true, R.bOk);
+			G->SetActorHiddenInGame(false);
+			double C = 0.0; Length += Stacktown::RoadLength(Chords[k]); if (Stacktown::RoadCost(Econ->GetRules(), Chords[k], C)) { Cost += C; }
 		}
-		G->SetGhost(true, R.bOk);
-		G->SetActorHiddenInGame(false);
+		else { G->SetActorHiddenInGame(true); }
 	}
+	if (RoadGhostActor) { RoadGhostActor->SetActorHiddenInGame(true); }
 	if (HudModel) { HudModel->PlaceRefusal = R.bOk ? FString() : ClassifyRoadRefusal(R.Reason); }
+	if (HudModel && PinnedBarMessage.IsEmpty() && R.bOk)
+	{
+		HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 %.0f uu \u00b7 $%.0f \u00b7 click to add a node \u00b7 ENTER to draw"), *RoadClass, Length, Cost);
+	}
 }
 
 FString AStacktownPlayerController::CityRoadClick(double X, double Y)
@@ -643,27 +659,49 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
 	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
-	if (!bRoadStartSet)
+	// ROADS_AS_MECHANIC section 5: click a node, click the next; Enter draws the curve
+	// through them as one road. Two nodes is a straight road, the old gesture plus Enter.
+	RoadNodes.Add(FVector2D(X, Y));
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d node%s \u00b7 click the next \u00b7 ENTER to draw \u00b7 BACKSPACE undo \u00b7 G to leave"), RoadNodes.Num(), RoadNodes.Num() == 1 ? TEXT("") : TEXT("s")); }
+	PlayCue(TEXT("S_Place"));
+	return FString::Printf(TEXT("road node %d (%.0f, %.0f)"), RoadNodes.Num(), X, Y);
+}
+
+FString AStacktownPlayerController::CityRoadCommit()
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	if (RoadNodes.Num() < 2)
 	{
-		bRoadStartSet = true; RoadStart = FVector2D(X, Y);
-		if (HudModel) { HudModel->BarMessage = TEXT("road start set \u00b7 click the end"); }
-		PlayCue(TEXT("S_Place"));
-		return FString::Printf(TEXT("road start (%.0f, %.0f)"), X, Y);
+		if (HudModel) { HudModel->ActionRefusal = TEXT("Click two nodes first"); bRefusalShowing = true; }
+		PlayCue(TEXT("S_Refuse"));
+		return TEXT("road path refused: fewer than two nodes");
 	}
-	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::FPlacementBoard::Default(Econ->GetRules()), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
-	bRoadStartSet = false;
-	HideRoadGhost();
+	const Stacktown::FRoadPathResult R = Stacktown::DrawRoadPath(Stacktown::FPlacementBoard::Default(Econ->GetRules()), Econ->GetMutableState(), RoadNodes, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
 	if (!R.bOk)
 	{
-		if (HudModel) { HudModel->PlaceRefusal = ClassifyRoadRefusal(R.Reason); HudModel->BarMessage = TEXT("click start, click end \u00b7 G to leave"); }
+		if (HudModel) { HudModel->PlaceRefusal = ClassifyRoadRefusal(R.Reason); }
 		PlayCue(TEXT("S_Refuse"));
-		return FString::Printf(TEXT("road refused: %s -> \"%s\""), *R.Reason, *ClassifyRoadRefusal(R.Reason));
+		return FString::Printf(TEXT("road path refused: %s -> \"%s\""), *R.Reason, *ClassifyRoadRefusal(R.Reason));
 	}
+	RoadNodes.Reset();
+	HideRoadGhost();
 	Econ->SaveState();
 	const FString Rep = Sync->Reconcile(false);
-	if (HudModel) { HudModel->PlaceRefusal.Reset(); HudModel->BarMessage = TEXT("click start, click end \u00b7 G to leave"); }
+	if (HudModel) { HudModel->PlaceRefusal.Reset(); HudModel->BarMessage = TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave"); }
 	PlayCue(TEXT("S_Place"));
-	return FString::Printf(TEXT("road %s drawn (%.0f, %.0f) -> (%.0f, %.0f); %s"), *R.Id, R.Segment.StartX, R.Segment.StartY, R.Segment.EndX, R.Segment.EndY, *Rep);
+	return FString::Printf(TEXT("road %s drawn: %d chords; %s"), *R.PathId, R.Segments.Num(), *Rep);
+}
+
+FString AStacktownPlayerController::CityRoadUndo()
+{
+	if (RoadNodes.Num() == 0) { return TEXT("no node to drop"); }
+	RoadNodes.Pop();
+	if (RoadNodes.Num() == 0) { HideRoadGhost(); }
+	if (HudModel) { HudModel->BarMessage = RoadNodes.Num() == 0 ? TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave") : FString::Printf(TEXT("%d node%s \u00b7 click the next \u00b7 ENTER to draw \u00b7 BACKSPACE undo"), RoadNodes.Num(), RoadNodes.Num() == 1 ? TEXT("") : TEXT("s")); }
+	PlayCue(TEXT("S_Refuse"));
+	return FString::Printf(TEXT("road node dropped, %d left"), RoadNodes.Num());
 }
 
 FString AStacktownPlayerController::CityNight(bool bOn)
@@ -749,7 +787,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 
 	// any key press clears a showing refusal (LOOK 6: cleared on the next input)
 	const bool bAnyKey = WasInputKeyJustPressed(EKeys::LeftMouseButton) || WasInputKeyJustPressed(EKeys::B) || WasInputKeyJustPressed(EKeys::U)
-		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G) || WasInputKeyJustPressed(EKeys::L);
+		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G) || WasInputKeyJustPressed(EKeys::L) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::BackSpace);
 	if (bAnyKey && bRefusalShowing) { HudModel->ActionRefusal.Reset(); bRefusalShowing = false; }
 
 	// hover: a lot actor under the cursor, or the board point for the ghost
@@ -764,7 +802,9 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (bRoadMode && WasInputKeyJustPressed(EKeys::T)) { UE_LOG(LogStacktown, Log, TEXT("ROAD CLASS: %s"), *CityCycleRoadClass()); }
 	if (!bRoadMode && WasInputKeyJustPressed(EKeys::P)) { UE_LOG(LogStacktown, Log, TEXT("PRESET: %s"), *CityPreset()); }
 	if (!bRoadMode && WasInputKeyJustPressed(EKeys::R)) { UE_LOG(LogStacktown, Log, TEXT("RECIPE: %s"), *CityCycleRecipe()); }
-	if (WasInputKeyJustPressed(EKeys::Home) || WasInputKeyJustPressed(EKeys::BackSpace))
+	if (bRoadMode && WasInputKeyJustPressed(EKeys::Enter)) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadCommit()); }
+	if (bRoadMode && WasInputKeyJustPressed(EKeys::BackSpace)) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadUndo()); }
+	if (WasInputKeyJustPressed(EKeys::Home) || (!bRoadMode && WasInputKeyJustPressed(EKeys::BackSpace)))
 	{
 		// A stranger who has lost the board gets it back: the arrival pose, exactly.
 		if (AStacktownCameraPawn* Cam = Cast<AStacktownCameraPawn>(GetPawn())) { Cam->SetArrivalView(); }
@@ -834,7 +874,7 @@ FString AStacktownPlayerController::CityCycleRoadClass()
 	int32 Index = 1;
 	for (int32 i = 0; i < 4; ++i) { if (RoadClass == Classes[i]) { Index = i; break; } }
 	RoadClass = Classes[(Index + 1) % 4];
-	if (HudModel) { HudModel->RoadClass = RoadClass; HudModel->BarMessage = TEXT("click start, click end \u00b7 T next type \u00b7 G to leave"); }
+	if (HudModel) { HudModel->RoadClass = RoadClass; HudModel->BarMessage = TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave"); }
 	PlayCue(TEXT("S_Place"));
 	return RoadClass;
 }

@@ -75,6 +75,12 @@ public:
 	/** A click in road mode: the first sets the start, the second draws; returns the outcome line. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityRoadClick(double X, double Y);
+	/** Draw the path through the committed nodes as ONE road (the seat's DrawRoadPath): Enter in road mode. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityRoadCommit();
+	/** Drop the last committed node: Backspace in road mode. */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityRoadUndo();
 	/** Cycle the road class drawn next; returns the new class. */
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityCycleRoadClass();
@@ -107,7 +113,10 @@ private:
 	void HideRoadGhost();
 
 	bool bRoadMode = false;
-	bool bRoadStartSet = false;
+	/** The nodes of the road being drawn, in click order; the cursor is the tentative next one. */
+	TArray<FVector2D> RoadNodes;
+	/** One ghost actor per chord of the tentative path. */
+	UPROPERTY() TArray<TObjectPtr<AActor>> RoadGhostChain;
 	FVector2D RoadStart = FVector2D::ZeroVector;
 	UPROPERTY() TObjectPtr<AActor> RoadGhostActor;
 	UPROPERTY() TObjectPtr<UStacktownNight> Night;

@@ -190,3 +190,18 @@ WHAT I WOULD DO FIRST ON MONDAY: paste the board to both seats; have the
  design lane rule the six open frames in one window; let the owner change
  numbers; then the session end (a goal ladder is not an ending), and
  twenty masses that differ in shape, not only in species.
+
+## After the morning report (2026-09-07 06:45 PDT)
+
+- LOOK's 05:32 release acted on in one cycle: mitred chords at the carriageway
+  (procedural slab per chord), scored line 60 uu with MI_pad_score, the arrival
+  measured against the camera model (all four corners in, 2.26x margins - the
+  floor for this lens; the design lane rules on it), the mass confirmed single
+  component, the wear / night / stain frames posted.
+- ENGINEERING's gap 1 (a lot may not overlap any road's corridor) merged and
+  built clean; 119/119. Gap 2 and the self-crossing path are their next pushes.
+- Found and fixed on the way: the sound-cue cache was invisible to the garbage
+  collector - a reset then a cue crashed the game. A stranger would have hit it.
+- Honest score: unchanged at about 40. The cycle closed defects and rulings; it
+  did not add a loop or content. Still not built: the pinned map roads at the
+  carriageway (owner's word), slots, the market mock beyond the demo.

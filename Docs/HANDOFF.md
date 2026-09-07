@@ -1102,6 +1102,18 @@ was asking the wrong question and returning "ok".**
   reaches for when a reload call keeps failing. A refusal branch that
   names the tempting wrong move is worth more than the guess it replaces.
 
+- 2026-09-07 06:45 PDT (coordinator): LOOK's 05:32 rulings built and framed;
+  ENGINEERING's gap 1 merged. Mitred curved roads (procedural slab per chord,
+  bisector cuts, shared joint edges), every drawn road at its carriageway with
+  the verge as plate, the stain continuous along a path, the scored line 60 uu
+  with MI_pad_score in, the arrival measured (Tools/measure/arrival_margins.py:
+  aim 1,500 short of centre, yaw 45, pitch -38, reach 21,000; 2.26x is the
+  floor for this lens), the sound-cue cache made a UPROPERTY after a GC crash
+  in PlaySound2D. Mass confirmed single-component (one section, one slot).
+  Suite 119/119 at 4f104ef; frames in Saved/SelfTest/look_cpp2/. Pinned map
+  roads still at corridor width - a map edit for the owner's word. Package
+  rebuilding from 4f104ef. The owner's test state was restored after the frames.
+
 ## 6. The recipe — measured numbers
 
 Full detail in `Docs/MINIATURE_RECIPE.md`. Essentials:

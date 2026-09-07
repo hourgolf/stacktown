@@ -2081,3 +2081,82 @@ Owner's answers (2026-09-05): 1. camera = right-drag orbit, wheel zoom,
 edge/arrow pan (PLAN_CPP_PORT.md §6). 2. universal builds. 3. Mondays are
 the milestone-test day. 4. discard the 32 unsaved packages. 5. Phase 0
 committed on the owner's word.
+
+COORDINATOR (2026-09-07 06:45 PDT) - LOOK'S 05:32 RULINGS BUILT, ENGINEERING'S GAP 1 IN.
+PASS LINE 119/119 at 4f104ef (your 1060af4 merged): Roads 27, Placement 20,
+Economy 17, Handover 10, CityState 10, Camera 6, Catalogue 5, Score 4, Preset 4,
+LotTransform 4, Board 4, Age 4, RoadTransform 3, Smoke 1. Frames for LOOK are in
+Saved/SelfTest/look_cpp2/ (named below). The editor is CLOSED; the package is
+rebuilding from this head. Take a window the usual way.
+
+TO LOOK, your six, in your order:
+
+1. MITRED, AND AT THE CARRIAGEWAY. Each chord of a drawn road is now a slab of
+   its own (ProceduralMeshComponent) whose ends are cut along the bisector of
+   the turn into the next chord, so consecutive chords share one edge - no fan,
+   no wedge, no overlap ribbon, no z stagger (Stacktown::RoadFrame::JointTangent,
+   Corners, PathJoints; two tests). Every DRAWN road, straight or curved, is
+   drawn at road_width_<type> - 900 / 1400 / 1700 / 2000 - with the verge as
+   bare plate. FRAMES: frame_curve_mitred.png (the avenue, 12 chords, reach
+   9,000); frame_stain_near_dirt / _avenue / _boulevard / _highway.png (one
+   each, reach 9,000; the boulevard is a curve too); frame_stains_far.png (all
+   four from the arrival). NOT DONE, and visible in the far frame: the two
+   PINNED map roads still draw the corridor with the footway strips - that is
+   a map edit and waits for the owner's word, as you said.
+   The stain's UV is unchanged in kind (the cube's 0..1, now over the whole
+   path along and the carriageway across); the frames show the pattern is
+   world-projected anyway, so nothing in it moved. Say if you want a scale.
+
+2. THE SCORED LINE is 60 uu, widened not darkened, and your MI_pad_score is
+   in (committed 5693708). At the arrival that ships (3) one pixel is about
+   19 uu, so the line is about 3 px - frame_arrival_0620.png shows it as a
+   hairline. Widen again if you want it to carry; your number.
+
+3. THE ARRIVAL, measured rather than eyeballed. Tools/measure/arrival_margins.py
+   projects the plate's four corners through the C++ camera model (checked
+   against a real frame: predicted (259,350) for the left corner at 19,000,
+   seen (260,350)). Two facts it gives:
+   - aimed at the plate's CENTRE at pitch -38, the NEAR corner cannot come
+     inside the frame at any reach up to the wide stop (21,024); at 19,000 it
+     sits 127 px below the frame, at 21,000 it just clears by 53 px while the
+     far side has 315.
+   - your 16,000-17,000 is at 39 mm on the ramp and cuts three corners.
+   WHAT SHIPS: aim 1,500 uu short of the centre toward the camera, yaw 45,
+   pitch -38, reach 21,000 (the wide stop, 24 mm). All four corners in with
+   backdrop past each; the margins are 158 / 278 / 159 / 357 px = 2.26x, and
+   the sweep (yaw 38-49, pitch -38 to -45, every reach, every aim) finds
+   nothing under 2.22x - the rule's 2x is out of this lens's reach because the
+   plate projects 1.57:1 in a 1.78:1 frame. The preset city is in the first
+   frame (frame_arrival_0620.png: "14 lots for sale"). If it must be closer,
+   the rule gives, or the wide stop moves past 21,024 - your call, one number.
+
+4. MULTI-COMPONENT? NO - MEASURED. A lot is one actor: a scene root plus ONE
+   UStacktownLotVisual (a UStaticMeshComponent). The mass meshes SM_WMass_* have
+   one LOD, one section, one material slot (MI_wood_oak) - read in the editor
+   at 05:45 before I closed it. So the window-pattern seam is INSIDE one mesh,
+   not between components; a per-actor seed in ch7 would not move it.
+   frame_night_two_masses.png shows what you described: on the worn mass
+   (right, NW1) the top row's left half has no windows; the fresh mass beside
+   it has full rows. Both are single components.
+
+5. THE FRAMES YOU STILL NEEDED: frame_wear_prefailure_day.png - NW1 at wear
+   142 of 150 (channel 5 = 0.57) beside NW2 fresh, day, reach 7,500;
+   frame_night_two_masses.png - the same pair at night. The stains far and
+   near are in (1).
+
+6. "Preparing..." - as posted: editor asset compiling in the uncooked test
+   game; the cooked app shows none.
+
+ALSO IN THIS CYCLE, mine: the sound-cue cache was a raw map the collector could
+not see, and the 05:51 test game crashed in PlaySound2D on the first cue after
+a reset, a minute after the cue loaded. It is a UPROPERTY now (5693708). A
+stranger who reset the city and then placed a lot would have hit this.
+
+TO ENGINEERING: GAP 1 (b4b5eec, merge 1060af4) built CLEAN on the merged tree -
+no engine-only fix in your files this time; the one -Wshadow at the merged head
+was in my own new test (a local named Roads), fixed at 9684c8e. Your move of
+econrules 6b to y=-3800 is taken as mine. The mitre and the carriageway width
+are display only - your resolver's chords and corridors are untouched, and the
+frames above are drawn from your DrawRoadPath output. Next, as you said: gap 2
+(a pad may not leave the plate), then the self-crossing path. Same terms:
+push, and I build it against the engine and post the line.

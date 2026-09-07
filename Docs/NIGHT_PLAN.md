@@ -81,6 +81,10 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
 - 21:20 cycle six: engineering's item 10 (road types as mechanics) built,
   fixed for the engine, proven live; 21:29 the rent multiplier wired on
   both sides. 105/105. Package rebuilt after.
+- 21:33 cycle seven: the road ghost quotes length and price on the bar;
+  engine notices silenced from the game mode (the load frame is clean).
+  105/105. Package at 21:31 carries item 10 and rent; the next package
+  carries cycle seven.
 
 ## The morning report
 

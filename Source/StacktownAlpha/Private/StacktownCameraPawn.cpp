@@ -146,3 +146,9 @@ void AStacktownCameraPawn::Tick(float DeltaSeconds)
 	Distance = FMath::Lerp(Distance, TargetDistance, A);
 	ApplyPose();
 }
+
+void AStacktownCameraPawn::SetView(FVector InFocus, double InYaw, double InPitch, double InDistance)
+{
+	TargetFocus = InFocus; TargetYaw = InYaw; TargetPitch = InPitch; TargetDistance = InDistance;
+	SnapToTargets();
+}

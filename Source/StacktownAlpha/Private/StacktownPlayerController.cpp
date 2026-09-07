@@ -41,7 +41,7 @@ void AStacktownPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	// A Development build prints engine notices ("Preparing SoundWaves") over the board; a stranger must never see them.
-	if (GEngine) { GEngine->Exec(GetWorld(), TEXT("DisableAllScreenMessages")); }
+	GAreScreenMessagesEnabled = false;   // the console route ran before the viewport existed (frame 20:20 still showed the notice)
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);

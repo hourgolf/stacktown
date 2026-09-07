@@ -68,7 +68,7 @@ bool UStacktownLotVisual::ShowPad(double Width, FString& OutError, bool bScored)
 		ClearScoreBars();
 		UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
 		UMaterialInterface* Line = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_pad_score.MI_pad_score"));
-		if (!Line) { Line = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_road_highway.MI_road_highway")); }
+		if (!Line) { Line = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_studio_grey.MI_studio_grey")); }   // the studio floor: darker than the plate, so the knife-mark reads (the highway stain read pale, frame 22:12)
 		if (!Cube) { OutError = TEXT("engine cube missing"); return false; }
 		const FVector Ext = Mesh->GetBounds().BoxExtent;   // the pad's footprint, from the pad mesh itself
 		SetStaticMesh(nullptr);

@@ -100,8 +100,8 @@ STACKTOWN_TYPES_TEST(FStacktownRoadTypeGeometry, "Stacktown.Roads.TypeGeometry")
 		FRoad Probe;
 		Probe.WidthClass = FString(Row.Type);
 		TestEqual(TEXT("type of"), RoadTypeOf(Probe), FString(Row.Type));
-		TestEqual(TEXT("half"), RoadHalf(Board.Rules, Board.Econ, Probe), Row.Half, 1e-9);
-		TestEqual(TEXT("max reach"), RoadMaxReach(Board.Rules, Board.Econ, Probe), Row.MaxReach, 1e-9);
+		TestEqual(TEXT("half"), Stacktown::RoadHalf(Board.Rules, Board.Econ, Probe), Row.Half, 1e-9);
+		TestEqual(TEXT("max reach"), Stacktown::RoadMaxReach(Board.Rules, Board.Econ, Probe), Row.MaxReach, 1e-9);
 		TestEqual(TEXT("corridor is twice the half"),
 			RoadCorridor(Board.Rules, Board.Econ, Probe.WidthClass), 2.0 * Row.Half, 1e-9);
 		TestEqual(TEXT("frontage"), BoolStr(RoadHasFrontage(Board.Econ, Probe)), BoolStr(Row.bFrontage));
@@ -116,13 +116,13 @@ STACKTOWN_TYPES_TEST(FStacktownRoadTypeGeometry, "Stacktown.Roads.TypeGeometry")
 	if (!TestNotNull(TEXT("arterial"), Arterial)) { return false; }
 	TestEqual(TEXT("no width class means avenue"), RoadTypeOf(*Arterial), FString(OracleDefaultType));
 	TestEqual(TEXT("untyped half is the oracle's"),
-		RoadHalf(Board.Rules, Board.Econ, *Arterial), T40_UntypedHalf, 1e-9);
+		Stacktown::RoadHalf(Board.Rules, Board.Econ, *Arterial), T40_UntypedHalf, 1e-9);
 	TestEqual(TEXT("untyped half IS Rules.RoadHalf"),
-		RoadHalf(Board.Rules, Board.Econ, *Arterial), Board.Rules.RoadHalf, 1e-9);
+		Stacktown::RoadHalf(Board.Rules, Board.Econ, *Arterial), Board.Rules.RoadHalf, 1e-9);
 	TestEqual(TEXT("untyped reach is the oracle's"),
-		RoadMaxReach(Board.Rules, Board.Econ, *Arterial), T40_UntypedReach, 1e-9);
+		Stacktown::RoadMaxReach(Board.Rules, Board.Econ, *Arterial), T40_UntypedReach, 1e-9);
 	TestEqual(TEXT("untyped reach IS Rules.RoadMaxReach"),
-		RoadMaxReach(Board.Rules, Board.Econ, *Arterial), Board.Rules.RoadMaxReach, 1e-9);
+		Stacktown::RoadMaxReach(Board.Rules, Board.Econ, *Arterial), Board.Rules.RoadMaxReach, 1e-9);
 	return true;
 }
 
@@ -271,8 +271,8 @@ STACKTOWN_TYPES_TEST(FStacktownRoadNarrowerFrontage, "Stacktown.Roads.NarrowerFr
 	const FLotPlacement& Lot = S.Parcels[P.Pid].Placement.GetValue();
 	TestEqual(TEXT("side"), Lot.Side, FString(T45_Lot.Side));
 	TestEqual(TEXT("road"), LotRoadId(Lot), FString(T45_Lot.RoadId));
-	const TArray<FRoad> Roads = Board.AllRoads(S);
-	const FRoad* Own = FindRoad(Roads, LotRoadId(Lot));
+	const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+	const FRoad* Own = FindRoad(RoadsLocal, LotRoadId(Lot));
 	if (!TestNotNull(TEXT("own road"), Own)) { return false; }
 	const FLotRect Rect = LotRect(Board.Rules, Board.Econ, *Own, Lot);
 	TestEqual(TEXT("lot rect ymin"), Rect.YMin, T45_LotRect.YMin, 1e-9);

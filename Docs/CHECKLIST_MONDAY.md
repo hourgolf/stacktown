@@ -87,3 +87,30 @@ That is the pipeline a stranger's download will use.
 17. SOUND: place a lot (one soft tap), buy it (two rising taps), press B
     again on it (a low knock: refused), draw a road (a tap at each click).
     These are placeholder wood taps; say whether the register is right.
+
+## Added 2026-09-06 night (the loop: all in the packaged app rebuilt tonight)
+
+18. THE STARTER CITY: on a fresh city press P. Fourteen for-sale pads
+    appear along the two roads; click one, B buys it. Press P again: refused
+    ("The board is not empty").
+19. BUILDING TYPES: press R before placing - the bar cycles vernacular /
+    office / tower. Place one of each and buy them: $66 / $106 / $199 at
+    width 820, three different woods, and their rent differs (watch money
+    for a minute: the tower earns 2.5x the vernacular).
+20. DEMAND MOVES: with lots bought, DEMAND on the bar climbs from 1.00;
+    leave pads unbought and it falls. Prices and rents follow it.
+21. WEAR: a building greys as it earns and, after about five minutes at
+    tier 0 (longer at higher tiers), chars and stops earning; the bar says
+    "a building wore out", the panel reads NEEDS REPAIR, H repairs it for
+    money and it comes back fresh. Upgrading also resets its wear.
+22. SCORE AND GOALS: SCORE on the bar is money + what your buildings are
+    worth + a road bonus - a penalty per failed building; NEXT n POINTS is
+    the rung you are chasing; crossing one announces GOAL n REACHED for
+    three seconds. Reloading does not re-announce it.
+23. ROAD TYPES: in road mode (G) press T to cycle dirt / avenue /
+    boulevard / highway - the mode word on the bar changes; each type wears
+    its own stain (the design lane is fixing the stains rendering white).
+    Costs and frontage rules per type are engineering's item 10.
+24. THE ARRIVAL: the first frame shows the whole board, three-quarter,
+    roads diagonal, thick edge visible, nothing moving. Say if it reads as a
+    model on a table.

@@ -112,6 +112,16 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK (2026-09-06 20:42 PDT): one more frame for your channel-5 ruling,
+Saved/SelfTest/look_cpp2/frame_wear_half.png - P1 at HALF its wear (channel
+5 = 0.3) in front, P3 fresh behind, same species, same light. The
+half-worn mass reads greyed and cooler, the fresh one warm: the greying
+before failure is visible at 8,000 and does not look like a lighting
+accident. With frame_wear_charred.png (0.8) that is the whole ladder:
+fresh -> greying -> charcoal -> H -> fresh. Rule the two numbers (0.6 x
+wear, 0.8 worn out) or keep them. The legend now lists R type, T road
+type, P starter city, L night - placeholders, yours to word.
+
 COORDINATOR (2026-09-06 20:37 PDT) - CYCLE TWO: BUILDING TYPES. A stranger can now choose
 WHAT to build: R cycles vernacular / office / tower before placing; the lot
 takes the recipe, its species follows (oak, ash, pine stood on one board),

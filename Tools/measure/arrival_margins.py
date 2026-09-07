@@ -62,10 +62,12 @@ def area_fraction(pts):
 
 
 def look_rule(pts):
-    """The design lane's replacement rule (BOARD 2026-09-07 06:40): all four
-    corners inside the frame, no corner within 5 percent of an edge (the HUD
-    bar's bottom is the top edge), and the plate covering at least a third of
-    the frame. Returns (corners_ok, area_ok, area)."""
+    """The design lane's rule (BOARD 2026-09-07 06:40, floor dropped 06:58): all
+    four corners inside the frame, no corner within 5 percent of an edge (the
+    HUD bar's bottom is the top edge); the plate then as large as that allows.
+    The third-of-frame floor was dropped once measured unreachable (28.5 percent
+    is the ceiling at pitch -38). Returns (corners_ok, area_ok, area) - area_ok
+    is informational only now."""
     left, right = 0.05 * W, 0.95 * W
     top, bottom = BAR + 0.05 * H, 0.95 * H
     corners_ok = all(left <= x <= right and top <= y <= bottom for x, y in pts)
@@ -81,7 +83,7 @@ def report(yaw, pitch, reach, aim):
     print('yaw %g pitch %g reach %g aim %g (focal %.1f mm): corners %s margins %s -> %s, %.2fx; plate %.1f%% of the frame; 5%%-edge rule %s, third-of-frame %s' % (
         yaw, pitch, reach, aim, focal(reach), [(round(x), round(y)) for x, y in pts],
         [round(v) for v in m], 'all four in' if ok else 'A CORNER IS OUT', ratio, 100 * area,
-        'met' if c_ok else 'FAILED', 'met' if a_ok else 'FAILED'))
+        'met' if c_ok else 'FAILED', 'met' if a_ok else 'not met (informational since 06:58)'))
 
 
 if __name__ == '__main__':

@@ -128,12 +128,8 @@ void UStacktownHud::Build(UWorld* InWorld)
 	NightWord = MakeText(TomorrowMedium, SizeLabel, Dim, SpacingLabel);
 	SetText(NightWord, TEXT("NIGHT"));
 	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(NightWord)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(24.f, 0.f, 0.f, 0.f)); }
-	SlotWord = MakeText(TomorrowMedium, SizeLabel, Dim, SpacingLabel);
-	SetText(SlotWord, TEXT("SLOT 2"));
-	if (UHorizontalBoxSlot* S = BarRow->AddChildToHorizontalBox(SlotWord)) { S->SetVerticalAlignment(VAlign_Center); S->SetPadding(FMargin(24.f, 0.f, 0.f, 0.f)); }
 	RoadWord->SetVisibility(ESlateVisibility::Collapsed);
 	NightWord->SetVisibility(ESlateVisibility::Collapsed);
-	SlotWord->SetVisibility(ESlateVisibility::Collapsed);
 	{
 		FGameViewportWidgetSlot Slot;
 		Slot.Anchors = FAnchors(0.f, 0.f, 1.f, 0.f);
@@ -249,9 +245,6 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 	RoadWord->SetVisibility(M->bRoadMode ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	SetText(RoadWord, M->bRoadMode ? M->RoadClass.ToUpper() : FString(TEXT("ROAD")));   // LOOK 4: the type IS the mode word
 	NightWord->SetVisibility(M->bNight ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
-	// The slot word, like NIGHT: a state tag on the bar's right, only when it is not the default. Placeholder placement, the design lane's to move.
-	SetText(SlotWord, FString::Printf(TEXT("SLOT %d"), M->Slot));
-	SlotWord->SetVisibility(M->Slot > 1 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 
 	if (M->bHasSelection)
 	{
@@ -285,7 +278,7 @@ void UStacktownHud::Apply(const UStacktownHudModel* M, const FVector2D& CursorSl
 		if (M->bRoadMode) { Verbs = TEXT("CLICK nodes      ENTER draw      BACKSPACE undo      T road type      G leave road mode"); }
 		else if (M->bHasSelection && !M->Verb.IsEmpty()) { Verbs = FString::Printf(TEXT("%s %s      CLICK elsewhere      G road      L night      N hold reset"), *M->VerbKey, *M->Verb.ToLower()); }
 		else if (M->bHasSelection) { Verbs = TEXT("CLICK elsewhere      G road      L night      N hold reset"); }
-		else { Verbs = TEXT("CLICK place      TAB width      R building      G road      L night      N hold reset      1-3 slot"); }
+		else { Verbs = TEXT("CLICK place      TAB width      R building      G road      L night      N hold reset      1-3 load"); }   // design lane 06:58: the keys LOAD (the save is continuous), so say load
 		SetText(LegendVerbsText, Verbs);
 	}
 

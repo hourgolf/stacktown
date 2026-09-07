@@ -97,16 +97,20 @@ chase a number, and hear the board answer.
 
 ## 9. New since the night, for the owner (2026-09-07 morning)
 
-- ROAD TONE. The design lane found its own stain ladder sits within one
-  percent of the plate's value at the highway end and will raise it. The
-  alternative they will not take alone: ALL FOUR road stains DARKER than the
-  plate - a dark inlay in a pale board, ordinary marquetry - which would end
-  the "roads out-read the timber" note for good. The frame that decides is
-  Saved/SelfTest/look_cpp2/frame_stains_adjacent_wide.png. Your call.
-- THE PINNED MAP ROADS (arterial, cross) still draw the corridor with footway
-  strips; every drawn road is now the carriageway on bare plate. Making the
-  map match is a map edit: your word.
-- THE STARTER CITY starts with THREE BUILT LOTS (NW3, SE0, NE0, the player's,
-  tier 1) so the first frame shows timber. Which three, or how many, is yours
-  and the design lane's to move; the score starts near 460 because of them.
-- SLOTS are 1, 2, 3 - unnamed. Say if names matter for the beta.
+- ROAD TONE: RESOLVED by the design lane at 06:58 without you - the frame
+  showed their ladder reads; they widened its ends (dirt .84 to highway .38)
+  and WITHDREW the "all four below the plate" alternative.
+- THE PINNED MAP ROADS are the real dominance problem, by that same frame:
+  the arterial and the cross street are near-white, the brightest things in
+  the picture, well above every stain. Every drawn road is now the
+  carriageway on bare plate in a stain; the two map roads still draw the
+  corridor with footway strips in the old white. Making the map match - the
+  same stain and width as a drawn avenue - is a map edit: YOUR WORD, and the
+  design lane says it is the one change that ends "roads out-read the timber".
+- THE STARTER CITY starts with THREE BUILT LOTS (NW3, SE0 at tier 1, NE0 at
+  tier 2, the player's) so the first frame shows timber and a skyline that
+  says the city grows. The design lane accepted the spread. Which three, or
+  how many, stays yours to move; the score starts near 480 because of them.
+- SLOTS are 1, 2, 3 - unnamed, named on the bar only when one is loaded
+  (the design lane's rule). Say if names, or a permanent slot word in the
+  left cluster of the bar, matter for the beta.

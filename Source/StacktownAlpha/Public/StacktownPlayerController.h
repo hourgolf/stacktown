@@ -144,6 +144,8 @@ private:
 	bool bGoalsPrimed = false;
 	/** A bar message that holds for a minimum time (LOOK 4: an announcement, 3 s or the next input, whichever is longer). */
 	FString PinnedBarMessage;
+	/** "Loaded slot 2." is on the bar until the next input (design lane 06:58). */
+	bool bSlotMessageShowing = false;
 	double PinnedBarUntil = 0.0;
 	/** The recipe of the next placed lot (vernacular | office | tower); R cycles it. */
 	FString NextRecipe = TEXT("vernacular");

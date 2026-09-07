@@ -472,7 +472,7 @@ void AStacktownPlayerController::RefreshSelection()
 	}
 	else
 	{
-		HudModel->SelectedState = FString::Printf(TEXT("OWNED \u00b7 TIER %d"), P->Tier);
+		HudModel->SelectedState = FString::Printf(TEXT("OWNED    TIER %d"), P->Tier);
 		Stacktown::FWoodCatalogue Cat;
 		if (Stacktown::TierUpAllowed(Cat, P->Rid, P->Tier, P->Width).bOk)
 		{
@@ -544,7 +544,7 @@ FString AStacktownPlayerController::CityCycleWidth(int32 Step)
 {
 	WidthIndex = ((WidthIndex + Step) % 5 + 5) % 5;
 	LastHoverPoint = FVector(1e9, 1e9, 0.0);
-	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 width %d"), *NextRecipe, (int32)CurrentLotWidth()); }
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%s    width %d"), *NextRecipe, (int32)CurrentLotWidth()); }
 	return FString::Printf(TEXT("%s width %d"), *NextRecipe, (int32)CurrentLotWidth());
 }
 
@@ -594,7 +594,7 @@ FString AStacktownPlayerController::CityRoadMode(bool bOn)
 	if (HudModel)
 	{
 		HudModel->bRoadMode = bOn;
-		HudModel->BarMessage = bOn ? TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave") : TEXT("");
+		HudModel->BarMessage = bOn ? TEXT("click nodes    ENTER to draw    T road type    G to leave") : TEXT("");
 	}
 	return bOn ? TEXT("road mode on") : TEXT("road mode off");
 }
@@ -653,7 +653,7 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 	if (HudModel) { HudModel->PlaceRefusal = R.bOk ? FString() : ClassifyRoadRefusal(R.Reason); }
 	if (HudModel && PinnedBarMessage.IsEmpty() && R.bOk)
 	{
-		HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 %.0f uu \u00b7 $%.0f \u00b7 click to add a node \u00b7 ENTER to draw"), *RoadClass, Length, Cost);
+		HudModel->BarMessage = FString::Printf(TEXT("%s    %.0f uu    $%.0f    click to add a node    ENTER to draw"), *RoadClass, Length, Cost);
 	}
 }
 
@@ -665,7 +665,7 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 	// ROADS_AS_MECHANIC section 5: click a node, click the next; Enter draws the curve
 	// through them as one road. Two nodes is a straight road, the old gesture plus Enter.
 	RoadNodes.Add(FVector2D(X, Y));
-	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d node%s \u00b7 click the next \u00b7 ENTER to draw \u00b7 BACKSPACE undo \u00b7 G to leave"), RoadNodes.Num(), RoadNodes.Num() == 1 ? TEXT("") : TEXT("s")); }
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d node%s    click the next    ENTER to draw    BACKSPACE undo    G to leave"), RoadNodes.Num(), RoadNodes.Num() == 1 ? TEXT("") : TEXT("s")); }
 	PlayCue(TEXT("S_Place"));
 	return FString::Printf(TEXT("road node %d (%.0f, %.0f)"), RoadNodes.Num(), X, Y);
 }
@@ -692,7 +692,7 @@ FString AStacktownPlayerController::CityRoadCommit()
 	HideRoadGhost();
 	Econ->SaveState();
 	const FString Rep = Sync->Reconcile(false);
-	if (HudModel) { HudModel->PlaceRefusal.Reset(); HudModel->BarMessage = TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave"); }
+	if (HudModel) { HudModel->PlaceRefusal.Reset(); HudModel->BarMessage = TEXT("click nodes    ENTER to draw    T road type    G to leave"); }
 	PlayCue(TEXT("S_Place"));
 	return FString::Printf(TEXT("road %s drawn: %d chords; %s"), *R.PathId, R.Segments.Num(), *Rep);
 }
@@ -702,7 +702,7 @@ FString AStacktownPlayerController::CityRoadUndo()
 	if (RoadNodes.Num() == 0) { return TEXT("no node to drop"); }
 	RoadNodes.Pop();
 	if (RoadNodes.Num() == 0) { HideRoadGhost(); }
-	if (HudModel) { HudModel->BarMessage = RoadNodes.Num() == 0 ? TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave") : FString::Printf(TEXT("%d node%s \u00b7 click the next \u00b7 ENTER to draw \u00b7 BACKSPACE undo"), RoadNodes.Num(), RoadNodes.Num() == 1 ? TEXT("") : TEXT("s")); }
+	if (HudModel) { HudModel->BarMessage = RoadNodes.Num() == 0 ? TEXT("click nodes    ENTER to draw    T road type    G to leave") : FString::Printf(TEXT("%d node%s    click the next    ENTER to draw    BACKSPACE undo"), RoadNodes.Num(), RoadNodes.Num() == 1 ? TEXT("") : TEXT("s")); }
 	PlayCue(TEXT("S_Refuse"));
 	return FString::Printf(TEXT("road node dropped, %d left"), RoadNodes.Num());
 }
@@ -780,7 +780,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 		{
 			if (E.Type == Stacktown::EEconEventType::WornOut)
 			{
-				HudModel->BarMessage = TEXT("a building wore out \u00b7 select it and press H to repair");
+				HudModel->BarMessage = TEXT("a building wore out    select it and press H to repair");
 				PlayCue(TEXT("S_Refuse"));
 				UE_LOG(LogStacktown, Log, TEXT("WEAR: %s wore out"), *E.Pid);
 			}
@@ -793,6 +793,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 		|| WasInputKeyJustPressed(EKeys::H) || WasInputKeyJustPressed(EKeys::Tab) || WasInputKeyJustPressed(EKeys::N) || WasInputKeyJustPressed(EKeys::G) || WasInputKeyJustPressed(EKeys::L) || WasInputKeyJustPressed(EKeys::Enter) || WasInputKeyJustPressed(EKeys::BackSpace)
 		|| WasInputKeyJustPressed(EKeys::One) || WasInputKeyJustPressed(EKeys::Two) || WasInputKeyJustPressed(EKeys::Three);
 	if (bAnyKey && bRefusalShowing) { HudModel->ActionRefusal.Reset(); bRefusalShowing = false; }
+	if (bAnyKey && bSlotMessageShowing) { HudModel->BarMessage.Reset(); bSlotMessageShowing = false; }   // the fresh-city hint fills the bar again if the board is empty
 
 	// hover: a lot actor under the cursor, or the board point for the ghost
 	FHitResult Hit;
@@ -847,7 +848,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 		NHeld += DeltaTime;
 		if (!bNFired)
 		{
-			HudModel->BarMessage = FString::Printf(TEXT("HOLD N TO RESET \u00b7 %.1f"), FMath::Max(0.f, ResetHoldSeconds - NHeld));
+			HudModel->BarMessage = FString::Printf(TEXT("HOLD N TO RESET    %.1f"), FMath::Max(0.f, ResetHoldSeconds - NHeld));
 			if (NHeld >= ResetHoldSeconds) { bNFired = true; UE_LOG(LogStacktown, Log, TEXT("RESET: %s"), *CityReset()); }
 		}
 	}
@@ -884,7 +885,7 @@ FString AStacktownPlayerController::CityCycleRoadClass()
 	int32 Index = 1;
 	for (int32 i = 0; i < 4; ++i) { if (RoadClass == Classes[i]) { Index = i; break; } }
 	RoadClass = Classes[(Index + 1) % 4];
-	if (HudModel) { HudModel->RoadClass = RoadClass; HudModel->BarMessage = TEXT("click nodes \u00b7 ENTER to draw \u00b7 T road type \u00b7 G to leave"); }
+	if (HudModel) { HudModel->RoadClass = RoadClass; HudModel->BarMessage = TEXT("click nodes    ENTER to draw    T road type    G to leave"); }
 	PlayCue(TEXT("S_Place"));
 	return RoadClass;
 }
@@ -910,16 +911,20 @@ FString AStacktownPlayerController::CityPreset()
 	// player is shown what the game is rather than told. They are the player's
 	// (they earn rent and count for the score); which three is a placeholder
 	// for the owner and the design lane to move.
+	// One of the three stands at tier 2 (design lane 06:58): a flat skyline of
+	// three low blocks says nothing; one taller block says the city GROWS, the
+	// one thing the arrival cannot otherwise tell a stranger.
 	static const TCHAR* Built[] = { TEXT("NW3"), TEXT("SE0"), TEXT("NE0") };
+	static const int32  BuiltTier[] = { 1, 1, 2 };
 	int32 NumBuilt = 0;
-	for (const TCHAR* Pin : Built)
+	for (int32 i = 0; i < 3; ++i)
 	{
-		if (Stacktown::FParcelState* P = Seeded.Parcels.Find(Pin)) { P->bOwned = true; P->Tier = 1; P->bFailed = false; ++NumBuilt; }
+		if (Stacktown::FParcelState* P = Seeded.Parcels.Find(Built[i])) { P->bOwned = true; P->Tier = BuiltTier[i]; P->bFailed = false; ++NumBuilt; }
 	}
 	Econ->GetMutableState() = Seeded;
 	Econ->SaveState();
 	const int32 ForSale = Seeded.Parcels.Num() - NumBuilt;
-	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d built \u00b7 %d lots for sale \u00b7 click one, B to buy"), NumBuilt, ForSale); bHintShowing = false; }
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d built    %d lots for sale    click one, B to buy"), NumBuilt, ForSale); bHintShowing = false; }
 	bGoalsPrimed = false;   // the built lots count: the score and the next goal re-read
 	PlayCue(TEXT("S_Place"));
 	return FString::Printf(TEXT("preset seeded: %d built, %d lots for sale; %s"), NumBuilt, ForSale, *Sync->Reconcile(false));
@@ -933,22 +938,19 @@ FString AStacktownPlayerController::CitySlot(int32 Slot)
 	CitySelect(FString());
 	FString Report;
 	const bool bOk = Sync->SwitchSlot(Slot, Report);
-	if (HudModel) { HudModel->Slot = Sync->GetSlot(); }
+	// The slot is named only when it changes (design lane 06:58: a bar message,
+	// body, dim, cleared on the next input - which slot is open matters when you
+	// load, not while you place lots). No permanent tag anywhere on the bar.
 	if (!bOk)
 	{
-		if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("SLOT %d \u00b7 already open"), Sync->GetSlot()); }
+		if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("Slot %d is open."), Sync->GetSlot()); bSlotMessageShowing = true; }
 		return Report;
 	}
 	// The slot's own goals, hint and score: nothing carried over from the city left.
 	bGoalsPrimed = false;
 	bHintShowing = false;
 	PinnedBarMessage.Reset();
-	if (HudModel)
-	{
-		const int32 Lots = Econ->GetState().Parcels.Num();
-		// A fresh board says nothing here: the fresh-city hint takes the bar on the next tick.
-		HudModel->BarMessage = Lots > 0 ? FString::Printf(TEXT("SLOT %d \u00b7 %d lots"), Sync->GetSlot(), Lots) : FString();
-	}
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("Loaded slot %d."), Sync->GetSlot()); bSlotMessageShowing = true; }
 	PlayCue(TEXT("S_Place"));
 	return Report;
 }
@@ -959,7 +961,7 @@ FString AStacktownPlayerController::CityCycleRecipe()
 	int32 Index = 0;
 	for (int32 i = 0; i < 3; ++i) { if (NextRecipe == Recipes[i]) { Index = i; break; } }
 	NextRecipe = Recipes[(Index + 1) % 3];
-	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%s \u00b7 width %d"), *NextRecipe, (int32)CurrentLotWidth()); }
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%s    width %d"), *NextRecipe, (int32)CurrentLotWidth()); }
 	PlayCue(TEXT("S_Place"));
 	return NextRecipe;
 }

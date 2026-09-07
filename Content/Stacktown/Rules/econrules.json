@@ -15,5 +15,19 @@
   "demand_rate": 0.1,
   "demand_min": 0.5,
   "demand_max": 2.0,
-  "wear_ticks_per_tier": 150
+  "wear_ticks_per_tier": 150,
+  "recipe_mult": {
+    "vernacular": {
+      "price": 1.0,
+      "rent": 1.0
+    },
+    "office": {
+      "price": 1.6,
+      "rent": 1.5
+    },
+    "tower": {
+      "price": 3.0,
+      "rent": 2.5
+    }
+  }
 }

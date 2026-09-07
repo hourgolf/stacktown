@@ -33,6 +33,14 @@ namespace Stacktown
 
 /** econrules.json, parsed. Every value is SCAFFOLDING awaiting the owner's
  *  economy notes - the machinery is the part that survives their arrival. */
+/** A recipe's price and rent factors (2026-09-06 night): a building TYPE that behaves
+ *  differently. Unknown recipes are vernacular, 1.0 / 1.0. */
+struct STACKTOWNALPHA_API FRecipeMult
+{
+	double Price = 1.0;
+	double Rent  = 1.0;
+};
+
 struct STACKTOWNALPHA_API FEconRules
 {
 	double MoneyStart        = 100.0;
@@ -58,6 +66,7 @@ struct STACKTOWNALPHA_API FEconRules
 	double DemandMin         = 0.5;
 	double DemandMax         = 2.0;
 	double WearTicksPerTier  = 150.0;
+	TMap<FString, FRecipeMult> RecipeMult;
 
 	/** Parse econrules.json. Returns false and fills OutError on malformed JSON
 	 *  or a missing key - never silently falls back to the defaults above, which
@@ -275,9 +284,14 @@ STACKTOWNALPHA_API double AgeFraction(double AgeTicks);
 
 /** price_base + price_per_100uu * (width/100) + price_per_tier * tier. */
 STACKTOWNALPHA_API double Price(const FEconRules& R, int32 Tier, double Width);
+/** Price for a recipe: Price x the recipe's factor (econrules.price(rid, ...)). */
+STACKTOWNALPHA_API double PriceFor(const FEconRules& R, const FString& Rid, int32 Tier, double Width);
 
 /** rent_per_tier * (tier + 1) * demand. */
 STACKTOWNALPHA_API double Rent(const FEconRules& R, int32 Tier, double Demand);
+/** Rent for a recipe: Rent x the recipe's factor (econrules.rent(rid, ...)). */
+STACKTOWNALPHA_API double RentFor(const FEconRules& R, const FString& Rid, int32 Tier, double Demand);
+STACKTOWNALPHA_API double RecipeFactor(const FEconRules& R, const FString& Rid, bool bPrice);
 
 /** Upgrade cost multiplier that CLIMBS with each level (owner's word): linear in
  *  the tier being climbed FROM, so a tier-3 lot costs 4x a tier-0 lot's first

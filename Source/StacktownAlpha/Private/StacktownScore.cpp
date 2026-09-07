@@ -13,7 +13,7 @@ namespace Stacktown
 		{
 			const FParcelState& P = Pair.Value;
 			if (!P.bOwned) { continue; }
-			B.LotValue += Price(R, P.Tier, P.Width);
+			B.LotValue += PriceFor(R, P.Rid, P.Tier, P.Width);
 			if (P.bFailed) { B.FailedPenalty += FailedLotPenalty; }
 		}
 		for (const TPair<FString, FRoadSegment>& Pair : S.Roads)

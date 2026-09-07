@@ -59,15 +59,24 @@ def asset_exists(rid, tier, width, baked_dir=BAKED_DIR):
     return os.path.exists(os.path.join(baked_dir, name + '.uasset'))
 
 
+def recipe_mult(rid, which, r=None):
+    """2026-09-06 night (NIGHT_PLAN.md, working defaults): a recipe is a TYPE
+    that behaves differently - office and tower cost more and earn more than
+    vernacular. Unknown recipes are vernacular (1.0). 'which' is 'price' or
+    'rent'."""
+    r = r or rules()
+    return float(r.get('recipe_mult', {}).get(rid, {}).get(which, 1.0))
+
+
 def price(rid, tier, width, r=None):
     r = r or rules()
-    return r['price_base'] + r['price_per_100uu'] * (float(width) / 100.0) \
-        + r['price_per_tier'] * int(tier)
+    return (r['price_base'] + r['price_per_100uu'] * (float(width) / 100.0)
+            + r['price_per_tier'] * int(tier)) * recipe_mult(rid, 'price', r)
 
 
 def rent(rid, tier, demand, r=None):
     r = r or rules()
-    return r['rent_per_tier'] * (int(tier) + 1) * float(demand)
+    return r['rent_per_tier'] * (int(tier) + 1) * float(demand) * recipe_mult(rid, 'rent', r)
 
 
 def tier_up_allowed(rid, tier, width, baked_dir=BAKED_DIR):
@@ -434,8 +443,13 @@ if __name__ == '__main__':
         'OF': {'rid': 'office', 'tier': 0, 'width': 2050,
                'owned': True, 'accum': 39.9}}}
     st2, e2 = tick(st2)
-    assert abs(st2['money'] - 0.75) < 1e-9, st2['money']
-    assert abs(st2['parcels']['OF']['accum'] - 40.65) < 1e-9, st2['parcels']['OF']
+    #    RE-WALKED 2026-09-06 night: an OFFICE earns 1.5x (recipe_mult):
+    #    0.75 x 1.5 = 1.125; accum 39.9 + 1.125 = 41.025.
+    assert abs(st2['money'] - 1.125) < 1e-9, st2['money']
+    assert abs(st2['parcels']['OF']['accum'] - 41.025) < 1e-9, st2['parcels']['OF']
+    assert abs(price('office', 0, 2050) - (50 + 41) * 1.6) < 1e-9, price('office', 0, 2050)
+    assert abs(rent('tower', 2, 1.0) - 0.75 * 3 * 2.5) < 1e-9, rent('tower', 2, 1.0)
+    assert abs(price('mystery', 0, 820) - 66.4) < 1e-9   # unknown recipe: vernacular
     assert st2['parcels']['OF']['tier'] == 0
     assert e2 == [], e2
     assert abs(st2['demand'] - 1.005) < 1e-9, st2['demand']   # one owned lot: one step toward 1.05

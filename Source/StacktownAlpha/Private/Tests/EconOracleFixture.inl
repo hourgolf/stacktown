@@ -27,6 +27,12 @@ inline constexpr double WearTicksPerTier = 150.0;
 inline constexpr double TradeCreditAmount = 20.0;
 inline constexpr double TradeBonusPerWin = 5.0;
 inline constexpr int32 TradeCreditsPerN = 10;
+inline constexpr double RecipeMult_office_Price = 1.6;
+inline constexpr double RecipeMult_office_Rent = 1.5;
+inline constexpr double RecipeMult_tower_Price = 3.0;
+inline constexpr double RecipeMult_tower_Rent = 2.5;
+inline constexpr double RecipeMult_vernacular_Price = 1.0;
+inline constexpr double RecipeMult_vernacular_Rent = 1.0;
 
 // --- the catalogue surface the economy asks about ------------------------
 inline constexpr int32 TierCount_office = 4;
@@ -153,8 +159,8 @@ inline constexpr double Tick1000_Money = 117.75000005133431;
 inline constexpr double Tick1000_Accum = 117.75000005133431;
 inline constexpr int32  Tick1000_Tier  = 0;
 inline constexpr int32  Tick1000_Events = 1;
-inline constexpr double TickRetired_Money = 0.75;
-inline constexpr double TickRetired_Accum = 40.65;
+inline constexpr double TickRetired_Money = 1.125;
+inline constexpr double TickRetired_Accum = 41.025;
 inline constexpr int32  TickRetired_Tier  = 0;
 inline constexpr int32  TickRetired_Events = 0;
 inline constexpr double TickMulti_DemandStart = 1.5;

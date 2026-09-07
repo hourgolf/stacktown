@@ -34,6 +34,11 @@ inline Stacktown::FEconRules OracleRules()
 	R.DemandMin         = StacktownOracle::DemandMin;
 	R.DemandMax         = StacktownOracle::DemandMax;
 	R.WearTicksPerTier  = StacktownOracle::WearTicksPerTier;
+	{
+		Stacktown::FRecipeMult V; V.Price = StacktownOracle::RecipeMult_vernacular_Price; V.Rent = StacktownOracle::RecipeMult_vernacular_Rent; R.RecipeMult.Add(TEXT("vernacular"), V);
+		Stacktown::FRecipeMult O; O.Price = StacktownOracle::RecipeMult_office_Price;     O.Rent = StacktownOracle::RecipeMult_office_Rent;     R.RecipeMult.Add(TEXT("office"), O);
+		Stacktown::FRecipeMult T; T.Price = StacktownOracle::RecipeMult_tower_Price;      T.Rent = StacktownOracle::RecipeMult_tower_Rent;      R.RecipeMult.Add(TEXT("tower"), T);
+	}
 	return R;
 }
 

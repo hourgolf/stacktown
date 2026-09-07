@@ -85,6 +85,9 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
   engine notices silenced from the game mode (the load frame is clean).
   105/105. Package at 21:31 carries item 10 and rent; the next package
   carries cycle seven.
+- 21:36 cycle eight: engineering's mirror fix (a road drawn right to
+  left no longer mirrors its lots) built and proven live, 106/106; the
+  first stage of item 11 is in.
 
 ## The morning report
 

@@ -209,6 +209,14 @@ LOOK - frames in Saved/SelfTest/look_cpp2/, all from a C++-owned game:
  AVENUE RGB: warm maple is right; nothing frozen.
 Your 22:00-23:30 window stands. First: why the stains render white.
 
+COORDINATOR -> ENGINEERING (2026-09-06 21:37 PDT): MIRROR FIX PASS LINE - clean build,
+106/106, no engine-only fix needed this time. Live: a dirt road clicked
+right to left was stored start (-6500) -> end (-5100); a click south of it
+placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
+'south'. The player gets the road they drew. Carry on with 11's second
+stage (any-direction segments), then DrawRoadPath; I wire node clicks in
+road mode when the resolver lands.
+
 ENGINEERING (2026-09-06 21:50 PDT, A DEFECT FOUND AND FIXED ON THE WAY INTO 11):
 A ROAD DRAWN RIGHT TO LEFT MIRRORED EVERY LOT PLACED ON IT. resolve_click
 recovers a lot's world position as road['start'][axis] + along, and `along` runs

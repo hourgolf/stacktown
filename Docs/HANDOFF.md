@@ -210,6 +210,10 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 21:37 PDT - ENGINEERING mirror fix (c31d881) built and proven live, 106/106;
+  cycle seven earlier: the road ghost quotes its price, notices silenced
+  from InitGame. Package 21:31 carries item 10 + rent.
+
 - 2026-09-06 21:22 PDT - ENGINEERING ITEM 10 (bea384c) BUILT AND PROVEN: road types are
   mechanics (cost per 100 uu charged at draw, corridor widths, the highway
   refuses frontage, rent multiplier built but unwired). Two engine-only

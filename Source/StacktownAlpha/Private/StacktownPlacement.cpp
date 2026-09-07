@@ -277,7 +277,7 @@ double RectDistance(const FLotRect& A, const FLotRect& B)
 	return FMath::Sqrt(Dx * Dx + Dy * Dy);
 }
 
-FRoadFrame RoadFrame(const FRoad& Road)
+FRoadFrame RoadFrameOf(const FRoad& Road)
 {
 	FRoadFrame F;
 	F.Ox = Road.StartX;
@@ -316,7 +316,7 @@ static FQuad BandQuad(const FRoadFrame& F, double S0, double S1, double Off0, do
 FQuad LotQuad(const FPlacementRules& R, const FEconRules& E, const FRoad& Road,
 	const FLotPlacement& Lot)
 {
-	const FRoadFrame F = RoadFrame(Road);
+	const FRoadFrame F = RoadFrameOf(Road);
 	const double Near = RoadHalf(R, E, Road);
 	const double Far  = Near + R.BlockDepth;
 	const double Sign = Lot.Side == Road.SidePlus ? 1.0 : -1.0;
@@ -325,7 +325,7 @@ FQuad LotQuad(const FPlacementRules& R, const FEconRules& E, const FRoad& Road,
 
 FQuad RoadQuad(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
 {
-	const FRoadFrame F = RoadFrame(Road);
+	const FRoadFrame F = RoadFrameOf(Road);
 	const double Half = RoadHalf(R, E, Road);
 	return BandQuad(F, F.S0, F.S0 + F.Length, -Half, Half);
 }
@@ -638,7 +638,7 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	// The snap still happens in this space rather than on Along, and for the
 	// same reason as before: round-half-to-even breaks ties on the parity of
 	// the integer part, so snapping road-relative can land a quantum away.
-	const FRoadFrame Frame = RoadFrame(*Road);
+	const FRoadFrame Frame = RoadFrameOf(*Road);
 	const double AxisMin = Frame.S0;
 	const double AxisMax = Frame.S0 + Frame.Length;
 	const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);

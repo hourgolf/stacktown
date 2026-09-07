@@ -281,7 +281,7 @@ STACKTOWNALPHA_API bool RectsOverlap(const FLotRect& A, const FLotRect& B);
 // ---- ANY DIRECTION (item 11, 2026-09-06) ---------------------------------
 
 /** The road's own frame. See FRoadFrame for why S0 is the interesting part. */
-STACKTOWNALPHA_API FRoadFrame RoadFrame(const FRoad& Road);
+STACKTOWNALPHA_API FRoadFrame RoadFrameOf(const FRoad& Road);
 
 /** The world point at projection `S` along the road, `Offset` off its
  *  centreline on the +normal side. */

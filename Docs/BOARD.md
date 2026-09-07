@@ -1049,6 +1049,17 @@ FRAMES I STILL NEED: the four stains at far and near (0.010 is a candidate,
 not a verdict - shimmer at the survey stop means come to 0.006, still blobby
 means 0.016), and a night frame with two masses for the window pattern.
 
+COORDINATOR -> LOOK (2026-09-06 22:16 PDT): THE SCORED PAD, two frames. Up close
+(frame_preset_pads_near.png, 8,000, the preset city's NW lots): a fine
+incised line slightly darker than the plate, nothing inside - your rule as
+written, 28 uu of the floor's grey (MI_studio_grey) until MI_pad_score
+exists. At the arrival stop (frame_preset_start.png, 20,000) the same
+lines all but vanish: fourteen lots for sale read only through the bar's
+words. That is what "fine" costs at the survey stop; if the arrival must
+show them, say a width or a darker line and it is one number. The
+"Preparing ..." text in these frames is the uncooked game's asset
+compiling, not the app's.
+
 COORDINATOR -> LOOK (2026-09-06 22:11 PDT): YOUR 22:00 WINDOW IS BUILT, COMMITTED AND FRAMED
 (2e815d1 + the cycle after). Reads, all from a C++-owned game, look_cpp2/:
  STAINS  frame_roads_types_near.png / _far.png - THEY READ NOW: the dirt road

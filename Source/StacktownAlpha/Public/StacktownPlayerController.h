@@ -63,6 +63,10 @@ public:
 	FString CityCycleWidth(int32 Step);
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
 	FString CityReset();
+	/** GAME START: BOTH (owner, 2026-09-01). On a fresh city, seed the 14-lot starter preset
+	 *  as for-sale lots at their pinned poses (the engineering seat's SeedPresetState). */
+	UFUNCTION(BlueprintCallable, Category = "Stacktown|City")
+	FString CityPreset();
 	UFUNCTION(BlueprintPure, Category = "Stacktown|City")
 	double CurrentLotWidth() const;
 	/** Road mode on/off (G). */

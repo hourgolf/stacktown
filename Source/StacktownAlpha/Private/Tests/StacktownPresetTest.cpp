@@ -9,6 +9,7 @@
 // player-placed lot does and the city sync needs no case for them.
 
 #include "Misc/AutomationTest.h"
+#include "StacktownEconomy.h"   // CityStateToJson / FromJson live here (engine-only fix, 2026-09-06 night)
 #include "StacktownPlacementTestCommon.h"
 #include "StacktownEconomyTestCommon.h"
 #include "StacktownLotTransform.h"
@@ -74,7 +75,7 @@ STACKTOWN_PRESET_TEST(FStacktownPresetPoses, "Stacktown.Preset.Poses")
 	const FPlacementBoard Board = FPlacementBoard::Default();
 	FEconRules R = OracleRules();
 	const FCityState Preset = SeedPresetState(R, Board);
-	const TArray<FRoad> Roads = Board.AllRoads(Preset);
+	const TArray<FRoad> RoadsLocal = Board.AllRoads(Preset);
 
 	int32 Posed = 0;
 	for (const TPair<FString, FParcelState>& Pair : Preset.Parcels)
@@ -83,7 +84,7 @@ STACKTOWN_PRESET_TEST(FStacktownPresetPoses, "Stacktown.Preset.Poses")
 			Pair.Value.Placement.IsSet());
 		if (!Pair.Value.Placement.IsSet()) { continue; }
 		LotFrame::FPose Pose;
-		if (LotFrame::Pose(Pair.Value.Placement.GetValue(), Roads, Pose)) { ++Posed; }
+		if (LotFrame::Pose(Pair.Value.Placement.GetValue(), RoadsLocal, Pose)) { ++Posed; }
 	}
 	// The city sync skips a lot it cannot pose. If this ever drops below
 	// fourteen, that many buildings silently do not appear on a fresh start.
@@ -126,7 +127,7 @@ STACKTOWN_PRESET_TEST(FStacktownPresetRoundTrip, "Stacktown.Preset.RoundTrip")
 
 	FCityState Back;
 	FString Err;
-	TestTrue(TEXT("round trip parses"), CityStateFromJson(CityStateToJson(Preset), Back, Err));
+	TestTrue(TEXT("round trip parses"), Stacktown::CityStateFromJson(Stacktown::CityStateToJson(Preset), Back, Err));
 	TestEqual(TEXT("still fourteen"), Back.Parcels.Num(), Preset.Parcels.Num());
 	FString Why;
 	const bool bSame = StatesEqual(Preset, Back, 1e-9, Why);

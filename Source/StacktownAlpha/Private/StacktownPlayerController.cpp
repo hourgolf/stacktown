@@ -394,7 +394,7 @@ void AStacktownPlayerController::HoverGhost(const FVector& BoardPoint, bool bOve
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
 	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard();
-	const Stacktown::FClickResult R = Stacktown::ResolveClick(Board, Econ->GetState(), BoardPoint.X, BoardPoint.Y, PinsActive(GetGameInstance()), CurrentLotWidth());
+	const Stacktown::FClickResult R = Stacktown::ResolveClick(Board, Econ->GetState(), BoardPoint.X, BoardPoint.Y, (!CityOwned() && PinsActive(GetGameInstance())), CurrentLotWidth());
 	if (!R.bOk)
 	{
 		if (Ghost) { Ghost->SetActorHiddenInGame(true); }
@@ -480,7 +480,7 @@ FString AStacktownPlayerController::CityPlaceAt(double X, double Y)
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
 	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
-	const Stacktown::FPlaceResult R = Stacktown::Place(Stacktown::TemporaryBoard(), Econ->GetMutableState(), X, Y, PinsActive(GetGameInstance()), CurrentLotWidth());
+	const Stacktown::FPlaceResult R = Stacktown::Place(Stacktown::TemporaryBoard(), Econ->GetMutableState(), X, Y, (!CityOwned() && PinsActive(GetGameInstance())), CurrentLotWidth());
 	if (!R.bOk)
 	{
 		if (HudModel) { HudModel->PlaceRefusal = ClassifyPlaceRefusal(R.Reason); }
@@ -579,7 +579,7 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 	if (!bRoadStartSet) { HideRoadGhost(); return; }
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
-	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, RoadClass, PinsActive(GetGameInstance()));
+	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
 	if (!RoadGhostActor)
 	{
 		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -608,7 +608,7 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 		PlayCue(TEXT("S_Place"));
 		return FString::Printf(TEXT("road start (%.0f, %.0f)"), X, Y);
 	}
-	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, RoadClass, PinsActive(GetGameInstance()));
+	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
 	bRoadStartSet = false;
 	HideRoadGhost();
 	if (!R.bOk)
@@ -670,7 +670,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (UStacktownEconomy* EconForHint = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr)
 	{
 		const bool bFresh = EconForHint->GetState().Parcels.Num() == 0;
-		if (bFresh && !bRoadMode && HudModel->BarMessage.IsEmpty()) { HudModel->BarMessage = TEXT("Click the board to place your first lot."); bHintShowing = true; }   // LOOK 4 wording
+		if (bFresh && !bRoadMode && HudModel->BarMessage.IsEmpty()) { HudModel->BarMessage = TEXT("Click the board to place your first lot, or press P for the starter city."); bHintShowing = true; }   // LOOK 4 wording + the preset offer (BOTH starts)
 		else if (!bFresh && bHintShowing) { HudModel->BarMessage.Reset(); bHintShowing = false; }
 	}
 
@@ -712,6 +712,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	if (WasInputKeyJustPressed(EKeys::G)) { UE_LOG(LogStacktown, Log, TEXT("ROAD: %s"), *CityRoadMode(!bRoadMode)); }
 	if (WasInputKeyJustPressed(EKeys::L)) { UE_LOG(LogStacktown, Log, TEXT("NIGHT: %s"), *CityNight(!(Night && Night->IsNight()))); }
 	if (bRoadMode && WasInputKeyJustPressed(EKeys::T)) { UE_LOG(LogStacktown, Log, TEXT("ROAD CLASS: %s"), *CityCycleRoadClass()); }
+	if (!bRoadMode && WasInputKeyJustPressed(EKeys::P)) { UE_LOG(LogStacktown, Log, TEXT("PRESET: %s"), *CityPreset()); }
 	if (bRoadMode)
 	{
 		HideGhost();
@@ -780,4 +781,25 @@ FString AStacktownPlayerController::CityCycleRoadClass()
 	if (HudModel) { HudModel->RoadClass = RoadClass; HudModel->BarMessage = TEXT("click start, click end \u00b7 T next type \u00b7 G to leave"); }
 	PlayCue(TEXT("S_Place"));
 	return RoadClass;
+}
+
+FString AStacktownPlayerController::CityPreset()
+{
+	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
+	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
+	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
+	if (Econ->GetState().Parcels.Num() > 0)
+	{
+		if (HudModel) { HudModel->ActionRefusal = TEXT("The board is not empty"); bRefusalShowing = true; }
+		PlayCue(TEXT("S_Refuse"));
+		return TEXT("preset refused: the board is not empty");
+	}
+	const Stacktown::FCityState Fresh = Econ->GetState();
+	Stacktown::FCityState Seeded = Stacktown::SeedPresetState(Econ->GetRules(), Stacktown::TemporaryBoard());
+	Seeded.Money = Fresh.Money; Seeded.Demand = Fresh.Demand; Seeded.TradesProcessed = Fresh.TradesProcessed; Seeded.GoalsReached = Fresh.GoalsReached; Seeded.Roads = Fresh.Roads;
+	Econ->GetMutableState() = Seeded;
+	Econ->SaveState();
+	if (HudModel) { HudModel->BarMessage = FString::Printf(TEXT("%d lots for sale \u00b7 click one, B to buy"), Seeded.Parcels.Num()); bHintShowing = false; }
+	PlayCue(TEXT("S_Place"));
+	return FString::Printf(TEXT("preset seeded: %d lots for sale; %s"), Seeded.Parcels.Num(), *Sync->Reconcile(false));
 }

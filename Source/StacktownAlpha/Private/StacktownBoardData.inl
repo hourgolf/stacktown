@@ -13,7 +13,8 @@ namespace BoardData
 {
 struct FRoadRow { const TCHAR* Id; double StartX; double StartY; double EndX;
                   double EndY; const TCHAR* SidePlus; const TCHAR* SideMinus; bool bAxisX; };
-struct FPinRow  { const TCHAR* Key; double X0; double X1; const TCHAR* Side; };
+struct FPinRow  { const TCHAR* Key; double X0; double X1; const TCHAR* Side;
+                   const TCHAR* Rid; double Width; };
 
 inline const FRoadRow Roads[] = {
 	{ TEXT("arterial"), -7650.0, 0.0, 7650.0, 0.0, TEXT("north"), TEXT("south"), true },
@@ -21,23 +22,26 @@ inline const FRoadRow Roads[] = {
 };
 inline constexpr int32 RoadsNum = 2;
 
-// The fourteen pinned lots, WITH their citylayout keys - the keys are what
-// lets a pinned parcel find its own span and therefore its pose.
+// The fourteen pinned lots: citylayout keys and spans, plus each pin's
+// recipe from testcity_pins. The key is what lets a pinned parcel find its
+// own span and therefore its pose; the recipe is what the preset start
+// seeds. The pin's declared TIER is deliberately absent - a fresh parcel
+// always seeds at tier 0.
 inline const FPinRow PinnedSpans[] = {
-	{ TEXT("NE0"), 1130.0, 3590.0, TEXT("north") },
-	{ TEXT("NE1"), 3590.0, 4410.0, TEXT("north") },
-	{ TEXT("NE2"), 4410.0, 6050.0, TEXT("north") },
-	{ TEXT("NW0"), -6050.0, -4820.0, TEXT("north") },
-	{ TEXT("NW1"), -4820.0, -3590.0, TEXT("north") },
-	{ TEXT("NW2"), -3590.0, -2360.0, TEXT("north") },
-	{ TEXT("NW3"), -2360.0, -1130.0, TEXT("north") },
-	{ TEXT("SE0"), 1130.0, 3180.0, TEXT("south") },
-	{ TEXT("SE1"), 3180.0, 4820.0, TEXT("south") },
-	{ TEXT("SE2"), 4820.0, 6050.0, TEXT("south") },
-	{ TEXT("SW0"), -6050.0, -4820.0, TEXT("south") },
-	{ TEXT("SW1"), -4820.0, -4000.0, TEXT("south") },
-	{ TEXT("SW2"), -4000.0, -2770.0, TEXT("south") },
-	{ TEXT("SW3"), -2770.0, -1130.0, TEXT("south") },
+	{ TEXT("NE0"), 1130.0, 3590.0, TEXT("north"), TEXT("contemporary6"), 2460.0 },
+	{ TEXT("NE1"), 3590.0, 4410.0, TEXT("north"), TEXT("vernacular8"), 820.0 },
+	{ TEXT("NE2"), 4410.0, 6050.0, TEXT("north"), TEXT("vernacular"), 1640.0 },
+	{ TEXT("NW0"), -6050.0, -4820.0, TEXT("north"), TEXT("vernacular8"), 1230.0 },
+	{ TEXT("NW1"), -4820.0, -3590.0, TEXT("north"), TEXT("contemporary"), 1230.0 },
+	{ TEXT("NW2"), -3590.0, -2360.0, TEXT("north"), TEXT("modern8"), 1230.0 },
+	{ TEXT("NW3"), -2360.0, -1130.0, TEXT("north"), TEXT("vernacular7"), 1230.0 },
+	{ TEXT("SE0"), 1130.0, 3180.0, TEXT("south"), TEXT("modern8"), 2050.0 },
+	{ TEXT("SE1"), 3180.0, 4820.0, TEXT("south"), TEXT("modern8"), 1640.0 },
+	{ TEXT("SE2"), 4820.0, 6050.0, TEXT("south"), TEXT("modern3"), 1230.0 },
+	{ TEXT("SW0"), -6050.0, -4820.0, TEXT("south"), TEXT("contemporary4"), 1230.0 },
+	{ TEXT("SW1"), -4820.0, -4000.0, TEXT("south"), TEXT("vernacular"), 820.0 },
+	{ TEXT("SW2"), -4000.0, -2770.0, TEXT("south"), TEXT("tower"), 1230.0 },
+	{ TEXT("SW3"), -2770.0, -1130.0, TEXT("south"), TEXT("tower"), 1640.0 },
 };
 inline constexpr int32 PinnedSpansNum = 14;
 

@@ -47,9 +47,41 @@ FPlacementBoard FPlacementBoard::Default()
 		S.X0 = Row.X0;
 		S.X1 = Row.X1;
 		S.Side = Row.Side;
+		S.Rid = Row.Rid;
+		S.Width = Row.Width;
 		Board.PinnedSpans.Add(S);
 	}
 	return Board;
+}
+
+FCityState SeedPresetState(const FEconRules& R, const FPlacementBoard& Board)
+{
+	FCityState S = SeedState(R);
+	for (const FPinnedSpan& Span : Board.PinnedSpans)
+	{
+		FParcelState P;
+		P.Rid = Span.Rid;
+		P.Tier = 0;          // ALWAYS. See FPinnedSpan for why no tier is carried.
+		P.Width = Span.Width;
+		P.bOwned = false;    // a city to buy into, not one already owned
+		P.Accum = 0.0;
+		P.bFailed = false;
+		P.Performance = 0.0;
+
+		// An ordinary placement, so these lots pose, render and reconcile
+		// through exactly the path a player-placed lot does.
+		FLotPlacement Lot;
+		if (!PinnedPlacementForKey(Board, Span.Key, Lot))
+		{
+			// Unreachable: the span came out of this same board. Skipping
+			// rather than asserting keeps a malformed board from taking the
+			// game down on a fresh start.
+			continue;
+		}
+		P.Placement = Lot;
+		S.Parcels.Add(Span.Key, P);
+	}
+	return S;
 }
 
 bool PinnedPlacementForKey(const FPlacementBoard& Board, const FString& Key,

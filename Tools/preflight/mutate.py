@@ -295,6 +295,22 @@ MUTATIONS = [
      '\t// Default ON: the Python drivers were the world before Phase B, and a\n\t// missing key must not silently switch a session\'s owner.\n\treturn true;',
      '\treturn false;', True, 'handover'),
 
+    # ---- the preset start (night item 12) ------------------------------------
+    ('preset-seeds-them-owned', 'a stranger arrives owning the whole city',
+     'P.bOwned = false;    // a city to buy into, not one already owned',
+     'P.bOwned = true;', True, 'placement'),
+
+    ('preset-seeds-a-tier', 'a bought lot shows its mature building instantly',
+     'P.Tier = 0;          // ALWAYS. See FPinnedSpan for why no tier is carried.',
+     'P.Tier = 3;', True, 'placement'),
+
+    ('preset-lots-have-no-placement', 'fourteen buildings silently do not appear',
+     'P.Placement = Lot;\n\t\tS.Parcels.Add(Span.Key, P);',
+     'S.Parcels.Add(Span.Key, P);', True, 'placement'),
+
+    ('preset-uses-the-wrong-width', 'every preset mass is the wrong size for its lot',
+     'P.Width = Span.Width;', 'P.Width = Board.Rules.V0Width;', True, 'placement'),
+
     # ---- the honest negatives ------------------------------------------------
     # DECLARED SURVIVOR, and now for a PROVEN reason rather than a shim artifact.
     # The shim's TMap preserves insertion order (as UE's does), so this mutation

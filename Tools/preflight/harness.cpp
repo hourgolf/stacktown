@@ -1068,6 +1068,65 @@ int main()
 				PinnedPlacementForKey(Real, TEXT("NOPE"), Nope), false);
 		}
 
+		CASE("Preset.Seed");
+		{
+			const FCityState Preset = SeedPresetState(R, Real);
+			const FCityState Empty = SeedState(R);
+			CheckInt("empty start is empty", Empty.Parcels.Num(), 0);
+			CheckInt("preset seeds fourteen", Preset.Parcels.Num(), Real.PinnedSpans.Num());
+			CheckNear("fresh money", Preset.Money, Empty.Money, Tol);
+			CheckNear("fresh demand", Preset.Demand, Empty.Demand, Tol);
+			CheckInt("no roads", Preset.Roads.Num(), 0);
+			for (int32 i = 0; i < Real.PinnedSpans.Num(); ++i)
+			{
+				const FPinnedSpan& Span = Real.PinnedSpans[i];
+				const FParcelState* P = Preset.Parcels.Find(Span.Key);
+				CheckBool("present", P != nullptr, true);
+				if (P == nullptr) { continue; }
+				CheckStr("rid", P->Rid, Span.Rid);
+				CheckNear("width", P->Width, Span.Width, Tol);
+				CheckBool("for sale", P->bOwned, false);
+				CheckInt("tier 0", P->Tier, 0);
+				CheckBool("has a placement", P->Placement.IsSet(), true);
+				if (!P->Placement.IsSet()) { continue; }
+				CheckNear("x0", P->Placement.GetValue().X0, Span.X0, Tol);
+				CheckNear("x1", P->Placement.GetValue().X1, Span.X1, Tol);
+				CheckStr("side", P->Placement.GetValue().Side, Span.Side);
+			}
+		}
+
+		CASE("Preset.Poses");
+		{
+			const FCityState Preset = SeedPresetState(R, Real);
+			const TArray<FRoad> Roads = Real.AllRoads(Preset);
+			int32 Posed = 0;
+			TArray<FString> Ids;
+			Preset.Parcels.GetKeys(Ids);
+			for (int32 i = 0; i < Ids.Num(); ++i)
+			{
+				const FParcelState& P = Preset.Parcels[Ids[i]];
+				if (!P.Placement.IsSet()) { continue; }
+				LotFrame::FPose Pose;
+				if (LotFrame::Pose(P.Placement.GetValue(), Roads, Pose)) { ++Posed; }
+			}
+			// A lot the sync cannot pose is a building that silently does not
+			// appear on a fresh start.
+			CheckInt("all fourteen pose", Posed, Real.PinnedSpans.Num());
+		}
+
+		CASE("Preset.Occupies");
+		{
+			const FCityState Preset = SeedPresetState(R, Real);
+			// Even with pins OFF, a real parcel stands there and the overlap
+			// scan refuses on its own - that is what makes these ordinary lots.
+			const FClickResult Refused = ResolveClick(Real, Preset, 2360.0, 1500.0, false, Real.Rules.V0Width);
+			CheckBool("refused with pins off", Refused.bOk, false);
+			CheckBool("by the overlap scan",
+				Refused.Reason.S.find("crosses an existing lot") != std::string::npos, true);
+			const FClickResult Accepted = ResolveClick(Real, SeedState(R), 2360.0, 1500.0, false, Real.Rules.V0Width);
+			CheckBool("free on an empty start", Accepted.bOk, true);
+		}
+
 		CASE("Board.PinsRefuse");
 		{
 			// TemporaryBoard carried no pins, so the C++ game accepted clicks on

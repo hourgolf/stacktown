@@ -27,6 +27,7 @@ ROOT = os.path.normpath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, os.path.join(ROOT, 'Content', 'Python'))
 
 import citylayout       # noqa: E402
+import testcity_pins    # noqa: E402
 import placement as P   # noqa: E402
 
 JSON_OUT = os.path.join(ROOT, 'Saved', 'SelfTest', 'board_data.json')
@@ -49,7 +50,21 @@ def main():
     for block in sorted(citylayout.blocks()):
         side = 'north' if block[0] == 'N' else 'south'
         for key, x0, x1, _corner in citylayout.lots(block):
-            spans.append({'key': key, 'x0': x0, 'x1': x1, 'side': side})
+            pin = testcity_pins.PINS[key]
+            # WIDTH COMES FROM THE SPAN, not from the pin's own 'w'. They agree
+            # today - asserted below, all fourteen - and the span is the one the
+            # geometry is actually built from, so a future disagreement should
+            # surface here rather than silently shifting a lot.
+            width = x1 - x0
+            assert abs(width - pin['w']) < 1e-9, (
+                'pin %s declares w=%s but its span is %s wide' % (key, pin['w'], width))
+            # THE PIN'S DECLARED TIER IS DELIBERATELY NOT CARRIED. A fresh
+            # parcel always seeds at tier 0 (PARCELIZATION_CONTRACT A2): seeding
+            # from a pin's eventual massing was the bug that made a bought lot
+            # show its full mature building instantly instead of growing. Not
+            # emitting it at all is stronger than remembering not to read it.
+            spans.append({'key': key, 'x0': x0, 'x1': x1, 'side': side,
+                          'rid': pin['rid'], 'width': width})
     spans.sort(key=lambda s: s['key'])
 
     # CROSS-CHECK against placement.PINNED_SPANS, which is what the ported
@@ -93,7 +108,8 @@ def main():
     w('{')
     w('struct FRoadRow { const TCHAR* Id; double StartX; double StartY; double EndX;')
     w('                  double EndY; const TCHAR* SidePlus; const TCHAR* SideMinus; bool bAxisX; };')
-    w('struct FPinRow  { const TCHAR* Key; double X0; double X1; const TCHAR* Side; };')
+    w('struct FPinRow  { const TCHAR* Key; double X0; double X1; const TCHAR* Side;')
+    w('                   const TCHAR* Rid; double Width; };')
     w('')
     w('inline const FRoadRow Roads[] = {')
     for r in data['roads']:
@@ -105,11 +121,16 @@ def main():
     w('};')
     w('inline constexpr int32 RoadsNum = %d;' % len(data['roads']))
     w('')
-    w('// The fourteen pinned lots, WITH their citylayout keys - the keys are what')
-    w('// lets a pinned parcel find its own span and therefore its pose.')
+    w('// The fourteen pinned lots: citylayout keys and spans, plus each pin\'s')
+    w('// recipe from testcity_pins. The key is what lets a pinned parcel find its')
+    w('// own span and therefore its pose; the recipe is what the preset start')
+    w('// seeds. The pin\'s declared TIER is deliberately absent - a fresh parcel')
+    w('// always seeds at tier 0.')
     w('inline const FPinRow PinnedSpans[] = {')
     for s in spans:
-        w('\t{ %s, %s, %s, %s },' % (q(s['key']), n(s['x0']), n(s['x1']), q(s['side'])))
+        w('\t{ %s, %s, %s, %s, %s, %s },' % (
+            q(s['key']), n(s['x0']), n(s['x1']), q(s['side']),
+            q(s['rid']), n(s['width'])))
     w('};')
     w('inline constexpr int32 PinnedSpansNum = %d;' % len(spans))
     w('')

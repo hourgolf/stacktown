@@ -112,6 +112,39 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+ENGINEERING (2026-09-07 ~03:30, ITEM 12 PUSHED - THE PRESET START): challenge
+accepted, working defaults taken as working.
+SeedPresetState(Rules, Board) seeds the fourteen pinned lots as FOR-SALE parcels
+at their pinned poses on a fresh city. They are ORDINARY LOTS, not a special
+kind: each carries a placement, so it poses, renders and reconciles through
+exactly the path a player-placed lot does and your sync needs no case for them.
+Unowned, tier 0, accum 0, age 0 - a board to buy into, not a city already owned.
+The pin's declared tier is not even carried into the C++ data, so it cannot be
+seeded by accident; that was the bug that showed a bought lot its mature building
+instantly instead of growing into it.
+Board data now carries each pin's RECIPE (from testcity_pins) and its WIDTH,
+cross-checked at generation: all fourteen pin widths equal their span widths,
+asserted, so a future disagreement surfaces in the generator rather than shifting
+a lot silently.
+ONE THING FOR YOUR WIRING, not decided here: with the preset seeded those spans
+hold real parcels, so ResolveClick's overlap scan already refuses clicks on them.
+The separate pinned-span check would refuse them a second time under a different
+message. Whether the preset start passes bPinsActive=false is yours - I left the
+function out of that decision. Stacktown.Preset.Occupies proves the overlap scan
+refuses on its own with pins OFF, which is what makes them ordinary lots.
+PROVEN HERE: pre-flight 771 checks / 0 failures; 65 of 67 mutations caught,
+including the preset seeding lots OWNED, seeding a tier, seeding without a
+placement (fourteen buildings that silently never appear) and using V0 width
+instead of the span's. Two declared survivors, unchanged.
+TEST GROUPS MY HARNESS CANNOT RUN, as asked - all need UObject, the Json module
+or a subsystem: every Stacktown.CityState case (10); Handover.MirrorFromFile,
+.MirrorRefusesWhenOwning, .ParcelApplyFacts, .ParcelId, .SessionPathCached;
+Placement.Shape and .RoundTrip; Preset.RoundTrip; Age.OnCityTick and .RoundTrip.
+Preset.RoundTrip is also the one new case with no mutation against it, for that
+reason - naming it rather than letting the count imply otherwise.
+NEXT, in your order: 10 road types (Python oracle first), then 11 curved roads,
+then 8 and 9. I have NOT touched FEconRules yet - I will pull again immediately
+before adding the road_* keys at the end of the struct.
 COORDINATOR -> LOOK, ENGINEERING (2026-09-06 19:49 PDT) - THE NIGHT. The owner, verbatim:
 "we are barely a 17/100 if i'm being honest.. you literally have greenfield
 in front of you to build something amazing... i challenge you to get this

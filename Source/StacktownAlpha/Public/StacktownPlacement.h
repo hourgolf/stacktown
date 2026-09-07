@@ -56,6 +56,18 @@ struct STACKTOWNALPHA_API FPinnedSpan
 	double  X0 = 0.0;
 	double  X1 = 0.0;
 	FString Side;
+
+	/** The recipe this pin was declared with. Read by the preset start; the
+	 *  click path never looks at it. */
+	FString Rid;
+	/** X1 - X0, carried rather than recomputed so the two cannot disagree. */
+	double  Width = 0.0;
+
+	/** NO DECLARED TIER, deliberately. A fresh parcel always seeds at tier 0
+	 *  (PARCELIZATION_CONTRACT A2) - seeding from a pin's eventual massing was
+	 *  the bug that made a bought lot show its full mature building instantly
+	 *  instead of growing into it. The field is absent rather than present and
+	 *  ignored, so it cannot be read by accident. */
 };
 
 /** placement.py's module constants, as data. Same reasoning as FEconRules: a
@@ -305,6 +317,22 @@ STACKTOWNALPHA_API FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityS
  *  the pose path a second way to describe where a lot is.
  *
  *  @return false when no pinned span carries that key. */
+/** A fresh city with the fourteen pinned lots standing on it as FOR-SALE
+ *  parcels at their pinned poses - the preset start (queue item 12,
+ *  MONDAY_DECISIONS section 3: a new game offers an empty board OR this).
+ *
+ *  They are ORDINARY LOTS, not a special kind: each gets a placement, so it
+ *  poses, renders and reconciles through exactly the path a player-placed lot
+ *  does, and the city sync needs no case for them. Every one seeds unowned at
+ *  tier 0 - the board is a city to buy into, not one already owned.
+ *
+ *  NOTE FOR THE WIRING: with the preset seeded, those spans are occupied by real
+ *  parcels, so ResolveClick's overlap scan already refuses clicks on them. The
+ *  separate pinned-span check would then refuse them a second time under a
+ *  different message; whether the preset start should pass bPinsActive=false is
+ *  the caller's call, and is why this function does not decide it. */
+STACKTOWNALPHA_API FCityState SeedPresetState(const FEconRules& R, const FPlacementBoard& Board);
+
 STACKTOWNALPHA_API bool PinnedPlacementForKey(const FPlacementBoard& Board,
 	const FString& Key, FLotPlacement& OutPlacement);
 

@@ -2082,7 +2082,7 @@ edge/arrow pan (PLAN_CPP_PORT.md §6). 2. universal builds. 3. Mondays are
 the milestone-test day. 4. discard the 32 unsaved packages. 5. Phase 0
 committed on the owner's word.
 
-COORDINATOR (2026-09-07 06:45 PDT) - LOOK'S 05:32 RULINGS BUILT, ENGINEERING'S GAP 1 IN.
+COORDINATOR (2026-09-07 06:15 PDT) - LOOK'S 05:32 RULINGS BUILT, ENGINEERING'S GAP 1 IN.
 PASS LINE 119/119 at 4f104ef (your 1060af4 merged): Roads 27, Placement 20,
 Economy 17, Handover 10, CityState 10, Camera 6, Catalogue 5, Score 4, Preset 4,
 LotTransform 4, Board 4, Age 4, RoadTransform 3, Smoke 1. Frames for LOOK are in
@@ -2160,3 +2160,7 @@ are display only - your resolver's chords and corridors are untouched, and the
 frames above are drawn from your DrawRoadPath output. Next, as you said: gap 2
 (a pad may not leave the plate), then the self-crossing path. Same terms:
 push, and I build it against the engine and post the line.
+
+COORDINATOR (2026-09-07 06:25 PDT): the package is rebuilt from 4f104ef - universal,
+1.6 GB, MI_pad_score and the four road stains in the manifest. The editor is
+free. (The entry above was stamped 06:45 by mistake; it went up at 06:15.)

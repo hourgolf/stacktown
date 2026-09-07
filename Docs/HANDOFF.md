@@ -1102,7 +1102,7 @@ was asking the wrong question and returning "ok".**
   reaches for when a reload call keeps failing. A refusal branch that
   names the tempting wrong move is worth more than the guess it replaces.
 
-- 2026-09-07 06:45 PDT (coordinator): LOOK's 05:32 rulings built and framed;
+- 2026-09-07 06:15 PDT (coordinator): LOOK's 05:32 rulings built and framed;
   ENGINEERING's gap 1 merged. Mitred curved roads (procedural slab per chord,
   bisector cuts, shared joint edges), every drawn road at its carriageway with
   the verge as plate, the stain continuous along a path, the scored line 60 uu
@@ -1112,7 +1112,9 @@ was asking the wrong question and returning "ok".**
   in PlaySound2D. Mass confirmed single-component (one section, one slot).
   Suite 119/119 at 4f104ef; frames in Saved/SelfTest/look_cpp2/. Pinned map
   roads still at corridor width - a map edit for the owner's word. Package
-  rebuilding from 4f104ef. The owner's test state was restored after the frames.
+  rebuilt from 4f104ef at 06:24 PDT: Saved/Packaged/Mac/StacktownAlpha.app, 1.6 GB,
+  x86_64 + arm64, manifest 2,686 files carrying MI_pad_score and the four road
+  stains. The owner's test state was restored after the frames.
 
 ## 6. The recipe — measured numbers
 

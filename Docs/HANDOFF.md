@@ -210,6 +210,18 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 22:19 PDT - PACKAGED (universal) from 693477c+: the whole night through cycle
+  twelve - the loop, types, road mechanics and rent, stains that read,
+  window bays per face, the char ramp, scored for-sale outlines, words,
+  sound, the arrival, Home. Smoke: lock and save written on launch. Visual
+  check is the owner's; the manifest carries every path-loaded asset.
+
+- 2026-09-06 22:11 PDT - DESIGN LANE 22:00 WINDOW landed (their assets + coordinator's
+  rulings work, 2e815d1): stains read, window bays fixed, channel-5 ramp,
+  scored for-sale outlines, words, contextual legend, the arrival pose.
+  106/106. Frames in look_cpp2/. Notices in test-game frames are the editor's
+  asset compiling, absent in a cooked app.
+
 - 2026-09-06 21:37 PDT - ENGINEERING mirror fix (c31d881) built and proven live, 106/106;
   cycle seven earlier: the road ghost quotes its price, notices silenced
   from InitGame. Package 21:31 carries item 10 + rent.

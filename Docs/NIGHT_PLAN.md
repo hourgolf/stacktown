@@ -88,6 +88,16 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
 - 21:36 cycle eight: engineering's mirror fix (a road drawn right to
   left no longer mirrors its lots) built and proven live, 106/106; the
   first stage of item 11 is in.
+- 22:05 cycle nine: the design lane's 22:00 window (stains fixed - texture
+  overrides; window bays per face) plus the coordinator's rulings work
+  (channel-5 ramp, scored for-sale outlines, refusal words, contextual
+  legend, the arrival as one pose). 106/106.
+- 22:09 cycle ten: the arrival at 20,000 (the board whole); frames for the
+  lane's reads posted.
+- 22:15 cycles eleven and twelve: the scored outline widened to 28 uu and
+  given the floor's grey (it still reads only up close at the arrival
+  stop - by the rule's own "fine line", the lane rules); the arrival
+  keeps the board whole at 20,000. 106/106. Package rebuilt at 22:16.
 
 ## The morning report
 

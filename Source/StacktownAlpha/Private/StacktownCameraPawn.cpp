@@ -158,5 +158,8 @@ void AStacktownCameraPawn::SetArrivalView()
 	// plate is about three quarters of the frame; the masses (the NE quadrant, where
 	// both the test city and the preset put their first blocks) in the upper-left
 	// third, the crossing leading the eye to them. Numbers found by frames.
-	SetView(FVector(1400.0, -900.0, 0.0), 35.0, -40.0, 16500.0);
+	// 16,500 cut the plate's far edge (frame_arrival 22:05); 18,500-19,500 still did.
+	// 20,000 keeps the board whole with the masses a little left of centre-top; the
+	// three-quarter width the lane asked for is not reachable whole at this lens ramp.
+	SetView(FVector(800.0, 300.0, 0.0), 35.0, -40.0, 20000.0);
 }

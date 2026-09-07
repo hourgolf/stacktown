@@ -132,3 +132,13 @@ Saved/Shaders/
 Saved/MaterialStats/
 Saved/Temp/
 Saved/Stacktown/
+
+# ---- generator output written beside its generator ---------------------------
+# papertex.py, objgen.py and objgen_chamfer.py all write into their own
+# directory. The results are regenerable in seconds by re-running them, and the
+# lossless copies the records actually cite live under Saved/Stage1/ - so these
+# are churn, not content. Untracked 2026-09-07 after a clean container produced
+# them and a clean-tree check flagged them.
+Content/Python/T_PaperDetail.png
+Content/Python/T_PaperNormal.png
+Content/Python/obj/

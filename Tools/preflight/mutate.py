@@ -12,6 +12,12 @@ first time that was done here it showed three economy cases catching nothing at
 all, and they got mutations of their own.
 
   python3 Tools/preflight/mutate.py
+  python3 Tools/preflight/mutate.py self-crossing plate   # a PROBE, see below
+
+An argument runs only the mutations whose names contain it. That is for
+iterating while writing a new one - a filtered run is a probe and NEVER the
+record, because the point of the table is which tests catch what, and a
+partial table cannot show a hole in a test you did not mutate against.
 """
 import os
 import shutil
@@ -631,6 +637,44 @@ MUTATIONS = [
      'return (L == TEXT("a") || L == TEXT("e") || L == TEXT("i")\n\t\t|| L == TEXT("o") || L == TEXT("u")) ? TEXT("an") : TEXT("a");',
      'return TEXT("a");', True, 'placement'),
 
+    # ---- the plate gap closed (self-test 62, 2026-09-07) -----------------
+    ('plate-check-dropped', 'a pad may hang off the board again',
+     '\t\tif (Over > 0.0)', '\t\tif (false)', True, 'placement'),
+
+    ('plate-ignores-the-x-edges', 'only the north and south edges hold a pad in',
+     '\t\tif (Board.PlateXMin - Pad.XMin > Over)', '\t\tif (false)', True, 'placement'),
+
+    ('plate-edge-is-exclusive', 'a pad flush with the plate edge is refused',
+     'if (Over > 0.0)', 'if (Over >= 0.0)', True, 'placement'),
+
+    ('plate-names-the-opposite-edge', 'the refusal sends the player the wrong way',
+     'double Over = Board.PlateYMin - Pad.YMin;\n\t\tconst TCHAR* Edge = TEXT("south");',
+     'double Over = Board.PlateYMin - Pad.YMin;\n\t\tconst TCHAR* Edge = TEXT("north");',
+     True, 'placement'),
+
+    ('plate-reports-the-smallest-overshoot', 'the reason names an edge the pad is inside of',
+     '\t\tif (Pad.YMax - Board.PlateYMax > Over)', '\t\tif (Pad.YMax - Board.PlateYMax < Over)',
+     True, 'placement'),
+
+    # ---- a path may not cross itself (self-test 63, 2026-09-07) ----------
+    ('self-crossing-not-checked', 'a path may loop back over itself again',
+     '\t\tif (PathSelfCrossing(Pts, Ci, Cj))', '\t\tif (false)', True, 'placement'),
+
+    ('self-crossing-scans-only-the-first-chord', 'only chord 1 is compared with the rest',
+     'for (int32 i = 0; i + 1 < Pts.Num(); ++i)\n\t{\n\t\tfor (int32 j = i + 2;',
+     'for (int32 i = 0; i < 1; ++i)\n\t{\n\t\tfor (int32 j = i + 2;', True, 'placement'),
+
+    ('self-crossing-endpoint-touch-counts', 'every joined pair of chords is a crossing',
+     '\t\t\t&& !SegSamePoint(P, X) && !SegSamePoint(P, Y))', '\t\t\t)', True, 'placement'),
+
+    ('self-crossing-proper-test-only', 'a T and a doubled-back run are not crossings',
+     '\tconst FVector2D Ends[4][3] = {', '\treturn false;\n\tconst FVector2D Ends[4][3] = {',
+     True, 'placement'),
+
+    ('self-crossing-names-the-wrong-chords', 'the reason names the pair the other way round',
+     'Cj + 1, Ordinal(Cj + 1), Ci + 1, Ordinal(Ci + 1)));',
+     'Ci + 1, Ordinal(Ci + 1), Cj + 1, Ordinal(Cj + 1)));', True, 'placement'),
+
     ('type-order-scrambled', 'the T-key cycle stops matching the decided order',
      'TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };',
      'TEXT("avenue"), TEXT("dirt"), TEXT("boulevard"), TEXT("highway") };', True, 'rules'),
@@ -646,7 +690,12 @@ def run_harness(target, path, out_path):
     return r.returncode, (r.stdout + r.stderr)
 
 
-def main():
+def main(only=()):
+    selected = [m for m in MUTATIONS
+                if not only or any(f in m[0] for f in only)]
+    if only and not selected:
+        print('no mutation matches %s' % ', '.join(only))
+        return 1
     originals = {k: open(v[0]).read() for k, v in TARGETS.items()}
     tmp = tempfile.mkdtemp(prefix='stacktown-mutate-')
     try:
@@ -660,7 +709,7 @@ def main():
         caught = survived = 0
         unexpected = []
         by_test = {}
-        for name, what, find, repl, expect_caught, target in MUTATIONS:
+        for name, what, find, repl, expect_caught, target in selected:
             original = originals[target]
             if find not in original:
                 print('  ??  %-42s PATTERN NOT FOUND (mutation is stale)' % name)
@@ -686,7 +735,10 @@ def main():
 
         print()
         print('mutations: %d caught, %d survived, %d total'
-              % (caught, survived, len(MUTATIONS)))
+              % (caught, survived, len(selected)))
+        if only:
+            print('PROBE ONLY (%s of %d mutations) - not the record.'
+                  % (', '.join(only), len(MUTATIONS)))
         print()
         print('BY TEST (a case with no mutation against it is not yet a test):')
         for case in sorted(by_test):
@@ -701,4 +753,4 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(tuple(sys.argv[1:])))

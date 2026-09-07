@@ -324,6 +324,20 @@ STACKTOWNALPHA_API FLotRect QuadRect(const FQuad& Q);
  *  axis-aligned quads, checked against it rather than argued. */
 STACKTOWNALPHA_API bool QuadsOverlap(const FQuad& A, const FQuad& B);
 
+/** True if two CENTRELINES cross - they meet at a point interior to at least
+ *  one of them, or they lie along each other for some length. MEETING END TO
+ *  END IS NOT A CROSSING: that is what every joined pair of chords on a path
+ *  does, and what two roads drawn nose to tail do. */
+STACKTOWNALPHA_API bool SegmentsCross(const FVector2D& A0, const FVector2D& A1,
+	const FVector2D& B0, const FVector2D& B1);
+
+/** The first pair of NON-ADJACENT chords of a sampled polyline whose
+ *  centrelines cross - lowest j within the lowest i, so a refusal names the
+ *  same pair every run. Non-adjacent because consecutive chords share an
+ *  endpoint by construction, which SegmentsCross already calls a touch. */
+STACKTOWNALPHA_API bool PathSelfCrossing(const TArray<FVector2D>& Pts,
+	int32& OutI, int32& OutJ);
+
 /** The click -> lot decision. Road and side selection and the outer reach bound
  *  are ResolveRoad's; this adds what it deliberately leaves open: the
  *  in-the-road refusal read off the WINNING road's corridor, the conversion back

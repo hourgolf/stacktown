@@ -196,16 +196,17 @@ STACKTOWN_DIR_TEST(FStacktownRoadDiagonalLot, "Stacktown.Roads.DiagonalLot")
 		FMath::RadiansToDegrees(FMath::Atan2(T52_Quad.Y[1] - T52_Quad.Y[0],
 			T52_Quad.X[1] - T52_Quad.X[0])), 0.01);
 
-	// Both sides of the same span are placeable - they share no ground - and
-	// the same span twice on the same side is not.
+	// AND ONLY ON ONE SIDE, which is a fact about the BOARD rather than about
+	// this test. A 45 degree road needs about 2440 uu each way for its pads,
+	// the plate is 8460 tall, and the arterial's corridor takes 2260 out of the
+	// middle of it - so a diagonal with lots on BOTH sides does not fit
+	// anywhere on this board. The far side refuses, with the reason that says
+	// why; before 2026-09-07 it placed, hanging off the plate.
 	FCityState Other = S;
 	const FPlaceResult P2 = Place(Board, Other, T52_OtherX, T52_OtherY, true, Board.Rules.V0Width);
-	TestTrue(TEXT("the other side of the same span places"), P2.bOk);
-	if (P2.bOk)
-	{
-		TestEqual(TEXT("other side"), Other.Parcels[P2.Pid].Placement.GetValue().Side,
-			FString(T52_OtherLot.Side));
-	}
+	TestEqual(TEXT("the far side of a margin diagonal is off the plate"),
+		BoolStr(P2.bOk), BoolStr(T52_OtherOk));
+	TestEqual(TEXT("and says so"), P2.Reason, FString(T52_OtherReason));
 	FCityState Again = S;
 	const FPlaceResult P3 = Place(Board, Again, T52_ClickX, T52_ClickY, true, Board.Rules.V0Width);
 	TestEqual(TEXT("the same span twice refuses"), BoolStr(P3.bOk), BoolStr(T52_AgainOk));
@@ -249,10 +250,17 @@ STACKTOWN_DIR_TEST(FStacktownRoadScansComparePads, "Stacktown.Roads.ScansCompare
 	// refused it.
 	const FPlacementBoard Board = OracleBoard();
 
-	// 54: two houses along one diagonal street. Empty mode, because the pinned
+	// 54: two lots along one diagonal street. Empty mode, because the pinned
 	// frontage is wall to wall from |x| 1130 to 6050 and a diagonal long enough
 	// for two lots cannot avoid it on this board - the same mode gate the click
 	// path already has, not a special case invented here.
+	//
+	// RELOCATED 2026-09-07 with the plate rule, and the second click DERIVED
+	// one lot-width along the same frame, so the spans are adjacent by
+	// construction. The plate rule does NOT cost this case - a first answer
+	// said two lots along one diagonal fit nowhere and the mutation table
+	// caught that; what does not fit anywhere is a 45 degree road with lots on
+	// BOTH sides, which is Stacktown.Roads.DiagonalLot's.
 	{
 		FCityState S = DirSeed();
 		S.Money = 9000.0;
@@ -272,6 +280,7 @@ STACKTOWN_DIR_TEST(FStacktownRoadScansComparePads, "Stacktown.Roads.ScansCompare
 		{
 			const FLotPlacement& A = S.Parcels[FString(TEXT("P1"))].Placement.GetValue();
 			const FLotPlacement& B = S.Parcels[FString(TEXT("P2"))].Placement.GetValue();
+			TestEqual(TEXT("the spans are adjacent"), B.X0, A.X1, 1e-9);
 			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
 			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(A));
 			if (TestNotNull(TEXT("road"), Rd))
@@ -415,6 +424,208 @@ STACKTOWN_DIR_TEST(FStacktownRoadLotNotInAnyCorridor, "Stacktown.Roads.LotNotInA
 	TestEqual(TEXT("lot x0"), OnCurve.Lot.X0, T61_FrontedLot.X0, 1e-9);
 	TestEqual(TEXT("lot x1"), OnCurve.Lot.X1, T61_FrontedLot.X1, 1e-9);
 	TestEqual(TEXT("lot road"), LotRoadId(OnCurve.Lot), FString(T61_FrontedLot.RoadId));
+	return true;
+}
+
+// --- 62: a lot's PAD may not leave the plate ---------------------------------
+STACKTOWN_DIR_TEST(FStacktownRoadPadOnPlate, "Stacktown.Roads.PadOnThePlate")
+{
+	// The second gap, decided as a working default on 2026-09-07. ResolveClick
+	// already refused a span that ran off the end of its ROAD; for the two
+	// built-ins the road spans the plate, so that WAS this rule and nothing
+	// could tell them apart. They come apart the moment a road is drawn near an
+	// edge or at an angle: the oracle's first curve along the southern margin
+	// put a pad at y = -5740 against a plate that stops at -4230.
+	const FPlacementBoard Board = OracleBoard();
+	FEconRules Rules = OracleRules();
+
+	// (a) REDUCTION FIRST, and by sweep rather than by argument. Every snapped
+	// span at every catalogue width, on both built-ins, on both sides, has its
+	// pad inside the plate - so nothing already standing on this board moves
+	// and no click that used to work stops working. The oracle ran the
+	// identical sweep; the COUNT is the fixture's, so a C++ sweep that quietly
+	// covered less ground would fail here rather than pass emptily.
+	{
+		const FCityState S = SeedState(Rules);
+		const TArray<FRoad> Built = Board.AllRoads(S);
+		int32 Swept = 0;
+		int32 OffPlate = 0;
+		for (const FRoad& Road : Built)
+		{
+			const FRoadFrame F = RoadFrameOf(Road);
+			for (int32 wi = 0; wi < T62_WidthsNum; ++wi)
+			{
+				const double W = T62_Widths[wi];
+				for (double X0 = F.S0; X0 + W <= F.S0 + F.Length + 1e-9;
+				     X0 += Board.Rules.PositionQuantum)
+				{
+					for (int32 si = 0; si < 2; ++si)
+					{
+						FLotPlacement Lot;
+						Lot.X0 = X0;
+						Lot.X1 = X0 + W;
+						Lot.Side = si == 0 ? Road.SidePlus : Road.SideMinus;
+						Lot.RoadId = Road.Id;
+						const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ, Road, Lot));
+						if (B.XMin < Board.PlateXMin || B.XMax > Board.PlateXMax ||
+						    B.YMin < Board.PlateYMin || B.YMax > Board.PlateYMax)
+						{
+							++OffPlate;
+						}
+						++Swept;
+					}
+				}
+			}
+		}
+		TestEqual(TEXT("the sweep covered the oracle's ground"), Swept, T62_Swept);
+		TestEqual(TEXT("the plate rule costs a built-in road no lot at all"), OffPlate, 0);
+	}
+
+	// (b) THE WITNESS, and it is the PAD that leaves, not the click. This 45
+	// degree road is entirely on the plate and the click is 779 uu INSIDE its
+	// northern edge - a spot a player reads as obviously fine - and the pad it
+	// would produce reaches y = 4542.
+	{
+		FCityState S = DirSeed();
+		S.Money = 40000.0;
+		const FRoadDrawResult D = DrawRoad(Board, S, T62_Road[0], T62_Road[1],
+			T62_Road[2], T62_Road[3], FString(TEXT("avenue")), false);
+		TestTrue(TEXT("the road itself is on the plate"), D.bOk);
+		TestTrue(TEXT("and so is the click"),
+			T62_ClickY > Board.PlateYMin && T62_ClickY < Board.PlateYMax);
+		const FClickResult C = ResolveClick(Board, S, T62_ClickX, T62_ClickY,
+			false, Board.Rules.V0Width);
+		TestEqual(TEXT("the pad hangs off, so the click refuses"),
+			BoolStr(C.bOk), BoolStr(T62_Ok));
+		// The reason names the EDGE and the DISTANCE, because that is the whole
+		// of what the player has to do about it.
+		TestEqual(TEXT("and says which edge, and by how much"), C.Reason, FString(T62_Reason));
+
+		// (c) THE BOX IS EXACTLY THE CORNER TEST HERE, which is why the box is
+		// the right instrument in this one place and the lazy one everywhere
+		// else: the plate is axis-aligned, so a rotated pad's box is inside it
+		// exactly when all four corners are.
+		if (D.bOk)
+		{
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, D.Id);
+			if (TestNotNull(TEXT("the drawn road"), Rd))
+			{
+				FLotPlacement Would;
+				Would.X0 = 5590.0;
+				Would.X1 = 6410.0;
+				Would.Side = TEXT("north");
+				Would.RoadId = D.Id;
+				const FQuad Q = LotQuad(Board.Rules, Board.Econ, *Rd, Would);
+				const FLotRect B = QuadRect(Q);
+				TestEqual(TEXT("box x min"), B.XMin, T62_PadBox[0], 0.01);
+				TestEqual(TEXT("box x max"), B.XMax, T62_PadBox[1], 0.01);
+				TestEqual(TEXT("box y min"), B.YMin, T62_PadBox[2], 0.01);
+				TestEqual(TEXT("box y max"), B.YMax, T62_PadBox[3], 0.01);
+				bool bCornersOn = true;
+				for (int32 k = 0; k < 4; ++k)
+				{
+					bCornersOn = bCornersOn &&
+						Q.X[k] >= Board.PlateXMin && Q.X[k] <= Board.PlateXMax &&
+						Q.Y[k] >= Board.PlateYMin && Q.Y[k] <= Board.PlateYMax;
+				}
+				const bool bBoxOn = B.XMin >= Board.PlateXMin && B.XMax <= Board.PlateXMax &&
+					B.YMin >= Board.PlateYMin && B.YMax <= Board.PlateYMax;
+				TestEqual(TEXT("the box agrees with the corners"),
+					BoolStr(bBoxOn), BoolStr(bCornersOn));
+				TestTrue(TEXT("and both say off"), !bBoxOn);
+			}
+		}
+	}
+
+	// (d) AND IT IS THE PLATE, NOT THE SHAPE. The same 45 degree pad, the same
+	// width, the same road angle, moved to where the board has room - it
+	// places, and its corners and box agree the other way.
+	{
+		FCityState S = DirSeed();
+		S.Money = 40000.0;
+		const FRoadDrawResult D = DrawRoad(Board, S, T62_RoomRoad[0], T62_RoomRoad[1],
+			T62_RoomRoad[2], T62_RoomRoad[3], FString(TEXT("avenue")), false);
+		TestTrue(TEXT("drawn"), D.bOk);
+		const FClickResult C = ResolveClick(Board, S, T62_RoomClickX, T62_RoomClickY,
+			false, Board.Rules.V0Width);
+		if (TestTrue(TEXT("the same shape places where there is room"), C.bOk))
+		{
+			TestEqual(TEXT("x0"), C.Lot.X0, T62_RoomLot.X0, 1e-9);
+			TestEqual(TEXT("x1"), C.Lot.X1, T62_RoomLot.X1, 1e-9);
+			TestEqual(TEXT("side"), C.Lot.Side, FString(T62_RoomLot.Side));
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(C.Lot));
+			if (TestNotNull(TEXT("road"), Rd))
+			{
+				const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ, *Rd, C.Lot));
+				TestTrue(TEXT("and its pad is on the plate"),
+					B.XMin >= Board.PlateXMin && B.XMax <= Board.PlateXMax &&
+					B.YMin >= Board.PlateYMin && B.YMax <= Board.PlateYMax);
+			}
+		}
+	}
+
+	// (e) ALL FOUR EDGES HOLD, not only the two the cases above happen to
+	// reach. A vertical road 1250 uu inside each side margin: the click on the
+	// outward side is ON THE PLATE and its pad is not, and the same click
+	// mirrored inward places. Written because a mutation that dropped the x
+	// edges entirely SURVIVED the first version of this test.
+	for (int32 i = 0; i < T62_EdgesNum; ++i)
+	{
+		const FEdgeCase& Ec = T62_Edges[i];
+		FCityState S = DirSeed();
+		S.Money = 40000.0;
+		const FRoadDrawResult D = DrawRoad(Board, S, Ec.Road[0], Ec.Road[1],
+			Ec.Road[2], Ec.Road[3], FString(TEXT("avenue")), false);
+		TestTrue(TEXT("margin road drawn"), D.bOk);
+		TestTrue(*FString::Printf(TEXT("%s: the click is on the plate"), Ec.Edge),
+			Ec.OutX >= Board.PlateXMin && Ec.OutX <= Board.PlateXMax);
+		const FClickResult Out = ResolveClick(Board, S, Ec.OutX, Ec.OutY,
+			false, Board.Rules.V0Width);
+		TestEqual(*FString::Printf(TEXT("%s: the pad is not"), Ec.Edge),
+			BoolStr(Out.bOk), BoolStr(Ec.bOutOk));
+		TestEqual(*FString::Printf(TEXT("%s: and the reason names it"), Ec.Edge),
+			Out.Reason, FString(Ec.OutReason));
+		const FClickResult In = ResolveClick(Board, S, Ec.InX, Ec.InY,
+			false, Board.Rules.V0Width);
+		TestEqual(*FString::Printf(TEXT("%s: the inward side places"), Ec.Edge),
+			BoolStr(In.bOk), BoolStr(Ec.bInOk));
+	}
+
+	// (f) AND THE EDGE ITSELF IS INSIDE. A pad FLUSH with the plate is on the
+	// plate: the arterial's outermost lot has its box on PlateXMin exactly and
+	// the cross street's on PlateYMin. The rule is stated with a strict >, and
+	// both of these are lots the board has always allowed.
+	{
+		FCityState S = SeedState(Rules);
+		const FClickResult X = ResolveClick(Board, S, T62_FlushXClick[0],
+			T62_FlushXClick[1], true, Board.Rules.V0Width);
+		if (TestTrue(TEXT("the arterial's outermost lot places"), X.bOk))
+		{
+			TestEqual(TEXT("x0"), X.Lot.X0, T62_FlushXLot.X0, 1e-9);
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(X.Lot));
+			if (TestNotNull(TEXT("road"), Rd))
+			{
+				const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ, *Rd, X.Lot));
+				TestEqual(TEXT("and its box is ON the west edge"), B.XMin, Board.PlateXMin, 1e-9);
+			}
+		}
+		const FClickResult Y = ResolveClick(Board, S, T62_FlushYClick[0],
+			T62_FlushYClick[1], true, Board.Rules.V0Width);
+		if (TestTrue(TEXT("the cross street's outermost lot places"), Y.bOk))
+		{
+			TestEqual(TEXT("x0"), Y.Lot.X0, T62_FlushYLot.X0, 1e-9);
+			const TArray<FRoad> RoadsLocal = Board.AllRoads(S);
+			const FRoad* Rd = FindRoad(RoadsLocal, LotRoadId(Y.Lot));
+			if (TestNotNull(TEXT("road"), Rd))
+			{
+				const FLotRect B = QuadRect(LotQuad(Board.Rules, Board.Econ, *Rd, Y.Lot));
+				TestEqual(TEXT("and its box is ON the south edge"), B.YMin, Board.PlateYMin, 1e-9);
+			}
+		}
+	}
 	return true;
 }
 

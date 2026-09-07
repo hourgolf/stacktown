@@ -484,3 +484,113 @@ Two self-tests moved to make room, and the reason is worth recording:
 test 39 and test 45 both drew a road at y=3000 and placed a lot on its
 south side. Both were placing lots *in the arterial*. They now draw at
 y=3800, which leaves 1170..2670 and clears the arterial's 1130 by 40 uu.
+
+## 7b. A pad may not leave the plate (2026-09-07)
+
+Decided as a working default by the coordinator's morning relay; the
+owner reverts it with a word.
+
+`resolve_click` already refused a span that ran off the end of its
+**road**. For the two built-ins the road spans the plate, so that *was*
+this rule and nothing could tell them apart. They come apart the moment a
+road is drawn near an edge or at an angle:
+
+- the first curve drawn along the southern margin put a pad at
+  y = -5,740 against a plate that stops at -4,230;
+- self-test 52's own 45° lot reached y = 5,150.
+
+Both were placeable, and both stood off the board.
+
+**The rule.** After the span bound and the pinned-span scan, the
+candidate's pad is computed and its **bounding box** must lie inside
+`PLATE_X_MIN/MAX × PLATE_Y_MIN/MAX`. The box is the right instrument in
+this one place and the lazy one everywhere else: the plate is
+axis-aligned, so a rotated pad's box is inside it *exactly* when all four
+corners are, and the box is the extent that has to fit. Both the oracle
+and the port assert that equivalence rather than arguing it.
+
+**The refusal names the edge and the distance** — "the lot would hang 312
+uu past the plate's north edge" — because that is the whole of what the
+player has to do about it: back off that far, that way. On a tie (a 45°
+pad can leave north and east by the same amount) the order
+south → north → west → east decides, so the message is the same every
+run and the same in both languages.
+
+**Reduction, by sweep rather than by argument.** Every snapped span at
+every catalogue width, on both built-ins, on both sides — 20,500 pads —
+is inside the plate. Nothing already standing on this board moves and no
+click that used to work stops working. The oracle emits the sweep's
+*count*, and the C++ runs the identical sweep and must reach it, so a
+port that quietly covered less ground fails rather than passing emptily.
+
+### What it costs, measured rather than guessed
+
+The cost falls entirely on diagonals, and it is one thing rather than
+two. A **45° road cannot carry lots on both sides anywhere on this
+board**: swept over six lengths, the whole plate at 200 uu steps, both
+diagonal orientations and nineteen positions along each road — zero
+pairs. The arithmetic says why: a 45° pad reaches about 2,440 uu each way
+(1,859 perpendicular plus 580 along), the plate is 8,460 tall, and the
+arterial's corridor takes 2,260 out of the middle of it, leaving about
+3,100 either side. Self-test 52 asserts the refusal on a road of its own.
+
+**A first version of this section also claimed two lots ALONG one
+diagonal fit nowhere. That was wrong**, and the mutation table is what
+caught it: `click-lot-scan-uses-boxes` — a mutation that makes the click's
+placed-lot scan compare bounding boxes — survived, because self-test 54
+had stopped placing its second lot for real. Two lots along one diagonal
+fit in plenty of places; a 1,500 uu 45° road in the southern margin
+carries them, spans adjacent, boxes overlapping and pads apart. 54 places
+both again, with the second click *derived* one lot-width along the same
+frame so the pair is adjacent by construction. Self-tests 52 and 55c
+moved into the margins, where there is room.
+
+**Two remedies, for the owner.** A tolerance — allow a pad to overhang by
+some margin, since the plate mesh has apron beyond the playable ground —
+would buy the both-sides case back. A larger plate would buy it outright.
+Neither is taken here: the rule as decided is what is built.
+
+**One adjacent gap, named and not closed:** a ROAD's corridor may still
+hang off the plate. `draw_road` checks its endpoints, not its pavement.
+It is the same shape of change and waits for a word.
+
+## 7c. A path may not cross itself (2026-09-07)
+
+Decided as a working default by the coordinator's morning relay; the
+owner reverts it with a word. `resolve_road_path`'s own docstring named
+this as open — "a path that loops back over itself is accepted, because
+this version cannot tell that apart from a tight bend" — and it was: the
+loop drew, and its pavement lay across its own pavement.
+
+**The test is CENTRELINE crossing between non-adjacent chords**, and that
+is not a preference. A corridor rule cannot be stated for this at all:
+chords two apart on a perfectly **straight** road are 410 uu apart — they
+are 410 long — and the corridor is 2,260 wide, so every straight road
+would cross itself by that measure. The centreline is the only instrument
+that tells a loop-back from a bend.
+
+**Meeting end to end is not a crossing.** That is what every joined pair
+of chords does, and what two roads drawn nose to tail do. `segments_cross`
+returns true when the two meet at a point interior to at least one of
+them, or when they lie along each other for some length — a T and a
+doubled-back run both count; a shared endpoint alone does not. Chords are
+compared from `i+2` up, because consecutive chords share an endpoint by
+construction.
+
+It is checked **before anything is asked of the board**, because it is a
+property of the gesture alone: the player is told about the shape they
+drew rather than about whatever it happened to land on. The refusal names
+the pair — "the curve would cross itself, its 23rd chord over its 3rd" —
+and the whole path is refused, with nothing spent and nothing stored, the
+same one-decision discipline every other path refusal has.
+
+**It is exact: no threshold and no fudge factor**, so a hairpin as tight
+as the sampler can produce still draws.
+
+**What that leaves open, named rather than hidden:** two arms of a
+hairpin whose centrelines miss but whose *corridors* overlap still lay
+pavement on pavement. The probe hairpin's arms come within 288 uu of each
+other against a 2,260 uu corridor, and self-test 63 asserts that number
+so it cannot drift quietly. Telling that apart from an ordinary bend
+needs a chord-distance threshold, which is a number nobody has decided;
+section 5's deferred intersections are the same question.

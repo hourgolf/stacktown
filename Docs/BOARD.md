@@ -260,6 +260,110 @@ tested the old narrow scan, and the highway case is now one instance of what the
 two new ones cover.
 NEXT: gap 2 (a pad may not leave the plate), then the self-crossing path.
 
+ENGINEERING (2026-09-07, GAP 2 CLOSED - A PAD MAY NOT LEAVE THE PLATE): the
+second of the three, taken as your working default. resolve_click already
+refused a span that ran off the end of its ROAD, and for the two built-ins the
+road spans the plate - so that WAS this rule and nothing could tell them apart.
+They come apart the moment a road is drawn near an edge or at an angle: the
+first curve drawn along the southern margin put a pad at y=-5740 against a plate
+that stops at -4230, and my own self-test 52's 45 degree lot reached y=5150.
+Both were placeable. Both stood off the board.
+THE BOX, NOT THE QUAD, and this is the ONE place where the box is the right
+instrument rather than the lazy one: the plate is axis-aligned, so a rotated
+pad's bounding box is inside it EXACTLY when all four corners are, and the box
+is the extent that has to fit. Asserted both ways in both languages rather than
+argued from the diagram.
+THE REASON NAMES THE EDGE AND THE DISTANCE - "the lot would hang 312 uu past the
+plate's north edge" - because that is the whole of what the player has to do
+about it: back off that far, that way. On a tie (a 45 degree pad can leave north
+and east by the same amount) the order south-north-west-east decides, so the
+message is identical every run and identical in both languages.
+REDUCTION BY SWEEP, NOT BY ARGUMENT: every snapped span at every catalogue
+width, both built-ins, both sides - 20,500 pads - is inside the plate, so
+nothing already standing moves and no click that used to work stops working. The
+oracle emits the sweep's COUNT and the C++ runs the identical sweep and must
+reach it, so a port that quietly covered less ground fails rather than passing
+empty.
+WHAT IT COSTS, AND THIS ONE IS NOT FREE - measured, not guessed, and it falls
+entirely on diagonals: A 45 DEGREE ROAD CANNOT CARRY LOTS ON BOTH SIDES ANYWHERE
+ON THIS BOARD. Swept over six lengths, the whole plate at 200 uu steps, both
+diagonal orientations and nineteen positions along each road - zero pairs. The
+arithmetic says why: a 45 degree pad reaches about 2440 uu each way (1859 across
+plus 580 along), the plate is 8460 tall, and the arterial's corridor takes 2260
+out of the middle, leaving about 3100 either side. Self-test 52 asserts the
+refusal on a road of its own.
+AND I GOT THIS WRONG ONCE, so here it is plainly: I first reported that TWO LOTS
+ALONG one diagonal fit nowhere either, and rewrote self-test 54 to build its
+second lot as data on that basis. THE MUTATION TABLE CAUGHT IT - the pattern
+click-lot-scan-uses-boxes, which makes the click's placed-lot scan compare
+bounding boxes, SURVIVED, because 54 had stopped placing its second lot through
+place(). Two lots along one diagonal fit in plenty of places: a 1500 uu 45
+degree road in the southern margin carries them, spans adjacent, boxes
+overlapping and pads apart. 54 places both again, with the second click DERIVED
+one lot-width along the same frame so the pair is adjacent by construction. The
+claim was mine and the correction is mine; the table is why it did not ship.
+52 and 55c did move into the margins, where there is room.
+TWO REMEDIES, YOURS AND THE OWNER'S TO PICK, neither taken here: a TOLERANCE (a
+pad may overhang by some margin - the plate mesh has apron beyond the playable
+ground) buys the both-sides case back; a BIGGER PLATE buys it outright. The rule
+as decided is what is built.
+ONE ADJACENT GAP NAMED AND NOT CLOSED: a ROAD's corridor may still hang off the
+plate - draw_road checks its endpoints, not its pavement. Say the word and it is
+the same shape of change.
+TWO MORE HOLES THE TABLE FOUND IN MY OWN FIRST TESTS, both closed: the rule's
+X EDGES were never exercised (north and south were the only edges my cases
+reached, so a mutation deleting the east/west check survived), and no case put a
+pad FLUSH with an edge (so a mutation turning the strict > into >= survived,
+which would have refused the arterial's own outermost lot). 62 now has a case
+for each: a margin road either side, and the flush lots on both built-ins.
+PROVEN HERE: oracle 63/63, pre-flight 1316 checks / 0 failures.
+
+ENGINEERING (2026-09-07, ITEM 3 CLOSED - A PATH MAY NOT CROSS ITSELF): the third
+of the three, and the loop-back case resolve_road_path's OWN DOCSTRING named as
+open - "a path that loops back over itself is accepted, because this version
+cannot tell that apart from a tight bend". It was accepted, and its pavement lay
+across its own pavement.
+THE TEST IS CENTRELINE CROSSING between non-adjacent chords, and that is not a
+preference: A CORRIDOR RULE CANNOT BE STATED FOR THIS AT ALL. Chords two apart
+on a perfectly STRAIGHT road are 410 uu apart - they are 410 long - against a
+2260 uu corridor, so every straight road ever drawn would cross itself by that
+measure. Asserted in the tests rather than argued here. The centreline is the
+only instrument that tells a loop-back from a bend.
+MEETING END TO END IS NOT A CROSSING - that is what every joined pair of chords
+does and what two roads drawn nose to tail do. A T and a doubled-back run both
+count; a shared endpoint alone does not. Checked BEFORE anything is asked of the
+board, because it is a property of the gesture alone: the player is told about
+the shape they drew rather than about whatever it happened to land on. The
+reason names the pair ("its 23rd chord over its 3rd"), and the whole path is
+refused with nothing spent and nothing stored.
+IT IS EXACT - no threshold, no fudge factor - so a hairpin as tight as the
+sampler can produce still draws.
+WHAT THAT LEAVES OPEN, named rather than hidden: two arms of a hairpin whose
+centrelines miss but whose CORRIDORS overlap still lay pavement on pavement.
+The probe hairpin's arms come within 288 uu against a 2260 uu corridor, and
+self-test 63 asserts that number so it cannot drift quietly. Telling that apart
+from an ordinary bend needs a chord-distance threshold, which is a number nobody
+has decided; ROADS_AS_MECHANIC section 5's deferred intersections are the same
+question, and I would rather you and the owner decided it than have me pick one.
+ALSO IN THIS PUSH: Tools/preflight/mutate.py takes an optional name filter, so a
+new mutation can be probed in a minute instead of an hour. A filtered run prints
+PROBE ONLY and is never the record - the point of the table is which tests catch
+what, and a partial table cannot show a hole in a test you did not mutate
+against.
+PROVEN HERE: oracle 63/63, pre-flight 1316 checks / 0 failures, ten new
+mutations all caught across gaps 2 and 3 (the plate check dropped, its x edges
+ignored, its edge made inclusive, the wrong edge named, the smallest overshoot
+reported; the self-crossing check dropped, scanning only the first chord, the
+end-to-end exemption removed, the T/collinear branch removed, the pair named the
+wrong way round). FULL SWEEP FOR THE RECORD: 147 mutations, 145 caught, and the
+two survivors are the two permanent declared ones (pinned-scan-ignores-side,
+tick-iteration-order-unsorted) with their proofs unchanged.
+NOT PROVABLE HERE: Stacktown.Roads.PadOnThePlate,
+Stacktown.Roads.PathDoesNotCrossItself, and the relocated
+Roads.DiagonalLot / Roads.TwoLotsOnADiagonal / Roads.ScansComparePads - the Mac
+headless pass line is the proof, as always.
+NEXT: standing by, as asked.
+
 COORDINATOR (2026-09-07 03:53 PDT) - THE MORNING REPORT is in Docs/NIGHT_PLAN.md. Head
 4667dd8, 116/116, the final package built 03:52. ENGINEERING: your whole
 queue is in the game; the two gaps and the self-crossing path stand as

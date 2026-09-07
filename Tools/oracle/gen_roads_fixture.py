@@ -374,22 +374,29 @@ def main():
             'ux': f[2], 'uy': f[3], 'nx': f[4], 'ny': f[5], 'points': rows})
 
     # 52: a lot on a 45 degree road, end to end, priced by its true length.
+    # RELOCATED 2026-09-07 with the plate rule: at (6200, 2500) this road's
+    # north lot reached y = 5150 against a plate that stops at 4230. It sits in
+    # the southern margin now - and ON ONE SIDE ONLY, which is a fact about the
+    # board: a 45 degree road needs about 2440 uu each way for its pads, the
+    # plate is 8460 tall, and the arterial's corridor takes 2260 out of the
+    # middle. The other side is emitted as the refusal it now is.
     s52 = citytick.seed_state()
     s52['money'] = 5000.0
-    s52, rid52, ok52, why52 = P.draw_road(s52, 6200.0, 2500.0, 7200.0, 3500.0)
+    s52, rid52, ok52, why52 = P.draw_road(s52, 6400.0, -4000.0, 7400.0, -3000.0)
     assert ok52, why52
-    s52, pid52, okl52, whyl52 = P.place(s52, 5639.4, 4060.6)
+    s52, pid52, okl52, whyl52 = P.place(s52, 5839.3, -2439.3)
     assert okl52, whyl52
     lot52 = s52['parcels'][pid52]['placement']
-    s52b, pid52b, oks52, _ = P.place(json.loads(json.dumps(s52)), 7760.6, 1939.4)
-    _, _, again52, why52c = P.place(json.loads(json.dumps(s52)), 5639.4, 4060.6)
+    _, _, oks52, why52o = P.place(json.loads(json.dumps(s52)), 7960.7, -4560.7)
+    assert not oks52, 'the far side of a margin diagonal cannot be on the plate'
+    _, _, again52, why52c = P.place(json.loads(json.dumps(s52)), 5839.3, -2439.3)
     fx['t52_diagonal_lot'] = {
         'money_before': 5000.0, 'money_after': s52['money'],
         'segment': seg(s52['roads'][rid52]),
-        'click': [5639.4, 4060.6], 'pid': pid52, 'lot': lot52,
+        'click': [5839.3, -2439.3], 'pid': pid52, 'lot': lot52,
         'quad': [list(pt) for pt in P.lot_quad(lot52, P._all_roads(s52))],
-        'other_side_click': [7760.6, 1939.4], 'other_side_ok': oks52,
-        'other_side_lot': s52b['parcels'][pid52b]['placement'] if oks52 else None,
+        'other_side_click': [7960.7, -4560.7], 'other_side_ok': oks52,
+        'other_side_reason': why52o,
         'again_ok': again52, 'again_reason': why52c,
     }
 
@@ -418,22 +425,28 @@ def main():
             'side_plus': d['side_plus'], 'side_minus': d['side_minus'],
             'axis': d['axis'], 'nx': f[4], 'ny': f[5]})
 
-    # 54: two houses along one diagonal street - pads apart, boxes overlapping.
+    # 54: two lots along one diagonal street - pads apart, boxes overlapping.
+    # RELOCATED 2026-09-07 with the plate rule, and the second click DERIVED
+    # one lot-width along the same frame, so the pair is adjacent by
+    # construction. The plate rule does NOT cost this case - a first answer
+    # said two lots along one diagonal fit nowhere, and the mutation table
+    # caught that: they fit in plenty of places. What does not fit anywhere is
+    # a 45 degree road with lots on BOTH sides, which is test 52's.
     s54 = citytick.seed_state()
     s54['money'] = 9000.0
-    s54, rid54, ok54, why54 = P.draw_road(s54, 5700.0, 2000.0, 7650.0, 3950.0,
-                                          pins_active=False)
+    s54, rid54, ok54, why54 = P.draw_road(s54, -5000.0, -4200.0, -3500.0,
+                                          -2700.0, pins_active=False)
     assert ok54, why54
     f54 = P.road_frame(P._road_dict(s54['roads'][rid54]))
     clicks54, lots54 = [], []
-    for t in (0.20, 0.80):
-        al = f54[6] * t
+    for al in (f54[6] * 0.20, f54[6] * 0.20 + P.V0_WIDTH):
         px = f54[0] + f54[2] * al + f54[4] * 1500.0
         py = f54[1] + f54[3] * al + f54[5] * 1500.0
         s54, pid, okp, whyp = P.place(s54, px, py, pins_active=False)
         assert okp, whyp
         clicks54.append([px, py])
         lots54.append(s54['parcels'][pid]['placement'])
+    assert lots54[1]['x0'] == lots54[0]['x1'], lots54
     qa54 = P.lot_quad(lots54[0], P._all_roads(s54))
     qb54 = P.lot_quad(lots54[1], P._all_roads(s54))
     fx['t54_two_lots'] = {
@@ -463,17 +476,23 @@ def main():
     qab55 = P.road_quad(P._road_dict(b55['roads'][rb55]))
     qbb55 = P.road_quad(P._road_dict(roadb55))
 
+    # RELOCATED 2026-09-07 with the plate rule: the old diagonal out of
+    # (5700, 2000) carried a NORTH-side lot whose pad reached y = 4542, and it
+    # could not be nudged back on - the road has to clear the arterial by its
+    # own half, so the near corner cannot start below y = 1929 and the far one
+    # lands at 4471 against a plate that stops at 4230. This one runs the other
+    # way, with the highway to the EAST of the pad instead of the west.
     c55 = citytick.seed_state(); c55['money'] = 40000.0
-    c55, rc55, okc55, whyc55 = P.draw_road(c55, 5700.0, 2000.0, 7650.0, 3950.0,
+    c55, rc55, okc55, whyc55 = P.draw_road(c55, 3000.0, 2000.0, 4950.0, 3950.0,
                                            pins_active=False)
     assert okc55, whyc55
     f55 = P.road_frame(P._road_dict(c55['roads'][rc55]))
-    al55 = f55[6] * 0.20
-    px55 = f55[0] + f55[2] * al55 + f55[4] * 1500.0
-    py55 = f55[1] + f55[3] * al55 + f55[5] * 1500.0
+    al55 = f55[6] * 0.75
+    px55 = f55[0] + f55[2] * al55 - f55[4] * 1500.0
+    py55 = f55[1] + f55[3] * al55 - f55[5] * 1500.0
     okc55, whyc55, lotc55 = P.resolve_click(c55, px55, py55, pins_active=False)
     assert okc55, whyc55
-    c55, rh55, okh55, whyh55 = P.draw_road(c55, 2600.0, 1800.0, 2600.0, 3000.0,
+    c55, rh55, okh55, whyh55 = P.draw_road(c55, 7400.0, 2600.0, 7400.0, 3800.0,
                                            'highway', pins_active=False)
     assert okh55, whyh55
     qh55 = P.road_quad(P._road_dict(c55['roads'][rh55]))
@@ -490,9 +509,9 @@ def main():
             'quads': P.quads_overlap(qab55, qbb55),
             'rects': P.rects_overlap(P.quad_rect(qab55), P.quad_rect(qbb55))},
         'lot_vs_highway': {
-            'road': [5700.0, 2000.0, 7650.0, 3950.0],
+            'road': [3000.0, 2000.0, 4950.0, 3950.0],
             'click': [px55, py55], 'lot': lotc55,
-            'highway': [2600.0, 1800.0, 2600.0, 3000.0],
+            'highway': [7400.0, 2600.0, 7400.0, 3800.0],
             'quads': P.quads_overlap(ql55, qh55),
             'rects': P.rects_overlap(P.quad_rect(ql55), P.quad_rect(qh55)),
             'still_places': P.resolve_click(c55, px55, py55,
@@ -637,6 +656,162 @@ def main():
     fx['t61_curve'] = {'nodes': [[2000.0, -4000.0], [4000.0, -2600.0],
                                  [6000.0, -4000.0]],
                        'fronted': fronted[:1], 'fronted_count': len(fronted)}
+
+    # ---- the plate gap closed, self-test 62 (2026-09-07) -------------------
+    # A lot's PAD may not leave the plate. The witness is a click 779 uu INSIDE
+    # the plate's north edge whose pad reaches y = 4542; the control is the
+    # same 45 degree shape where the board has room. The REDUCTION is a sweep
+    # rather than an argument, and the C++ runs the same sweep against the same
+    # count - the numbers below are the sweep's parameters, not its answers.
+    import woodmap
+    s62 = funded()
+    s62, r62, ok62, why62 = P.draw_road(s62, 5700.0, 2000.0, 7650.0, 3950.0,
+                                        pins_active=False)
+    assert ok62, why62
+    f62 = P.road_frame(P._road_dict(s62['roads'][r62]))
+    al62 = f62[6] * 0.20
+    px62 = f62[0] + f62[2] * al62 + f62[4] * 1500.0
+    py62 = f62[1] + f62[3] * al62 + f62[5] * 1500.0
+    ok62b, why62b, lot62 = P.resolve_click(s62, px62, py62, pins_active=False)
+    assert not ok62b, (ok62b, lot62)
+    s62d = funded()
+    s62d, r62d, ok62d, why62d = P.draw_road(s62d, 3000.0, 2000.0, 4950.0,
+                                            3950.0, pins_active=False)
+    assert ok62d, why62d
+    f62d = P.road_frame(P._road_dict(s62d['roads'][r62d]))
+    al62d = f62d[6] * 0.75
+    px62d = f62d[0] + f62d[2] * al62d - f62d[4] * 1500.0
+    py62d = f62d[1] + f62d[3] * al62d - f62d[5] * 1500.0
+    ok62e, why62e, lot62d = P.resolve_click(s62d, px62d, py62d,
+                                            pins_active=False)
+    assert ok62e, why62e
+    swept62 = 0
+    for road62 in (P.ARTERIAL, P.CROSS_STREET):
+        fr62 = P.road_frame(P._road_dict(road62))
+        d62 = P._road_dict(road62)
+        for w62 in woodmap.WIDTHS:
+            s = fr62[7]
+            while s + w62 <= fr62[7] + fr62[6] + 1e-9:
+                for side62 in (d62['side_plus'], d62['side_minus']):
+                    box = P.quad_rect(P.lot_quad(
+                        {'x0': s, 'x1': s + w62, 'side': side62,
+                         'road_id': road62['id']}, P.ROADS))
+                    assert (box[0] >= P.PLATE_X_MIN and box[1] <= P.PLATE_X_MAX
+                            and box[2] >= P.PLATE_Y_MIN
+                            and box[3] <= P.PLATE_Y_MAX), (road62['id'], s, box)
+                    swept62 += 1
+                s += P.POSITION_QUANTUM
+    # ALL FOUR EDGES, because a mutation that dropped the x edges entirely
+    # survived the first version of this: north and south were the only edges
+    # the cases above ever reached.
+    edges62 = []
+    for ex62, sg62, name62 in ((6400.0, 1.0, 'east'), (-6400.0, -1.0, 'west')):
+        se62 = funded()
+        se62, re62, oke62, whye62 = P.draw_road(se62, ex62, -4000.0, ex62,
+                                                -1500.0, pins_active=False)
+        assert oke62, whye62
+        out62 = ex62 + 1200.0 * sg62
+        oko62, whyo62, _l = P.resolve_click(se62, out62, -2800.0,
+                                            pins_active=False)
+        assert not oko62, name62
+        oki62, whyi62, lin62 = P.resolve_click(se62, ex62 - 1200.0 * sg62,
+                                               -2800.0, pins_active=False)
+        assert oki62, whyi62
+        edges62.append({'edge': name62, 'road': [ex62, -4000.0, ex62, -1500.0],
+                        'out_click': [out62, -2800.0], 'out_ok': oko62,
+                        'out_reason': whyo62,
+                        'in_click': [ex62 - 1200.0 * sg62, -2800.0],
+                        'in_ok': oki62, 'in_lot': lin62})
+    # AND THE EDGE ITSELF IS INSIDE: a pad flush with the plate is on it. Both
+    # of these are lots the board has always allowed.
+    sf62 = citytick.seed_state()
+    okf62, whyf62, lf62 = P.resolve_click(sf62, P.PLATE_X_MIN + P.WIDTH_QUANTUM,
+                                          1500.0)
+    assert okf62, whyf62
+    okg62, whyg62, lg62 = P.resolve_click(sf62, 1500.0,
+                                          P.PLATE_Y_MIN + P.WIDTH_QUANTUM)
+    assert okg62, whyg62
+    fx['t62_plate'] = {
+        'edges': edges62,
+        'flush_x_click': [P.PLATE_X_MIN + P.WIDTH_QUANTUM, 1500.0],
+        'flush_x_lot': lf62,
+        'flush_x_box': list(P.quad_rect(P.lot_quad(lf62, P.ROADS))),
+        'flush_y_click': [1500.0, P.PLATE_Y_MIN + P.WIDTH_QUANTUM],
+        'flush_y_lot': lg62,
+        'flush_y_box': list(P.quad_rect(P.lot_quad(lg62, P.ROADS))),
+        'road': [5700.0, 2000.0, 7650.0, 3950.0], 'click': [px62, py62],
+        'ok': ok62b, 'reason': why62b,
+        'pad_box': list(P.quad_rect(P.lot_quad(
+            {'x0': 5590.0, 'x1': 6410.0, 'side': 'north', 'road_id': r62},
+            P._all_roads(s62)))),
+        'room_road': [3000.0, 2000.0, 4950.0, 3950.0],
+        'room_click': [px62d, py62d], 'room_lot': lot62d,
+        'widths': list(woodmap.WIDTHS), 'swept': swept62,
+    }
+
+    # ---- a path may not cross itself, self-test 63 (2026-09-07) -----------
+    # The loop-back case resolve_road_path's own docstring named as open. The
+    # test is CENTRELINE crossing between non-adjacent chords: exact, no
+    # threshold. A corridor rule cannot be stated for this at all - chords two
+    # apart on a perfectly STRAIGHT road are 410 uu apart against a 2260 uu
+    # corridor - and the hairpin below is what that costs, emitted so the hole
+    # is a measured number rather than a remark.
+    PAIRS63 = [
+        ('a-proper-x', [0.0, 0.0], [100.0, 100.0], [0.0, 100.0], [100.0, 0.0]),
+        ('apart', [0.0, 0.0], [100.0, 100.0], [200.0, 0.0], [300.0, 100.0]),
+        ('nose-to-tail', [0.0, 0.0], [100.0, 100.0], [100.0, 100.0], [200.0, 0.0]),
+        ('tail-to-nose', [0.0, 0.0], [100.0, 100.0], [0.0, 0.0], [100.0, -100.0]),
+        ('a-tee', [0.0, 0.0], [100.0, 100.0], [50.0, 50.0], [150.0, 0.0]),
+        ('doubles-back-along-it', [0.0, 0.0], [100.0, 100.0], [50.0, 50.0], [150.0, 150.0]),
+        ('carries-on-from-the-end', [0.0, 0.0], [100.0, 100.0], [100.0, 100.0], [200.0, 200.0]),
+        ('parallel-and-close', [0.0, 0.0], [100.0, 100.0], [1.0, 0.0], [101.0, 100.0]),
+    ]
+    LOOP63 = [[3000.0, -3900.0], [6200.0, -3900.0], [5800.0, -2500.0],
+              [3400.0, -2500.0], [4200.0, -4200.0]]
+    HAIR63 = [[4000.0, -4200.0], [5200.0, -2400.0], [4300.0, -2400.0]]
+    s63 = citytick.seed_state()
+    s63['money'] = 90000.0
+    s63, path63, ids63, ok63, why63 = P.draw_road_path(
+        s63, [tuple(n) for n in LOOP63], pins_active=False)
+    assert not ok63, 'the loop-back must refuse'
+    s63b = citytick.seed_state()
+    s63b['money'] = 90000.0
+    s63b, path63b, ids63b, ok63b, why63b = P.draw_road_path(
+        s63b, [tuple(n) for n in LOOP63[:4]], pins_active=False)
+    assert ok63b, why63b
+    s63c = citytick.seed_state()
+    s63c['money'] = 90000.0
+    s63c, path63c, ids63c, ok63c, why63c = P.draw_road_path(
+        s63c, [tuple(n) for n in HAIR63], pins_active=False)
+    assert ok63c, why63c
+    hit63 = P.path_self_crossing(P.sample_path([tuple(n) for n in LOOP63]))
+    hp63 = P.sample_path([tuple(n) for n in HAIR63])
+    gap63 = None
+    for i in range(len(hp63) - 1):
+        for j in range(i + 2, len(hp63) - 1):
+            for t in range(51):
+                px = hp63[i][0] + (hp63[i + 1][0] - hp63[i][0]) * t / 50.0
+                py = hp63[i][1] + (hp63[i + 1][1] - hp63[i][1]) * t / 50.0
+                for u in range(51):
+                    qx = hp63[j][0] + (hp63[j + 1][0] - hp63[j][0]) * u / 50.0
+                    qy = hp63[j][1] + (hp63[j + 1][1] - hp63[j][1]) * u / 50.0
+                    d = ((px - qx) ** 2 + (py - qy) ** 2) ** 0.5
+                    if gap63 is None or d < gap63:
+                        gap63 = d
+    fx['t63_self_crossing'] = {
+        'pairs': [{'label': lb, 'a0': a0, 'a1': a1, 'b0': b0, 'b1': b1,
+                   'cross': P.segments_cross(tuple(a0), tuple(a1),
+                                             tuple(b0), tuple(b1))}
+                  for lb, a0, a1, b0, b1 in PAIRS63],
+        'loop_nodes': LOOP63, 'loop_i': hit63[0], 'loop_j': hit63[1],
+        'loop_ok': ok63, 'loop_reason': why63, 'loop_money': s63['money'],
+        'loop_money_before': 90000.0, 'loop_roads': len(s63['roads']),
+        'open_nodes': LOOP63[:4], 'open_ok': ok63b, 'open_chords': len(ids63b),
+        'hairpin_nodes': HAIR63, 'hairpin_ok': ok63c,
+        'hairpin_chords': len(ids63c), 'hairpin_gap': gap63,
+        'straight_chord_gap': 2.0 * P.WIDTH_QUANTUM,
+        'corridor_width': 2.0 * P.ROAD_HALF,
+    }
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_PATH, 'w') as f:

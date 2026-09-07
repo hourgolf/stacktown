@@ -22,6 +22,7 @@ struct FRect { double XMin; double XMax; double YMin; double YMax; };
 
 inline constexpr double PositionQuantum = 10.0;
 inline constexpr double V0Width = 820.0;
+inline constexpr double WidthQuantum = 410.0;
 inline constexpr double RoadHalf = 1130.0;
 inline constexpr double BlockDepth = 1500.0;
 inline constexpr double ReachSlack = 600.0;

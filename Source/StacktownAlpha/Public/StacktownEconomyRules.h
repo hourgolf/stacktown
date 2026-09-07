@@ -255,6 +255,17 @@ struct STACKTOWNALPHA_API FRoadSegment
 	double  StartX = 0.0, StartY = 0.0;
 	double  EndX   = 0.0, EndY   = 0.0;
 	FString WidthClass;
+
+	/** Which ROAD this segment belongs to. A curve drawn as one gesture is
+	 *  many chords sharing a path (Stacktown::DrawRoadPath); a straight road
+	 *  is its own path, and so is any segment written before this key existed.
+	 *  EMPTY means "my own id" - Stacktown::RoadPathId is the one place that
+	 *  fallback lives, the same shape LotRoadId already established.
+	 *
+	 *  It is not decoration: InCrossing counts PATHS, and without that the
+	 *  joints of every curve - one every 410 uu - would each be "pavement
+	 *  shared by more than one road" and no lot could front a curve at all. */
+	FString Path;
 };
 
 /** The live city. Mirrors the dict econrules.tick()/buy()/upgrade() operate on. */

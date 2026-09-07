@@ -167,7 +167,8 @@ inline bool StatesEqual(const Stacktown::FCityState& A, const Stacktown::FCitySt
 			|| FMath::Abs(S.StartY - Other->StartY) > Tolerance
 			|| FMath::Abs(S.EndX - Other->EndX) > Tolerance
 			|| FMath::Abs(S.EndY - Other->EndY) > Tolerance
-			|| S.WidthClass != Other->WidthClass)
+			|| S.WidthClass != Other->WidthClass
+			|| S.Path != Other->Path)
 		{
 			OutWhy = FString::Printf(TEXT("road '%s' differs"), *Pair.Key);
 			return false;

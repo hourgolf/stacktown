@@ -46,6 +46,10 @@ struct STACKTOWNALPHA_API FRoad
 	 *  which predate types entirely. RoadTypeOf() is the one place that empty
 	 *  becomes 'avenue'; nothing else may read this field raw. */
 	FString WidthClass;
+
+	/** The road this chord belongs to - see FRoadSegment::Path. Empty means
+	 *  "my own id"; RoadPathId is the one place that reads it. */
+	FString Path;
 };
 
 /** One pinned lot's frontage span. Position was never citystate.json's to own -
@@ -86,6 +90,11 @@ struct STACKTOWNALPHA_API FPlacementRules
 	 *  - 10 uu, not the 410 width quantum, which still governs widths only. */
 	double  PositionQuantum = 10.0;
 	double  V0Width         = 820.0;
+	/** The board's own unit: the width ladder is built on it (woodmap.WIDTHS)
+	 *  and a curve is sampled at it, so one chord is one lot-width unit of
+	 *  road. NOT the position quantum, which became 10 when the owner asked
+	 *  for free placement along the road; this is still 410. */
+	double  WidthQuantum    = 410.0;
 	FString V0Recipe        = TEXT("vernacular");
 	/** Dormant BP_Parcel actors pre-placed as map content. No Python API in this
 	 *  UE build spawns an actor into the running world, so a placed lot can only
@@ -415,6 +424,75 @@ STACKTOWNALPHA_API double RectDistance(const FLotRect& A, const FLotRect& B);
  *  one line that applies it is the economy loop's, deliberately left. */
 STACKTOWNALPHA_API double RoadRentMultiplier(const FPlacementBoard& Board,
 	const FCityState& State, const FLotPlacement& Lot);
+
+// ---- CURVED MULTI-NODE ROADS (item 11, ROADS_AS_MECHANIC section 5) -------
+// A Catmull-Rom through the committed nodes, resampled by ARC LENGTH at the
+// 410 quantum into straight chords, drawn as ONE road: one decision, one
+// price, one path id. The chords are how a curve is stored and drawn, not
+// what it is.
+
+/** Which ROAD a chord belongs to. Empty Path means the chord is its own road,
+ *  which is what a straight draw and anything written before this key are. */
+STACKTOWNALPHA_API FString RoadPathId(const FRoad& Road);
+
+/** The chords of this one's own path that JOIN it end to end. Found by
+ *  matching endpoints rather than by id order, so it stays right however a
+ *  path's ids were allocated. */
+STACKTOWNALPHA_API TArray<FRoad> PathNeighbours(const TArray<FRoad>& Roads, const FRoad& Road);
+
+/** The projection range a lot on `Road` may occupy, in `Road`'s own direction:
+ *  its own span widened by whatever its joined neighbours reach.
+ *
+ *  A curve is sampled at the 410 WIDTH_QUANTUM and the narrowest lot in the
+ *  catalogue is 820 - two quanta - so no lot fits inside a single chord, and
+ *  without this every click on a curve is refused with "off-board: snapped
+ *  span exceeds the R3 road" on completely open ground. ONE chord either side,
+ *  because the pad is a straight rectangle in this chord's frame and a span
+ *  that ran further could come out where the pad does not go. */
+STACKTOWNALPHA_API void PathSpan(const TArray<FRoad>& Roads, const FRoad& Road,
+	double& OutMin, double& OutMax);
+
+/** The curve through `Nodes` as a polyline whose vertices are `Spacing` apart
+ *  ALONG THE CURVE. Arc-length resampling, not parameter space: a
+ *  Catmull-Rom's parameter runs faster round the outside of a bend, which is
+ *  exactly where a chord's error against the curve is largest. The last node
+ *  is always a vertex, and a leftover shorter than half a spacing is merged
+ *  into the chord before it rather than left as a stub. */
+STACKTOWNALPHA_API TArray<FVector2D> SamplePath(const FPlacementRules& R,
+	const TArray<FVector2D>& Nodes, double Spacing);
+
+struct STACKTOWNALPHA_API FRoadPathResult
+{
+	bool                 bOk = false;
+	FString              Reason;
+	/** The path id the chords share. Empty on refusal. */
+	FString              PathId;
+	/** The chords, in order along the curve. EMPTY on refusal, never partial:
+	 *  a path that half-built where it first hit something would leave the
+	 *  player a road they did not draw and a bill for it. */
+	TArray<FRoadSegment> Segments;
+};
+
+/** One curved road as ONE decision. Every chord is checked against the board
+ *  and any failure refuses the whole path, naming the chord. The length and
+ *  the price are the path's, not each chord's - a 410 chord is under the 820 a
+ *  lot needs, and refusing every curve for that would measure the wrong thing.
+ *
+ *  IT DOES NOT CROSS ITSELF BY DEFINITION: consecutive chords share an
+ *  endpoint so their corridors always overlap, and chords a few apart overlap
+ *  on a bend, so the crossing check runs against the board only. What that
+ *  leaves open, named rather than hidden: a path that loops back over itself
+ *  is accepted, because this version cannot tell that from a tight bend. */
+STACKTOWNALPHA_API FRoadPathResult ResolveRoadPath(const FPlacementBoard& Board,
+	const FCityState& State, const TArray<FVector2D>& Nodes,
+	const FString& WidthClass, bool bPinsActive);
+
+/** One curve-drawing gesture. The chords go in exactly as ResolveRoadPath
+ *  validated them, and the money moves here and only here, once, for the whole
+ *  path - the same discipline DrawRoad holds for a straight road. */
+STACKTOWNALPHA_API FRoadPathResult DrawRoadPath(const FPlacementBoard& Board,
+	FCityState& State, const TArray<FVector2D>& Nodes,
+	const FString& WidthClass, bool bPinsActive);
 
 /** Drawn-road ids in creation order: R1, R2, ... R9, R10 - numerically, not
  *  lexicographically, which would put R10 before R2. The Python gets this free

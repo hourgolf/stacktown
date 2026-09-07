@@ -203,6 +203,10 @@ bool CityStateFromJson(const FString& JsonText, FCityState& Out, FString& OutErr
 			Seg.EndX   = (*End)[0]->AsNumber();
 			Seg.EndY   = (*End)[1]->AsNumber();
 			(*RObj)->TryGetStringField(TEXT("width_class"), Seg.WidthClass);
+			// 'path' groups the chords of one curve (item 11). Optional, and
+			// absent means the segment is its own road - which is what every
+			// straight draw and everything written before curves is.
+			(*RObj)->TryGetStringField(TEXT("path"), Seg.Path);
 			S.Roads.Add(Pair.Key, Seg);
 		}
 	}
@@ -343,6 +347,13 @@ FString CityStateToJson(const FCityState& State)
 		RObj->SetArrayField(TEXT("start"), Start);
 		RObj->SetArrayField(TEXT("end"), End);
 		RObj->SetStringField(TEXT("width_class"), Seg.WidthClass);
+		// Written only when there IS one, so a straight road's entry is
+		// byte-for-byte what it was before curves existed and the Python
+		// oracle's own files still round-trip unchanged.
+		if (!Seg.Path.IsEmpty())
+		{
+			RObj->SetStringField(TEXT("path"), Seg.Path);
+		}
 		Roads->SetObjectField(RoadId, RObj);
 	}
 	Root->SetObjectField(TEXT("roads"), Roads);

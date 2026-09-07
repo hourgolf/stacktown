@@ -38,10 +38,11 @@ def clickcase(c):
 
 def segdef(s):
     if s is None:
-        return '{ nullptr, 0.0, 0.0, 0.0, 0.0, nullptr }'
-    return '{ %s, %s, %s, %s, %s, %s }' % (
+        return '{ nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr }'
+    return '{ %s, %s, %s, %s, %s, %s, %s }' % (
         q(s['id']), n(s['start'][0]), n(s['start'][1]),
-        n(s['end'][0]), n(s['end'][1]), q(s['width_class']))
+        n(s['end'][0]), n(s['end'][1]), q(s['width_class']),
+        q(s.get('path') or None))
 
 
 def main():
@@ -59,7 +60,8 @@ def main():
     w('namespace StacktownRoadsOracle')
     w('{')
     w('struct FSegDef { const TCHAR* Id; double StartX; double StartY;')
-    w('                 double EndX; double EndY; const TCHAR* WidthClass; };')
+    w('                 double EndX; double EndY; const TCHAR* WidthClass;')
+    w('                 const TCHAR* Path; };')
     w('struct FDrawCase { double X0; double Y0; double X1; double Y1;')
     w('                   bool bPinsActive; bool bOk; const TCHAR* Reason; FSegDef Road; };')
     w('struct FRectDef { double XMin; double XMax; double YMin; double YMax; };')
@@ -385,6 +387,99 @@ def main():
     w('inline constexpr bool T55_LvH_Quads = %s;' % b(lh['quads']))
     w('inline constexpr bool T55_LvH_Rects = %s;' % b(lh['rects']))
     w('inline constexpr bool T55_LvH_StillPlaces = %s;' % b(lh['still_places']))
+    w('')
+    w('// ---- CURVED MULTI-NODE ROADS, self-tests 56-60 (item 11) -------------')
+    w('struct FNode { double X; double Y; };')
+    w('')
+    w('// The three nodes every curve case below is drawn through.')
+    w('inline const FNode Curve[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in fx['CURVE']))
+    w('inline constexpr int32 CurveNum = %d;' % len(fx['CURVE']))
+    w('')
+    w('// 56: the sampled polyline, vertex for vertex.')
+    w('inline const FNode T56_Sampled[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in fx['t56_sampled']))
+    w('inline constexpr int32 T56_SampledNum = %d;' % len(fx['t56_sampled']))
+    w('inline const FNode T56_StraightNodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in fx['t56_straight_nodes']))
+    w('inline constexpr int32 T56_StraightNodesNum = %d;' % len(fx['t56_straight_nodes']))
+    w('inline const FNode T56_Straight[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in fx['t56_straight']))
+    w('inline constexpr int32 T56_StraightNum = %d;' % len(fx['t56_straight']))
+    w('')
+    w('// 57: one gesture, one road, one price.')
+    t = fx['t57_path']
+    w('inline constexpr double T57_MoneyBefore = %s;' % n(t['money_before']))
+    w('inline constexpr double T57_MoneyAfter = %s;' % n(t['money_after']))
+    w('inline const TCHAR* const T57_PathId = %s;' % q(t['path_id']))
+    w('inline const TCHAR* const T57_Ids[] = { %s };'
+      % ', '.join(q(i) for i in t['ids']))
+    w('inline constexpr int32 T57_IdsNum = %d;' % len(t['ids']))
+    w('inline const FSegDef T57_Segments[] = {')
+    for sg in t['segments']:
+        w('\t%s,' % segdef(sg))
+    w('};')
+    w('')
+    w('// 58: joints in more than one CHORD, and a lot that spans them.')
+    w('inline const FNode T58_Joints[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in fx['t58_joints']))
+    w('inline constexpr int32 T58_JointsNum = %d;' % len(fx['t58_joints']))
+    t = fx['t58_lot']
+    w('inline constexpr double T58_ClickX = %s;' % n(t['click'][0]))
+    w('inline constexpr double T58_ClickY = %s;' % n(t['click'][1]))
+    w('inline const FLotDef2 T58_Lot = %s;' % lotdef(t['lot']))
+    w('inline constexpr double T58_ChordLength = %s;' % n(t['chord_length']))
+    w('inline constexpr double T58_SpanMin = %s;' % n(t['span_min']))
+    w('inline constexpr double T58_SpanMax = %s;' % n(t['span_max']))
+    w('')
+    w('// 59: one decision - any chord failing refuses the whole path.')
+    def pathcase(key, name, with_nodes=True):
+        c = fx[key]
+        if with_nodes and 'nodes' in c:
+            w('inline const FNode %s_Nodes[] = { %s };' % (
+                name, ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in c['nodes'])))
+            w('inline constexpr int32 %s_NodesNum = %d;' % (name, len(c['nodes'])))
+        w('inline constexpr bool %s_Ok = %s;' % (name, b(c['ok'])))
+        w('inline const TCHAR* const %s_Reason = %s;' % (name, q(c.get('reason'))))
+    pathcase('t59_crosses', 'T59_Crosses')
+    w('inline constexpr int32 T59_CrossesSegments = %d;'
+      % (0 if fx['t59_crosses']['segments'] is None else len(fx['t59_crosses']['segments'])))
+    pathcase('t59_afford', 'T59_Afford')
+    t = fx['t59_boundary']
+    w('inline constexpr double T59_Cost = %s;' % n(t['cost']))
+    w('inline constexpr bool T59_UnderOk = %s;' % b(t['under_ok']))
+    w('inline const TCHAR* const T59_UnderReason = %s;' % q(t['under_reason']))
+    w('inline constexpr bool T59_ExactOk = %s;' % b(t['exact_ok']))
+    pathcase('t59_unknown', 'T59_Unknown')
+    pathcase('t59_one_node', 'T59_OneNode')
+    pathcase('t59_too_short', 'T59_TooShort')
+    t = fx['t59_overshoot']
+    w('inline const FNode T59_Overshoot_Nodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['nodes']))
+    w('inline constexpr int32 T59_Overshoot_NodesNum = %d;' % len(t['nodes']))
+    w('inline constexpr bool T59_Overshoot_Ok = %s;' % b(t['ok']))
+    w('inline const TCHAR* const T59_Overshoot_Reason = %s;' % q(t['reason']))
+    w('inline constexpr double T59_Overshoot_MinY = %s;' % n(t['min_y']))
+    w('inline constexpr double T59_Overshoot_PlateYMin = %s;' % n(t['plate_y_min']))
+    t = fx['t59_lot']
+    w('inline constexpr double T59_Lot_ClickX = %s;' % n(t['lot_click'][0]))
+    w('inline constexpr double T59_Lot_ClickY = %s;' % n(t['lot_click'][1]))
+    w('inline const FLotDef2 T59_Lot_Lot = %s;' % lotdef(t['lot']))
+    w('inline const FNode T59_Lot_Nodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['nodes']))
+    w('inline constexpr int32 T59_Lot_NodesNum = %d;' % len(t['nodes']))
+    w('inline constexpr bool T59_Lot_Ok = %s;' % b(t['ok']))
+    w('inline const TCHAR* const T59_Lot_Reason = %s;' % q(t['reason']))
+    t = fx['t59_two_nodes']
+    w('inline const FNode T59_Two_Nodes[] = { %s };'
+      % ', '.join('{ %s, %s }' % (n(p[0]), n(p[1])) for p in t['nodes']))
+    w('inline constexpr int32 T59_Two_NodesNum = %d;' % len(t['nodes']))
+    w('inline const TCHAR* const T59_Two_PathId = %s;' % q(t['path_id']))
+    w('inline constexpr int32 T59_Two_Count = %d;' % len(t['ids']))
+    w('inline const FSegDef T59_Two_Segments[] = {')
+    for sg in t['segments']:
+        w('\t%s,' % segdef(sg))
+    w('};')
     w('')
     w('} // namespace StacktownRoadsOracle')
 

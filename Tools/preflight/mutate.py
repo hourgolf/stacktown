@@ -109,7 +109,8 @@ MUTATIONS = [
      'return FMath::Abs(OutProj.Across);', True, 'placement'),
 
     ('crossing-never-detected', 'a click on shared pavement resolves to one road anyway',
-     'return Count > 1;', 'return Count > 2;', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 again - InCrossing counts paths now.
+     'return Seen.Num() > 1;', 'return Seen.Num() > 2;', True, 'placement'),
 
     ('pins-ignore-the-mode-gate', 'empty mode still refuses on a dormant pin',
      'if (bPinsActive && Road->Id == Board.PinnedRoadId)',
@@ -157,9 +158,9 @@ MUTATIONS = [
     # the integer part - so Snap(start + t) != start + Snap(t) at a tie even when
     # start is on the grid. The reasoning in the spec is stale; the code is right.
     ('snap-before-world-space', 'the grid shifts at a tie, and on any off-grid road start',
-     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
-     'const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);',
-     'const double X0 = AxisMin + Snap(R, Local.Along - Width / 2.0);', True, 'placement'),
+     # REFRESHED 2026-09-06: item 11 again - the span bound is the joined run.
+     'const double X0 = Snap(R, Frame.S0 + Local.Along - Width / 2.0);',
+     'const double X0 = Frame.S0 + Snap(R, Local.Along - Width / 2.0);', True, 'placement'),
 
     ('overlap-scan-unsorted', 'a refusal names whichever lot was added first',
      'TArray<FString> Ids;\n\tState.Parcels.GetKeys(Ids);\n\tIds.Sort([](const FString& A, const FString& B) { return A < B; });',
@@ -510,7 +511,8 @@ MUTATIONS = [
      'return BandQuad(F, F.S0, F.S0 + F.Length / 2.0, -Half, Half);', True, 'placement'),
 
     ('click-span-not-projected', 'the span is recovered as a world x again',
-     'const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);',
+     # REFRESHED 2026-09-06: item 11 again - the span bound is the joined run.
+     'const double X0 = Snap(R, Frame.S0 + Local.Along - Width / 2.0);',
      'const double X0 = Snap(R, Road->StartX + Local.Along - Width / 2.0);', True, 'placement'),
 
     ('diagonal-length-manhattan', 'a diagonal is measured along the axes',
@@ -536,6 +538,81 @@ MUTATIONS = [
     ('draw-crossing-scan-uses-boxes', 'the road-vs-road scan compares bounding boxes',
      'if (QuadsOverlap(Mine, RoadQuad(R, E, Road)))',
      'if (RectsOverlap(QuadRect(Mine), RoadRect(R, E, Road)))', True, 'placement'),
+
+    # ---- curved multi-node roads (item 11, self-tests 56-60) -------------
+    ('in-crossing-counts-chords', 'every joint of every curve becomes the crossing',
+     'Seen.Add(RoadPathId(Road));', 'Seen.Add(Road.Id);', True, 'placement'),
+
+    ('path-id-has-no-fallback', 'a straight road stops being its own path',
+     'return Road.Path.IsEmpty() ? Road.Id : Road.Path;',
+     'return Road.Path;', True, 'placement'),
+
+    ('path-not-carried-on-the-chord', 'the chords forget which road they are',
+     '\tRoad.Path = Seg.Path;', '\tRoad.Path = FString();', True, 'placement'),
+
+    ('catmull-near-end-duplicated', 'the curve leaves its first node the wrong way',
+     'Ctrl.Add(FVector2D(2.0 * Nodes[0].X - Nodes[1].X, 2.0 * Nodes[0].Y - Nodes[1].Y));',
+     'Ctrl.Add(Nodes[0]);', True, 'placement'),
+
+    ('catmull-far-end-duplicated', 'the curve reaches its last node the wrong way',
+     'Ctrl.Add(FVector2D(2.0 * Nodes[Nodes.Num() - 1].X - Nodes[Nodes.Num() - 2].X,\n\t\t2.0 * Nodes[Nodes.Num() - 1].Y - Nodes[Nodes.Num() - 2].Y));',
+     'Ctrl.Add(Nodes[Nodes.Num() - 1]);', True, 'placement'),
+
+    ('sampled-in-parameter-space', 'chords stretch round the outside of a bend',
+     'while (Carried + (Seg - Pos) >= Spacing)', 'while (false)', True, 'placement'),
+
+    ('last-node-dropped', 'the road stops short of where the player clicked',
+     'if (Out[Out.Num() - 1] != Dense[Dense.Num() - 1])\n\t{\n\t\tOut.Add(Dense[Dense.Num() - 1]);\n\t}',
+     'if (false)\n\t{\n\t\tOut.Add(Dense[Dense.Num() - 1]);\n\t}', True, 'placement'),
+
+    ('leftover-stub-left-in', 'a 50 uu chord with a 2260 uu corridor',
+     'if (FMath::Sqrt((B.X - A.X) * (B.X - A.X) + (B.Y - A.Y) * (B.Y - A.Y)) < Spacing / 2.0)',
+     'if (false)', True, 'placement'),
+
+    ('path-vertices-not-snapped', 'the polyline leaves the position grid',
+     'const FVector2D Q(Snap(R, P.X), Snap(R, P.Y));',
+     'const FVector2D Q(P.X, P.Y);', True, 'placement'),
+
+    ('path-priced-at-half', 'a curve costs half what it is quoted',
+     'const double Cost = Type->CostPer100uu * Length / 100.0;',
+     'const double Cost = Type->CostPer100uu * Length / 200.0;', True, 'placement'),
+
+    ('path-draw-charges-nothing', 'a curve is quoted and then given away',
+     'State.Money -= Type->CostPer100uu * Length / 100.0;',
+     'State.Money -= 0.0;', True, 'placement'),
+
+    ('path-min-length-not-checked', 'a curve shorter than one lot is a road',
+     'if (Length < R.V0Width)\n\t{\n\t\treturn RefusePath(FString::Printf(\n\t\t\tTEXT("too short:',
+     'if (false)\n\t{\n\t\treturn RefusePath(FString::Printf(\n\t\t\tTEXT("too short:', True, 'placement'),
+
+    ('path-plate-check-on-nodes', 'the overshoot past a node goes off the board',
+     'for (const FVector2D& P : Pts)\n\t{\n\t\tif (!(Board.PlateXMin <= P.X',
+     'for (const FVector2D& P : Nodes)\n\t{\n\t\tif (!(Board.PlateXMin <= P.X', True, 'placement'),
+
+    ('path-lot-scan-dropped', 'a curve is drawn through a standing building',
+     'if (QuadsOverlap(Mine, LotQuad(R, E, *LotRoad, Lot)))',
+     'if (false)', True, 'placement'),
+
+    ('path-crossing-scan-dropped', 'a curve is drawn over another road',
+     'if (QuadsOverlap(Mine, RoadQuad(R, E, Road)))\n\t\t\t{\n\t\t\t\treturn RefusePath(',
+     'if (false)\n\t\t\t{\n\t\t\t\treturn RefusePath(', True, 'placement'),
+
+    # The pattern names ResolveRoadPath's OWN guard: CatmullRom has an early
+    # out spelled the same way, and mutating that one is a no-op (resampling a
+    # two-point polyline gives the same vertices as resampling the straight
+    # curve through them), so its survival said nothing.
+    ('path-two-nodes-refused', 'a straight draw through the path door is refused',
+     'if (Nodes.Num() < 2)\n\t{\n\t\treturn RefusePath(TEXT("a road needs at least two nodes"));',
+     'if (Nodes.Num() < 3)\n\t{\n\t\treturn RefusePath(TEXT("a road needs at least two nodes"));',
+     True, 'placement'),
+
+    ('path-span-not-widened', 'no lot can front a curve',
+     'for (const FRoad& Other : PathNeighbours(Roads, Road))',
+     'for (const FRoad& Other : TArray<FRoad>())', True, 'placement'),
+
+    ('path-span-takes-every-chord', 'a span runs round the bend past its own pad',
+     '\t\tconst bool bJoined =\n\t\t\t(Other.EndX   == Road.StartX && Other.EndY   == Road.StartY) ||\n\t\t\t(Other.StartX == Road.EndX   && Other.StartY == Road.EndY)   ||\n\t\t\t(Other.StartX == Road.StartX && Other.StartY == Road.StartY) ||\n\t\t\t(Other.EndX   == Road.EndX   && Other.EndY   == Road.EndY);',
+     '\t\tconst bool bJoined = true;', True, 'placement'),
 
     ('type-order-scrambled', 'the T-key cycle stops matching the decided order',
      'TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };',

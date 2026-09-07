@@ -71,6 +71,7 @@ def main():
 
     c = fx['constants']
     for key, name in (('POSITION_QUANTUM', 'PositionQuantum'), ('V0_WIDTH', 'V0Width'),
+                      ('WIDTH_QUANTUM', 'WidthQuantum'),
                       ('ROAD_HALF', 'RoadHalf'), ('BLOCK_DEPTH', 'BlockDepth'),
                       ('REACH_SLACK', 'ReachSlack'), ('ROAD_MAX_REACH', 'RoadMaxReach'),
                       ('VERGE', 'Verge'),

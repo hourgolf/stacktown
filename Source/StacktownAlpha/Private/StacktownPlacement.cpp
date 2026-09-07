@@ -18,6 +18,7 @@ FPlacementBoard FPlacementBoard::Default()
 	Board.Rules.RoadHalf        = BoardData::RoadHalf;
 	Board.Rules.BlockDepth      = BoardData::BlockDepth;
 	Board.Rules.RoadMaxReach    = BoardData::RoadMaxReach;
+	Board.Rules.WidthQuantum    = BoardData::WidthQuantum;
 	Board.Rules.Verge           = BoardData::Verge;
 	Board.Rules.ReachSlack      = BoardData::ReachSlack;
 
@@ -137,9 +138,10 @@ FRoad RoadDictFromSegment(const FString& Id, const FRoadSegment& Seg)
 	Road.EndX = Seg.EndX;
 	Road.EndY = Seg.EndY;
 	// The TYPE travels with the geometry. Orientation is read off start/end
-	// rather than stored; the width class is the one thing a segment genuinely
-	// carries that its shape cannot say.
+	// rather than stored; the width class and the path are the two things a
+	// segment genuinely carries that its shape cannot say.
 	Road.WidthClass = Seg.WidthClass;
+	Road.Path = Seg.Path;
 	// ANY DIRECTION since 2026-09-06 (item 11). The names come off the NORMAL,
 	// not off a same-X / same-Y test: the normal is the direction rotated +90
 	// degrees, whichever of its components dominates decides which pair of
@@ -429,7 +431,13 @@ FRoadProjection ProjectToRoad(const FRoad& Road, double X, double Y)
 bool InCrossing(const FPlacementRules& R, const FEconRules& E,
 	const TArray<FRoad>& Roads, double X, double Y)
 {
-	int32 Count = 0;
+	// COUNTED BY PATH, not by chord (curved roads, item 11). A drawn curve is
+	// many chords 410 uu apart whose corridors overlap almost everywhere along
+	// it, by construction; counting chords would make the whole of every curve
+	// "the crossing" and refuse every lot on it. Chords of ONE road are one
+	// road here, and a straight road is its own path, so nothing about the two
+	// built-ins or a one-segment draw changes.
+	TSet<FString> Seen;
 	for (const FRoad& Road : Roads)
 	{
 		const FRoadProjection P = ProjectToRoad(Road, X, Y);
@@ -437,10 +445,10 @@ bool InCrossing(const FPlacementRules& R, const FEconRules& E,
 		// 2000 wide and its pavement has to be 2000 wide here too.
 		if (P.Along >= 0.0 && P.Along <= P.Length && FMath::Abs(P.Across) < RoadHalf(R, E, Road))
 		{
-			++Count;
+			Seen.Add(RoadPathId(Road));
 		}
 	}
-	return Count > 1;
+	return Seen.Num() > 1;
 }
 
 FString LotRoadId(const FLotPlacement& Lot)
@@ -576,6 +584,157 @@ bool RectsOverlap(const FLotRect& A, const FLotRect& B)
 	return A.XMin < B.XMax && B.XMin < A.XMax && A.YMin < B.YMax && B.YMin < A.YMax;
 }
 
+FString RoadPathId(const FRoad& Road)
+{
+	return Road.Path.IsEmpty() ? Road.Id : Road.Path;
+}
+
+TArray<FRoad> PathNeighbours(const TArray<FRoad>& Roads, const FRoad& Road)
+{
+	TArray<FRoad> Out;
+	const FString Pid = RoadPathId(Road);
+	for (const FRoad& Other : Roads)
+	{
+		if (Other.Id == Road.Id || RoadPathId(Other) != Pid)
+		{
+			continue;
+		}
+		const bool bJoined =
+			(Other.EndX   == Road.StartX && Other.EndY   == Road.StartY) ||
+			(Other.StartX == Road.EndX   && Other.StartY == Road.EndY)   ||
+			(Other.StartX == Road.StartX && Other.StartY == Road.StartY) ||
+			(Other.EndX   == Road.EndX   && Other.EndY   == Road.EndY);
+		if (bJoined)
+		{
+			Out.Add(Other);
+		}
+	}
+	return Out;
+}
+
+void PathSpan(const TArray<FRoad>& Roads, const FRoad& Road, double& OutMin, double& OutMax)
+{
+	const FRoadFrame F = RoadFrame(Road);
+	OutMin = F.S0;
+	OutMax = F.S0 + F.Length;
+	for (const FRoad& Other : PathNeighbours(Roads, Road))
+	{
+		const double Ends[2][2] = { { Other.StartX, Other.StartY }, { Other.EndX, Other.EndY } };
+		for (int32 i = 0; i < 2; ++i)
+		{
+			const double S = Ends[i][0] * F.Ux + Ends[i][1] * F.Uy;
+			OutMin = FMath::Min(OutMin, S);
+			OutMax = FMath::Max(OutMax, S);
+		}
+	}
+}
+
+/** A uniform Catmull-Rom through `Nodes`, densely sampled.
+ *
+ *  THE END TANGENTS ARE EXTRAPOLATED, not duplicated: the phantom control
+ *  point before the first node is 2*P0 - P1, which continues the line the
+ *  first two nodes make. Duplicating the endpoint instead halves that tangent,
+ *  which changes the curve's shape near its ends - so the road would start off
+ *  along a curve the player did not draw. */
+static TArray<FVector2D> CatmullRom(const TArray<FVector2D>& Nodes, int32 PerSpan)
+{
+	TArray<FVector2D> Out;
+	if (Nodes.Num() < 2)
+	{
+		for (const FVector2D& N : Nodes) { Out.Add(N); }
+		return Out;
+	}
+	TArray<FVector2D> Ctrl;
+	Ctrl.Add(FVector2D(2.0 * Nodes[0].X - Nodes[1].X, 2.0 * Nodes[0].Y - Nodes[1].Y));
+	for (const FVector2D& N : Nodes) { Ctrl.Add(N); }
+	Ctrl.Add(FVector2D(2.0 * Nodes[Nodes.Num() - 1].X - Nodes[Nodes.Num() - 2].X,
+		2.0 * Nodes[Nodes.Num() - 1].Y - Nodes[Nodes.Num() - 2].Y));
+
+	Out.Add(Nodes[0]);
+	for (int32 i = 0; i + 1 < Nodes.Num(); ++i)
+	{
+		const FVector2D& P0 = Ctrl[i];
+		const FVector2D& P1 = Ctrl[i + 1];
+		const FVector2D& P2 = Ctrl[i + 2];
+		const FVector2D& P3 = Ctrl[i + 3];
+		for (int32 k = 1; k <= PerSpan; ++k)
+		{
+			const double T  = static_cast<double>(k) / static_cast<double>(PerSpan);
+			const double T2 = T * T;
+			const double T3 = T2 * T;
+			Out.Add(FVector2D(
+				0.5 * ((2.0 * P1.X) + (-P0.X + P2.X) * T
+					+ (2.0 * P0.X - 5.0 * P1.X + 4.0 * P2.X - P3.X) * T2
+					+ (-P0.X + 3.0 * P1.X - 3.0 * P2.X + P3.X) * T3),
+				0.5 * ((2.0 * P1.Y) + (-P0.Y + P2.Y) * T
+					+ (2.0 * P0.Y - 5.0 * P1.Y + 4.0 * P2.Y - P3.Y) * T2
+					+ (-P0.Y + 3.0 * P1.Y - 3.0 * P2.Y + P3.Y) * T3)));
+		}
+	}
+	return Out;
+}
+
+TArray<FVector2D> SamplePath(const FPlacementRules& R, const TArray<FVector2D>& Nodes, double Spacing)
+{
+	const TArray<FVector2D> Dense = CatmullRom(Nodes, 64);
+	TArray<FVector2D> Out;
+	if (Dense.Num() < 2)
+	{
+		for (const FVector2D& P : Dense) { Out.Add(FVector2D(Snap(R, P.X), Snap(R, P.Y))); }
+		return Out;
+	}
+
+	Out.Add(Dense[0]);
+	double Carried = 0.0;
+	for (int32 i = 1; i < Dense.Num(); ++i)
+	{
+		const double Ax = Dense[i - 1].X, Ay = Dense[i - 1].Y;
+		const double Bx = Dense[i].X,     By = Dense[i].Y;
+		const double Seg = FMath::Sqrt((Bx - Ax) * (Bx - Ax) + (By - Ay) * (By - Ay));
+		if (Seg == 0.0)
+		{
+			continue;
+		}
+		double Pos = 0.0;
+		while (Carried + (Seg - Pos) >= Spacing)
+		{
+			Pos += Spacing - Carried;
+			const double T = Pos / Seg;
+			Out.Add(FVector2D(Ax + (Bx - Ax) * T, Ay + (By - Ay) * T));
+			Carried = 0.0;
+		}
+		Carried += Seg - Pos;
+	}
+	if (Out[Out.Num() - 1] != Dense[Dense.Num() - 1])
+	{
+		Out.Add(Dense[Dense.Num() - 1]);
+	}
+	// THE LEFTOVER IS MERGED, not left as a stub: a 50 uu chord is a road
+	// segment with a 2260 uu corridor and no length - a bump on the board and
+	// a hole in the frontage.
+	if (Out.Num() >= 3)
+	{
+		const FVector2D& A = Out[Out.Num() - 2];
+		const FVector2D& B = Out[Out.Num() - 1];
+		if (FMath::Sqrt((B.X - A.X) * (B.X - A.X) + (B.Y - A.Y) * (B.Y - A.Y)) < Spacing / 2.0)
+		{
+			Out.RemoveAt(Out.Num() - 2);
+		}
+	}
+
+	TArray<FVector2D> Snapped;
+	for (const FVector2D& P : Out)
+	{
+		const FVector2D Q(Snap(R, P.X), Snap(R, P.Y));
+		// The snap can collide two vertices that were under a quantum apart.
+		if (Snapped.Num() == 0 || Snapped[Snapped.Num() - 1] != Q)
+		{
+			Snapped.Add(Q);
+		}
+	}
+	return Snapped;
+}
+
 static FClickResult Refuse(const FString& Reason)
 {
 	FClickResult Result;
@@ -639,9 +798,12 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	// same reason as before: round-half-to-even breaks ties on the parity of
 	// the integer part, so snapping road-relative can land a quantum away.
 	const FRoadFrame Frame = RoadFrame(*Road);
-	const double AxisMin = Frame.S0;
-	const double AxisMax = Frame.S0 + Frame.Length;
-	const double X0 = Snap(R, AxisMin + Local.Along - Width / 2.0);
+	// THE JOINED RUN, not this chord alone (curved roads, item 11): a curve is
+	// sampled at 410 and the narrowest lot is 820, so a lot never fits inside
+	// one chord and every click on a curve was refused on open ground.
+	double AxisMin = 0.0, AxisMax = 0.0;
+	PathSpan(Roads, *Road, AxisMin, AxisMax);
+	const double X0 = Snap(R, Frame.S0 + Local.Along - Width / 2.0);
 	const double X1 = X0 + Width;
 
 	if (X0 < AxisMin || X1 > AxisMax)
@@ -1061,6 +1223,247 @@ double RoadRentMultiplier(const FPlacementBoard& Board, const FCityState& State,
 		}
 	}
 	return Mult;
+}
+
+static FRoadPathResult RefusePath(const FString& Reason)
+{
+	FRoadPathResult Result;
+	Result.bOk = false;
+	Result.Reason = Reason;
+	return Result;
+}
+
+/** C1, C2, ... - the first not claimed by any segment in state. A namespace
+ *  distinct by construction from the chord ids (R + digits), the placed lots
+ *  (P + digits) and the pins (letters). */
+static FString NextPathId(const FCityState& State)
+{
+	TSet<FString> Taken;
+	for (const auto& Pair : State.Roads)
+	{
+		Taken.Add(Pair.Value.Path.IsEmpty() ? Pair.Key : Pair.Value.Path);
+	}
+	int32 N = 1;
+	while (Taken.Contains(FString::Printf(TEXT("C%d"), N)))
+	{
+		++N;
+	}
+	return FString::Printf(TEXT("C%d"), N);
+}
+
+static const TCHAR* Ordinal(int32 N)
+{
+	if (N % 100 >= 10 && N % 100 <= 20) { return TEXT("th"); }
+	switch (N % 10)
+	{
+	case 1:  return TEXT("st");
+	case 2:  return TEXT("nd");
+	case 3:  return TEXT("rd");
+	default: return TEXT("th");
+	}
+}
+
+FRoadPathResult ResolveRoadPath(const FPlacementBoard& Board, const FCityState& State,
+	const TArray<FVector2D>& Nodes, const FString& WidthClass, bool bPinsActive)
+{
+	const FPlacementRules& R = Board.Rules;
+	const FEconRules& E = Board.Econ;
+
+	if (!WidthClass.IsEmpty() && E.FindRoadType(WidthClass) == nullptr)
+	{
+		FString Known;
+		for (const FString& T : RoadTypeNames())
+		{
+			Known += Known.IsEmpty() ? T : FString::Printf(TEXT(", %s"), *T);
+		}
+		return RefusePath(FString::Printf(
+			TEXT("unknown road type '%s': expected one of %s"), *WidthClass, *Known));
+	}
+	if (Nodes.Num() < 2)
+	{
+		return RefusePath(TEXT("a road needs at least two nodes"));
+	}
+
+	const TArray<FVector2D> Pts = SamplePath(R, Nodes, R.WidthQuantum);
+	if (Pts.Num() < 2)
+	{
+		return RefusePath(FString::Printf(
+			TEXT("too short: the nodes are inside one %.0f uu grid step of each other"),
+			R.PositionQuantum));
+	}
+
+	double Length = 0.0;
+	for (int32 i = 0; i + 1 < Pts.Num(); ++i)
+	{
+		const double Dx = Pts[i + 1].X - Pts[i].X;
+		const double Dy = Pts[i + 1].Y - Pts[i].Y;
+		Length += FMath::Sqrt(Dx * Dx + Dy * Dy);
+	}
+	// THE PATH'S length, not each chord's: a 410 chord is under the 820 a lot
+	// needs, and refusing every curve for that would measure the wrong thing.
+	if (Length < R.V0Width)
+	{
+		return RefusePath(FString::Printf(
+			TEXT("too short: %.0f uu is under the %.0f uu a single lot needs"),
+			Length, R.V0Width));
+	}
+
+	// ON THE SAMPLED POLYLINE, not on the nodes: a Catmull-Rom reaches past
+	// its own nodes on a bend, so nodes that are all inside the plate are not
+	// a proof that the road is.
+	for (const FVector2D& P : Pts)
+	{
+		if (!(Board.PlateXMin <= P.X && P.X <= Board.PlateXMax &&
+		      Board.PlateYMin <= P.Y && P.Y <= Board.PlateYMax))
+		{
+			return RefusePath(FString::Printf(
+				TEXT("off-board: the curve leaves the plate at [%.0f, %.0f]"), P.X, P.Y));
+		}
+	}
+
+	FRoadPathResult Result;
+	Result.PathId = NextPathId(State);
+	{
+		TSet<FString> Taken;
+		for (const auto& Pair : State.Roads) { Taken.Add(Pair.Key); }
+		int32 N = 1;
+		for (int32 i = 0; i + 1 < Pts.Num(); ++i)
+		{
+			while (Taken.Contains(FString::Printf(TEXT("R%d"), N))) { ++N; }
+			FRoadSegment Seg;
+			Seg.StartX = Pts[i].X;     Seg.StartY = Pts[i].Y;
+			Seg.EndX   = Pts[i + 1].X; Seg.EndY   = Pts[i + 1].Y;
+			Seg.WidthClass = WidthClass;
+			Seg.Path = Result.PathId;
+			Result.Segments.Add(Seg);
+			Taken.Add(FString::Printf(TEXT("R%d"), N));
+			++N;
+		}
+	}
+	// The ids, allocated in the same order as the chords above.
+	TArray<FString> Ids;
+	{
+		TSet<FString> Taken;
+		for (const auto& Pair : State.Roads) { Taken.Add(Pair.Key); }
+		int32 N = 1;
+		for (int32 i = 0; i < Result.Segments.Num(); ++i)
+		{
+			while (Taken.Contains(FString::Printf(TEXT("R%d"), N))) { ++N; }
+			Ids.Add(FString::Printf(TEXT("R%d"), N));
+			Taken.Add(Ids[i]);
+			++N;
+		}
+	}
+
+	const TArray<FRoad> Roads = Board.AllRoads(State);
+	TArray<FString> Pids;
+	State.Parcels.GetKeys(Pids);
+	Pids.Sort([](const FString& A, const FString& B) { return A < B; });
+
+	for (int32 k = 0; k < Result.Segments.Num(); ++k)
+	{
+		const FQuad Mine = RoadQuad(R, E, RoadDictFromSegment(Ids[k], Result.Segments[k]));
+		for (const FRoad& Road : Roads)
+		{
+			if (QuadsOverlap(Mine, RoadQuad(R, E, Road)))
+			{
+				return RefusePath(FString::Printf(
+					TEXT("crosses: the curve would cross the %s road at its %d%s chord"),
+					*Road.Id, k + 1, Ordinal(k + 1)));
+			}
+		}
+		for (const FString& Pid : Pids)
+		{
+			const FParcelState& Pa = State.Parcels[Pid];
+			if (!Pa.Placement.IsSet()) { continue; }
+			const FLotPlacement& Lot = Pa.Placement.GetValue();
+			const FRoad* LotRoad = FindRoad(Roads, LotRoadId(Lot));
+			if (LotRoad == nullptr)
+			{
+				return RefusePath(FString::Printf(
+					TEXT("stale lot: '%s' names road '%s', which no longer exists"),
+					*Pid, *LotRoadId(Lot)));
+			}
+			if (QuadsOverlap(Mine, LotQuad(R, E, *LotRoad, Lot)))
+			{
+				return RefusePath(FString::Printf(
+					TEXT("overlap: the curve would cross an existing lot at [%.1f, %.1f] on the %s"),
+					Lot.X0, Lot.X1, *LotRoadId(Lot)));
+			}
+		}
+		if (bPinsActive)
+		{
+			const FRoad* Arterial = FindRoad(Roads, Board.PinnedRoadId);
+			if (Arterial != nullptr)
+			{
+				for (const FPinnedSpan& Pin : Board.PinnedSpans)
+				{
+					FLotPlacement PinLot;
+					PinLot.X0 = Pin.X0; PinLot.X1 = Pin.X1;
+					PinLot.Side = Pin.Side; PinLot.RoadId = Board.PinnedRoadId;
+					if (QuadsOverlap(Mine, LotQuad(R, E, *Arterial, PinLot)))
+					{
+						return RefusePath(FString::Printf(
+							TEXT("overlap: the curve would cross a pinned lot at [%.1f, %.1f]"),
+							Pin.X0, Pin.X1));
+					}
+				}
+			}
+		}
+	}
+
+	// ONE PRICE, for the whole gesture, from the polyline's own length rather
+	// than summed per chord - the same number either way, said once.
+	const FRoadTypeRules* Type = E.FindRoadType(
+		WidthClass.IsEmpty() ? FString(DefaultRoadType()) : WidthClass);
+	if (Type == nullptr)
+	{
+		return RefusePath(FString::Printf(
+			TEXT("unknown road type '%s': the ruleset cannot price it"), *WidthClass));
+	}
+	const double Cost = Type->CostPer100uu * Length / 100.0;
+	if (State.Money < Cost)
+	{
+		return RefusePath(FString::Printf(
+			TEXT("can't afford: a %.0f uu %s costs %.2f, money is %.2f"),
+			Length, *RoadTypeOf(Result.Segments[0]), Cost, State.Money));
+	}
+
+	Result.bOk = true;
+	return Result;
+}
+
+FRoadPathResult DrawRoadPath(const FPlacementBoard& Board, FCityState& State,
+	const TArray<FVector2D>& Nodes, const FString& WidthClass, bool bPinsActive)
+{
+	FRoadPathResult Result = ResolveRoadPath(Board, State, Nodes, WidthClass, bPinsActive);
+	if (!Result.bOk)
+	{
+		return Result;
+	}
+	double Length = 0.0;
+	for (const FRoadSegment& Seg : Result.Segments)
+	{
+		Length += RoadLength(Seg);
+	}
+	if (const FRoadTypeRules* Type = Board.Econ.FindRoadType(RoadTypeOf(Result.Segments[0])))
+	{
+		State.Money -= Type->CostPer100uu * Length / 100.0;
+	}
+	// Ids are re-derived here the same way ResolveRoadPath derived them, off a
+	// state that has not changed in between.
+	TSet<FString> Taken;
+	for (const auto& Pair : State.Roads) { Taken.Add(Pair.Key); }
+	int32 N = 1;
+	for (const FRoadSegment& Seg : Result.Segments)
+	{
+		while (Taken.Contains(FString::Printf(TEXT("R%d"), N))) { ++N; }
+		const FString Id = FString::Printf(TEXT("R%d"), N);
+		State.Roads.Add(Id, Seg);
+		Taken.Add(Id);
+		++N;
+	}
+	return Result;
 }
 
 FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityState& State,

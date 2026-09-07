@@ -27,7 +27,7 @@ def seg(d):
     if d is None:
         return None
     return {'id': d['id'], 'start': list(d['start']), 'end': list(d['end']),
-            'width_class': d['width_class']}
+            'width_class': d['width_class'], 'path': d.get('path', '')}
 
 
 def cap_draw(state, x0, y0, x1, y1, pins_active=True, width_class='avenue'):
@@ -488,6 +488,110 @@ def main():
             'still_places': P.resolve_click(c55, px55, py55,
                                             pins_active=False)[0]},
     }
+
+    # ---- CURVED MULTI-NODE ROADS, self-tests 56-60 (item 11, second half) --
+    CURVE = [(2000.0, -4000.0), (4000.0, -2600.0), (6000.0, -4000.0)]
+    fx['CURVE'] = [list(n) for n in CURVE]
+    fx['t56_sampled'] = [list(p) for p in P.sample_path(CURVE)]
+    fx['t56_straight_nodes'] = [[0.0, 0.0], [1000.0, 0.0]]
+    fx['t56_straight'] = [list(p) for p in P.sample_path(
+        [tuple(n) for n in fx['t56_straight_nodes']])]
+
+    s57 = citytick.seed_state()
+    s57['money'] = 40000.0
+    s57, path57, ids57, ok57, why57 = P.draw_road_path(s57, CURVE,
+                                                       pins_active=False)
+    assert ok57, why57
+    fx['t57_path'] = {
+        'money_before': 40000.0, 'money_after': s57['money'],
+        'path_id': path57, 'ids': ids57,
+        'segments': [seg(s57['roads'][i]) for i in ids57],
+        'paths': [s57['roads'][i]['path'] for i in ids57],
+    }
+
+    # 58: joints where more than one CHORD claims the point, and _in_crossing
+    # false at every one of them because they are one PATH.
+    roads58 = P._all_roads(s57)
+
+    def chords_at(x, y):
+        n = 0
+        for rd in roads58:
+            al, ac, ln = P._project_to_road(rd, x, y)
+            if 0.0 <= al <= ln and abs(ac) < P.road_half(rd):
+                n += 1
+        return n
+    joints = [list(s57['roads'][i]['end']) for i in ids57[:-1]
+              if chords_at(*s57['roads'][i]['end']) > 1]
+    assert joints, 'no joint sits in more than one chord'
+    fx['t58_joints'] = joints
+    lot58 = None
+    for k in range(len(ids57)):
+        f = P.road_frame(P._road_dict(s57['roads'][ids57[k]]))
+        mx = f[0] + f[2] * f[6] * 0.5
+        my = f[1] + f[3] * f[6] * 0.5
+        st, lp, okl, whyl = P.place(s57, mx + f[4] * 1500.0, my + f[5] * 1500.0,
+                                    pins_active=False)
+        if okl and st['parcels'][lp]['placement']['road_id'] in ids57:
+            lot58 = {'click': [mx + f[4] * 1500.0, my + f[5] * 1500.0],
+                     'lot': st['parcels'][lp]['placement']}
+            break
+    assert lot58 is not None, 'no lot could front any chord of the curve'
+    seg58 = P._road_dict(s57['roads'][lot58['lot']['road_id']])
+    lo58, hi58 = P.path_span(roads58, seg58)
+    fx['t58_lot'] = dict(lot58, chord_length=P.road_frame(seg58)[6],
+                         span_min=lo58, span_max=hi58)
+
+    # 59: one decision - any chord failing refuses the whole path.
+    s59 = citytick.seed_state()
+    s59['money'] = 40000.0
+    hits = [(2000.0, -3300.0), (4000.0, -2100.0), (6000.0, -3300.0)]
+    ok59, why59, segs59 = P.resolve_road_path(s59, hits, pins_active=False)
+    fx['t59_crosses'] = {'nodes': [list(n) for n in hits], 'ok': ok59,
+                         'reason': why59, 'segments': segs59}
+    ok59b, why59b, _ = P.resolve_road_path(citytick.seed_state(), CURVE,
+                                           pins_active=False)
+    fx['t59_afford'] = {'ok': ok59b, 'reason': why59b}
+    cost59 = 10.0 * sum(P.road_length(s57['roads'][i]) for i in ids57) / 100.0
+    sb = citytick.seed_state(); sb['money'] = cost59 - 1.0
+    okb, whyb, _ = P.resolve_road_path(sb, CURVE, pins_active=False)
+    se = citytick.seed_state(); se['money'] = cost59
+    oke, whye, _ = P.resolve_road_path(se, CURVE, pins_active=False)
+    fx['t59_boundary'] = {'cost': cost59, 'under_ok': okb, 'under_reason': whyb,
+                          'exact_ok': oke}
+    okc, whyc, _ = P.resolve_road_path(s57, CURVE, 'motorway', pins_active=False)
+    fx['t59_unknown'] = {'ok': okc, 'reason': whyc}
+    okd, whyd, _ = P.resolve_road_path(s57, [(0.0, 0.0)], pins_active=False)
+    fx['t59_one_node'] = {'ok': okd, 'reason': whyd}
+    oki, whyi, _ = P.resolve_road_path(
+        s57, [(3000.0, -4000.0), (3300.0, -3800.0)], pins_active=False)
+    fx['t59_too_short'] = {'nodes': [[3000.0, -4000.0], [3300.0, -3800.0]],
+                           'ok': oki, 'reason': whyi}
+    off_nodes = [(2000.0, -4000.0), (2600.0, -4229.0), (5000.0, -3200.0)]
+    sk = citytick.seed_state(); sk['money'] = 40000.0
+    okk, whyk, _ = P.resolve_road_path(sk, off_nodes, pins_active=False)
+    fx['t59_overshoot'] = {
+        'nodes': [list(n) for n in off_nodes], 'ok': okk, 'reason': whyk,
+        'min_y': min(p[1] for p in P.sample_path(off_nodes)),
+        'plate_y_min': P.PLATE_Y_MIN,
+    }
+    sl = citytick.seed_state(); sl['money'] = 40000.0
+    sl, pl59, ol59, wl59 = P.place(sl, 4000.0, -2000.0, pins_active=False)
+    assert ol59, wl59
+    okl59, whyl59, _ = P.resolve_road_path(
+        sl, [(3000.0, -3000.0), (4000.0, -2400.0), (5000.0, -3000.0)],
+        pins_active=False)
+    fx['t59_lot'] = {'lot_click': [4000.0, -2000.0],
+                     'lot': sl['parcels'][pl59]['placement'],
+                     'nodes': [[3000.0, -3000.0], [4000.0, -2400.0],
+                               [5000.0, -3000.0]],
+                     'ok': okl59, 'reason': whyl59}
+    sf = citytick.seed_state(); sf['money'] = 40000.0
+    sf, pf, idsf, okf, whyf = P.draw_road_path(
+        sf, [(2000.0, -4000.0), (5000.0, -4000.0)], pins_active=False)
+    assert okf, whyf
+    fx['t59_two_nodes'] = {'nodes': [[2000.0, -4000.0], [5000.0, -4000.0]],
+                           'path_id': pf, 'ids': idsf,
+                           'segments': [seg(sf['roads'][i]) for i in idsf]}
 
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_PATH, 'w') as f:

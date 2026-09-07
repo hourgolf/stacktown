@@ -56,6 +56,7 @@ inline constexpr double BlockDepth = 1500.0;
 inline constexpr double RoadMaxReach = 3230.0;
 inline constexpr double Verge = 430.0;
 inline constexpr double ReachSlack = 600.0;
+inline constexpr double WidthQuantum = 410.0;
 inline constexpr int32 PoolSize = 30;
 inline const TCHAR* const V0Recipe = TEXT("vernacular");
 

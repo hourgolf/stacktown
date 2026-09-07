@@ -1563,6 +1563,211 @@ int main()
 	}
 
 	// =====================================================================
+	// CURVED MULTI-NODE ROADS (queue item 11, second half). placement.py
+	// self-tests 56-60, ROADS_AS_MECHANIC section 5's own shape: a
+	// Catmull-Rom through the committed nodes, resampled by ARC LENGTH at the
+	// 410 quantum into straight chords, drawn as ONE road.
+	// =====================================================================
+	{
+		using namespace StacktownRoadsOracle;
+		const FPlacementBoard Board = OracleBoard();
+		auto Nodes = [](const FNode* Src, int32 Count) {
+			TArray<FVector2D> Out;
+			for (int32 i = 0; i < Count; ++i) { Out.Add(FVector2D(Src[i].X, Src[i].Y)); }
+			return Out;
+		};
+		const FString Avenue(TEXT("avenue"));
+
+		CASE("Roads.Sampler");
+		{
+			// 56: vertex for vertex against the oracle - the arc-length
+			// resampling, the merged leftover and the snap all in one answer.
+			const TArray<FVector2D> Pts = SamplePath(Board.Rules,
+				Nodes(Curve, CurveNum), Board.Rules.WidthQuantum);
+			CheckInt("vertex count", Pts.Num(), T56_SampledNum);
+			for (int32 i = 0; i < Pts.Num() && i < T56_SampledNum; ++i)
+			{
+				CheckNear("vertex x", Pts[i].X, T56_Sampled[i].X, Tol);
+				CheckNear("vertex y", Pts[i].Y, T56_Sampled[i].Y, Tol);
+			}
+			// Two nodes is a straight line through them, not a curve.
+			const TArray<FVector2D> Str = SamplePath(Board.Rules,
+				Nodes(T56_StraightNodes, T56_StraightNodesNum), Board.Rules.WidthQuantum);
+			CheckInt("straight vertex count", Str.Num(), T56_StraightNum);
+			for (int32 i = 0; i < Str.Num() && i < T56_StraightNum; ++i)
+			{
+				CheckNear("straight x", Str[i].X, T56_Straight[i].X, Tol);
+				CheckNear("straight y", Str[i].Y, T56_Straight[i].Y, Tol);
+			}
+		}
+
+		CASE("Roads.PathIsOneRoad");
+		{
+			// 57 + 58: one gesture, one road, one price - and one road to
+			// everything downstream, which is what makes a curve buildable.
+			FCityState S = SeedState(R);
+			S.Money = T57_MoneyBefore;
+			const FRoadPathResult D = DrawRoadPath(Board, S, Nodes(Curve, CurveNum),
+				Avenue, false);
+			CheckBool("curve drawn", D.bOk, true);
+			CheckStr("path id", D.PathId, FString(T57_PathId));
+			CheckInt("chord count", D.Segments.Num(), T57_IdsNum);
+			CheckNear("priced once, for the polyline", S.Money, T57_MoneyAfter, Tol);
+			for (int32 i = 0; i < D.Segments.Num() && i < T57_IdsNum; ++i)
+			{
+				CheckBool("chord in state", S.Roads.Contains(FString(T57_Ids[i])), true);
+				const FRoadSegment& Seg = S.Roads[FString(T57_Ids[i])];
+				CheckNear("chord start x", Seg.StartX, T57_Segments[i].StartX, Tol);
+				CheckNear("chord start y", Seg.StartY, T57_Segments[i].StartY, Tol);
+				CheckNear("chord end x", Seg.EndX, T57_Segments[i].EndX, Tol);
+				CheckNear("chord end y", Seg.EndY, T57_Segments[i].EndY, Tol);
+				CheckStr("chord path", Seg.Path, FString(T57_Segments[i].Path));
+			}
+
+			// The joints sit in more than one CHORD - so counting chords would
+			// call every one of them "the crossing", and there is one every
+			// 410 uu. Counting PATHS is what makes a curve carry lots at all.
+			const TArray<FRoad> Roads = Board.AllRoads(S);
+			for (int32 j = 0; j < T58_JointsNum; ++j)
+			{
+				int32 Chords = 0;
+				for (const FRoad& Rd : Roads)
+				{
+					const FRoadProjection Pr = ProjectToRoad(Rd, T58_Joints[j].X, T58_Joints[j].Y);
+					if (Pr.Along >= 0.0 && Pr.Along <= Pr.Length
+						&& FMath::Abs(Pr.Across) < RoadHalf(Board.Rules, Board.Econ, Rd))
+					{
+						++Chords;
+					}
+				}
+				CheckBool("the joint sits in more than one chord", Chords > 1, true);
+				CheckBool("and is not the crossing",
+					InCrossing(Board.Rules, Board.Econ, Roads, T58_Joints[j].X, T58_Joints[j].Y), false);
+			}
+
+			// A lot fronts a chord, spanning the JOINED RUN rather than the one
+			// chord - which it must, because the curve is sampled at 410 and
+			// the narrowest lot is 820.
+			const FClickResult CR = ResolveClick(Board, S, T58_ClickX, T58_ClickY,
+				false, Board.Rules.V0Width);
+			CheckBool("a lot fronts the curve", CR.bOk, true);
+			if (CR.bOk)
+			{
+				CheckNear("lot x0", CR.Lot.X0, T58_Lot.X0, Tol);
+				CheckNear("lot x1", CR.Lot.X1, T58_Lot.X1, Tol);
+				CheckStr("lot road", LotRoadId(CR.Lot), FString(T58_Lot.RoadId));
+				const FRoad* Own = FindRoad(Roads, LotRoadId(CR.Lot));
+				CheckBool("own chord", Own != nullptr, true);
+				if (Own != nullptr)
+				{
+					const FRoadFrame F = RoadFrame(*Own);
+					CheckNear("the chord is shorter than a lot", F.Length, T58_ChordLength, Tol);
+					CheckBool("shorter than V0Width", F.Length < Board.Rules.V0Width, true);
+					double Lo = 0.0, Hi = 0.0;
+					PathSpan(Roads, *Own, Lo, Hi);
+					CheckNear("span min", Lo, T58_SpanMin, Tol);
+					CheckNear("span max", Hi, T58_SpanMax, Tol);
+					CheckBool("the span is wider than the chord", Hi - Lo > F.Length, true);
+				}
+			}
+		}
+
+		CASE("Roads.PathIsOneDecision");
+		{
+			// 59: ANY chord failing refuses the WHOLE path, and nothing is
+			// added or spent. A path that half-built where it first hit
+			// something would leave the player a road they did not draw.
+			FCityState S = SeedState(R);
+			S.Money = 40000.0;
+			const FRoadPathResult X = DrawRoadPath(Board, S,
+				Nodes(T59_Crosses_Nodes, T59_Crosses_NodesNum), Avenue, false);
+			CheckBool("refused", X.bOk, T59_Crosses_Ok);
+			CheckStr("reason names the road and the chord", X.Reason, FString(T59_Crosses_Reason));
+			CheckInt("no segments handed back", X.Segments.Num(), T59_CrossesSegments);
+			CheckNear("nothing spent", S.Money, 40000.0, Tol);
+			CheckInt("no road added", S.Roads.Num(), 0);
+
+			// The price is the PATH's, and checked at the boundary so a price
+			// that is merely WRONG is caught and not just one that is absent.
+			FCityState Fresh = SeedState(R);
+			const FRoadPathResult A = ResolveRoadPath(Board, Fresh, Nodes(Curve, CurveNum),
+				Avenue, false);
+			CheckBool("a fresh city cannot afford it", A.bOk, T59_Afford_Ok);
+			CheckStr("and is told the price", A.Reason, FString(T59_Afford_Reason));
+			FCityState Under = SeedState(R);
+			Under.Money = T59_Cost - 1.0;
+			CheckBool("one uu under refuses",
+				ResolveRoadPath(Board, Under, Nodes(Curve, CurveNum), Avenue, false).bOk,
+				T59_UnderOk);
+			FCityState Exact = SeedState(R);
+			Exact.Money = T59_Cost;
+			const FRoadPathResult Ex = DrawRoadPath(Board, Exact, Nodes(Curve, CurveNum),
+				Avenue, false);
+			CheckBool("the exact quote draws", Ex.bOk, T59_ExactOk);
+			CheckNear("and spends all of it", Exact.Money, 0.0, 1e-6);
+
+			// The boundary refusals, each with its own words.
+			FCityState S2 = SeedState(R);
+			S2.Money = 40000.0;
+			const FRoadPathResult U = ResolveRoadPath(Board, S2, Nodes(Curve, CurveNum),
+				FString(TEXT("motorway")), false);
+			CheckBool("unknown type refused", U.bOk, T59_Unknown_Ok);
+			CheckStr("unknown type reason", U.Reason, FString(T59_Unknown_Reason));
+			TArray<FVector2D> One;
+			One.Add(FVector2D(0.0, 0.0));
+			const FRoadPathResult O = ResolveRoadPath(Board, S2, One, Avenue, false);
+			CheckBool("one node refused", O.bOk, T59_OneNode_Ok);
+			CheckStr("one node reason", O.Reason, FString(T59_OneNode_Reason));
+			const FRoadPathResult Sh = ResolveRoadPath(Board, S2,
+				Nodes(T59_TooShort_Nodes, T59_TooShort_NodesNum), Avenue, false);
+			CheckBool("too short refused", Sh.bOk, T59_TooShort_Ok);
+			CheckStr("too short reason", Sh.Reason, FString(T59_TooShort_Reason));
+
+			// THE PLATE CHECK IS ON THE POLYLINE, not the nodes: every node
+			// here is on the plate and the curve still leaves it.
+			for (int32 i = 0; i < T59_Overshoot_NodesNum; ++i)
+			{
+				CheckBool("node is on the plate",
+					T59_Overshoot_Nodes[i].Y >= T59_Overshoot_PlateYMin, true);
+			}
+			CheckBool("and the curve is not",
+				T59_Overshoot_MinY < T59_Overshoot_PlateYMin, true);
+			FCityState S3 = SeedState(R);
+			S3.Money = 40000.0;
+			const FRoadPathResult Ov = ResolveRoadPath(Board, S3,
+				Nodes(T59_Overshoot_Nodes, T59_Overshoot_NodesNum), Avenue, false);
+			CheckBool("overshoot refused", Ov.bOk, T59_Overshoot_Ok);
+			CheckStr("overshoot reason", Ov.Reason, FString(T59_Overshoot_Reason));
+
+			// And a curve may not be drawn through a standing building.
+			FCityState S4 = SeedState(R);
+			S4.Money = 40000.0;
+			const FPlaceResult PL = Place(Board, S4, T59_Lot_ClickX, T59_Lot_ClickY,
+				false, Board.Rules.V0Width);
+			CheckBool("lot placed", PL.bOk, true);
+			const FRoadPathResult Th = ResolveRoadPath(Board, S4,
+				Nodes(T59_Lot_Nodes, T59_Lot_NodesNum), Avenue, false);
+			CheckBool("through a building refused", Th.bOk, T59_Lot_Ok);
+			CheckStr("and names the lot", Th.Reason, FString(T59_Lot_Reason));
+
+			// TWO NODES IS A ROAD - the straight case through the same door.
+			FCityState S5 = SeedState(R);
+			S5.Money = 40000.0;
+			const FRoadPathResult Two = DrawRoadPath(Board, S5,
+				Nodes(T59_Two_Nodes, T59_Two_NodesNum), Avenue, false);
+			CheckBool("two nodes draw", Two.bOk, true);
+			CheckStr("path id", Two.PathId, FString(T59_Two_PathId));
+			CheckInt("chord count", Two.Segments.Num(), T59_Two_Count);
+			for (int32 i = 0; i < Two.Segments.Num() && i < T59_Two_Count; ++i)
+			{
+				CheckNear("chord start x", Two.Segments[i].StartX, T59_Two_Segments[i].StartX, Tol);
+				CheckNear("chord end x", Two.Segments[i].EndX, T59_Two_Segments[i].EndX, Tol);
+				CheckNear("chord y", Two.Segments[i].StartY, T59_Two_Segments[i].StartY, Tol);
+			}
+		}
+	}
+
+	// =====================================================================
 	// THE RUNTIME BOARD (queue item 1). FPlacementBoard::Default() is
 	// PRODUCTION data generated from citylayout, not a test fixture - so the
 	// interesting assertion is that it AGREES with the fixture the ported

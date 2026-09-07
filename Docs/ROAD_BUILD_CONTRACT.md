@@ -311,13 +311,70 @@ road's own frame, and reduces exactly to the four axis-aligned cases it
 replaced. Without it a diagonal lot would resolve correctly and still
 stand in the wrong place.
 
-**Still not built:** `DrawRoadPath` — the Catmull-Rom through committed
-nodes, sampled at the 410 quantum into straight segments (section 5's
-own shape). The resolver is ready for it; the open question it needs
-answered first is that adjacent samples of one path share endpoints, so
-their corridors overlap and the crossing refusal (§3) would reject the
-path against itself. Intersections are the same question one step
-further out and are still open.
+## 6c. Curved multi-node roads (2026-09-06) — section 5's v0, built
+
+`DrawRoadPath(nodes)`. A Catmull-Rom through the committed nodes,
+resampled by **arc length** at the 410 quantum into straight chords,
+drawn as **one road**: one decision, one price, one path id. The chords
+are how a curve is stored and drawn, not what it is.
+
+**Arc length, not parameter space.** A Catmull-Rom's parameter runs
+faster round the outside of a bend, so even-`t` sampling gives long
+chords through corners — exactly where a chord's error against the curve
+is largest. The end tangents are **extrapolated** (`2*P0 - P1`), not
+duplicated: duplicating halves the tangent and changes the curve's shape
+near its ends, so the road would leave its first node along a curve the
+player did not draw. The last node is always a vertex, and a leftover
+shorter than half a spacing is **merged** into the chord before it — a
+50 uu chord is a road segment with a 2260 uu corridor and no length.
+
+**One decision.** Every chord is checked against the board and any
+failure refuses the whole path, naming the chord. Nothing is added and
+nothing is spent: a path that half-built where it first hit something
+would leave the player a road they did not draw and a bill for it. The
+length, the minimum and the price are the **path's** — a 410 chord is
+under the 820 a lot needs, and refusing every curve for that would
+measure the wrong thing. The plate check runs on the **sampled
+polyline**, not the nodes, because the curve reaches past its own nodes
+on a bend.
+
+**A path is one road to everything downstream**, and it has to be. Two
+things break otherwise, and both were found by building it:
+
+1. **`_in_crossing` must count paths, not chords.** Consecutive chords
+   share an endpoint, so the shared point has `along` in range for both
+   — and there is one every 410 uu. Counting chords makes the whole of
+   every curve "pavement shared by more than one road", and no lot can
+   front a curve at all.
+2. **A lot's span must be the joined run, not one chord.** The curve is
+   sampled at 410 and the narrowest lot in the catalogue is 820, so a
+   lot never fits inside a single chord: every click on a curve came
+   back `off-board: snapped span exceeds the R3 road` on open ground.
+   `path_span` widens the bound by the immediate neighbours only — one
+   chord either side — because the pad is a straight rectangle in this
+   chord's frame and a span that ran further could come out where the
+   pad does not go.
+
+It **does not cross itself**, by definition: consecutive corridors
+always overlap and chords a few apart overlap on a bend, so the crossing
+check runs against the board only. **What that leaves open, named rather
+than hidden:** a path that loops back over itself is accepted, because
+this version cannot tell that from a tight bend. Section 5 says "a
+single open-ended road" and defers intersections; a self-crossing curve
+is the same question and waits with them.
+
+**A second pre-existing gap found on the way, and raised rather than
+closed:** a lot's pad can hang off the plate. The span bound keeps a lot
+inside its *road*, and for the two built-ins the road spans the plate so
+those were the same thing; they are not the same thing for a road drawn
+near an edge. The first curve along the southern margin put a pad at
+y = −5740 against a plate that stops at −4230, and self-test 52's own
+45° lot reaches y = 5150. The fix is four comparisons against
+`quad_rect(lot_quad(...))` and it moves where lots may go on boards that
+already exist — the owner's call, like the frontage-corridor gap in §7.
+
+**Still not built:** intersections. Two roads still refuse to cross, and
+a path is exempt only from itself.
 
 ## 7. Road types as mechanics (2026-09-06)
 

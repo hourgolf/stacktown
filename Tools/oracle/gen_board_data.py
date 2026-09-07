@@ -89,7 +89,8 @@ def main():
                   # Road types (2026-09-06): the corridor half is per type now,
                   # and these two are what it is built from. VERGE is RECOVERED
                   # from today's avenue rather than chosen - see placement.py.
-                  'verge': P.VERGE, 'reach_slack': P.REACH_SLACK},
+                  'verge': P.VERGE, 'reach_slack': P.REACH_SLACK,
+                  'width_quantum': P.WIDTH_QUANTUM},
     }
     os.makedirs(os.path.dirname(JSON_OUT), exist_ok=True)
     with open(JSON_OUT, 'w') as f:
@@ -146,7 +147,8 @@ def main():
     for key, name in (('position_quantum', 'PositionQuantum'), ('v0_width', 'V0Width'),
                       ('road_half', 'RoadHalf'), ('block_depth', 'BlockDepth'),
                       ('road_max_reach', 'RoadMaxReach'),
-                      ('verge', 'Verge'), ('reach_slack', 'ReachSlack')):
+                      ('verge', 'Verge'), ('reach_slack', 'ReachSlack'),
+                      ('width_quantum', 'WidthQuantum')):
         w('inline constexpr double %s = %s;' % (name, n(ru[key])))
     w('inline constexpr int32 PoolSize = %d;' % ru['pool_size'])
     w('inline const TCHAR* const V0Recipe = %s;' % q(ru['v0_recipe']))

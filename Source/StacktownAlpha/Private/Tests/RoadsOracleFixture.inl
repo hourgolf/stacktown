@@ -9,7 +9,8 @@
 namespace StacktownRoadsOracle
 {
 struct FSegDef { const TCHAR* Id; double StartX; double StartY;
-                 double EndX; double EndY; const TCHAR* WidthClass; };
+                 double EndX; double EndY; const TCHAR* WidthClass;
+                 const TCHAR* Path; };
 struct FDrawCase { double X0; double Y0; double X1; double Y1;
                    bool bPinsActive; bool bOk; const TCHAR* Reason; FSegDef Road; };
 struct FRectDef { double XMin; double XMax; double YMin; double YMax; };
@@ -37,8 +38,8 @@ inline const FRectDef T28_Rect1 = { -2630.0, -1130.0, 200.0, 600.0 };
 // 29: side conventions READ OFF the segment geometry, not stored.
 struct FOrientCase { FSegDef Seg; const TCHAR* SidePlus; const TCHAR* SideMinus; bool bAxisX; };
 inline const FOrientCase T29Orientation[] = {
-	{ { TEXT("H"), 0.0, 100.0, 500.0, 100.0, TEXT("avenue") }, TEXT("north"), TEXT("south"), true },
-	{ { TEXT("V"), 300.0, 0.0, 300.0, 900.0, TEXT("avenue") }, TEXT("west"), TEXT("east"), false },
+	{ { TEXT("H"), 0.0, 100.0, 500.0, 100.0, TEXT("avenue"), nullptr }, TEXT("north"), TEXT("south"), true },
+	{ { TEXT("V"), 300.0, 0.0, 300.0, 900.0, TEXT("avenue"), nullptr }, TEXT("west"), TEXT("east"), false },
 };
 inline constexpr int32 T29OrientationNum = 2;
 
@@ -47,35 +48,35 @@ inline const TCHAR* const T30_Before[] = { TEXT("arterial"), TEXT("cross") };
 inline constexpr int32 T30_BeforeNum = 2;
 inline const TCHAR* const T30_After[] = { TEXT("arterial"), TEXT("cross"), TEXT("R1") };
 inline constexpr int32 T30_AfterNum = 3;
-inline const FSegDef T30_Drawn = { TEXT("R1"), 0.0, 100.0, 500.0, 100.0, TEXT("avenue") };
+inline const FSegDef T30_Drawn = { TEXT("R1"), 0.0, 100.0, 500.0, 100.0, TEXT("avenue"), nullptr };
 
 // 31-37: every accept and every named refusal.
-inline const FDrawCase T31 = { 6200.0, 3000.0, 7600.0, 3000.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") } };
-inline const FDrawCase T32 = { 0.0, 3000.0, 1000.0, 3800.0, true, false, TEXT("crosses: the drawn road would cross the cross road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
-inline const FDrawCase T33 = { 6200.0, 3000.0, 6700.0, 3000.0, true, false, TEXT("too short: 500 uu is under the 820 uu a single lot needs"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
-inline const FDrawCase T34 = { 7000.0, 3000.0, 8000.0, 3000.0, true, false, TEXT("off-board: the drawn road would leave the plate"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
-inline const FDrawCase T35 = { 6200.0, 0.0, 7600.0, 0.0, true, false, TEXT("crosses: the drawn road would cross the arterial road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
-inline const FDrawCase T36 = { 2000.0, 2900.0, 3000.0, 2900.0, true, false, TEXT("overlap: the drawn road would cross a pinned lot at [1130.0, 3590.0]"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
-inline const FDrawCase T36b = { 2000.0, 2900.0, 3000.0, 2900.0, false, true, TEXT(""), { TEXT("R1"), 2000.0, 2900.0, 3000.0, 2900.0, TEXT("avenue") } };
-inline const FDrawCase T37 = { 3000.0, 3400.0, 3000.0, 4230.0, true, true, TEXT(""), { TEXT("R1"), 3000.0, 3400.0, 3000.0, 4230.0, TEXT("avenue") } };
+inline const FDrawCase T31 = { 6200.0, 3000.0, 7600.0, 3000.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr } };
+inline const FDrawCase T32 = { 0.0, 3000.0, 1000.0, 3800.0, true, false, TEXT("crosses: the drawn road would cross the cross road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
+inline const FDrawCase T33 = { 6200.0, 3000.0, 6700.0, 3000.0, true, false, TEXT("too short: 500 uu is under the 820 uu a single lot needs"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
+inline const FDrawCase T34 = { 7000.0, 3000.0, 8000.0, 3000.0, true, false, TEXT("off-board: the drawn road would leave the plate"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
+inline const FDrawCase T35 = { 6200.0, 0.0, 7600.0, 0.0, true, false, TEXT("crosses: the drawn road would cross the arterial road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
+inline const FDrawCase T36 = { 2000.0, 2900.0, 3000.0, 2900.0, true, false, TEXT("overlap: the drawn road would cross a pinned lot at [1130.0, 3590.0]"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
+inline const FDrawCase T36b = { 2000.0, 2900.0, 3000.0, 2900.0, false, true, TEXT(""), { TEXT("R1"), 2000.0, 2900.0, 3000.0, 2900.0, TEXT("avenue"), nullptr } };
+inline const FDrawCase T37 = { 3000.0, 3400.0, 3000.0, 4230.0, true, true, TEXT(""), { TEXT("R1"), 3000.0, 3400.0, 3000.0, 4230.0, TEXT("avenue"), nullptr } };
 
 // ADDED BY THE PORT: a near-axis drag snaps its minor coordinate to the
 // START point. Every accepted road in 28-39 has equal ends, so nothing
 // there separates start from end.
-inline const FDrawCase NearHorizontal = { 6200.0, 3000.0, 7600.0, 3050.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") } };
-inline const FDrawCase NearVertical = { 3000.0, 3400.0, 3050.0, 4230.0, true, true, TEXT(""), { TEXT("R1"), 3000.0, 3400.0, 3000.0, 4230.0, TEXT("avenue") } };
+inline const FDrawCase NearHorizontal = { 6200.0, 3000.0, 7600.0, 3050.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr } };
+inline const FDrawCase NearVertical = { 3000.0, 3400.0, 3050.0, 4230.0, true, true, TEXT(""), { TEXT("R1"), 3000.0, 3400.0, 3000.0, 4230.0, TEXT("avenue"), nullptr } };
 
 // 38: draw_road end to end, R1 then R2, and a refusal naming R1 itself.
 inline const TCHAR* const T38_FirstId = TEXT("R1");
-inline const FSegDef T38_FirstStored = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") };
+inline const FSegDef T38_FirstStored = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr };
 inline const TCHAR* const T38_SecondId = TEXT("R2");
-inline const FSegDef T38_SecondStored = { TEXT("R2"), 3000.0, 3400.0, 3000.0, 4230.0, TEXT("avenue") };
-inline const FDrawCase T38_CrossesR1 = { 6900.0, 2000.0, 6900.0, 4230.0, true, false, TEXT("crosses: the drawn road would cross the R1 road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
+inline const FSegDef T38_SecondStored = { TEXT("R2"), 3000.0, 3400.0, 3000.0, 4230.0, TEXT("avenue"), nullptr };
+inline const FDrawCase T38_CrossesR1 = { 6900.0, 2000.0, 6900.0, 4230.0, true, false, TEXT("crosses: the drawn road would cross the R1 road"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
 inline const TCHAR* const T38_Ids[] = { TEXT("R1"), TEXT("R2") };
 inline constexpr int32 T38_IdsNum = 2;
 
 // 39: a lot placed AGAINST a drawn road, through place() itself.
-inline const FSegDef T39_Drawn = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") };
+inline const FSegDef T39_Drawn = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr };
 inline constexpr double T39_ClickX = 6900.0;
 inline constexpr double T39_ClickY = 1700.0;
 inline const TCHAR* const T39_Pid = TEXT("P1");
@@ -106,14 +107,14 @@ inline constexpr int32 T40_TypesNum = 4;
 inline constexpr double T40_UntypedHalf = 1130.0;
 inline constexpr double T40_UntypedReach = 3230.0;
 // A vertical 1400 uu run prices identically to a horizontal one.
-inline const FSegDef T41_VerticalSeg = { TEXT("X"), 0.0, 100.0, 0.0, 1500.0, TEXT("avenue") };
+inline const FSegDef T41_VerticalSeg = { TEXT("X"), 0.0, 100.0, 0.0, 1500.0, TEXT("avenue"), nullptr };
 inline constexpr double T41_VerticalLength = 1400.0;
-inline const FSegDef T41_ShortDirtSeg = { TEXT("X"), 0.0, 0.0, 700.0, 0.0, TEXT("dirt") };
+inline const FSegDef T41_ShortDirtSeg = { TEXT("X"), 0.0, 0.0, 700.0, 0.0, TEXT("dirt"), nullptr };
 inline constexpr double T41_ShortDirtCost = 35.0;
 
 // 42: the highway refuses frontage. The SAME segment drawn as each type.
 inline constexpr double T42_Seg[] = { 7500.0, 1500.0, 7500.0, 4230.0 };
-inline const FSegDef T42_HighwayStored = { TEXT("R1"), 7500.0, 1500.0, 7500.0, 4230.0, TEXT("highway") };
+inline const FSegDef T42_HighwayStored = { TEXT("R1"), 7500.0, 1500.0, 7500.0, 4230.0, TEXT("highway"), nullptr };
 inline constexpr double T42_MoneyAfterHighway = 181.0;
 inline const FClickCase2 T42_BesideHighway = { 5200.0, 3800.0, true, false, TEXT("no frontage: the R1 is a highway and nothing may face it"), { 0.0, 0.0, nullptr, nullptr } };
 inline const FClickCase2 T42_BesideAvenue = { 5200.0, 3800.0, true, true, TEXT(""), { 3390.0, 4210.0, TEXT("west"), TEXT("R1") } };
@@ -125,10 +126,10 @@ inline const FClickCase2 T43_Without = { 7000.0, 1500.0, true, true, TEXT(""), {
 
 // 44: roads cost money, on a state left at money_start deliberately.
 inline constexpr double T44_MoneyStart = 100.0;
-inline const FDrawCase T44_AvenueRefused = { 6200.0, 3000.0, 7600.0, 3000.0, true, false, TEXT("can't afford: a 1400 uu avenue costs 140.00, money is 100.00"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
+inline const FDrawCase T44_AvenueRefused = { 6200.0, 3000.0, 7600.0, 3000.0, true, false, TEXT("can't afford: a 1400 uu avenue costs 140.00, money is 100.00"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
 inline const TCHAR* const T44_AvenueClass = TEXT("avenue");
 inline constexpr double T44_MoneyAfterRefusal = 100.0;
-inline const FSegDef T44_DirtStored = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("dirt") };
+inline const FSegDef T44_DirtStored = { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("dirt"), nullptr };
 inline constexpr double T44_MoneyAfter = 30.0;
 
 // 45: a narrower road pulls its own frontage line in.
@@ -143,8 +144,8 @@ inline const FRectDef T45_LotRect = { 6490.0, 7310.0, 620.0, 2120.0 };
 inline const FLotDef2 T46_Lot = { 6490.0, 7310.0, TEXT("south"), TEXT("D") };
 inline const FRectDef T46_DirtLotRect = { 6490.0, 7310.0, 620.0, 2120.0 };
 inline constexpr double T46_FarDistance = 2120.0;
-inline const FSegDef T46_NearHighway = { TEXT("HW"), 7500.0, 1500.0, 7500.0, 4230.0, TEXT("highway") };
-inline const FSegDef T46_FarHighway = { TEXT("HW"), 7500.0, -4230.0, 7500.0, -1500.0, TEXT("highway") };
+inline const FSegDef T46_NearHighway = { TEXT("HW"), 7500.0, 1500.0, 7500.0, 4230.0, TEXT("highway"), nullptr };
+inline const FSegDef T46_FarHighway = { TEXT("HW"), 7500.0, -4230.0, 7500.0, -1500.0, TEXT("highway"), nullptr };
 inline const FRentCase T46_Cases[] = {
 	{ TEXT("dirt"), nullptr, 0.75 },
 	{ TEXT("avenue"), nullptr, 1.0 },
@@ -156,12 +157,12 @@ inline constexpr int32 T46_CasesNum = 5;
 
 // 47: an unrecognised type is refused at the boundary, with a reason.
 inline const TCHAR* const T47_Class = TEXT("motorway");
-inline const FDrawCase T47_Unknown = { 6200.0, 3000.0, 7600.0, 3000.0, true, false, TEXT("unknown road type 'motorway': expected one of dirt, avenue, boulevard, highway"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
+inline const FDrawCase T47_Unknown = { 6200.0, 3000.0, 7600.0, 3000.0, true, false, TEXT("unknown road type 'motorway': expected one of dirt, avenue, boulevard, highway"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
 
 // 48: _in_crossing measures each road's OWN pavement.
 inline constexpr double T48_X = 6200.0;
 inline constexpr double T48_Y = 500.0;
-inline const FSegDef T48_Segment = { TEXT("HW"), 7500.0, -4230.0, 7500.0, 4230.0, TEXT("highway") };
+inline const FSegDef T48_Segment = { TEXT("HW"), 7500.0, -4230.0, 7500.0, 4230.0, TEXT("highway"), nullptr };
 inline constexpr bool T48_Highway = true;
 inline constexpr bool T48_Avenue = false;
 inline constexpr bool T48_BuiltinsAtOrigin = true;
@@ -173,8 +174,8 @@ struct FDragCase { double FX0; double FY0; double FX1; double FY1;
                    double ClickX; double ClickY; FSegDef Segment;
                    FLotDef2 Lot; double Money; };
 inline const FDragCase T49_Drag[] = {
-	{ 6200.0, 3000.0, 7600.0, 3000.0, 6900.0, 1700.0, { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue") }, { 6490.0, 7310.0, TEXT("south"), TEXT("R1") }, 860.0 },
-	{ 7300.0, -4230.0, 7300.0, -3000.0, 5500.0, -3600.0, { TEXT("R1"), 7300.0, -4230.0, 7300.0, -3000.0, TEXT("avenue") }, { -4010.0, -3190.0, TEXT("west"), TEXT("R1") }, 877.0 },
+	{ 6200.0, 3000.0, 7600.0, 3000.0, 6900.0, 1700.0, { TEXT("R1"), 6200.0, 3000.0, 7600.0, 3000.0, TEXT("avenue"), nullptr }, { 6490.0, 7310.0, TEXT("south"), TEXT("R1") }, 860.0 },
+	{ 7300.0, -4230.0, 7300.0, -3000.0, 5500.0, -3600.0, { TEXT("R1"), 7300.0, -4230.0, 7300.0, -3000.0, TEXT("avenue"), nullptr }, { -4010.0, -3190.0, TEXT("west"), TEXT("R1") }, 877.0 },
 };
 inline constexpr int32 T49_DragNum = 2;
 
@@ -190,8 +191,8 @@ struct FSideRow  { const TCHAR* Label; double StartX; double StartY;
 struct FQuadDef  { double X[4]; double Y[4]; };
 
 // 32b/33b: a diagonal DRAWS now, and is measured along its centreline.
-inline const FDrawCase T32b_Diagonal = { 6200.0, 2500.0, 7200.0, 3500.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue") } };
-inline const FDrawCase T33b_DiagonalTooShort = { 6200.0, 3000.0, 6700.0, 3500.0, true, false, TEXT("too short: 707 uu is under the 820 uu a single lot needs"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr } };
+inline const FDrawCase T32b_Diagonal = { 6200.0, 2500.0, 7200.0, 3500.0, true, true, TEXT(""), { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue"), nullptr } };
+inline const FDrawCase T33b_DiagonalTooShort = { 6200.0, 3000.0, 6700.0, 3500.0, true, false, TEXT("too short: 707 uu is under the 820 uu a single lot needs"), { nullptr, 0.0, 0.0, 0.0, 0.0, nullptr, nullptr } };
 
 // 50: QuadsOverlap against RectsOverlap on real axis-aligned lot pairs.
 inline const FQuadPair T50_Pairs[] = {
@@ -211,7 +212,7 @@ inline const FProjCase T51_Projection[] = {
 inline constexpr int32 T51_ProjectionNum = 2;
 
 // 52: a lot on a 45 degree road, end to end, priced by its true length.
-inline const FSegDef T52_Segment = { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue") };
+inline const FSegDef T52_Segment = { TEXT("R1"), 6200.0, 2500.0, 7200.0, 3500.0, TEXT("avenue"), nullptr };
 inline constexpr double T52_MoneyBefore = 5000.0;
 inline constexpr double T52_MoneyAfter = 4858.57864376269;
 inline constexpr double T52_ClickX = 5639.4;
@@ -235,7 +236,7 @@ inline const FSideRow T53_Sides[] = {
 inline constexpr int32 T53_SidesNum = 5;
 
 // 54: two houses along one diagonal street - pads apart, boxes overlapping.
-inline const FSegDef T54_Segment = { TEXT("R1"), 5700.0, 2000.0, 7650.0, 3950.0, TEXT("avenue") };
+inline const FSegDef T54_Segment = { TEXT("R1"), 5700.0, 2000.0, 7650.0, 3950.0, TEXT("avenue"), nullptr };
 inline constexpr double T54_Clicks[2][2] = { { 5029.339828220179, 3450.660171779821 }, { 6199.339828220179, 4620.660171779821 } };
 inline const FLotDef2 T54_Lots[2] = { { 5590.0, 6410.0, TEXT("north"), TEXT("R1") }, { 7240.0, 8060.0, TEXT("north"), TEXT("R1") } };
 inline constexpr bool T54_Quads = false;
@@ -258,5 +259,98 @@ inline constexpr double T55_LvH_Highway[4] = { 2600.0, 1800.0, 2600.0, 3000.0 };
 inline constexpr bool T55_LvH_Quads = false;
 inline constexpr bool T55_LvH_Rects = true;
 inline constexpr bool T55_LvH_StillPlaces = true;
+
+// ---- CURVED MULTI-NODE ROADS, self-tests 56-60 (item 11) -------------
+struct FNode { double X; double Y; };
+
+// The three nodes every curve case below is drawn through.
+inline const FNode Curve[] = { { 2000.0, -4000.0 }, { 4000.0, -2600.0 }, { 6000.0, -4000.0 } };
+inline constexpr int32 CurveNum = 3;
+
+// 56: the sampled polyline, vertex for vertex.
+inline const FNode T56_Sampled[] = { { 2000.0, -4000.0 }, { 2320.0, -3750.0 }, { 2620.0, -3470.0 }, { 2930.0, -3190.0 }, { 3240.0, -2930.0 }, { 3580.0, -2710.0 }, { 3980.0, -2600.0 }, { 4370.0, -2690.0 }, { 4720.0, -2900.0 }, { 5040.0, -3160.0 }, { 5340.0, -3440.0 }, { 5650.0, -3720.0 }, { 6000.0, -4000.0 } };
+inline constexpr int32 T56_SampledNum = 13;
+inline const FNode T56_StraightNodes[] = { { 0.0, 0.0 }, { 1000.0, 0.0 } };
+inline constexpr int32 T56_StraightNodesNum = 2;
+inline const FNode T56_Straight[] = { { 0.0, 0.0 }, { 410.0, 0.0 }, { 1000.0, 0.0 } };
+inline constexpr int32 T56_StraightNum = 3;
+
+// 57: one gesture, one road, one price.
+inline constexpr double T57_MoneyBefore = 40000.0;
+inline constexpr double T57_MoneyAfter = 39504.436298069144;
+inline const TCHAR* const T57_PathId = TEXT("C1");
+inline const TCHAR* const T57_Ids[] = { TEXT("R1"), TEXT("R2"), TEXT("R3"), TEXT("R4"), TEXT("R5"), TEXT("R6"), TEXT("R7"), TEXT("R8"), TEXT("R9"), TEXT("R10"), TEXT("R11"), TEXT("R12") };
+inline constexpr int32 T57_IdsNum = 12;
+inline const FSegDef T57_Segments[] = {
+	{ TEXT("R1"), 2000.0, -4000.0, 2320.0, -3750.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R2"), 2320.0, -3750.0, 2620.0, -3470.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R3"), 2620.0, -3470.0, 2930.0, -3190.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R4"), 2930.0, -3190.0, 3240.0, -2930.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R5"), 3240.0, -2930.0, 3580.0, -2710.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R6"), 3580.0, -2710.0, 3980.0, -2600.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R7"), 3980.0, -2600.0, 4370.0, -2690.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R8"), 4370.0, -2690.0, 4720.0, -2900.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R9"), 4720.0, -2900.0, 5040.0, -3160.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R10"), 5040.0, -3160.0, 5340.0, -3440.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R11"), 5340.0, -3440.0, 5650.0, -3720.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R12"), 5650.0, -3720.0, 6000.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+};
+
+// 58: joints in more than one CHORD, and a lot that spans them.
+inline const FNode T58_Joints[] = { { 2320.0, -3750.0 }, { 3240.0, -2930.0 }, { 3580.0, -2710.0 }, { 4720.0, -2900.0 }, { 5040.0, -3160.0 } };
+inline constexpr int32 T58_JointsNum = 5;
+inline constexpr double T58_ClickX = 2595.1230827640884;
+inline constexpr double T58_ClickY = -1560.6447642717733;
+inline const FLotDef2 T58_Lot = { 920.0, 1740.0, TEXT("north"), TEXT("R5") };
+inline constexpr double T58_ChordLength = 404.96913462633177;
+inline constexpr double T58_SpanMin = 726.9689831340979;
+inline constexpr double T58_SpanMax = 1929.0359022566483;
+
+// 59: one decision - any chord failing refuses the whole path.
+inline const FNode T59_Crosses_Nodes[] = { { 2000.0, -3300.0 }, { 4000.0, -2100.0 }, { 6000.0, -3300.0 } };
+inline constexpr int32 T59_Crosses_NodesNum = 3;
+inline constexpr bool T59_Crosses_Ok = false;
+inline const TCHAR* const T59_Crosses_Reason = TEXT("crosses: the curve would cross the arterial road at its 6th chord");
+inline constexpr int32 T59_CrossesSegments = 0;
+inline constexpr bool T59_Afford_Ok = false;
+inline const TCHAR* const T59_Afford_Reason = TEXT("can't afford: a 4956 uu avenue costs 495.56, money is 100.00");
+inline constexpr double T59_Cost = 495.5637019308552;
+inline constexpr bool T59_UnderOk = false;
+inline const TCHAR* const T59_UnderReason = TEXT("can't afford: a 4956 uu avenue costs 495.56, money is 494.56");
+inline constexpr bool T59_ExactOk = true;
+inline constexpr bool T59_Unknown_Ok = false;
+inline const TCHAR* const T59_Unknown_Reason = TEXT("unknown road type 'motorway': expected one of dirt, avenue, boulevard, highway");
+inline constexpr bool T59_OneNode_Ok = false;
+inline const TCHAR* const T59_OneNode_Reason = TEXT("a road needs at least two nodes");
+inline const FNode T59_TooShort_Nodes[] = { { 3000.0, -4000.0 }, { 3300.0, -3800.0 } };
+inline constexpr int32 T59_TooShort_NodesNum = 2;
+inline constexpr bool T59_TooShort_Ok = false;
+inline const TCHAR* const T59_TooShort_Reason = TEXT("too short: 361 uu is under the 820 uu a single lot needs");
+inline const FNode T59_Overshoot_Nodes[] = { { 2000.0, -4000.0 }, { 2600.0, -4229.0 }, { 5000.0, -3200.0 } };
+inline constexpr int32 T59_Overshoot_NodesNum = 3;
+inline constexpr bool T59_Overshoot_Ok = false;
+inline const TCHAR* const T59_Overshoot_Reason = TEXT("off-board: the curve leaves the plate at [2310, -4260]");
+inline constexpr double T59_Overshoot_MinY = -4260.0;
+inline constexpr double T59_Overshoot_PlateYMin = -4230.0;
+inline constexpr double T59_Lot_ClickX = 4000.0;
+inline constexpr double T59_Lot_ClickY = -2000.0;
+inline const FLotDef2 T59_Lot_Lot = { 3590.0, 4410.0, TEXT("south"), TEXT("arterial") };
+inline const FNode T59_Lot_Nodes[] = { { 3000.0, -3000.0 }, { 4000.0, -2400.0 }, { 5000.0, -3000.0 } };
+inline constexpr int32 T59_Lot_NodesNum = 3;
+inline constexpr bool T59_Lot_Ok = false;
+inline const TCHAR* const T59_Lot_Reason = TEXT("overlap: the curve would cross an existing lot at [3590.0, 4410.0] on the arterial");
+inline const FNode T59_Two_Nodes[] = { { 2000.0, -4000.0 }, { 5000.0, -4000.0 } };
+inline constexpr int32 T59_Two_NodesNum = 2;
+inline const TCHAR* const T59_Two_PathId = TEXT("C1");
+inline constexpr int32 T59_Two_Count = 7;
+inline const FSegDef T59_Two_Segments[] = {
+	{ TEXT("R1"), 2000.0, -4000.0, 2410.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R2"), 2410.0, -4000.0, 2820.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R3"), 2820.0, -4000.0, 3230.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R4"), 3230.0, -4000.0, 3640.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R5"), 3640.0, -4000.0, 4050.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R6"), 4050.0, -4000.0, 4460.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+	{ TEXT("R7"), 4460.0, -4000.0, 5000.0, -4000.0, TEXT("avenue"), TEXT("C1") },
+};
 
 } // namespace StacktownRoadsOracle

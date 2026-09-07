@@ -294,6 +294,154 @@ def road_cost(road, rules=None):
             * road_length(road) / 100.0)
 
 
+def path_neighbours(roads, road):
+    """The segments of `road`'s own path that JOIN it end to end - the one
+    whose end is this segment's start, and the one whose start is its end.
+    Found by matching endpoints rather than by id order, so it stays right
+    however a path's ids were allocated.
+
+    Exists because of a real collision between two things section 5 of
+    ROADS_AS_MECHANIC asks for at once: the curve is sampled at the 410
+    WIDTH_QUANTUM, and the narrowest lot in the catalogue is 820 - two
+    quanta. So no lot fits inside a single chord's own span, and before this
+    every click on a curve was refused with "off-board: snapped span exceeds
+    the R3 road" on completely open ground. A lot IS a chord (section 5.4)
+    and a chord it is; it simply spans more than one of them, so the bound
+    its span is checked against has to be the run of joined chords rather
+    than the one it happens to sit on."""
+    out = []
+    pid = road_path_id(road)
+    for other in roads:
+        if other['id'] == road['id'] or road_path_id(other) != pid:
+            continue
+        if (other['end'] == road['start'] or other['start'] == road['end']
+                or other['start'] == road['start']
+                or other['end'] == road['end']):
+            out.append(other)
+    return out
+
+
+def path_span(roads, road, rules=None):
+    """(s_min, s_max) - the projection range a lot on `road` may occupy,
+    measured in `road`'s own direction: its own span, widened by whatever
+    its joined neighbours reach in that direction.
+
+    ONLY THE IMMEDIATE NEIGHBOURS, deliberately. Walking the whole path
+    would let a lot's span run round a bend and come out somewhere the pad
+    - which is a straight rectangle in this chord's frame - does not go. One
+    chord either side is enough for the 820 lot the collision above is
+    about, and it is the largest claim that stays honest about the pad being
+    straight."""
+    frame = road_frame(road)
+    ux, uy, s_min = frame[2], frame[3], frame[7]
+    s_max = s_min + frame[6]
+    for other in path_neighbours(roads, road):
+        for pt in (other['start'], other['end']):
+            s = pt[0] * ux + pt[1] * uy
+            s_min = min(s_min, s)
+            s_max = max(s_max, s)
+    return s_min, s_max
+
+
+def road_path_id(road):
+    """Which ROAD a segment belongs to. A curve drawn as one gesture is many
+    segments (draw_road_path below) that share a 'path'; a straight road is
+    its own path, and so is anything written before this key existed - the
+    same backward-compat shape lot_road_id established, one place again."""
+    return road.get('path', road['id'])
+
+
+def _catmull_rom(nodes, samples_per_span=64):
+    """A uniform Catmull-Rom through `nodes`, densely sampled.
+
+    ROADS_AS_MECHANIC section 5's own shape: "a Catmull-Rom through the
+    committed nodes, sampled to a polyline at the 410 quantum". This is the
+    dense half; _sample_path below does the arc-length resampling.
+
+    THE END TANGENTS ARE EXTRAPOLATED, not duplicated: the phantom control
+    point before the first node is 2*P0 - P1, which continues the line the
+    first two nodes make. Duplicating the endpoint instead (the other common
+    choice) makes the curve leave its first node along the chord to the
+    THIRD, so a road would start off in a direction the player did not draw.
+    """
+    pts = list(nodes)
+    if len(pts) < 2:
+        return list(pts)
+    ctrl = [(2.0 * pts[0][0] - pts[1][0], 2.0 * pts[0][1] - pts[1][1])]
+    ctrl += pts
+    ctrl.append((2.0 * pts[-1][0] - pts[-2][0], 2.0 * pts[-1][1] - pts[-2][1]))
+    out = [pts[0]]
+    for i in range(len(pts) - 1):
+        p0, p1, p2, p3 = ctrl[i], ctrl[i + 1], ctrl[i + 2], ctrl[i + 3]
+        for k in range(1, samples_per_span + 1):
+            t = float(k) / samples_per_span
+            t2, t3 = t * t, t * t * t
+            out.append((
+                0.5 * ((2.0 * p1[0]) + (-p0[0] + p2[0]) * t
+                       + (2.0 * p0[0] - 5.0 * p1[0] + 4.0 * p2[0] - p3[0]) * t2
+                       + (-p0[0] + 3.0 * p1[0] - 3.0 * p2[0] + p3[0]) * t3),
+                0.5 * ((2.0 * p1[1]) + (-p0[1] + p2[1]) * t
+                       + (2.0 * p0[1] - 5.0 * p1[1] + 4.0 * p2[1] - p3[1]) * t2
+                       + (-p0[1] + 3.0 * p1[1] - 3.0 * p2[1] + p3[1]) * t3)))
+    return out
+
+
+def sample_path(nodes, spacing=WIDTH_QUANTUM):
+    """The curve through `nodes` as a polyline whose vertices are `spacing`
+    apart ALONG THE CURVE - 410, the width quantum the whole board is built
+    on, so a chord is one lot-width unit of road.
+
+    Arc-length resampling, not parameter-space: a Catmull-Rom's parameter
+    runs faster on the outside of a bend, so sampling at even t would give
+    long chords through corners and short ones on the straights - the exact
+    places where a chord's error against the curve is largest.
+
+    The LAST node is always a vertex, whatever the spacing leaves over. A
+    road that stopped 300 uu short of where the player clicked would be a
+    different road from the one they drew; a slightly short final chord is
+    not. Every vertex is snapped to the position grid, like a lot's own
+    span and a straight road's endpoints."""
+    dense = _catmull_rom(nodes)
+    if len(dense) < 2:
+        return [(_snap(p[0]), _snap(p[1])) for p in dense]
+    out = [dense[0]]
+    carried = 0.0
+    for i in range(1, len(dense)):
+        ax, ay = dense[i - 1]
+        bx, by = dense[i]
+        seg = ((bx - ax) ** 2 + (by - ay) ** 2) ** 0.5
+        if seg == 0.0:
+            continue
+        pos = 0.0
+        while carried + (seg - pos) >= spacing:
+            step = spacing - carried
+            pos += step
+            t = pos / seg
+            out.append((ax + (bx - ax) * t, ay + (by - ay) * t))
+            carried = 0.0
+        carried += seg - pos
+    if out[-1] != dense[-1]:
+        out.append(dense[-1])
+    # THE LEFTOVER IS MERGED, not left as a stub. Whatever the spacing does
+    # not divide evenly comes out as a final chord of anything from 0 to 410,
+    # and a 50 uu chord is a road segment with a 2260 uu corridor and no
+    # length - a bump on the board and a hole in the frontage. If the last
+    # chord is under half a spacing, the vertex before the endpoint is
+    # dropped, making one final chord of up to one and a half spacings.
+    if len(out) >= 3:
+        last = ((out[-1][0] - out[-2][0]) ** 2
+                + (out[-1][1] - out[-2][1]) ** 2) ** 0.5
+        if last < spacing / 2.0:
+            del out[-2]
+    snapped = [(_snap(p[0]), _snap(p[1])) for p in out]
+    # The snap can collide two vertices that were under a quantum apart.
+    deduped = [snapped[0]]
+    for p in snapped[1:]:
+        if p != deduped[-1]:
+            deduped.append(p)
+    return deduped
+
+
 def road_material_name(road):
     """The material instance the engine side loads for this road's
     surface - MI_road_dirt / _avenue / _boulevard / _highway. Formatted
@@ -387,14 +535,22 @@ def _in_crossing(roads, x, y, rules=None):
     PER-TYPE CORRIDOR since 2026-09-06: the band is the ROAD'S OWN half
     (road_half), not the one avenue constant - a highway is 2000 wide and
     its pavement has to be 2000 wide here too, or a click standing on it
-    would be offered frontage on the road it is standing in."""
+    would be offered frontage on the road it is standing in.
+
+    COUNTED BY PATH, not by segment (curved roads, item 11). A drawn curve
+    is many straight segments 410 uu apart whose corridors overlap almost
+    everywhere along it - by construction, not by accident - so counting
+    segments would make the whole of every curve 'the crossing' and refuse
+    every lot on it. Segments of ONE road are one road here. A single
+    straight road is its own path (road_path_id), so nothing about the
+    two built-ins or a one-segment draw changes."""
     r = _rules(rules)
-    count = 0
+    seen = set()
     for road in roads:
         along, across, length = _project_to_road(road, x, y)
         if 0.0 <= along <= length and abs(across) < road_half(road, r):
-            count += 1
-    return count > 1
+            seen.add(road_path_id(road))
+    return len(seen) > 1
 
 
 def lot_road_id(lot):
@@ -732,9 +888,8 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
     # street the same holds in y. So this is one line different from the
     # world_coord it replaces, and no lot already saved changes meaning.
     frame = road_frame(road)
-    s_min = frame[7]
-    s_max = s_min + frame[6]
-    x0 = _snap(s_min + along - width / 2.0)
+    s_min, s_max = path_span(roads, road, r)
+    x0 = _snap(frame[7] + along - width / 2.0)
     x1 = x0 + width
     if x0 < s_min or x1 > s_max:
         return False, (
@@ -749,6 +904,20 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
                     'overlap: [%.1f, %.1f] crosses a pinned lot at '
                     '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
     candidate = {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
+    # A PAD CAN HANG OFF THE PLATE, and this is where the check would go.
+    # NOT ADDED TONIGHT, deliberately, and raised on Docs/BOARD.md instead:
+    # the span bound above keeps a lot inside its ROAD, and for the two
+    # built-ins the road spans the plate so those were the same thing. They
+    # are not the same thing for a road drawn near an edge - the first curve
+    # drawn along the southern margin put a pad at y = -5740 against a plate
+    # that stops at -4230, and self-test 52's own 45 degree lot reaches
+    # y = 5150 against a plate that stops at 4230.
+    #
+    # It is a real, PRE-EXISTING gap (a straight road drawn near an edge does
+    # it too), the fix is four comparisons against quad_rect(lot_quad(...)),
+    # and it moves where lots may go on boards that already exist - the same
+    # reason the frontage-corridor gap above was raised rather than closed.
+    # The owner's call, not curved roads'.
     # QUADS, not bounding boxes: a diagonal lot's box is much bigger than the
     # lot and would refuse clicks that are fine. quads_overlap reduces exactly
     # to rects_overlap while everything is axis-aligned (self-test 50).
@@ -1095,6 +1264,154 @@ def draw_road(state, x0, y0, x1, y1, width_class='avenue', pins_active=True,
     state['money'] -= road_cost(road, r)
     state.setdefault('roads', {})[road['id']] = road
     return state, road['id'], True, ''
+
+
+def _next_path_id(state):
+    """C1, C2, ... - the first not already claimed by a segment in state.
+    A namespace distinct by construction from the segment ids (R + digits),
+    the placed lots (P + digits) and the pins (letters)."""
+    taken = {road_path_id(seg) for seg in state.get('roads', {}).values()}
+    n = 1
+    while 'C%d' % n in taken:
+        n += 1
+    return 'C%d' % n
+
+
+def resolve_road_path(state, nodes, width_class='avenue', pins_active=True,
+                       rules=None):
+    """(ok, reason, segments) - a CURVED road as one decision.
+
+    ROADS_AS_MECHANIC section 5's shape, built: a Catmull-Rom through the
+    committed nodes, sampled at the 410 quantum into straight segments, each
+    of which is an ordinary road afterwards. The player draws one gesture and
+    gets one road; the segments are how it is stored and drawn, not what it
+    is.
+
+    ONE ROAD, SO ONE DECISION. Every segment is checked against the board -
+    the plate, existing roads, placed lots, pinned lots - and ANY failure
+    refuses the WHOLE path, naming the segment. A path that half-built where
+    it first hit something would leave the player with a road they did not
+    draw and a bill for it. The length and the price are the path's, not each
+    chord's: a 410 uu chord is under the 820 a lot needs, and refusing every
+    curve for that would be measuring the wrong thing.
+
+    IT DOES NOT CROSS ITSELF BY DEFINITION. Consecutive chords share an
+    endpoint, so their corridors always overlap; segments a few apart on a
+    bend overlap too, because the corridor is 2260 wide and the chords are
+    410 long. Checking a path against its own segments would refuse every
+    curve ever drawn. So the crossing check runs against the board only, and
+    the segments carry a shared 'path' so that everything downstream -
+    _in_crossing above, and the next road's own crossing check - treats them
+    as the one road they are.
+
+    WHAT THAT LEAVES OPEN, named rather than hidden: a path that loops back
+    over itself is accepted, because this version cannot tell that apart from
+    a tight bend. Section 5 says "a single open-ended road" and defers
+    intersections; a self-crossing curve is the same question and waits with
+    them."""
+    r = _rules(rules)
+    if width_class not in ROAD_TYPES:
+        return False, (
+            'unknown road type %r: expected one of %s'
+            % (width_class, ', '.join(ROAD_TYPES))), None
+    if len(nodes) < 2:
+        return False, 'a road needs at least two nodes', None
+
+    pts = sample_path(nodes)
+    if len(pts) < 2:
+        return False, (
+            'too short: the nodes are inside one %.0f uu grid step of each '
+            'other' % POSITION_QUANTUM), None
+
+    length = sum(((pts[i + 1][0] - pts[i][0]) ** 2
+                  + (pts[i + 1][1] - pts[i][1]) ** 2) ** 0.5
+                 for i in range(len(pts) - 1))
+    if length < MIN_ROAD_LENGTH:
+        return False, (
+            'too short: %.0f uu is under the %.0f uu a single lot needs'
+            % (length, MIN_ROAD_LENGTH)), None
+
+    for px, py in pts:
+        if not (PLATE_X_MIN <= px <= PLATE_X_MAX and
+                PLATE_Y_MIN <= py <= PLATE_Y_MAX):
+            return False, (
+                'off-board: the curve leaves the plate at [%.0f, %.0f]'
+                % (px, py)), None
+
+    path_id = _next_path_id(state)
+    segments = []
+    n = 1
+    taken = set(state.get('roads', {}).keys())
+    for i in range(len(pts) - 1):
+        while 'R%d' % n in taken:
+            n += 1
+        segments.append({'id': 'R%d' % n, 'start': pts[i], 'end': pts[i + 1],
+                         'width_class': width_class, 'path': path_id})
+        taken.add('R%d' % n)
+
+    roads = _all_roads(state)
+    for k, seg in enumerate(segments):
+        mine = road_quad(_road_dict(seg), r)
+        for road in roads:
+            if quads_overlap(mine, road_quad(road, r)):
+                return False, (
+                    'crosses: the curve would cross the %s road at its %d%s '
+                    'chord' % (road['id'], k + 1, _ordinal(k + 1))), None
+        for p in state['parcels'].values():
+            lot = p.get('placement')
+            if not lot:
+                continue
+            if quads_overlap(mine, lot_quad(lot, roads, r)):
+                return False, (
+                    'overlap: the curve would cross an existing lot at '
+                    '[%.1f, %.1f] on the %s'
+                    % (lot['x0'], lot['x1'], lot_road_id(lot))), None
+        if pins_active:
+            for pin_x0, pin_x1, pin_side in PINNED_SPANS:
+                pin_lot = {'x0': pin_x0, 'x1': pin_x1, 'side': pin_side,
+                           'road_id': 'arterial'}
+                if quads_overlap(mine, lot_quad(pin_lot, roads, r)):
+                    return False, (
+                        'overlap: the curve would cross a pinned lot at '
+                        '[%.1f, %.1f]' % (pin_x0, pin_x1)), None
+
+    # ONE PRICE, for the whole gesture, charged from the polyline's own length
+    # rather than summed per chord - the same number either way, said once.
+    cost = r['road_cost_per_100uu_%s' % width_class] * length / 100.0
+    if state['money'] < cost:
+        return False, (
+            "can't afford: a %.0f uu %s costs %.2f, money is %.2f"
+            % (length, width_class, cost, state['money'])), None
+    return True, '', segments
+
+
+def _ordinal(n):
+    if 10 <= n % 100 <= 20:
+        return 'th'
+    return {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+
+
+def draw_road_path(state, nodes, width_class='avenue', pins_active=True,
+                    rules=None):
+    """One curve-drawing gesture. (state, path_id, ids, ok, reason) - path_id
+    and ids are None on refusal, mirroring draw_road's own shape.
+
+    The segments go in EXACTLY as resolve_road_path validated them, and the
+    money moves here and only here, once, for the whole path - the same
+    discipline draw_road holds for a straight road."""
+    r = _rules(rules)
+    ok, reason, segments = resolve_road_path(state, nodes, width_class,
+                                              pins_active=pins_active, rules=r)
+    if not ok:
+        return state, None, None, False, reason
+    length = sum(road_length(seg) for seg in segments)
+    state['money'] -= (r['road_cost_per_100uu_%s' % width_class] * length
+                       / 100.0)
+    roads = state.setdefault('roads', {})
+    for seg in segments:
+        roads[seg['id']] = seg
+    return (state, road_path_id(segments[0]),
+            [seg['id'] for seg in segments], True, '')
 
 
 def plan_reactivation(pids, pool_labels):
@@ -2267,7 +2584,251 @@ if __name__ == '__main__':
     _ok55, _why55, _again55 = resolve_click(_c55, _px55, _py55, pins_active=False)
     assert _ok55 and _again55 == _lotc55, (_ok55, _why55, _again55)
 
-    print('placement self-check: 55/55 pass (pure-Python click->lot->state '
+    # ---- CURVED MULTI-NODE ROADS, 2026-09-06 (56-60) -------------------
+    # ROADS_AS_MECHANIC section 5's shape: a Catmull-Rom through the committed
+    # nodes, sampled at the 410 quantum into straight segments, each of which
+    # is an ordinary road afterwards. The player draws one gesture and gets ONE
+    # road; the segments are how it is stored and drawn, not what it is.
+    _CURVE = [(2000.0, -4000.0), (4000.0, -2600.0), (6000.0, -4000.0)]
+
+    # 56. THE SAMPLER. Vertices are one WIDTH_QUANTUM apart ALONG THE CURVE,
+    #     not in parameter space - a Catmull-Rom's parameter runs faster round
+    #     the outside of a bend, so even-t sampling gives long chords through
+    #     corners, which is exactly where a chord's error against the curve is
+    #     largest. The first and last nodes are always vertices: a road that
+    #     stopped short of where the player clicked would be a different road.
+    _pts56 = sample_path(_CURVE)
+    assert _pts56[0] == (_snap(_CURVE[0][0]), _snap(_CURVE[0][1])), _pts56[0]
+    assert _pts56[-1] == (_snap(_CURVE[-1][0]), _snap(_CURVE[-1][1])), _pts56[-1]
+    assert len(_pts56) >= 10, len(_pts56)
+    for _p in _pts56:
+        assert _p == (_snap(_p[0]), _snap(_p[1])), _p
+    _ch56 = [((_pts56[i + 1][0] - _pts56[i][0]) ** 2
+              + (_pts56[i + 1][1] - _pts56[i][1]) ** 2) ** 0.5
+             for i in range(len(_pts56) - 1)]
+    #     Every chord is within a snap step of the quantum, EXCEPT the last,
+    #     which carries whatever the spacing did not divide evenly and is
+    #     merged rather than left as a stub - so it runs up to one and a half
+    #     quanta. A 50 uu chord is a road segment with a 2260 uu corridor and
+    #     no length: a bump on the board and a hole in the frontage.
+    for _c in _ch56[:-1]:
+        assert abs(_c - WIDTH_QUANTUM) <= 20.0, (_c, _ch56)
+    assert WIDTH_QUANTUM / 2.0 <= _ch56[-1] <= WIDTH_QUANTUM * 1.5, _ch56[-1]
+    #     THE CURVE LEAVES ITS FIRST NODE ALONG THE FIRST CHORD. The phantom
+    #     control point before node 0 is 2*P0 - P1, which continues the line
+    #     the first two nodes make; DUPLICATING the endpoint instead - the
+    #     other common choice - makes the curve leave node 0 along the chord
+    #     to the THIRD node, so the road starts off in a direction the player
+    #     did not draw. Measured as the angle between the first sampled step
+    #     and the first node-to-node direction. THE MARGIN IS NARROW ON
+    #     PURPOSE and worth knowing: duplicating an endpoint leaves the
+    #     TANGENT DIRECTION alone (the Catmull-Rom tangent at P1 is
+    #     (P2 - P0)/2, so P0 = 2*P1 - P2 gives P2 - P1 and P0 = P1 gives half
+    #     of it) and changes its MAGNITUDE, which changes the curve's shape
+    #     and so where arc-length sampling puts the first vertex. Measured:
+    #     0.9986 as written, 0.9944 with the endpoint duplicated, so the
+    #     bound sits between them with about the same room either side.
+    def _ang56(a, b):
+        _n1 = (a[0] ** 2 + a[1] ** 2) ** 0.5
+        _n2 = (b[0] ** 2 + b[1] ** 2) ** 0.5
+        _d = (a[0] * b[0] + a[1] * b[1]) / (_n1 * _n2)
+        return max(-1.0, min(1.0, _d))
+    _step56 = (_pts56[1][0] - _pts56[0][0], _pts56[1][1] - _pts56[0][1])
+    _chord56 = (_CURVE[1][0] - _CURVE[0][0], _CURVE[1][1] - _CURVE[0][1])
+    assert _ang56(_step56, _chord56) > 0.997, _ang56(_step56, _chord56)
+    #     and the same at the far end, where the phantom is 2*Pn - Pn-1
+    _stepE56 = (_pts56[-1][0] - _pts56[-2][0], _pts56[-1][1] - _pts56[-2][1])
+    _chordE56 = (_CURVE[-1][0] - _CURVE[-2][0], _CURVE[-1][1] - _CURVE[-2][1])
+    assert _ang56(_stepE56, _chordE56) > 0.997, _ang56(_stepE56, _chordE56)
+
+    #     Two nodes is a straight line through them, not a curve.
+    _str56 = sample_path([(0.0, 0.0), (1000.0, 0.0)])
+    assert _str56[0] == (0.0, 0.0) and _str56[-1] == (1000.0, 0.0), _str56
+    assert all(_p[1] == 0.0 for _p in _str56), _str56
+
+    # 57. ONE GESTURE, ONE ROAD, ONE PRICE. The segments share a 'path', so
+    #     everything downstream treats them as the one road they are, and the
+    #     money moves once for the whole polyline rather than per chord.
+    s57 = citytick.seed_state()
+    s57['money'] = 40000.0
+    s57, path57, ids57, ok57, why57 = draw_road_path(s57, _CURVE,
+                                                      pins_active=False)
+    assert ok57, why57
+    assert path57 == 'C1' and len(ids57) == len(_pts56) - 1, (path57, ids57)
+    assert ids57 == ['R%d' % (i + 1) for i in range(len(ids57))], ids57
+    assert {s57['roads'][_i]['path'] for _i in ids57} == {'C1'}
+    assert {s57['roads'][_i]['width_class'] for _i in ids57} == {'avenue'}
+    #     The chords are the sampled polyline, joined end to end, unchanged.
+    for _k, _i in enumerate(ids57):
+        assert s57['roads'][_i]['start'] == _pts56[_k], (_i, _k)
+        assert s57['roads'][_i]['end'] == _pts56[_k + 1], (_i, _k)
+    _len57 = sum(_ch56)
+    assert abs(s57['money'] - (40000.0 - 10.0 * _len57 / 100.0)) < 1e-9, s57['money']
+
+    # 58. AND IT IS ONE ROAD TO EVERYTHING DOWNSTREAM. Consecutive chords
+    #     share an endpoint so their corridors always overlap, and chords a
+    #     few apart overlap too on a bend - the corridor is 2260 wide and the
+    #     chords are 410 long. Counting SEGMENTS in _in_crossing would make
+    #     the whole of every curve "the crossing" and refuse every lot on it;
+    #     counting PATHS is what makes a curve buildable at all.
+    _mid58 = s57['roads'][ids57[len(ids57) // 2]]
+    _f58 = road_frame(_road_dict(_mid58))
+    _on58 = (_f58[0] + _f58[2] * _f58[6] * 0.5, _f58[1] + _f58[3] * _f58[6] * 0.5)
+    assert not _in_crossing(_all_roads(s57), _on58[0], _on58[1]), _on58
+    #     AT A JOINT is the case that separates counting paths from counting
+    #     segments: the shared endpoint has `along` in range for BOTH chords
+    #     (its end, and the next one's start), so segment-counting calls every
+    #     joint of every curve "the crossing" - and there is one every 410 uu.
+    #     The joints are SEARCHED rather than assumed: a shared endpoint is
+    #     exactly on both chords' lines, but `along <= length` is a
+    #     floating-point comparison against a length that came out of a square
+    #     root, so at some joints the earlier chord misses its own end by a
+    #     hair. Asserting a particular joint would be asserting the rounding.
+    _roads58 = _all_roads(s57)
+
+    def _chords_at(x, y):
+        _n = 0
+        for _rd in _roads58:
+            _al, _ac, _ln = _project_to_road(_rd, x, y)
+            if 0.0 <= _al <= _ln and abs(_ac) < road_half(_rd):
+                _n += 1
+        return _n
+    _shared58 = [s57['roads'][_i]['end'] for _i in ids57[:-1]
+                 if _chords_at(*s57['roads'][_i]['end']) > 1]
+    assert _shared58, 'no joint sits in more than one chord - the case is gone'
+    for _j in _shared58:
+        assert not _in_crossing(_roads58, _j[0], _j[1]), _j
+    #     and a lot really does front a chord of the curve
+    _place58 = None
+    for _k in range(len(ids57)):
+        _f = road_frame(_road_dict(s57['roads'][ids57[_k]]))
+        _m = (_f[0] + _f[2] * _f[6] * 0.5, _f[1] + _f[3] * _f[6] * 0.5)
+        _s, _p, _o, _w = place(s57, _m[0] + _f[4] * 1500.0, _m[1] + _f[5] * 1500.0,
+                               pins_active=False)
+        if _o and _s['parcels'][_p]['placement']['road_id'] in ids57:
+            _place58 = _s['parcels'][_p]['placement']
+            break
+    assert _place58 is not None, 'no lot could front any chord of the curve'
+    assert _place58['x1'] - _place58['x0'] == V0_WIDTH, _place58
+
+    # 59. ONE DECISION: ANY chord failing refuses the WHOLE path, and nothing
+    #     is added or spent. A path that half-built where it first hit
+    #     something would leave the player a road they did not draw and a bill
+    #     for it.
+    s59 = citytick.seed_state()
+    s59['money'] = 40000.0
+    _hits = [(2000.0, -3300.0), (4000.0, -2100.0), (6000.0, -3300.0)]
+    s59, path59, ids59, ok59, why59 = draw_road_path(s59, _hits, pins_active=False)
+    assert not ok59 and path59 is None and ids59 is None, (ok59, path59)
+    assert 'crosses' in why59 and 'arterial' in why59 and 'chord' in why59, why59
+    assert s59['money'] == 40000.0 and s59['roads'] == {}, (s59['money'], s59['roads'])
+    #     and the resolver hands back NO segments, not the ones it had built
+    #     before it hit something - a caller that took them would half-build.
+    _ok59e, _why59e, _segs59e = resolve_road_path(s59, _hits, pins_active=False)
+    assert not _ok59e and _segs59e is None, (_ok59e, _segs59e)
+    #     TWO NODES IS A ROAD - the straight case through the same door.
+    s59f = citytick.seed_state()
+    s59f['money'] = 40000.0
+    s59f, path59f, ids59f, ok59f, why59f = draw_road_path(
+        s59f, [(2000.0, -4000.0), (5000.0, -4000.0)], pins_active=False)
+    assert ok59f and path59f == 'C1' and len(ids59f) >= 2, (ok59f, why59f, ids59f)
+    assert s59f['roads'][ids59f[0]]['start'] == (2000.0, -4000.0)
+    assert s59f['roads'][ids59f[-1]]['end'] == (5000.0, -4000.0)
+    #     and the price is the PATH's, refused once, on a fresh city's balance
+    s59b = citytick.seed_state()
+    _ok59b, _why59b, _segs59b = resolve_road_path(s59b, _CURVE, pins_active=False)
+    assert not _ok59b and _segs59b is None, _ok59b
+    assert "can't afford" in _why59b, _why59b
+    #     AT THE BOUNDARY, so a price that is merely WRONG is caught and not
+    #     just a price that is absent: one uu under the quote refuses and the
+    #     exact quote draws.
+    _cost59 = 10.0 * _len57 / 100.0
+    s59g = citytick.seed_state()
+    s59g['money'] = _cost59 - 1.0
+    _ok59g, _why59g, _ = resolve_road_path(s59g, _CURVE, pins_active=False)
+    assert not _ok59g and "can't afford" in _why59g, _why59g
+    s59h = citytick.seed_state()
+    s59h['money'] = _cost59
+    _ok59h, _why59h, _ = resolve_road_path(s59h, _CURVE, pins_active=False)
+    assert _ok59h, _why59h
+    s59h, _p59h, _i59h, _o59h, _w59h = draw_road_path(s59h, _CURVE,
+                                                       pins_active=False)
+    assert _o59h and abs(s59h['money']) < 1e-9, (_o59h, s59h['money'])
+    #     an unknown type is refused at the boundary here too
+    _ok59c, _why59c, _ = resolve_road_path(s57, _CURVE, 'motorway',
+                                            pins_active=False)
+    assert not _ok59c and 'unknown road type' in _why59c, _why59c
+    #     and fewer than two nodes is not a road
+    _ok59d, _why59d, _ = resolve_road_path(s57, [(0.0, 0.0)], pins_active=False)
+    assert not _ok59d and 'two nodes' in _why59d, _why59d
+    #     THE WHOLE PATH must be long enough to hold a lot - measured on the
+    #     polyline, not per chord, because a 410 chord never is and refusing
+    #     every curve for that would be measuring the wrong thing.
+    _ok59i, _why59i, _ = resolve_road_path(
+        s57, [(3000.0, -4000.0), (3300.0, -3800.0)], pins_active=False)
+    assert not _ok59i and 'too short' in _why59i, _why59i
+    #     AND IT MUST STAY ON THE PLATE, checked on the SAMPLED POLYLINE
+    #     rather than on the nodes. A Catmull-Rom reaches past its own nodes
+    #     on a bend - measured below, 20 uu past the lowest node for one set
+    #     of three - so nodes that are all inside are not a proof that the
+    #     road is.
+    s59j = citytick.seed_state()
+    s59j['money'] = 40000.0
+    _ok59j, _why59j, _ = resolve_road_path(
+        s59j, [(2000.0, -4000.0), (4000.0, -4400.0), (6000.0, -4000.0)],
+        pins_active=False)
+    assert not _ok59j and 'off-board' in _why59j, _why59j
+    _over59 = sample_path([(2000.0, -4000.0), (2600.0, -4150.0),
+                            (6000.0, -3600.0)])
+    assert min(_p[1] for _p in _over59) < -4150.0, min(_p[1] for _p in _over59)
+    #     and the case that separates the two: EVERY NODE on the plate, and
+    #     the curve reaching 30 uu past its edge between them. Checking the
+    #     nodes would accept this and put a road off the board.
+    _nodes59k = [(2000.0, -4000.0), (2600.0, -4229.0), (5000.0, -3200.0)]
+    for _nx, _ny in _nodes59k:
+        assert PLATE_X_MIN <= _nx <= PLATE_X_MAX, _nx
+        assert PLATE_Y_MIN <= _ny <= PLATE_Y_MAX, _ny
+    assert min(_p[1] for _p in sample_path(_nodes59k)) < PLATE_Y_MIN
+    s59k = citytick.seed_state()
+    s59k['money'] = 40000.0
+    _ok59k, _why59k, _ = resolve_road_path(s59k, _nodes59k, pins_active=False)
+    assert not _ok59k and 'off-board' in _why59k, _why59k
+
+    #     A CURVE MAY NOT BE DRAWN THROUGH A STANDING BUILDING either - the
+    #     placed-lot scan, which a curve needs as much as a straight road and
+    #     which nothing else here exercises.
+    s59l = citytick.seed_state()
+    s59l['money'] = 40000.0
+    s59l, _pl59, _ol59, _wl59 = place(s59l, 4000.0, -2000.0, pins_active=False)
+    assert _ol59, _wl59
+    _lot59 = s59l['parcels'][_pl59]['placement']
+    _ok59l, _why59l, _ = resolve_road_path(
+        s59l, [(3000.0, -3000.0), (4000.0, -2400.0), (5000.0, -3000.0)],
+        pins_active=False)
+    assert not _ok59l, (_ok59l, _lot59)
+    assert 'overlap' in _why59l and 'existing lot' in _why59l, _why59l
+
+    # 60. A LOT SPANS MORE THAN ONE CHORD, which it has to: the curve is
+    #     sampled at 410 and the narrowest lot in the catalogue is 820. Before
+    #     path_span every click on a curve was refused with "off-board:
+    #     snapped span exceeds the R3 road" on completely open ground - the
+    #     bound was the chord's own range, and no lot fits in 410 uu.
+    _seg60 = _road_dict(s57['roads'][_place58['road_id']])
+    _f60 = road_frame(_seg60)
+    assert _f60[6] < V0_WIDTH, _f60[6]          # the chord is shorter than a lot
+    _lo60, _hi60 = path_span(_all_roads(s57), _seg60)
+    assert _hi60 - _lo60 > _f60[6], (_lo60, _hi60, _f60[6])
+    assert _lo60 <= _place58['x0'] and _place58['x1'] <= _hi60, (_place58, _lo60, _hi60)
+    #     STILL BOUNDED, only by the joined run rather than the one chord: the
+    #     widening is the immediate neighbours and nothing further, so a span
+    #     cannot run round a bend and come out where the pad does not go.
+    _ends60 = [r for r in _all_roads(s57) if r['id'] in (ids57[0], ids57[-1])]
+    for _e in _ends60:
+        _l, _h = path_span(_all_roads(s57), _e)
+        _fe = road_frame(_e)
+        assert _h - _l < 3.0 * WIDTH_QUANTUM, (_e['id'], _l, _h)
+
+    print('placement self-check: 60/60 pass (pure-Python click->lot->state '
           'contract; resolve_road multi-road frontage; cross-street and '
           'corner-overlap coverage; save/load round-trip; free placement '
           'along the road (1-27, prior sessions) PLUS drawn roads, '
@@ -2316,7 +2877,16 @@ if __name__ == '__main__':
           'bounding-box scan would have refused the second on empty '
           'ground - and the same for the road-vs-lot, road-vs-road and '
           'lot-vs-highway scans, each shown against the box test that '
-          'would have refused it; live cursor-trace '
+          'would have refused it PLUS curved multi-node roads, 2026-09-06 '
+          '(56-60, ROADS_AS_MECHANIC section 5): a Catmull-Rom through the '
+          'committed nodes, resampled by ARC LENGTH at the 410 quantum with '
+          'the leftover merged rather than left as a stub, drawn as ONE road '
+          '- one decision, one price, one path id - whose chords are ordinary '
+          'roads afterwards; _in_crossing counts PATHS, without which every '
+          'curve would be "the crossing" end to end and carry no lots at '
+          'all; and a lot spans the joined run of chords rather than the one '
+          'it sits on, because the curve is sampled at 410 and the narrowest '
+          'lot is 820; live cursor-trace '
           'coordinates, actor spawn/resolve, and the feel itself are NOT '
           'provable here - see module docstring, and PLACEMENT_GRID.md '
           'section 8 - the owner\'s own click on empty board is the real '

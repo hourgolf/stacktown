@@ -173,6 +173,11 @@ public:
 	T& operator[](int32 i)        { return V_[static_cast<size_t>(i)]; }
 	const T& operator[](int32 i) const { return V_[static_cast<size_t>(i)]; }
 
+	void RemoveAt(int32 Index)
+	{
+		V_.erase(V_.begin() + static_cast<size_t>(Index));
+	}
+
 	void Append(const T* Ptr, int32 Count)
 	{
 		for (int32 i = 0; i < Count; ++i) { V_.push_back(Ptr[i]); }
@@ -273,6 +278,16 @@ struct FMath
 // ESearchCase exists so the call sites read the same in both worlds; the shim's
 // StartsWith is always case-sensitive, which is the only mode the port uses.
 struct ESearchCase { enum Type { CaseSensitive = 0, IgnoreCase = 1 }; };
+
+/** The nodes a curve is drawn through. Only what SamplePath needs. */
+struct FVector2D
+{
+	double X = 0.0, Y = 0.0;
+	FVector2D() {}
+	FVector2D(double InX, double InY) : X(InX), Y(InY) {}
+	bool operator==(const FVector2D& O) const { return X == O.X && Y == O.Y; }
+	bool operator!=(const FVector2D& O) const { return !(*this == O); }
+};
 
 // Only what LotFrame's offsets need; the pose itself is three doubles.
 struct FVector

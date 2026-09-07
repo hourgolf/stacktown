@@ -217,6 +217,72 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+ENGINEERING (2026-09-06 22:55 PDT, ITEM 11 COMPLETE - DrawRoadPath, CURVED
+MULTI-NODE ROADS): a Catmull-Rom through the committed nodes, resampled by ARC
+LENGTH at the 410 quantum into straight chords, drawn as ONE road - one
+decision, one price, one path id. ROADS_AS_MECHANIC section 5's v0, built.
+ARC LENGTH, not parameter space: a Catmull-Rom's parameter runs faster round
+the outside of a bend, so even-t sampling gives long chords through corners,
+which is exactly where a chord's error against the curve is largest. End
+tangents are EXTRAPOLATED (2*P0 - P1), not duplicated - duplicating halves the
+tangent and changes the curve's shape near its ends, so the road would leave
+its first node along a curve the player did not draw. The last node is always a
+vertex, and a leftover under half a spacing is MERGED rather than left as a
+stub: a 50 uu chord is a road segment with a 2260 uu corridor and no length.
+A PATH IS ONE ROAD TO EVERYTHING DOWNSTREAM, and it has to be. Two things break
+otherwise and I found both by building it:
+ 1. _in_crossing MUST COUNT PATHS. Consecutive chords share an endpoint, so the
+    shared point has `along` in range for BOTH - and there is one every 410 uu.
+    Counting chords makes the whole of every curve "pavement shared by more
+    than one road" and NO LOT CAN FRONT A CURVE AT ALL.
+ 2. A LOT'S SPAN MUST BE THE JOINED RUN, not one chord. The curve is sampled at
+    410 and the narrowest lot is 820, so a lot never fits inside a chord: every
+    click on a curve came back "off-board: snapped span exceeds the R3 road" on
+    open ground. path_span widens by the IMMEDIATE neighbours only - the pad is
+    a straight rectangle in that chord's frame and a span running further could
+    come out where the pad does not go.
+    This is the one place section 5's own two instructions collide (sample at
+    410; lots are chords) and I resolved it by widening the bound rather than
+    by sampling at 820, which would have been the other reading. Say if you
+    want the other one.
+ONE DECISION: any chord failing refuses the WHOLE path, naming the chord;
+nothing added, nothing spent. Length, minimum and price are the PATH's. The
+plate check runs on the SAMPLED POLYLINE, not the nodes, because the curve
+reaches past its own nodes on a bend - there is a case in the suite where every
+node is on the plate and the curve is 30 uu off it.
+IT DOES NOT CROSS ITSELF BY DEFINITION, and what that leaves open is NAMED: a
+path that loops back over itself is accepted, because this version cannot tell
+that from a tight bend. Section 5 defers intersections; a self-crossing curve
+is the same question and waits with them. Two SEPARATE roads still refuse to
+cross - a path is exempt only from itself.
+SCHEMA: one additive key, 'path', on a road segment. Absent means the segment
+is its own road, which is what every straight draw and everything written
+before curves is - so no saved city migrates, and CityStateToJson only writes
+the key when there IS one, leaving a straight road's entry byte-for-byte what
+it was.
+PROVEN HERE: oracle 60/60 (56-60 new), pre-flight 1250 checks / 0 failures,
+132 of 134 mutations caught with only the two long-declared survivors. Three
+patterns went stale against the refactor and were refreshed; one of my own new
+mutations was a NO-OP again (CatmullRom's early-out is spelled the same as
+ResolveRoadPath's node-count guard, and resampling a two-point polyline gives
+the same vertices either way) so its survival said nothing - repointed at the
+guard I meant.
+A SECOND PRE-EXISTING GAP FOUND AND RAISED, NOT CLOSED: a lot's pad can hang
+off the plate. The span bound keeps a lot inside its ROAD, and for the two
+built-ins the road spans the plate so those were the same thing - they are not
+for a road drawn near an edge. The first curve along the southern margin put a
+pad at y = -5740 against a plate that stops at -4230, and self-test 52's own 45
+degree lot reaches y = 5150. Four comparisons fix it; it moves where lots may
+go on boards that already exist, so it is the owner's call like the
+frontage-corridor gap. The comment sits where the check would go.
+NOT WIRED: node clicks in road mode are yours ("I wire node clicks in road
+mode", your queue line). Stacktown::DrawRoadPath(Board, State, Nodes,
+WidthClass, bPinsActive) takes a TArray<FVector2D> and returns the path id and
+the chords; ResolveRoadPath is the same decision without spending, for the
+ghost. AStacktownRoad already draws one chord per segment, so a path renders as
+the ribbon of straight pieces section 5.3 asks for with no new actor.
+NEXT: item 8, then 9.
+
 ENGINEERING (2026-09-06 22:09 PDT, ITEM 11 STAGE TWO PUSHED - ROADS AT ANY
 DIRECTION): pulled to 2e815d1; both your rulings taken and in.
 BOULEVARD MEDIAN 300 uu: road_width_boulevard is 1700, so its corridor half is

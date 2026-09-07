@@ -121,8 +121,12 @@ void UStacktownLotVisual::ApplyState(bool bOwned, float Age, float Wear01, bool 
 	// lot greys as it wears (a stranger sees decay coming) and chars when worn out.
 	// Design lane 22:00: 0.6 for a newly failed lot (D16's boundary: the most degraded a
 	// mass can look and still be weathered wood), climbing to 0.8 (char) the longer it is
-	// left - Wear01 runs past 1.0 while failed. Before failure it greys as 0.6 x wear.
-	const float Failure = bFailed ? 0.6f + 0.2f * FMath::Clamp(Wear01 - 1.f, 0.f, 1.f) : 0.6f * FMath::Clamp(Wear01, 0.f, 1.f);
+	// left - Wear01 runs past 1.0 while failed. Before failure it greys as 0.3 x wear:
+	// the design lane's 08:42 ruling gives three bands the eye can separate - 0 to 0.3
+	// age and use (never alarming), 0.6 failed (needs repair), 0.6 to 0.8 neglect -
+	// and the EMPTY band between 0.3 and 0.6 is the point: failure is an event, not a
+	// gradient, and the step is what the player notices. Nothing may creep into it.
+	const float Failure = bFailed ? 0.6f + 0.2f * FMath::Clamp(Wear01 - 1.f, 0.f, 1.f) : 0.3f * FMath::Clamp(Wear01, 0.f, 1.f);
 	SetCustomPrimitiveDataFloat(5, Failure);
 	SetCustomPrimitiveDataFloat(6, 0.f);
 }

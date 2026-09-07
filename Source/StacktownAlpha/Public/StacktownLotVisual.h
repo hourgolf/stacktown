@@ -37,7 +37,7 @@ public:
 	 *    1 GlowLevel  night window emission - 0.45 owned (D24 ladder, GlowScale 40), 0 for sale (D20: bare board)
 	 *    2 GlowState  encoded hue, 0.5 neutral warm until the economy can say activity
 	 *    4 Attention 0 today
-	 *    5 Failure    0.6 x wear (weathers toward the species grey as the lot wears), 0.8 worn out (chars) until repaired
+	 *    5 Failure    0.3 x wear before failure (tired, never alarming); 0.6 at failure, rising to 0.8 with neglect (chars) until repaired - the empty 0.3-0.6 band is the step (design lane 2026-09-07 08:42)
 	 *    6 Scorch     0 today
 	 *  Found by the design lane's night frame (2026-09-06 16:02): channels 1 and 2 were
 	 *  READ by the material and WRITTEN by nothing in C++, so every window was black. */

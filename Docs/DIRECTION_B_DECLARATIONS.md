@@ -2760,6 +2760,26 @@ board's visible seams). A green ghost spends all of that on a hover state.
 The pale-timber ghost is legible for a different reason: **it is the only thing
 on the board with a soft edge and no grain.** Presence, not hue.
 
+> **THIS CLAIM IS CONDITIONAL, AND IT HAS ALREADY BEEN FALSE ONCE.**
+> Amended 2026-09-07 by the LOOK seat, which wrote the original sentence.
+>
+> It is not a fact about the ghost. It is a fact about EVERYTHING ELSE ON THE
+> BOARD, and anything added anywhere can break it without touching this
+> declaration. On 2026-09-06 `8150cee` gave every activated unbought pad the
+> ghost's own material, correctly citing D22 — and with fourteen soft-edged
+> grainless rectangles standing on the plate, the sentence above was simply
+> untrue and the cursor's ghost had nothing left to distinguish it.
+> It is true again only because the for-sale pad was later ruled to be a
+> SCORED OUTLINE WITH NO FILL (2026-09-07): an incised line in the plate's own
+> timber, which has grain and a hard edge, so the ghost is once more the only
+> thing of its kind.
+>
+> So: before giving anything else a soft edge, a translucent fill, or a
+> grainless surface, come back here. The ghost's legibility is spent the
+> moment a second object shares its look, and the cost does not appear in the
+> frame that adds it — it appears in the frame where a player cannot find
+> their own cursor.
+
 ### Refuse: red, and red is CORRECT here
 
     fill      none — no fill at all

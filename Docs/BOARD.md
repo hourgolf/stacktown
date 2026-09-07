@@ -1324,6 +1324,59 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK 08:42: all three closed. No editor needed for any of them.
+
+=== 1. THE PRE-FAILURE CEILING: COME DOWN TO 0.3. My spec collided. ===
+frame_wear_prefailure_day is decisive and it convicts my own ruling. NW1 at
+0.57 does not read as a working building that is getting tired - it reads as
+BLEACHED, BLOTCHED, WATER-DAMAGED DRIFTWOOD beside NW2's fresh walnut. That
+lot has not failed. It is still earning. It looks worse than I ever wanted
+"NEEDS REPAIR" to look.
+THE FAULT IS MINE AND IT IS ARITHMETIC. I ruled 0.6 for a newly failed lot
+AND a pre-failure ceiling that tops out at 0.6, and never noticed I had given
+the two states the SAME NUMBER. At 142/150 the channel reads 0.57 against a
+failed floor of 0.60 - a gap of 0.03, which is nothing. So the one distinction
+the player actually needs, the difference between a lot that wants attention
+and a lot that does not, is the one distinction the wood cannot make.
+RULE: PRE-FAILURE CEILING 0.3. A lot that has never failed never exceeds it.
+That gives three bands the eye can separate:
+    0    -> 0.3   age and use: fresh to tired, and NEVER alarming
+    0.6          failed: NEEDS REPAIR
+    0.6  -> 0.8   neglect: it is getting worse
+AND THE GAP BETWEEN 0.3 AND 0.6 IS THE POINT, not a rounding artefact.
+FAILURE IS AN EVENT, NOT A GRADIENT. A building that slides continuously into
+failure gives the player no moment to notice; a building that STEPS gives
+them one. The empty band is what makes the step visible, so nothing may be
+allowed to creep into it later for smoothness.
+0.3 is also the value I already read in frame_wear_half and called "tired,
+mottled, grain intact - the right register". It was the right register for a
+WORKING building; I simply put the ceiling in the wrong place.
+
+=== 2. D22'S GHOST SENTENCE: AMENDED IN THE DECLARATION, not retracted. ===
+Docs/DIRECTION_B_DECLARATIONS.md, D22. I did not delete it, because the
+interesting thing is not that it was wrong - it is WHY it broke and that it
+is now TRUE AGAIN.
+The claim is not a fact about the ghost. It is a fact about EVERYTHING ELSE
+ON THE BOARD, so anything added anywhere can falsify it without touching
+D22. 8150cee did exactly that by giving fourteen unbought pads the ghost's
+own material - correctly citing D22 while destroying the property D22 relies
+on. It is true again only because the for-sale pad was later ruled a scored
+outline with no fill: an incised line in the plate's own timber, which has
+grain and a hard edge.
+The amendment says all of that and ends with the instruction that matters:
+before giving anything else a soft edge, a translucent fill, or a grainless
+surface, come back here - because the cost never shows up in the frame that
+adds it. It shows up in the frame where a player cannot find their cursor.
+
+=== 3. ACTIVITY GLOW: correctly blocked, and I am not asking. ===
+Performance is zero for every lot under "player trades only", so the channel
+has nothing to say and lighting a lot at random would be worse than lighting
+none. GlowState's range stays reserved. When the owner rules which lot a
+trade lights, the material end is already built and waiting - the tint ramp
+and the level both exist; only the driver is missing.
+
+NOTHING OF MINE IS OPEN.
+
 LOOK -> COORDINATOR 08:04: state of the lane, on the owner's word to report.
 Nothing of mine was outstanding - you had already taken my 07:12 at ff7062f.
 
@@ -2665,3 +2718,11 @@ COORDINATOR (2026-09-07 08:10 PDT) -> LOOK, on your three open items:
 Your method note is taken as a rule for this seat too: my own "the stain's
 rings restart per chord" this morning was an explanation after a frame, and
 the next frame showed the pattern is world-projected. Predict, then build.
+
+COORDINATOR (2026-09-07 08:55 PDT) -> LOOK: the pre-failure ceiling is 0.3 (channel 5 =
+0.3 x wear before failure; 0.6 at failure; 0.6 to 0.8 with neglect; the band
+between stays empty by construction - nothing writes into it). Suite 122/122.
+PROOF: Saved/SelfTest/look_cpp2/frame_wear_prefailure_03.png - the same pair as
+this morning, NW1 at wear 142 of 150 now at 0.28: tired, faintly greyed oak
+beside fresh walnut, and nothing about it says repair. Your D22 amendment is
+committed with it. Nothing of yours is open; the package is rebuilding.

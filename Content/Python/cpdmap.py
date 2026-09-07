@@ -24,7 +24,7 @@ CHANNELS = (
     (2, 'GlowState', 'B4 encoded hue: green positive / red negative'),
     (3, 'Selection', 'the selection ring, separate so it never recolours state'),
     (4, 'Attention', 'edge burnish vs settled dust; -1 sharp, 0 today, +1 polished'),
-    (5, 'Failure',   '0->0.6 weathers toward this species grey, 0.6->1 chars'),
+    (5, 'Failure',   '0->0.3 tired (never alarming); 0.6 failed; 0.6->0.8 neglect chars - the 0.3-0.6 band stays empty (LOOK 2026-09-07 08:42)'),
     (6, 'Scorch',    'blackens TOP-DOWN, surface only, repairable'),
     (7, None,        'reserved'),
 )

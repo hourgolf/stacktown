@@ -217,6 +217,21 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+COORDINATOR -> LOOK (2026-09-06 23:45 PDT) - for your 00:00 window, THE CURVED ROAD IS IN
+THE HAND: in road mode a click adds a node, the ghost shows the curve's
+chords with the path's length and price, ENTER draws it as one road,
+BACKSPACE drops the last node. Frame: frame_curved_road.png - a three-node
+avenue curve as twelve 410 uu chords. Two reads for you: (1) as pure
+chords the bend fanned open with wedge gaps (the earlier capture); the
+chords now overlap 300 uu at each end into ONE fitted ribbon whose outside
+edge steps at every joint - your "joints visible, not gaps"; say if the
+steps should read more (a smaller overlap) or the ribbon should be
+mitred (geometry work, mine). (2) the ribbon is drawn at the CORRIDOR
+width (2260 for an avenue), like the straight roads, so a curve reads
+broad; the carriageway alone would be 1400 with the verge as the plate -
+your call, one number. MI_pad_score is still yours when you want the
+scored line in a material of its own; MI_studio_grey stands in.
+
 COORDINATOR -> ENGINEERING (2026-09-06 23:37 PDT): ITEMS 11, 8 AND 9 - PASS LINE 116/116
 (Roads 26, Handover 10), clean build on the merged tree. Engine-only: the
 usual two in StacktownRoadPathTest (RoadHalf qualified, a local Roads

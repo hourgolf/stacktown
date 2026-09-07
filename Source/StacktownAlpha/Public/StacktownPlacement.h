@@ -391,11 +391,18 @@ STACKTOWNALPHA_API double RoadHalf(const FPlacementRules& R, const FEconRules& E
 STACKTOWNALPHA_API double RoadHalfForType(const FPlacementRules& R, const FEconRules& E,
 	const FString& WidthClass);
 
-/** The full corridor a road occupies on the board - twice its half. What the
- *  road MESH is scaled across, so a highway looks like a highway; RoadFrameOf's
- *  own constant is this number for an avenue. */
+/** The full corridor a road occupies on the board - twice its half. What
+ *  placement measures against; RoadFrameOf's own constant is this number for
+ *  an avenue. (Until 2026-09-07 the road mesh was scaled across this too; the
+ *  design lane ruled the verge is bare plate, so the mesh now draws
+ *  RoadCarriageway and the corridor stays a measurement.) */
 STACKTOWNALPHA_API double RoadCorridor(const FPlacementRules& R, const FEconRules& E,
 	const FString& WidthClass);
+
+/** The carriageway alone - road_width_<type>, what the road MESH is drawn
+ *  across. Falls back to the avenue's 1400 for a type the ruleset does not
+ *  know, for the same reason RoadHalfForType falls back: a width cannot refuse. */
+STACKTOWNALPHA_API double RoadCarriageway(const FEconRules& E, const FString& WidthClass);
 
 /** RoadHalf + BlockDepth + ReachSlack, for THIS road. */
 STACKTOWNALPHA_API double RoadMaxReach(const FPlacementRules& R, const FEconRules& E, const FRoad& Road);

@@ -15,6 +15,8 @@ public class StacktownAlpha : ModuleRules
 			"UMG", "Slate", "SlateCore"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		// ProceduralMeshComponent: a drawn road is a mitred slab built per chord
+		// (StacktownRoad.cpp) - a stock cube cannot be cut on the bias.
+		PrivateDependencyModuleNames.AddRange(new string[] { "ProceduralMeshComponent" });
 	}
 }

@@ -631,7 +631,10 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		RoadGhostChain.Add(GetWorld()->SpawnActor<AStacktownRoad>(AStacktownRoad::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params));
 	}
-	const double Corridor = Stacktown::RoadCorridor(Stacktown::FPlacementBoard::Default().Rules, Econ->GetRules(), RoadClass);
+	// The ghost is cut exactly as the drawn road will be: the carriageway wide,
+	// each chord mitred into the next (design lane 2026-09-07 05:32).
+	const double Width = Stacktown::RoadCarriageway(Econ->GetRules(), RoadClass);
+	const TArray<Stacktown::RoadFrame::FJoint> Joints = Stacktown::RoadFrame::ChainJoints(Chords);
 	double Length = 0.0, Cost = 0.0;
 	for (int32 k = 0; k < RoadGhostChain.Num(); ++k)
 	{
@@ -639,7 +642,7 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 		if (!G) { continue; }
 		if (k < Chords.Num())
 		{
-			G->ShowSegment(TEXT("ghost"), Chords[k], Corridor);
+			G->ShowSegment(TEXT("ghost"), Chords[k], Width, Joints[k].TanStart, Joints[k].TanEnd);
 			G->SetGhost(true, R.bOk);
 			G->SetActorHiddenInGame(false);
 			double C = 0.0; Length += Stacktown::RoadLength(Chords[k]); if (Stacktown::RoadCost(Econ->GetRules(), Chords[k], C)) { Cost += C; }

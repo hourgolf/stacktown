@@ -238,6 +238,13 @@ double RoadCorridor(const FPlacementRules& R, const FEconRules& E, const FString
 	return 2.0 * RoadHalfForType(R, E, WidthClass);
 }
 
+double RoadCarriageway(const FEconRules& E, const FString& WidthClass)
+{
+	const FRoadTypeRules* T = E.FindRoadType(
+		WidthClass.IsEmpty() ? FString(DefaultRoadType()) : WidthClass);
+	return T ? T->Width : FRoadTypeRules().Width;
+}
+
 double RoadMaxReach(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
 {
 	return RoadHalf(R, E, Road) + R.BlockDepth + R.ReachSlack;

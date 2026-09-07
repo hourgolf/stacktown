@@ -4,6 +4,8 @@
 #include "GameFramework/PlayerController.h"
 #include "StacktownPlayerController.generated.h"
 
+class USoundBase;
+
 class AStacktownCameraPawn;
 class UStacktownHudModel;
 class UStacktownHud;
@@ -128,7 +130,11 @@ private:
 	/** Placeholder sound cues (MONDAY_DECISIONS section 5): wood taps in /Game/Stacktown/Audio,
 	 *  loaded by path once and cached; a missing asset plays nothing and logs once. */
 	void PlayCue(const TCHAR* Name);
-	TMap<FString, TObjectPtr<class USoundBase>> Cues;
+	/** A UPROPERTY, or the collector frees the cached cue behind the map's back:
+	 *  the test game of 2026-09-07 05:51 crashed in PlaySound2D on the first cue
+	 *  after a reset, a minute after the cue was loaded - the reset's garbage
+	 *  pass had taken the sound this raw map could not vouch for. */
+	UPROPERTY() TMap<FString, TObjectPtr<USoundBase>> Cues;
 	TSet<FString> CuesMissing;
 	/** A save from before goals_reached existed is primed silently on the first owning tick, never congratulated. */
 	bool bGoalsPrimed = false;

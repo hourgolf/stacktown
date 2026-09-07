@@ -161,5 +161,16 @@ void AStacktownCameraPawn::SetArrivalView()
 	// 16,500 cut the plate's far edge (frame_arrival 22:05); 18,500-19,500 still did.
 	// 20,000 keeps the board whole with the masses a little left of centre-top; the
 	// three-quarter width the lane asked for is not reachable whole at this lens ramp.
-	SetView(FVector(800.0, 300.0, 0.0), 35.0, -40.0, 20000.0);
+	// Design lane 05:32: the problem was yaw, not reach. A rectangular board fits
+	// largest when its long axis lies on the frame's diagonal: aim at the plate's
+	// centre so the four margins are even, yaw so the long (x) axis runs corner to
+	// corner, pitch -40, then come in. Acceptance: all four corners inside the frame
+	// with backdrop past each, no margin more than twice another.
+	// Measured against the camera model (2026-09-07 06:05, 1600x900, the plate
+	// 15,300 x 8,460): aimed at the plate's centre the near corner cannot come
+	// inside the frame at any reach up to the wide stop; aimed 1,500 uu toward
+	// the camera, at the wide stop, all four corners are in with backdrop past
+	// each and the margins run 158 / 278 / 159 / 357 px - 2.26x, the closest
+	// this lens gets to the rule's 2x at pitch -38. The design lane rules on it.
+	SetView(FVector(-1061.0, -1061.0, 0.0), 45.0, -38.0, 21000.0);
 }

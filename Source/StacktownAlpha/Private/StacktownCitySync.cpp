@@ -258,19 +258,24 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 			++Removed;
 		}
 	}
-	// drawn roads: one AStacktownRoad per segment in the state
+	// drawn roads: one AStacktownRoad per segment in the state, each chord of a
+	// path cut to meet its neighbours (design lane 2026-09-07 05:32: mitre it,
+	// and draw it at the carriageway - the verge is bare plate)
 	int32 RoadsSpawned = 0, RoadsRemoved = 0;
 	TSet<FString> RoadsSeen;
+	const TMap<FString, Stacktown::RoadFrame::FJoint> Joints = Stacktown::RoadFrame::PathJoints(State.Roads);
 	for (const auto& Pair : State.Roads)
 	{
 		const FString& Id = Pair.Key;
 		const Stacktown::FRoadSegment& Seg = Pair.Value;
 		RoadsSeen.Add(Id);
+		const Stacktown::RoadFrame::FJoint Joint = Joints.FindRef(Id);
 		// The TYPE is part of the signature since road types (2026-09-06): it
-		// decides the corridor width and the stain, so a segment that changed
-		// type without moving must still be re-shown.
-		const FString Sig = FString::Printf(TEXT("%.0f|%.0f|%.0f|%.0f|%s"),
-			Seg.StartX, Seg.StartY, Seg.EndX, Seg.EndY, *Seg.WidthClass);
+		// decides the width and the stain, so a segment that changed type
+		// without moving must still be re-shown. The JOINTS are part of it too:
+		// a chord that did not move still needs a new cut when its neighbour did.
+		const FString Sig = FString::Printf(TEXT("%.0f|%.0f|%.0f|%.0f|%s|%.4f|%.4f"),
+			Seg.StartX, Seg.StartY, Seg.EndX, Seg.EndY, *Seg.WidthClass, Joint.TanStart, Joint.TanEnd);
 		TObjectPtr<AActor>* Existing = RoadActors.Find(Id);
 		AStacktownRoad* Road = (Existing && IsValid(*Existing)) ? Cast<AStacktownRoad>(Existing->Get()) : nullptr;
 		if (!Road)
@@ -286,7 +291,7 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		if (RoadSignatures.FindRef(Id) != Sig)
 		{
 			Road->ShowSegment(Id, Seg,
-				Stacktown::RoadCorridor(Board.Rules, Board.Econ, Seg.WidthClass));
+				Stacktown::RoadCarriageway(Board.Econ, Seg.WidthClass), Joint.TanStart, Joint.TanEnd);
 			RoadSignatures.Add(Id, Sig);
 		}
 	}

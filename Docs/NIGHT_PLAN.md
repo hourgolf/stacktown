@@ -217,3 +217,10 @@ WHAT I WOULD DO FIRST ON MONDAY: paste the board to both seats; have the
   stands at about 45; the stranger's first frame is now a started wooden
   city, the package opens by double-click, and nothing they do can lose a
   city.
+- 09:50: the built-in roads wear the avenue stain at the carriageway, drawn by
+  the game under C++ ownership with the map's white dressing hidden (no map
+  edit); the 0.3 wear ceiling; the one-shot brief (Docs/ONE_SHOT_PROMPT.md).
+  The Monday app is verified with all of it. Nothing on the board is white
+  now. Honest number: about 47 - the first frame is one timber object with a
+  started city on it. Open: engineering's corridor-off-plate push; the
+  owner's decisions in MONDAY_DECISIONS section 9.

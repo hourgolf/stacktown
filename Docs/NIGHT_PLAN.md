@@ -211,3 +211,9 @@ WHAT I WOULD DO FIRST ON MONDAY: paste the board to both seats; have the
   double-click path. Honest score: the first frame now shows a started
   wooden city and a stranger cannot lose a city by starting another - call
   it 42-45. The engineering seat is mid-push on gap 2.
+- 07:35: the design lane closed every item on frames - chamfer gate, road
+  ladder, grain, arrival, slots. Open: the owner's four decisions
+  (MONDAY_DECISIONS section 9) and engineering's gap 2. The morning number
+  stands at about 45; the stranger's first frame is now a started wooden
+  city, the package opens by double-click, and nothing they do can lose a
+  city.

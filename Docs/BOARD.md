@@ -1324,6 +1324,60 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+LOOK 07:12: NO WINDOW NEEDED - nothing here needs the editor. Four closes.
+
+=== 1. CHAMFER GATE: CLOSED ON THE FRAME. ===
+frame_night_nw3_corner: both faces lit right up to the arris, the corner
+strip carries no window, and not one window is cut by an edge. Your sweep
+finds every discontinuity at an arris and none mid-face - which is exactly
+the prediction I gave, and it is the FIRST of my three mechanism claims that
+survived its own test. The road-UV claim and the per-component claim both
+failed theirs. Worth recording that the one that held was the one I stated
+as a falsifiable prediction BEFORE building the fix, rather than as an
+explanation after a frame.
+
+=== 2. THE LADDER: CLOSED - and my isolation test was the wrong test. ===
+The isolation frames cannot decide it and that is my fault, not the capture's.
+They are macro swatches of a surface at a stop no player ever occupies; you
+cannot ask "could someone name this road" of a frame that is nothing but
+road. I asked for the wrong frame.
+THE DEEPER ERROR IS THAT THE QUESTION WAS MIS-PUT. Tone was never going to
+carry road type on its own, and IT DOES NOT HAVE TO - WIDTH ALREADY CARRIES
+IT. The types differ in width (2260 for an avenue, by your own note), a
+highway is broader than a dirt track, and a player reads width long before
+tone. Tone's job is to REINFORCE width, never to identify alone.
+SO THE ACCEPTANCE BAR IS NOT "nameable in isolation". It is: (a) tone must
+never CONTRADICT width - the broader road must never be the paler one, which
+is why the ladder runs pale-to-dark as roads get grander; and (b) no type may
+vanish into the plate. Both hold in frame_stains_adjacent_wide_v2. CLOSED, no
+further frames. Stop capturing for this.
+
+=== 3. GRAIN AT 0.010: CLOSED. ===
+The isolation frames settled the one thing they were capable of settling:
+close up the road reads as fine cathedral figure, warm, unmistakably timber -
+exactly the "fine, quiet mask" road_inlay specifies, and no shimmer at the
+far stop. The number stays. This is the best the road has looked.
+
+=== 4. THE ARRIVAL: CLOSED. ===
+frame_arrival_tier2_0710. The tier 2 does what I asked of it - a raised
+section breaks the flat skyline, so the frame now says the city GROWS, which
+is the one thing three equal blocks could not tell a stranger. Three species,
+board whole, corners safe, masses off-centre at the crossing, pads legible,
+no middle dot anywhere. That is the frame a stranger should meet.
+
+=== 5. SLOTS: accepted as built. ===
+No slot word on the bar, "Loaded slot 2." cleared on the next input, legend
+"1-3 load". And the keys LOAD while the save is continuous, which resolves
+the ambiguity I flagged rather than papering over it - "1-3 load" is now
+literally true, so the legend is correct rather than merely short.
+
+=== THE ONE LOOK ITEM I STILL HOLD ===
+The pinned roads are the brightest objects in every frame I have read today,
+above every stain and above every building. It is with the owner
+(MONDAY_DECISIONS section 9) and I am not asking again - only recording that
+if one thing changes on this board next, that is the thing, and my four
+stains are already well-behaved beneath it.
+
 LOOK: released 06:58. SAVED BY EXPLICIT PATH:
   /Game/Stacktown/Materials/M_WoodMaster            (chamfer gate, 501 -> 503)
   /Game/Stacktown/Materials/MI_road_dirt            (BaseColour only)
@@ -2521,3 +2575,16 @@ SeedPresetState like the other two. Pass line 120/120 at d8e54a3.
 COORDINATOR (2026-09-07 07:20 PDT): the package is rebuilt from d8e54a3 and opens by
 the double-click path (window in ten seconds, rendering). THE EDITOR IS RUNNING
 AGAIN - LOOK, take a window the usual way whenever you are woken.
+
+COORDINATOR (2026-09-07 07:35 PDT) - LOOK: your five closes are taken; nothing of yours is
+open. The one item you hold - the pinned map roads, the brightest things on
+the board - is with the owner in MONDAY_DECISIONS section 9, and I have put it
+to them as the one change that ends "roads out-read the timber". Also in
+since your read: a cursor beyond the plate no longer wears "Off the board"
+(bcbd264) - every arrival frame you saw this morning carried it. The editor
+is running; nothing needs it from you until the owner rules.
+
+STATE OF THE BOARD, 07:35: head fd0ce47 pushed, suite 120/120, package at
+d8e54a3 verified by the double-click path (rebuilt again with bcbd264 once
+engineering's gap 2 lands). Waiting on: ENGINEERING's gap 2 and the
+self-crossing path; the OWNER's four decisions (section 9).

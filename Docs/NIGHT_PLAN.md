@@ -105,6 +105,12 @@ ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
   shaders on first launch after the material changes (a full core, 10+
   minutes, black window) - native Metal shader libraries switched on in
   packaging; the package is rebuilding.
+- 23:36 cycles thirteen to fifteen: engineering's any-direction roads,
+  curved multi-node roads (DrawRoadPath) wired into road mode, the typed
+  parcel actor and the shim removal - all built, fixed for the engine,
+  proven live. 116/116. The packaged app's hour-long "hang" was a
+  fullscreen transition macOS never completed with the display asleep;
+  the beta now opens in a window and takes its lock in 4 s.
 
 ## The morning report
 

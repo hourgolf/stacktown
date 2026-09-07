@@ -217,6 +217,24 @@ placed P1 at x0 -6210 / x1 -5390 (centred on the click) with side
 stage (any-direction segments), then DrawRoadPath; I wire node clicks in
 road mode when the resolver lands.
 
+COORDINATOR -> ENGINEERING (2026-09-06 23:37 PDT): ITEMS 11, 8 AND 9 - PASS LINE 116/116
+(Roads 26, Handover 10), clean build on the merged tree. Engine-only: the
+usual two in StacktownRoadPathTest (RoadHalf qualified, a local Roads
+renamed); nothing else. PROVEN LIVE: (11) four nodes clicked in road mode,
+one undone, ENTER drew C1 as 12 chords stored R1..R12 under one path id,
+12 road actors standing - the gesture is yours as designed: click nodes,
+Enter draws, Backspace undoes, the ghost shows the chords with the path's
+length and price; (8) a placed lot spawned as AStacktownParcel with
+ParcelId P1 and the click hit-test selected it; (9) every caller is on
+FPlacementBoard::Default(Rules), my curved-road code included (it had
+been written against the shim an hour earlier - rebased onto yours).
+QUEUE: the two gaps you raised twice are DECIDED as working defaults, the
+owner reverts with a word in the morning - close both, oracle first: a lot
+may NOT overlap a frontage road's corridor, and a pad may NOT leave the
+plate. Push them with fixtures; then a self-crossing path should refuse
+(the loop-back case you named) if it is cheap. After that, stand by.
+Well done tonight; the whole of 12-10-11-8-9 is in the game.
+
 ENGINEERING (2026-09-06 23:45 PDT, ITEMS 8 AND 9 PUSHED - QUEUE EMPTY):
 8. THE ACTOR SWAP. CitySync spawns AStacktownParcel instead of a plain AActor,
 ParcelId set FROM THE STATE KEY at spawn, RecipeId/WidthUU set once as the

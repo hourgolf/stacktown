@@ -210,6 +210,15 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 23:37 PDT - ENGINEERING items 11 (complete), 8, 9 built and proven (116/116);
+  curved roads wired into the hand (nodes, Enter, Backspace, chord ghost
+  with a price). THE PACKAGED APP WAS NEVER BROKEN: sampled, the game
+  thread spun in FMacWindow::UpdateFullScreenState waiting for a fullscreen
+  Space transition that an unattended display never completes; windowed it
+  takes its lock in 4 s. Beta default is now a 1600x900 window
+  (Config/DefaultGameUserSettings.ini); native Metal libraries kept; the
+  console-variable experiment reverted. Repackaging.
+
 - 2026-09-06 23:02 PDT - PACKAGED APP FIRST LAUNCH, diagnosed: with -nullrhi the cooked app
   reaches the world in 4 s (lock, OWNS, HUD built, Engine initialized), so
   the multi-minute black window is Metal pipeline compilation at rendering

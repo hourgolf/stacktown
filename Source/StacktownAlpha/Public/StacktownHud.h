@@ -59,7 +59,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD")
 	FString LegendCamera = TEXT("RIGHT-DRAG orbit      WHEEL zoom      EDGES or ARROWS pan");
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stacktown|HUD")
-	FString LegendVerbs = TEXT("CLICK select / place      TAB width      B buy      U upgrade      H repair      N hold reset      G road mode");
+	FString LegendVerbs = TEXT("CLICK select / place      TAB width      R type      B buy      U upgrade      H repair      G road      T road type      P starter city      L night      N hold reset");   // R / T / P / L added 2026-09-06 night, wording is the design lane's (CONTENT 6)
 };
 
 /**

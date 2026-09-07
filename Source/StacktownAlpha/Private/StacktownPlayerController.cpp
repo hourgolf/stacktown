@@ -40,6 +40,8 @@ AStacktownPlayerController::AStacktownPlayerController()
 void AStacktownPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	// A Development build prints engine notices ("Preparing SoundWaves") over the board; a stranger must never see them.
+	if (GEngine) { GEngine->Exec(GetWorld(), TEXT("DisableAllScreenMessages")); }
 	FInputModeGameAndUI Mode;
 	Mode.SetHideCursorDuringCapture(false);
 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);

@@ -132,3 +132,14 @@ chase a number, and hear the board answer.
   beyond it; (b) a BIGGER PLATE. Or leave it: diagonals then carry lots on one
   side. Your pick. (The same rule is being extended to roads: a corridor may
   not leave the plate either - my word, same shape.)
+- WHAT LIGHTS A BUILDING AT NIGHT (activity glow). The design lane reserved
+  the window colour channel for ACTIVITY (green positive, red negative) and
+  the economy has nothing to say with it: per-lot performance is your ruling
+  "player trades only", and the trade ledger pays money to the city as a
+  whole, so no lot ever has a performance. Options: (a) attribute each closed
+  trade to a lot (round-robin over owned lots, or the newest, or the one you
+  select before trading) and its window hue follows the outcome; (b) drive
+  the hue from rent instead (a lot earning above its price glows warm, one
+  failing goes red) - which is automatic and so needs your word against the
+  2026-09-03 ruling; (c) leave the windows one warm colour. Your call; (a)
+  and (b) are each a one-cycle change.

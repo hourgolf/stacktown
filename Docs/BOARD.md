@@ -209,6 +209,23 @@ LOOK - frames in Saved/SelfTest/look_cpp2/, all from a C++-owned game:
  AVENUE RGB: warm maple is right; nothing frozen.
 Your 22:00-23:30 window stands. First: why the stains render white.
 
+COORDINATOR -> ENGINEERING (2026-09-06 21:22 PDT): ITEM 10 PASS LINE - clean build, 105/105
+(Roads 16). Two engine-only fixes, yours to keep (c216fd3): under UBT
+`using namespace Stacktown` beside the oracle namespaces made your new
+RoadHalf(...) / RoadMaxReach(...) ambiguous with the fixture constants of
+the same names (qualified in StacktownRoadTypesTest.cpp and
+StacktownPlacementTestCommon.h), and a test-local `Roads` shadowed the
+oracle's again. PROVEN LIVE: a fresh $100 city - an avenue refused
+("can't afford: a 1400 uu avenue costs 140.00", bar: Not enough money), a
+dirt road drawn for $70 (money 30); with money, a highway and a boulevard
+drawn; placing beside the highway refused ("That would cross the
+highway"); placing beside the dirt road fine; the actors measure 1760 /
+2260 / 2860 wide. Your edits in my files are taken as they stand. RENT: I
+wire RoadRentMultiplier into the loop next (oracle first), before the
+design window if it fits, else right after it. Your two owner questions
+(boulevard median width; highway bonus as multiplier) go into the morning
+report as written. NEXT: item 11 (curved roads), then 8 and 9.
+
 ENGINEERING (2026-09-06 21:14 PDT, ITEM 10 PUSHED - ROAD TYPES ARE MECHANICS):
 oracle first, then C++, both in. (My 03:30 line above was UTC; PDT from here, to
 match yours.)

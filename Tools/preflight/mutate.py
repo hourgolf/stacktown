@@ -665,7 +665,7 @@ MUTATIONS = [
      'for (int32 i = 0; i < 1; ++i)\n\t{\n\t\tfor (int32 j = i + 2;', True, 'placement'),
 
     ('self-crossing-endpoint-touch-counts', 'every joined pair of chords is a crossing',
-     '\t\t\t&& !SamePoint(P, X) && !SamePoint(P, Y))', '\t\t\t)', True, 'placement'),
+     '\t\t\t&& !SegSamePoint(P, X) && !SegSamePoint(P, Y))', '\t\t\t)', True, 'placement'),
 
     ('self-crossing-proper-test-only', 'a T and a doubled-back run are not crossings',
      '\tconst FVector2D Ends[4][3] = {', '\treturn false;\n\tconst FVector2D Ends[4][3] = {',

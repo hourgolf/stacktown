@@ -371,13 +371,17 @@ FLotRect QuadRect(const FQuad& Q)
 	return Rect;
 }
 
+// TU-LOCAL AND PREFIXED. Names as ordinary as SamePoint are exactly what a
+// unity build leaks between translation units in the same blob - the mitre
+// test's own `Roads` namespace did it on 2026-09-07 - so these carry the Seg
+// prefix even inside an anonymous namespace inside Stacktown.
 namespace
 {
 /** Sign of (B - A) x (C - A): +1 if C is left of AB, -1 right, 0 on the line.
  *  The tolerance is RELATIVE to the two vectors' own sizes, because these are
  *  board coordinates in the thousands and an absolute epsilon would mean one
  *  thing at the origin and another at the plate's corner. */
-int32 CrossSign(const FVector2D& A, const FVector2D& B, const FVector2D& C)
+int32 SegCrossSign(const FVector2D& A, const FVector2D& B, const FVector2D& C)
 {
 	const double ABx = B.X - A.X, ABy = B.Y - A.Y;
 	const double ACx = C.X - A.X, ACy = C.Y - A.Y;
@@ -389,13 +393,13 @@ int32 CrossSign(const FVector2D& A, const FVector2D& B, const FVector2D& C)
 	return 0;
 }
 
-bool SamePoint(const FVector2D& P, const FVector2D& Q)
+bool SegSamePoint(const FVector2D& P, const FVector2D& Q)
 {
 	return FMath::Abs(P.X - Q.X) < 1e-9 && FMath::Abs(P.Y - Q.Y) < 1e-9;
 }
 
 /** P is known to be ON the infinite line AB - is it inside the segment? */
-bool InExtent(const FVector2D& A, const FVector2D& B, const FVector2D& P)
+bool SegInExtent(const FVector2D& A, const FVector2D& B, const FVector2D& P)
 {
 	return FMath::Min(A.X, B.X) - 1e-9 <= P.X && P.X <= FMath::Max(A.X, B.X) + 1e-9 &&
 	       FMath::Min(A.Y, B.Y) - 1e-9 <= P.Y && P.Y <= FMath::Max(A.Y, B.Y) + 1e-9;
@@ -405,10 +409,10 @@ bool InExtent(const FVector2D& A, const FVector2D& B, const FVector2D& P)
 bool SegmentsCross(const FVector2D& A0, const FVector2D& A1,
 	const FVector2D& B0, const FVector2D& B1)
 {
-	const int32 D1 = CrossSign(B0, B1, A0);
-	const int32 D2 = CrossSign(B0, B1, A1);
-	const int32 D3 = CrossSign(A0, A1, B0);
-	const int32 D4 = CrossSign(A0, A1, B1);
+	const int32 D1 = SegCrossSign(B0, B1, A0);
+	const int32 D2 = SegCrossSign(B0, B1, A1);
+	const int32 D3 = SegCrossSign(A0, A1, B0);
+	const int32 D4 = SegCrossSign(A0, A1, B1);
 	if (D1 * D2 < 0 && D3 * D4 < 0)
 	{
 		return true;
@@ -423,8 +427,8 @@ bool SegmentsCross(const FVector2D& A0, const FVector2D& A1,
 		const FVector2D& P = Ends[k][0];
 		const FVector2D& X = Ends[k][1];
 		const FVector2D& Y = Ends[k][2];
-		if (CrossSign(X, Y, P) == 0 && InExtent(X, Y, P)
-			&& !SamePoint(P, X) && !SamePoint(P, Y))
+		if (SegCrossSign(X, Y, P) == 0 && SegInExtent(X, Y, P)
+			&& !SegSamePoint(P, X) && !SegSamePoint(P, Y))
 		{
 			return true;
 		}

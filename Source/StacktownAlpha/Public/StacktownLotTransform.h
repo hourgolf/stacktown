@@ -14,7 +14,10 @@ namespace Stacktown
 {
 namespace LotFrame
 {
-	/** citylayout.HALF (centreline to facade) and BLOCK_DEPTH (facade to back). */
+	/** citylayout.HALF (centreline to facade) and BLOCK_DEPTH (facade to back).
+	 *  THE AVENUE'S half. Since road types (2026-09-06) each type sets its own
+	 *  frontage line - a dirt track's is 880 - so Pose() takes it as an argument
+	 *  and this is the default a caller with no ruleset draws with. */
 	static constexpr double RoadHalf = 1130.0;
 	static constexpr double BlockDepth = 1500.0;
 	/** The pad's centre line: HALF + BLOCK_DEPTH / 2. */
@@ -29,8 +32,14 @@ namespace LotFrame
 
 	/** _lot_transform: the pose for a lot given every road (built-ins + drawn).
 	 *  Falls back to the arterial when the lot's road is unknown, as the Python
-	 *  does; false only when there is no arterial either. */
-	STACKTOWNALPHA_API bool Pose(const FLotPlacement& LotPlacement, const TArray<FRoad>& Roads, FPose& Out);
+	 *  does; false only when there is no arterial either.
+	 *
+	 *  `InRoadHalf` is the lot's OWN road's centreline-to-facade distance -
+	 *  Stacktown::RoadHalf for that road. Passing the wrong one puts the
+	 *  building 250 uu behind its own pad on a dirt track, which is exactly
+	 *  what the rules layer would refuse to allow a click to do. */
+	STACKTOWNALPHA_API bool Pose(const FLotPlacement& LotPlacement, const TArray<FRoad>& Roads,
+		FPose& Out, double InRoadHalf = RoadHalf);
 
 	/** The placeholder cube is centre-pivot: half a width along +x covers the span. */
 	STACKTOWNALPHA_API FVector PadOffset(double Width);

@@ -193,6 +193,114 @@ ROADS = (ARTERIAL, CROSS_STREET)
 # proven live rather than inventing a second one that could drift from it.
 ROAD_MAX_REACH = ROAD_HALF + BLOCK_DEPTH + REACH_SLACK
 
+# ROAD TYPES AS MECHANICS (2026-09-06). Docs/MONDAY_DECISIONS.md section 2
+# decided the four types on 2026-09-01 - dirt, paved avenue, tree-lined
+# boulevard, highway, the highway REFUSING frontage - and left every
+# NUMBER open. Docs/NIGHT_PLAN.md's own stated assumption ("assumptions,
+# stated so they can be revoked") adopts that section's PROPOSED table as
+# tonight's WORKING defaults. The numbers live in econrules.json, never
+# here, so the owner changes any cell of that table without touching code
+# - the same discipline every other tuned number already follows, and the
+# reason this module reads them through econrules.rules() rather than
+# carrying a second copy.
+ROAD_TYPES = ('dirt', 'avenue', 'boulevard', 'highway')
+
+# 'avenue' IS today's road (MONDAY_DECISIONS section 2 names it "1400
+# (today's road)"), so it is what a segment written before this key
+# existed must mean: the two built-ins carry no 'width_class' at all, and
+# every drawn segment in the owner's real citystate.json carries exactly
+# 'avenue'. Same backward-compat shape lot_road_id already established for
+# a different missing key - ONE place the fallback rule lives, not one per
+# call site.
+DEFAULT_ROAD_TYPE = 'avenue'
+
+# VERGE: what lies between the carriageway edge and the facade line -
+# pavement, kerb, and the boulevard's own trees. RECOVERED from today's
+# road rather than chosen: the avenue is 1400 wide inside a corridor whose
+# half is citylayout.HALF = 1130, so the verge is 1130 - 700 = 430 each
+# side. Every other type is that SAME verge around its own carriageway,
+# which is why road_half() below reduces EXACTLY to ROAD_HALF for an
+# avenue - checked in self-test 40, not asserted here.
+VERGE = ROAD_HALF - 1400.0 / 2.0
+
+
+def _rules(rules):
+    """econrules.rules() unless the caller already read it. Every road
+    helper below takes `rules=None` so that no existing call site had to
+    change, but any function that walks EVERY road (resolve_click,
+    resolve_road_draw, road_rent_multiplier) reads once and threads the
+    dict down: econrules.rules() re-reads the JSON from disk on every
+    call BY DESIGN (the bytecode-cache trap its own module records), and
+    a per-road re-read would turn one click into a dozen file reads."""
+    return econrules.rules() if rules is None else rules
+
+
+def road_type(road):
+    """A road's type, one of ROAD_TYPES. See DEFAULT_ROAD_TYPE for why a
+    missing 'width_class' is 'avenue' rather than an error. An UNKNOWN
+    name IS an error, loudly: a typo'd type would otherwise silently
+    price, rent and render as whatever the fallback happens to be, which
+    is exactly the shape of quiet wrong answer this project has paid for
+    three times (HANDOFF section 5)."""
+    t = road.get('width_class', DEFAULT_ROAD_TYPE)
+    if t not in ROAD_TYPES:
+        raise ValueError('unknown road type %r (expected one of %s)'
+                         % (t, ', '.join(ROAD_TYPES)))
+    return t
+
+
+def road_half(road, rules=None):
+    """Centreline to facade line for THIS road - the per-type
+    generalization of the ROAD_HALF constant, which stays defined above
+    as what it always was: the avenue's own number, and the one the board
+    geometry was authored against. A wider road pushes its OWN frontage
+    line further out; it does not touch BLOCK_DEPTH, which measures the
+    block behind the frontage and has nothing to do with the road."""
+    return _rules(rules)['road_width_%s' % road_type(road)] / 2.0 + VERGE
+
+
+def road_max_reach(road, rules=None):
+    """resolve_road's outer claim distance for THIS road - the same sum
+    ROAD_MAX_REACH is, with the road's own half in place of the constant,
+    so a highway's reach starts where its own pavement ends rather than
+    where an avenue's would."""
+    return road_half(road, rules) + BLOCK_DEPTH + REACH_SLACK
+
+
+def road_has_frontage(road, rules=None):
+    """False for a road no lot may front - today the highway alone
+    (MONDAY_DECISIONS section 2: the highway "REFUSES frontage"). A RULES
+    KEY per type, not an `if road_type(road) == 'highway'`, so the owner
+    revokes it by editing a number; and read as a flag by every caller,
+    so nothing below has to know which type is the special one."""
+    return bool(_rules(rules)['road_frontage_%s' % road_type(road)])
+
+
+def road_length(road):
+    """Centreline length. Axis-aligned in this pass, but written as a
+    true 2D distance so it is already right when segments stop being."""
+    (sx, sy), (ex, ey) = road['start'], road['end']
+    return ((ex - sx) ** 2 + (ey - sy) ** 2) ** 0.5
+
+
+def road_cost(road, rules=None):
+    """What drawing THIS road costs, in the same money citytick spends:
+    its type's per-100-uu price times its own length. DERIVED from the
+    segment every time, never stored on it - a stored cost is one more
+    copy that can disagree with the geometry it prices, the same reason
+    _road_dict reads orientation off start/end instead of storing it."""
+    r = _rules(rules)
+    return (r['road_cost_per_100uu_%s' % road_type(road)]
+            * road_length(road) / 100.0)
+
+
+def road_material_name(road):
+    """The material instance the engine side loads for this road's
+    surface - MI_road_dirt / _avenue / _boulevard / _highway. Formatted
+    HERE so the C++ port, the design lane and this module all read the
+    same string off the same type rather than each formatting its own."""
+    return 'MI_road_%s' % road_type(road)
+
 
 def _road_dict(seg):
     """A citystate road-segment dict ({'id','start','end','width_class'},
@@ -251,7 +359,7 @@ def _project_to_road(road, x, y):
     return along, across, length
 
 
-def _in_crossing(roads, x, y):
+def _in_crossing(roads, x, y, rules=None):
     """True if `(x, y)` falls inside MORE THAN ONE road's own in-corridor
     band (`abs(across) < ROAD_HALF`, standing on that road's pavement,
     not its frontage) with its `along` in-segment - the click is on
@@ -261,11 +369,17 @@ def _in_crossing(roads, x, y):
     refusal, not folded into "off-board") can never disagree about the
     rule. NOT the corner-lot question (RESOLVE_ROAD_NOTES.md section 7,
     still open, still unanswered here) - the narrower, unambiguous case
-    of standing on the pavement itself where two roads overlap."""
+    of standing on the pavement itself where two roads overlap.
+
+    PER-TYPE CORRIDOR since 2026-09-06: the band is the ROAD'S OWN half
+    (road_half), not the one avenue constant - a highway is 2000 wide and
+    its pavement has to be 2000 wide here too, or a click standing on it
+    would be offered frontage on the road it is standing in."""
+    r = _rules(rules)
     count = 0
     for road in roads:
         along, across, length = _project_to_road(road, x, y)
-        if 0.0 <= along <= length and abs(across) < ROAD_HALF:
+        if 0.0 <= along <= length and abs(across) < road_half(road, r):
             count += 1
     return count > 1
 
@@ -285,7 +399,43 @@ def lot_road_id(lot):
     return lot.get('road_id', 'arterial')
 
 
-def resolve_road(roads, x, y):
+def _road_distance(road, x, y):
+    """(along, across, dist) for one road - the projection above plus the
+    point-to-SEGMENT distance resolve_road selects on. Factored out
+    2026-09-06 so the frontage check and the no-frontage explanation
+    (resolve_click) measure with the ONE function rather than each
+    carrying its own copy of the clamp. `dist` is the perpendicular
+    offset when the click's `along` falls inside the segment's own
+    [0, length], else the distance to whichever endpoint is nearer - a
+    click past a short segment's end must not claim frontage on a road
+    that does not reach that far."""
+    along, across, length = _project_to_road(road, x, y)
+    if 0.0 <= along <= length:
+        return along, across, abs(across)
+    clamped = max(0.0, min(length, along))
+    return along, across, ((along - clamped) ** 2 + across ** 2) ** 0.5
+
+
+def _nearest_no_frontage(roads, x, y, rules=None):
+    """The nearest road that REFUSES frontage and whose reach the point
+    is inside, or None. Exists only so resolve_click can say WHY a click
+    beside a highway is refused - without it the answer is resolve_road's
+    generic "not within reach of any road", which is true and useless
+    standing on a highway's verge with the highway right there."""
+    r = _rules(rules)
+    best, best_dist = None, None
+    for road in roads:
+        if road_has_frontage(road, r):
+            continue
+        _, _, dist = _road_distance(road, x, y)
+        if dist > road_max_reach(road, r):
+            continue
+        if best_dist is None or dist < best_dist:
+            best, best_dist = road, dist
+    return best
+
+
+def resolve_road(roads, x, y, rules=None):
     """(road, local) | (None, None) - RESOLVE_ROAD_NOTES.md section 2.
     `local` is {'along', 'across', 'side'} in the WINNING road's own
     frame; `side` is already relabelled to that road's own
@@ -302,22 +452,35 @@ def resolve_road(roads, x, y):
     subject to ROAD_MAX_REACH - beyond every road's reach is (None,
     None), the generalized form of today's single-road off-board
     refusal. Near the crossing (`_in_crossing` above) refuses the same
-    way, before nearest-road selection ever runs."""
-    if _in_crossing(roads, x, y):
+    way, before nearest-road selection ever runs.
+
+    TWO CHANGES 2026-09-06, road types (MONDAY_DECISIONS section 2). A
+    road that refuses frontage is not a candidate at all - the highway
+    carries traffic past the city, and a lot never faces one. And the
+    reach bound became the ROAD'S OWN (road_max_reach), applied as a
+    FILTER before nearest-road selection rather than as a test on the
+    winner afterwards: with one reach for every road the two orders are
+    identical (if the nearest is out of reach, all of them are), but with
+    per-type reaches a near, narrow road would otherwise win the
+    comparison and then fail the bound, hiding a wider road that legally
+    reaches the point. Both reduce to the old behaviour exactly while
+    every road is an avenue - self-tests 13-19 above are unchanged and
+    still pass, which is the check."""
+    r = _rules(rules)
+    if _in_crossing(roads, x, y, r):
         return None, None
     best = None
     best_dist = None
     for road in roads:
-        along, across, length = _project_to_road(road, x, y)
-        if 0.0 <= along <= length:
-            dist = abs(across)
-        else:
-            clamped = max(0.0, min(length, along))
-            dist = ((along - clamped) ** 2 + across ** 2) ** 0.5
+        if not road_has_frontage(road, r):
+            continue
+        along, across, dist = _road_distance(road, x, y)
+        if dist > road_max_reach(road, r):
+            continue
         if best_dist is None or dist < best_dist:
             best = (road, along, across)
             best_dist = dist
-    if best is None or best_dist > ROAD_MAX_REACH:
+    if best is None:
         return None, None
     road, along, across = best
     side = road['side_plus'] if across >= 0.0 else road['side_minus']
@@ -337,7 +500,7 @@ def _find_road(roads, road_id):
     raise KeyError(road_id)
 
 
-def lot_rect(lot, roads=ROADS):
+def lot_rect(lot, roads=ROADS, rules=None):
     """World-space footprint (xmin, xmax, ymin, ymax) of a lot's PAD from
     its placement dict, ANY axis-aligned road (generalized 2026-09-04,
     Docs/ROAD_BUILD_CONTRACT.md - drawn roads are no longer just 'cross
@@ -356,9 +519,16 @@ def lot_rect(lot, roads=ROADS):
     checked not assumed (self-test): ARTERIAL's centreline is Y=0 and
     CROSS_STREET's is X=0, so the offset below is exactly the constant
     this function used to hard-code, recovered from the road's own
-    'start' instead of restated as a literal."""
+    'start' instead of restated as a literal.
+
+    PER-TYPE FRONTAGE LINE 2026-09-06: `near` is the road's OWN half
+    (road_half), so a lot on a dirt track sits 880 uu off its centreline
+    and one on a highway would sit 1430 - if a highway could be fronted,
+    which it cannot. BLOCK_DEPTH is unchanged and deliberately so: the
+    block behind a lot is the same block whatever road it faces."""
     road = _find_road(roads, lot_road_id(lot))
-    near, far = ROAD_HALF, ROAD_HALF + BLOCK_DEPTH
+    near = road_half(road, rules)
+    far = near + BLOCK_DEPTH
     x0, x1 = float(lot['x0']), float(lot['x1'])
     if road['axis'] == 'y':
         cx = road['start'][0]
@@ -375,7 +545,7 @@ def rects_overlap(a, b):
     return a[0] < b[1] and b[0] < a[1] and a[2] < b[3] and b[2] < a[3]
 
 
-def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
+def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
     """(ok, reason, lot) - the click -> lot decision, MULTI-ROAD as of
     2026-09-03 (RESOLVE_ROAD_NOTES.md; resolve_road above, wired in
     rather than standalone now). Road/side selection and the outer
@@ -425,22 +595,32 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
     plus whatever the player has drawn. resolve_road/_in_crossing/
     lot_rect all already took a roads argument generically; nothing in
     THEIR code changed, only what this function passes them did."""
+    r = _rules(rules)
     roads = _all_roads(state)
-    road, local = resolve_road(roads, x, y)
+    road, local = resolve_road(roads, x, y, r)
     if road is None:
-        if _in_crossing(roads, x, y):
+        if _in_crossing(roads, x, y, r):
             return False, (
                 'in the crossing: (%.1f, %.1f) is pavement shared by '
                 'more than one road' % (x, y)), None
+        # A refusal a player can act on, rather than the true-but-useless
+        # 'off-board' they would otherwise get while standing on a
+        # highway's verge with the highway right in front of them.
+        near = _nearest_no_frontage(roads, x, y, r)
+        if near is not None:
+            return False, (
+                'no frontage: the %s is a %s and nothing may face it'
+                % (near['id'], road_type(near))), None
         return False, (
             'off-board: (%.1f, %.1f) is not within reach of any road'
             % (x, y)), None
     along, across, side = local['along'], local['across'], local['side']
     _, _, length = _project_to_road(road, x, y)
-    if 0.0 <= along <= length and abs(across) < ROAD_HALF:
+    half = road_half(road, r)
+    if 0.0 <= along <= length and abs(across) < half:
         return False, (
             'in the road: |across|=%.0f is inside the %s corridor '
-            '(half %.0f)' % (abs(across), road['id'], ROAD_HALF)), None
+            '(half %.0f)' % (abs(across), road['id'], half)), None
     axis_idx = 0 if road['axis'] == 'x' else 1
     world_coord = road['start'][axis_idx] + along
     x0 = _snap(world_coord - width / 2.0)
@@ -460,7 +640,29 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
                     'overlap: [%.1f, %.1f] crosses a pinned lot at '
                     '[%.1f, %.1f]' % (x0, x1, pin_x0, pin_x1)), None
     candidate = {'x0': x0, 'x1': x1, 'side': side, 'road_id': road['id']}
-    mine = lot_rect(candidate, roads)
+    mine = lot_rect(candidate, roads, r)
+    # NO-FRONTAGE CORRIDORS, added 2026-09-06 with road types. Every
+    # other refusal here is reached THROUGH the road a lot faces, so a
+    # road nothing may face is unguarded by construction: the highway is
+    # not a candidate in resolve_road, is not a lot, and is not a pin, so
+    # without this a lot fronting some other road could be laid straight
+    # across two thousand uu of motorway.
+    #
+    # DELIBERATELY NOT ALL ROADS. A lot can also overlap a FRONTAGE road's
+    # corridor - self-test 39's own lot does, sitting in the 740 uu the
+    # arterial and a road drawn 3000 uu from it leave between their
+    # pavements, which is less than BLOCK_DEPTH. That is a real,
+    # pre-existing gap, found by widening this check to every road and
+    # watching test 39 refuse; fixing it changes where lots may go on
+    # boards that already exist, which is the owner's call and not part of
+    # road types. RAISED on Docs/BOARD.md, not silently fixed here.
+    for other in roads:
+        if road_has_frontage(other, r):
+            continue
+        if rects_overlap(mine, road_rect(other, r)):
+            return False, (
+                'in the road: [%.1f, %.1f] would run across the %s, a %s'
+                % (x0, x1, other['id'], road_type(other))), None
     for p in state['parcels'].values():
         lot = p.get('placement')
         if not lot:
@@ -471,7 +673,7 @@ def resolve_click(state, x, y, pins_active=True, width=V0_WIDTH):
         # onto a standing building there. The rectangle test contains the
         # old same-road same-side span test, so nothing it refused is
         # allowed now.
-        if rects_overlap(mine, lot_rect(lot, roads)):
+        if rects_overlap(mine, lot_rect(lot, roads, r)):
             return False, (
                 'overlap: [%.1f, %.1f] on the %s crosses an existing lot at '
                 '[%.1f, %.1f] on the %s' % (x0, x1, road['id'], lot['x0'],
@@ -491,7 +693,7 @@ def _next_pid(state):
     return 'P%d' % n
 
 
-def place(state, x, y, pins_active=True, width=V0_WIDTH):
+def place(state, x, y, pins_active=True, width=V0_WIDTH, rules=None):
     """One placement attempt. (state, pid, ok, reason) - pid is None on
     refusal. On success, state['parcels'][pid] has EXACTLY the shape
     citytick.ensure_parcel() already produces for a pinned parcel
@@ -512,7 +714,8 @@ def place(state, x, y, pins_active=True, width=V0_WIDTH):
         return state, None, False, (
             'pool exhausted: %d/%d placed lots already active'
             % (placed, POOL_SIZE))
-    ok, reason, lot = resolve_click(state, x, y, pins_active=pins_active, width=width)
+    ok, reason, lot = resolve_click(state, x, y, pins_active=pins_active,
+                                    width=width, rules=rules)
     if not ok:
         return state, None, False, reason
     pid = _next_pid(state)
@@ -533,18 +736,20 @@ def place(state, x, y, pins_active=True, width=V0_WIDTH):
 MIN_ROAD_LENGTH = V0_WIDTH
 
 
-def road_rect(road):
+def road_rect(road, rules=None):
     """World-space footprint (xmin, xmax, ymin, ymax) of a road's OWN
-    corridor - ROAD_HALF either side of its centreline, for its full
-    length. Same rectangle shape lot_rect returns, so rects_overlap
+    corridor - road_half either side of its centreline (its own type's,
+    since 2026-09-06: a dirt track's footprint is narrower than an
+    avenue's and a highway's is wider), for its full length. Same rectangle shape lot_rect returns, so rects_overlap
     compares a candidate road against an existing road OR an existing
     lot with the one comparison function, nothing road-specific in
     rects_overlap itself."""
+    half = road_half(road, rules)
     sx, sy = road['start']
     ex, ey = road['end']
     if sy == ey:
-        return (min(sx, ex), max(sx, ex), sy - ROAD_HALF, sy + ROAD_HALF)
-    return (sx - ROAD_HALF, sx + ROAD_HALF, min(sy, ey), max(sy, ey))
+        return (min(sx, ex), max(sx, ex), sy - half, sy + half)
+    return (sx - half, sx + half, min(sy, ey), max(sy, ey))
 
 
 def _next_road_id(state):
@@ -558,8 +763,66 @@ def _next_road_id(state):
     return 'R%d' % n
 
 
+def _rect_distance(a, b):
+    """Shortest distance between two axis-aligned rectangles, 0.0 when
+    they touch or overlap. The gap on each axis (negative where the spans
+    already intersect, clamped to zero), then the hypotenuse of the two -
+    so a diagonal neighbour is measured corner to corner rather than
+    along whichever axis happens to be larger."""
+    dx = max(0.0, a[0] - b[1], b[0] - a[1])
+    dy = max(0.0, a[2] - b[3], b[2] - a[3])
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def road_rent_multiplier(state, lot, rules=None):
+    """What the roads around a lot do to its rent - MONDAY_DECISIONS
+    section 2's own "the part that makes a type a planning decision
+    rather than a price".
+
+    TWO MECHANISMS, because that table describes two. A lot's OWN road
+    multiplies by its type (dirt 0.75, avenue 1.0, boulevard 1.25). A
+    road that refuses frontage - today the highway alone - multiplies
+    every lot within road_highway_reach of its PAVEMENT by its own
+    figure. That second one has to be proximity rather than frontage:
+    the highway refuses frontage, so no lot ever fronts one, and a
+    frontage-only reading would leave road_rent_mult_highway dead in the
+    rules file. Written against the frontage FLAG, never the name
+    'highway', so nothing here has to know which type is the special one.
+
+    THEY MULTIPLY. A dirt track beside a motorway is 0.75 * 1.1 = 0.825;
+    a boulevard beside one is 1.375. FLAGGED FOR THE OWNER (Docs/
+    BOARD.md): "every lot within 2,000 uu of it rents at 1.1x" can also
+    be read as an absolute that REPLACES the road's own figure, which
+    would let a dirt lot beside a highway out-earn a boulevard lot away
+    from one. Multiplying composes and keeps the type ordering intact, so
+    it is what is built - one word from the owner changes it.
+
+    DISTANCE IS PAVEMENT TO PAD, rectangle to rectangle, zero when they
+    touch. "Within 2,000 uu of it" reads as how far the lot is from the
+    road you can see; measuring from the centreline instead would spend
+    1,430 of the 2,000 crossing the highway's own corridor before it
+    reached the first lot at all.
+
+    NOT APPLIED HERE, and that is deliberate: citytick.tick() is the
+    coordinator's tonight (2026-09-06 relay, "do not touch it"), so this
+    is the pure, tested function rent gets multiplied by, left un-wired
+    rather than wired by two hands at once."""
+    r = _rules(rules)
+    roads = _all_roads(state)
+    own = _find_road(roads, lot_road_id(lot))
+    mult = r['road_rent_mult_%s' % road_type(own)]
+    reach = r['road_highway_reach']
+    mine = lot_rect(lot, roads, r)
+    for road in roads:
+        if road_has_frontage(road, r):
+            continue
+        if _rect_distance(mine, road_rect(road, r)) <= reach:
+            mult *= r['road_rent_mult_%s' % road_type(road)]
+    return mult
+
+
 def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
-                       pins_active=True):
+                       pins_active=True, rules=None):
     """(ok, reason, road) - the click-click -> road decision, the same
     role resolve_click plays for a lot: the ONE place a drawn road is
     accepted or refused, called by both the ghost preview and draw_road
@@ -595,7 +858,23 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
     POSITION_QUANTUM same as a lot's own snap); a click-pair with
     neither axis dominant REFUSES rather than silently reinterpreting a
     genuinely diagonal gesture as a straight one the player did not
-    draw."""
+    draw.
+
+    TYPE AND PRICE 2026-09-06 (MONDAY_DECISIONS section 2). `width_class`
+    was already carried on every segment and its one existing value,
+    'avenue', is already one of the four type names - so it IS the type
+    now and no schema changed. Two refusals joined the list: an
+    unrecognised type (a boundary check here, not road_type's internal
+    raise - a bad string arriving from a UI deserves a reason, not a
+    traceback), and one the city can feel, "can't afford". Cost is
+    checked LAST, after every geometric refusal: a road that crosses a
+    building is illegal whatever the balance, and quoting the price of a
+    road that could never have been drawn is noise."""
+    r = _rules(rules)
+    if width_class not in ROAD_TYPES:
+        return False, (
+            'unknown road type %r: expected one of %s'
+            % (width_class, ', '.join(ROAD_TYPES))), None
     dx, dy = x1 - x0, y1 - y0
     if abs(dx) >= 3.0 * abs(dy):
         sx0, sy0, sx1, sy1 = _snap(x0), _snap(y0), _snap(x1), _snap(y0)
@@ -618,9 +897,9 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
     candidate = {'id': _next_road_id(state), 'start': (sx0, sy0),
                  'end': (sx1, sy1), 'width_class': width_class}
     roads = _all_roads(state)
-    mine = road_rect(_road_dict(candidate))
+    mine = road_rect(_road_dict(candidate), r)
     for road in roads:
-        if rects_overlap(mine, road_rect(road)):
+        if rects_overlap(mine, road_rect(road, r)):
             return False, (
                 'crosses: the drawn road would cross the %s road'
                 % road['id']), None
@@ -628,7 +907,7 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
         lot = p.get('placement')
         if not lot:
             continue
-        if rects_overlap(mine, lot_rect(lot, roads)):
+        if rects_overlap(mine, lot_rect(lot, roads, r)):
             return False, (
                 'overlap: the drawn road would cross an existing lot at '
                 '[%.1f, %.1f] on the %s'
@@ -637,23 +916,40 @@ def resolve_road_draw(state, x0, y0, x1, y1, width_class='avenue',
         for pin_x0, pin_x1, pin_side in PINNED_SPANS:
             pin_lot = {'x0': pin_x0, 'x1': pin_x1, 'side': pin_side,
                        'road_id': 'arterial'}
-            if rects_overlap(mine, lot_rect(pin_lot, roads)):
+            if rects_overlap(mine, lot_rect(pin_lot, roads, r)):
                 return False, (
                     'overlap: the drawn road would cross a pinned lot at '
                     '[%.1f, %.1f]' % (pin_x0, pin_x1)), None
+    cost = road_cost(candidate, r)
+    if state['money'] < cost:
+        return False, (
+            "can't afford: a %.0f uu %s costs %.2f, money is %.2f"
+            % (length, width_class, cost, state['money'])), None
     return True, '', candidate
 
 
-def draw_road(state, x0, y0, x1, y1, width_class='avenue', pins_active=True):
+def draw_road(state, x0, y0, x1, y1, width_class='avenue', pins_active=True,
+               rules=None):
     """One road-drawing attempt. (state, road_id, ok, reason) - road_id
     is None on refusal, mirroring place()'s own return shape exactly.
     On success, state['roads'][road_id] is the SAME dict
     resolve_road_draw already validated, inserted unchanged - not
-    re-derived, the same discipline place() already holds for a lot."""
+    re-derived, the same discipline place() already holds for a lot.
+
+    THE MONEY MOVES HERE, and only here: resolve_road_draw decides
+    whether the city can pay (so the ghost preview can say "can't
+    afford" without spending anything), and this function is what
+    actually spends it. Deducted from the SAME candidate that was
+    priced, through the same road_cost, so the amount charged cannot
+    differ from the amount quoted. The rules dict is read once and
+    threaded into both, or a quote and its charge could straddle an edit
+    to econrules.json mid-click."""
+    r = _rules(rules)
     ok, reason, road = resolve_road_draw(state, x0, y0, x1, y1, width_class,
-                                          pins_active=pins_active)
+                                          pins_active=pins_active, rules=r)
     if not ok:
         return state, None, False, reason
+    state['money'] -= road_cost(road, r)
     state.setdefault('roads', {})[road['id']] = road
     return state, road['id'], True, ''
 
@@ -1203,6 +1499,13 @@ if __name__ == '__main__':
     #     of the north-pin frontage's own wall-to-wall span, which ends
     #     at 6050, and clear of the cross street's corridor at x=0).
     s31 = citytick.seed_state()
+    #     FUNDED 2026-09-06, road types: roads cost money now, and a
+    #     1400 uu avenue at $10/100 uu is $140 against the $100 a fresh
+    #     city starts with. These tests are about GEOMETRY, so they are
+    #     given a balance that cannot be the reason they refuse; the
+    #     price itself is tested on its own in 44 below, on a state left
+    #     at money_start deliberately.
+    s31['money'] = 1000.0
     ok31, reason31, road31 = resolve_road_draw(s31, 6200.0, 3000.0, 7600.0, 3000.0)
     assert ok31 and reason31 == '', (ok31, reason31)
     assert road31 == {'id': 'R1', 'start': (6200.0, 3000.0),
@@ -1270,6 +1573,7 @@ if __name__ == '__main__':
     #     x-span 6200..7600, y 2000..4230 stays clear of the arterial's
     #     far edge at 1130) is refused by name.
     s38 = citytick.seed_state()
+    s38['money'] = 1000.0   # see 31 - geometry test, not a price test
     s38, rid38, ok38, reason38 = draw_road(s38, 6200.0, 3000.0, 7600.0, 3000.0)
     assert ok38 and rid38 == 'R1' and reason38 == '', (rid38, ok38, reason38)
     assert s38['roads']['R1'] == {
@@ -1297,6 +1601,7 @@ if __name__ == '__main__':
     #     y in [3000-2630, 3000-1130] = [370, 1870], read off R1's own
     #     'start' the same way it is for the arterial.
     s39 = citytick.seed_state()
+    s39['money'] = 1000.0   # see 31 - geometry test, not a price test
     s39, _, _, _ = draw_road(s39, 6200.0, 3000.0, 7600.0, 3000.0)
     s39, pid39, ok39, reason39 = place(s39, 6900.0, 1700.0)
     assert ok39 and pid39 == 'P1' and reason39 == '', (pid39, ok39, reason39)
@@ -1306,7 +1611,229 @@ if __name__ == '__main__':
     assert lot_rect(s39['parcels']['P1']['placement'], _all_roads(s39)) == (
         6490.0, 7310.0, 370.0, 1870.0)
 
-    print('placement self-check: 39/39 pass (pure-Python click->lot->state '
+
+    # ---- ROAD TYPES AS MECHANICS, 2026-09-06 (40-47) -------------------
+    # MONDAY_DECISIONS section 2's four types, its PROPOSED table adopted
+    # as tonight's working defaults in econrules.json. Every number below
+    # is hand-computed from that table and the ONE recovered constant
+    # (VERGE = 430), never read back out of the same rules dict the code
+    # reads - a test that asks the code for its own answer proves nothing.
+    R = econrules.rules()
+
+    # 40. road_half per type, and the reduction that makes this change
+    #     safe: an avenue - and a road with no 'width_class' at all, which
+    #     is what both built-ins are - is EXACTLY the old ROAD_HALF
+    #     constant, so every one of tests 1-39 above measures the same
+    #     board it always did. dirt 900/2+430=880, avenue 1400/2+430=1130,
+    #     boulevard 1400/2+430=1130 (the median is not in the number - see
+    #     the flag on Docs/BOARD.md), highway 2000/2+430=1430.
+    assert road_type(ARTERIAL) == 'avenue' and road_type(CROSS_STREET) == 'avenue'
+    assert road_half(ARTERIAL, R) == ROAD_HALF == 1130.0
+    _halves = {'dirt': 880.0, 'avenue': 1130.0, 'boulevard': 1130.0,
+               'highway': 1430.0}
+    for _t, _h in _halves.items():
+        assert road_half({'width_class': _t}, R) == _h, (_t, _h)
+    assert road_max_reach(ARTERIAL, R) == ROAD_MAX_REACH == 3230.0
+    assert road_max_reach({'width_class': 'highway'}, R) == 3530.0
+    try:
+        road_type({'width_class': 'motorway'})
+        raise AssertionError('unknown road type must raise, not fall back')
+    except ValueError as e:
+        assert 'motorway' in str(e), str(e)
+
+    # 41. Price and material name, both derived from type and geometry,
+    #     neither stored. A 1400 uu road at the table's own per-100-uu
+    #     prices: dirt 5*14=70, avenue 10*14=140, boulevard 20*14=280,
+    #     highway 30*14=420. Length is the centreline's, so a vertical
+    #     road prices identically to a horizontal one of the same span.
+    _seg = lambda t, n: {'id': 'X', 'start': (0.0, 0.0), 'end': (n, 0.0),
+                         'width_class': t}
+    assert road_length(_seg('avenue', 1400.0)) == 1400.0
+    assert road_length({'id': 'X', 'start': (0.0, 100.0),
+                        'end': (0.0, 1500.0), 'width_class': 'avenue'}) == 1400.0
+    for _t, _c in (('dirt', 70.0), ('avenue', 140.0), ('boulevard', 280.0),
+                   ('highway', 420.0)):
+        assert abs(road_cost(_seg(_t, 1400.0), R) - _c) < 1e-9, (_t, _c)
+        assert road_material_name(_seg(_t, 1400.0)) == 'MI_road_%s' % _t
+    assert abs(road_cost(_seg('dirt', 700.0), R) - 35.0) < 1e-9
+
+    # 42. THE HIGHWAY REFUSES FRONTAGE - the one mechanic section 2 states
+    #     as a rule rather than a number. The SAME segment, x=7500 running
+    #     y 1500..4230, drawn twice: as a highway, a click 2300 uu to its
+    #     west is refused with a reason a player can act on ('no frontage'
+    #     naming the type), NOT the true-but-useless 'off-board' the
+    #     generic path would give; as an avenue, the identical click
+    #     places a lot on its west side. Both built-ins are out of reach
+    #     from there (arterial 3800 > 3230, cross street 5200 > 3230), so
+    #     the drawn road is the only thing that can answer, which is what
+    #     makes the pair a clean A/B.
+    assert road_has_frontage({'width_class': 'highway'}, R) is False
+    for _t in ('dirt', 'avenue', 'boulevard'):
+        assert road_has_frontage({'width_class': _t}, R) is True, _t
+    s42 = citytick.seed_state()
+    s42['money'] = 2000.0
+    s42, hid42, ok42, reason42 = draw_road(s42, 7500.0, 1500.0, 7500.0, 4230.0,
+                                            'highway')
+    assert ok42 and hid42 == 'R1', (hid42, ok42, reason42)
+    ok42b, reason42b, lot42b = resolve_click(s42, 5200.0, 3800.0)
+    assert not ok42b and lot42b is None, (ok42b, lot42b)
+    assert 'no frontage' in reason42b and 'highway' in reason42b, reason42b
+    #     And 'no frontage' is bounded by the highway's OWN reach, not
+    #     handed out board-wide: (-7000, -4000) is outside every road's
+    #     reach including this one's, and gets the plain 'off-board'.
+    ok42e, reason42e, _ = resolve_click(s42, -7000.0, -4000.0)
+    assert not ok42e and 'off-board' in reason42e, reason42e
+    assert 'no frontage' not in reason42e, reason42e
+    s42c = citytick.seed_state()
+    s42c['money'] = 2000.0
+    s42c, _, ok42c, _ = draw_road(s42c, 7500.0, 1500.0, 7500.0, 4230.0, 'avenue')
+    assert ok42c
+    ok42d, reason42d, lot42d = resolve_click(s42c, 5200.0, 3800.0)
+    assert ok42d and reason42d == '', (ok42d, reason42d)
+    assert lot42d == {'x0': 3390.0, 'x1': 4210.0, 'side': 'west',
+                       'road_id': 'R1'}, lot42d
+
+    # 43. AND NOTHING MAY BE LAID ACROSS ONE. Refusing frontage is not
+    #     enough on its own: a lot fronting some OTHER road can still run
+    #     straight through a highway's corridor, and every other refusal
+    #     in resolve_click is reached through the road a lot faces, so a
+    #     road nothing faces is unguarded by construction. A vertical
+    #     highway at x=7500 (corridor 6070..8930) against an arterial
+    #     north lot at x=7000 (span 6590..7410, y 1130..2630): the two
+    #     rectangles genuinely intersect. The SAME click on a board with
+    #     no highway places normally, which is what proves the refusal is
+    #     the highway's doing and not the coordinates'.
+    s43 = citytick.seed_state()
+    s43['money'] = 2000.0
+    s43, _, ok43, reason43 = draw_road(s43, 7500.0, 1500.0, 7500.0, 4230.0,
+                                        'highway')
+    assert ok43, reason43
+    ok43b, reason43b, lot43b = resolve_click(s43, 7000.0, 1500.0)
+    assert not ok43b and lot43b is None, (ok43b, lot43b)
+    assert 'across the R1' in reason43b and 'highway' in reason43b, reason43b
+    s43c = citytick.seed_state()
+    ok43c, reason43c, lot43c = resolve_click(s43c, 7000.0, 1500.0)
+    assert ok43c and lot43c == {'x0': 6590.0, 'x1': 7410.0, 'side': 'north',
+                                 'road_id': 'arterial'}, (reason43c, lot43c)
+
+    # 44. ROADS COST MONEY, on a state left at money_start (100) on
+    #     purpose - the funding note at test 31 explains why the geometry
+    #     tests are not. The 1400 uu east-margin road from test 31: as an
+    #     avenue it is $140 and refuses; as a dirt track it is $70 and
+    #     draws, leaving exactly $30. The refusal spends nothing, which is
+    #     the property that lets the ghost preview call the same function
+    #     every frame.
+    s44 = citytick.seed_state()
+    assert s44['money'] == 100.0, s44['money']
+    ok44, reason44, road44 = resolve_road_draw(s44, 6200.0, 3000.0, 7600.0,
+                                                3000.0, 'avenue')
+    assert not ok44 and road44 is None, (ok44, road44)
+    assert "can't afford" in reason44 and '140.00' in reason44, reason44
+    s44, rid44, ok44b, reason44b = draw_road(s44, 6200.0, 3000.0, 7600.0,
+                                              3000.0, 'avenue')
+    assert not ok44b and rid44 is None and s44['money'] == 100.0, s44['money']
+    s44, rid44c, ok44c, reason44c = draw_road(s44, 6200.0, 3000.0, 7600.0,
+                                               3000.0, 'dirt')
+    assert ok44c and rid44c == 'R1', (rid44c, ok44c, reason44c)
+    assert abs(s44['money'] - 30.0) < 1e-9, s44['money']
+    assert s44['roads']['R1']['width_class'] == 'dirt'
+
+    # 45. A NARROWER ROAD PULLS ITS OWN FRONTAGE LINE IN. The dirt road
+    #     just drawn has corridor half 880, so its footprint is
+    #     y 2120..3880 (not 1870..4130) and a lot on its south side sits
+    #     at y 620..2120 (not 370..1870). Same click, same road geometry,
+    #     different type - the whole point of the type being a mechanic.
+    assert road_rect(s44['roads']['R1'], R) == (6200.0, 7600.0, 2120.0, 3880.0)
+    s45 = citytick.seed_state()
+    s45['money'] = 2000.0
+    s45, _, ok45, reason45 = draw_road(s45, 6200.0, 3000.0, 7600.0, 3000.0,
+                                        'dirt')
+    assert ok45, reason45
+    s45, pid45, ok45b, reason45b = place(s45, 6900.0, 2000.0)
+    assert ok45b and pid45 == 'P1', (pid45, ok45b, reason45b)
+    assert lot_rect(s45['parcels']['P1']['placement'], _all_roads(s45), R) == (
+        6490.0, 7310.0, 620.0, 2120.0)
+
+    # 46. THE RENT MULTIPLIER, the part that makes a type a planning
+    #     decision. Own-road type first (dirt 0.75, avenue 1.0, boulevard
+    #     1.25), then the highway's proximity bonus, which is a SEPARATE
+    #     mechanism and MULTIPLIES - see road_rent_multiplier's own
+    #     docstring for the flag raised on that reading. Synthetic states
+    #     here rather than drawn ones: this function is pure over (state,
+    #     lot), and building the exact adjacency by hand is the only way
+    #     to test the 2,000 uu edge from both sides.
+    _lot46 = {'x0': 6490.0, 'x1': 7310.0, 'side': 'south', 'road_id': 'D'}
+    def _s46(dirt_type, extra=None):
+        roads = {'D': {'id': 'D', 'start': (6200.0, 3000.0),
+                        'end': (7600.0, 3000.0), 'width_class': dirt_type}}
+        if extra:
+            roads['HW'] = extra
+        return {'money': 0.0, 'parcels': {}, 'roads': roads}
+    for _t, _m in (('dirt', 0.75), ('avenue', 1.0), ('boulevard', 1.25)):
+        assert abs(road_rent_multiplier(_s46(_t), _lot46, R) - _m) < 1e-9, _t
+    #     The dirt lot's own footprint is (6490, 7310, 620, 2120). A
+    #     highway running y 1500..4230 at x=7500 has corridor
+    #     (6070, 8930, 1500, 4230) - the two rectangles touch, distance 0,
+    #     well inside the 2,000 reach: 0.75 * 1.1 = 0.825.
+    _near = {'id': 'HW', 'start': (7500.0, 1500.0), 'end': (7500.0, 4230.0),
+             'width_class': 'highway'}
+    assert abs(road_rent_multiplier(_s46('dirt', _near), _lot46, R)
+               - 0.825) < 1e-9
+    #     The SAME highway moved south of the lot, corridor top edge at
+    #     y=-1500, is 620-(-1500) = 2120 uu away - 120 uu outside reach,
+    #     and the bonus is gone. A near miss on purpose: an off-by-a-lot
+    #     reach would pass a test written at 10,000 uu.
+    _far = {'id': 'HW', 'start': (7500.0, -4230.0), 'end': (7500.0, -1500.0),
+            'width_class': 'highway'}
+    assert abs(road_rent_multiplier(_s46('dirt', _far), _lot46, R) - 0.75) < 1e-9
+    assert abs(_rect_distance((6490.0, 7310.0, 620.0, 2120.0),
+                              road_rect(_far, R)) - 2120.0) < 1e-9
+
+    # 47. An unrecognised type is REFUSED at the boundary with a reason,
+    #     not raised through it - a bad string arriving from a UI is a
+    #     refusal a player can read, while road_type's own raise stays for
+    #     a caller inside this module getting it wrong. Nothing is spent
+    #     and no road is created either way.
+    s47 = citytick.seed_state()
+    s47['money'] = 2000.0
+    ok47, reason47, road47 = resolve_road_draw(s47, 6200.0, 3000.0, 7600.0,
+                                                3000.0, 'motorway')
+    assert not ok47 and road47 is None, (ok47, road47)
+    assert 'unknown road type' in reason47 and 'motorway' in reason47, reason47
+    s47, rid47, ok47b, _ = draw_road(s47, 6200.0, 3000.0, 7600.0, 3000.0,
+                                      'motorway')
+    assert not ok47b and rid47 is None and s47['money'] == 2000.0
+    assert s47.get('roads') == {}, s47.get('roads')
+
+    # 48. _in_crossing measures each road's OWN pavement. A point 1,300
+    #     uu from a highway's centreline is standing ON it (half 1,430)
+    #     and would not be on an avenue (half 1,130) - so whether that
+    #     point is "pavement shared by more than one road" depends on the
+    #     type, and nothing else in tests 40-47 reaches this line.
+    #
+    #     A DIRECT UNIT TEST, on a road list built by hand, and the
+    #     honest reason why: resolve_road_draw refuses any candidate
+    #     whose corridor overlaps an existing one, so no state reachable
+    #     through draw_road can have two corridors sharing ground at all
+    #     - the only crossing that exists is ARTERIAL x CROSS_STREET,
+    #     both avenues, where the constant and the per-type half agree.
+    #     The per-type half is still what belongs here: the built-ins are
+    #     never validated against that rule, and a wider road drawn
+    #     against a rule that ever softens (an underpass, a bridge) would
+    #     otherwise offer frontage on pavement a player is standing in.
+    #     Called with an explicit list rather than a state, which is
+    #     exactly what makes it testable while it is unreachable.
+    _hw48 = _road_dict({'id': 'HW', 'start': (7500.0, -4230.0),
+                         'end': (7500.0, 4230.0), 'width_class': 'highway'})
+    _av48 = dict(_hw48, width_class='avenue')
+    #     (6200, 500): 500 from the arterial's centreline (inside its
+    #     1,130) and 1,300 from the vertical road's (inside a highway's
+    #     1,430, outside an avenue's 1,130).
+    assert _in_crossing([ARTERIAL, _hw48], 6200.0, 500.0, R) is True
+    assert _in_crossing([ARTERIAL, _av48], 6200.0, 500.0, R) is False
+    assert _in_crossing([ARTERIAL, CROSS_STREET], 0.0, 0.0, R) is True
+
+    print('placement self-check: 48/48 pass (pure-Python click->lot->state '
           'contract; resolve_road multi-road frontage; cross-street and '
           'corner-overlap coverage; save/load round-trip; free placement '
           'along the road (1-27, prior sessions) PLUS drawn roads, '
@@ -1320,7 +1847,21 @@ if __name__ == '__main__':
           'draw_road persists unchanged and sequences R1/R2 like _next_pid; '
           'a lot placed against a drawn road resolves, snaps and computes '
           'its world footprint through the exact same path a built-in '
-          'road lot does, proven end to end; live cursor-trace '
+          'road lot does, proven end to end PLUS road types as mechanics, '
+          '2026-09-06 (40-48, MONDAY_DECISIONS section 2): width_class IS '
+          'the type and every number comes from econrules.json, so the '
+          'owner retunes the table without touching code; road_half/'
+          'road_max_reach reduce EXACTLY to the ROAD_HALF and '
+          'ROAD_MAX_REACH constants for an avenue and for a road carrying '
+          'no type at all, which is what makes 1-39 above still measure '
+          'the board they always did; the highway refuses frontage with a '
+          'reason a player can act on AND refuses to be built across; '
+          'roads are priced per 100 uu by type, refused when unaffordable '
+          'without spending anything, and charged once, by draw_road, '
+          'from the same candidate that was quoted; the rent multiplier '
+          'is pure and TESTED BUT NOT WIRED - citytick.tick() is the '
+          'coordinator\'s and applying it there is one line, deliberately '
+          'left; live cursor-trace '
           'coordinates, actor spawn/resolve, and the feel itself are NOT '
           'provable here - see module docstring, and PLACEMENT_GRID.md '
           'section 8 - the owner\'s own click on empty board is the real '

@@ -8,6 +8,7 @@
 #include "CoreMinimal.h"
 #include "StacktownPlacement.h"
 #include "PlacementOracleFixture.inl"
+#include "StacktownEconomyTestCommon.h"   // OracleRules(): the road-type table is econrules.json's
 
 namespace StacktownTest
 {
@@ -26,6 +27,10 @@ inline Stacktown::FPlacementBoard OracleBoard()
 	Board.Rules.RoadHalf        = RoadHalf;
 	Board.Rules.BlockDepth      = BlockDepth;
 	Board.Rules.RoadMaxReach    = RoadMaxReach;
+	Board.Rules.Verge           = Verge;
+	Board.Rules.ReachSlack      = ReachSlack;
+	// The road-type table the ORACLE read, not the one FEconRules compiles in.
+	Board.Econ                  = StacktownTest::OracleRules();
 
 	for (int32 i = 0; i < RoadsNum; ++i)
 	{

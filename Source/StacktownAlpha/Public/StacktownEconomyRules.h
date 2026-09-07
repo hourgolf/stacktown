@@ -31,6 +31,50 @@
 namespace Stacktown
 {
 
+/** What one road TYPE costs, earns, measures and allows. Ported from
+ *  MONDAY_DECISIONS.md section 2's table, whose numbers live in econrules.json
+ *  as road_<family>_<type> keys - four families, four types, sixteen keys plus
+ *  the highway's reach.
+ *
+ *  A STRUCT PER TYPE rather than sixteen flat fields, because every caller wants
+ *  one type's whole row at once and the Python looks them up by the same type
+ *  name the segment already carries. */
+struct STACKTOWNALPHA_API FRoadTypeRules
+{
+	/** Charged at DrawRoad, per 100 uu of centreline. */
+	double CostPer100uu = 0.0;
+	/** What lots fronting this road earn, relative to today's avenue. */
+	double RentMult     = 1.0;
+	/** Carriageway width. The CORRIDOR is this plus the verge either side -
+	 *  see FPlacementRules::Verge, which is where that arithmetic lives. */
+	double Width        = 1400.0;
+	/** False for a road no lot may face. The highway, and only the highway,
+	 *  today - as a flag rather than a name so nothing has to special-case it. */
+	bool   bFrontage    = true;
+
+	bool operator==(const FRoadTypeRules& O) const
+	{
+		return CostPer100uu == O.CostPer100uu && RentMult == O.RentMult
+			&& Width == O.Width && bFrontage == O.bFrontage;
+	}
+};
+
+/** The four types, in the order MONDAY_DECISIONS section 2 lists them. The
+ *  order is the T-key cycle in road mode, so it is not incidental. */
+STACKTOWNALPHA_API const TArray<FString>& RoadTypeNames();
+
+/** 'avenue' IS today's road, so it is what a segment carrying no width class
+ *  means: the two built-in roads carry none at all, and every drawn segment in
+ *  the owner's real save carries exactly this. */
+STACKTOWNALPHA_API const TCHAR* DefaultRoadType();
+
+/** The shipped table, as data for a struct that has not been given a ruleset.
+ *  Same status as MoneyStart = 100 below - a default FEconRules has to mean
+ *  something, and FromJson still REQUIRES every key. Checked against the
+ *  generated oracle fixture by Stacktown.Roads.TypeRulesMatchOracle, so a stale
+ *  compiled default cannot quietly diverge from econrules.json. */
+STACKTOWNALPHA_API TMap<FString, FRoadTypeRules> DefaultRoadTypes();
+
 /** econrules.json, parsed. Every value is SCAFFOLDING awaiting the owner's
  *  economy notes - the machinery is the part that survives their arrival. */
 struct STACKTOWNALPHA_API FEconRules
@@ -58,6 +102,27 @@ struct STACKTOWNALPHA_API FEconRules
 	double DemandMin         = 0.5;
 	double DemandMax         = 2.0;
 	double WearTicksPerTier  = 150.0;
+
+	/** ROAD TYPES AS MECHANICS, 2026-09-06 (MONDAY_DECISIONS section 2, the
+	 *  night plan's working defaults). APPENDED AT THE END on purpose: the
+	 *  economy loop's own keys above landed the same night from the other side
+	 *  of the branch, and growing the struct at its tail is what let both land
+	 *  without either rewriting the other's lines.
+	 *
+	 *  Keyed by the same four names a segment's width class carries, so there is
+	 *  no second vocabulary and no mapping table between them. */
+	TMap<FString, FRoadTypeRules> RoadTypes = DefaultRoadTypes();
+	/** How far a road that refuses frontage still lifts the rent of lots near
+	 *  it, measured from its PAVEMENT, not its centreline. */
+	double RoadHighwayReach = 2000.0;
+
+	/** This ruleset's row for `Type`, or nullptr if it has none. A caller that
+	 *  gets nullptr has a broken ruleset and must say so - never substitute the
+	 *  avenue and carry on, which would price a typo as if it were a type. */
+	const FRoadTypeRules* FindRoadType(const FString& Type) const
+	{
+		return RoadTypes.Find(Type);
+	}
 
 	/** Parse econrules.json. Returns false and fills OutError on malformed JSON
 	 *  or a missing key - never silently falls back to the defaults above, which

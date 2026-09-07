@@ -73,6 +73,7 @@ def main():
     for key, name in (('POSITION_QUANTUM', 'PositionQuantum'), ('V0_WIDTH', 'V0Width'),
                       ('ROAD_HALF', 'RoadHalf'), ('BLOCK_DEPTH', 'BlockDepth'),
                       ('REACH_SLACK', 'ReachSlack'), ('ROAD_MAX_REACH', 'RoadMaxReach'),
+                      ('VERGE', 'Verge'),
                       ('PLATE_X_MIN', 'PlateXMin'), ('PLATE_X_MAX', 'PlateXMax'),
                       ('PLATE_Y_MIN', 'PlateYMin'), ('PLATE_Y_MAX', 'PlateYMax'),
                       ('PERFORMANCE_NEUTRAL', 'PerformanceNeutral')):

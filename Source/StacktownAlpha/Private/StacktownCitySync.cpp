@@ -137,6 +137,16 @@ void UStacktownCitySync::HideBlueprintLots()
 	UE_LOG(LogStacktown, Log, TEXT("CitySync: hid %d Blueprint parcel actors (the C++ lots stand in their place)"), N);
 }
 
+/** The lot's own road's frontage distance, for LotFrame::Pose - the one line
+ *  that keeps a building standing on its pad when its road is not an avenue. */
+static double LotRoadHalf(const Stacktown::FPlacementBoard& Board,
+	const TArray<Stacktown::FRoad>& Roads, const Stacktown::FLotPlacement& Lot)
+{
+	const Stacktown::FRoad* Road = Stacktown::FindRoad(Roads, Stacktown::LotRoadId(Lot));
+	return Road ? Stacktown::RoadHalf(Board.Rules, Board.Econ, *Road)
+	            : Stacktown::LotFrame::RoadHalf;
+}
+
 FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 {
 	UWorld* World = GetWorld();
@@ -144,7 +154,8 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 	if (!World || !Econ) { return TEXT("reconcile: no world or economy"); }
 	if (bHideBlueprintLots) { HideBlueprintLots(); }
 	const Stacktown::FCityState& State = Econ->GetState();
-	const TArray<Stacktown::FRoad> Roads = Stacktown::TemporaryBoard().AllRoads(State);
+	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard(Econ->GetRules());
+	const TArray<Stacktown::FRoad> Roads = Board.AllRoads(State);
 	int32 Spawned = 0, Updated = 0, Removed = 0, Skipped = 0;
 	TSet<FString> Seen;
 	for (const auto& Pair : State.Parcels)
@@ -153,7 +164,8 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		const Stacktown::FParcelState& P = Pair.Value;
 		if (!P.Placement.IsSet()) { ++Skipped; continue; }   // pinned lots: poses come with the board factory (item 5)
 		Stacktown::LotFrame::FPose Pose;
-		if (!Stacktown::LotFrame::Pose(P.Placement.GetValue(), Roads, Pose)) { ++Skipped; continue; }
+		if (!Stacktown::LotFrame::Pose(P.Placement.GetValue(), Roads, Pose,
+			LotRoadHalf(Board, Roads, P.Placement.GetValue()))) { ++Skipped; continue; }
 		Seen.Add(Pid);
 		const FString Sig = FString::Printf(TEXT("%s|%d|%.0f|%d|%.0f|%.0f|%.0f"), *P.Rid, P.Tier, P.Width, P.bOwned, Pose.X, Pose.Y, Pose.Yaw);
 		TObjectPtr<AActor>* Existing = Lots.Find(Pid);
@@ -220,7 +232,11 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		const FString& Id = Pair.Key;
 		const Stacktown::FRoadSegment& Seg = Pair.Value;
 		RoadsSeen.Add(Id);
-		const FString Sig = FString::Printf(TEXT("%.0f|%.0f|%.0f|%.0f"), Seg.StartX, Seg.StartY, Seg.EndX, Seg.EndY);
+		// The TYPE is part of the signature since road types (2026-09-06): it
+		// decides the corridor width and the stain, so a segment that changed
+		// type without moving must still be re-shown.
+		const FString Sig = FString::Printf(TEXT("%.0f|%.0f|%.0f|%.0f|%s"),
+			Seg.StartX, Seg.StartY, Seg.EndX, Seg.EndY, *Seg.WidthClass);
 		TObjectPtr<AActor>* Existing = RoadActors.Find(Id);
 		AStacktownRoad* Road = (Existing && IsValid(*Existing)) ? Cast<AStacktownRoad>(Existing->Get()) : nullptr;
 		if (!Road)
@@ -235,7 +251,8 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		}
 		if (RoadSignatures.FindRef(Id) != Sig)
 		{
-			Road->ShowSegment(Id, Seg);
+			Road->ShowSegment(Id, Seg,
+				Stacktown::RoadCorridor(Board.Rules, Board.Econ, Seg.WidthClass));
 			RoadSignatures.Add(Id, Sig);
 		}
 	}

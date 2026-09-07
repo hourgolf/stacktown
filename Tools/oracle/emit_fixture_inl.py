@@ -69,6 +69,25 @@ def main():
         w('inline constexpr double %s = %s;' % (name, cxx_num(r[key])))
     w('inline constexpr int32 TradeCreditsPerN = %d;' % r['trade_credits_per_n'])
     w('')
+    w('// ROAD TYPES (MONDAY_DECISIONS section 2), read straight out of')
+    w('// econrules.json by the oracle. OracleRules() builds FEconRules::RoadTypes')
+    w('// from these, so a placement test measures the owner\'s table and not the')
+    w('// table the C++ happens to have compiled in - and')
+    w('// Stacktown.Roads.TypeRulesMatchOracle compares the two, which is what')
+    w('// keeps that compiled default from quietly drifting.')
+    w('struct FRoadTypeRow { const TCHAR* Type; double CostPer100uu; double RentMult;')
+    w('                      double Width; bool bFrontage; };')
+    w('inline const FRoadTypeRow RoadTypeRows[] = {')
+    for t in ('dirt', 'avenue', 'boulevard', 'highway'):
+        w('\t{ TEXT("%s"), %s, %s, %s, %s },' % (
+            t, cxx_num(r['road_cost_per_100uu_%s' % t]),
+            cxx_num(r['road_rent_mult_%s' % t]),
+            cxx_num(r['road_width_%s' % t]),
+            'true' if r['road_frontage_%s' % t] else 'false'))
+    w('};')
+    w('inline constexpr int32 RoadTypeRowsNum = 4;')
+    w('inline constexpr double RoadHighwayReach = %s;' % cxx_num(r['road_highway_reach']))
+    w('')
 
     w('// --- the catalogue surface the economy asks about ------------------------')
     tc = fx['catalogue']['tier_count']

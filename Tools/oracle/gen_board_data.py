@@ -85,7 +85,11 @@ def main():
         'rules': {'position_quantum': P.POSITION_QUANTUM, 'v0_width': P.V0_WIDTH,
                   'v0_recipe': P.V0_RECIPE, 'pool_size': P.POOL_SIZE,
                   'road_half': P.ROAD_HALF, 'block_depth': P.BLOCK_DEPTH,
-                  'road_max_reach': P.ROAD_MAX_REACH},
+                  'road_max_reach': P.ROAD_MAX_REACH,
+                  # Road types (2026-09-06): the corridor half is per type now,
+                  # and these two are what it is built from. VERGE is RECOVERED
+                  # from today's avenue rather than chosen - see placement.py.
+                  'verge': P.VERGE, 'reach_slack': P.REACH_SLACK},
     }
     os.makedirs(os.path.dirname(JSON_OUT), exist_ok=True)
     with open(JSON_OUT, 'w') as f:
@@ -141,7 +145,8 @@ def main():
     ru = data['rules']
     for key, name in (('position_quantum', 'PositionQuantum'), ('v0_width', 'V0Width'),
                       ('road_half', 'RoadHalf'), ('block_depth', 'BlockDepth'),
-                      ('road_max_reach', 'RoadMaxReach')):
+                      ('road_max_reach', 'RoadMaxReach'),
+                      ('verge', 'Verge'), ('reach_slack', 'ReachSlack')):
         w('inline constexpr double %s = %s;' % (name, n(ru[key])))
     w('inline constexpr int32 PoolSize = %d;' % ru['pool_size'])
     w('inline const TCHAR* const V0Recipe = %s;' % q(ru['v0_recipe']))

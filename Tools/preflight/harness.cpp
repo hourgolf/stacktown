@@ -495,7 +495,7 @@ int main()
 
 		auto CheckResolve = [&](const char* What, const TArray<FRoad>& Roads, const FResolveCase& C) {
 			FRoadLocal Local;
-			const FRoad* Got = ResolveRoad(Board.Rules, Roads, C.X, C.Y, Local);
+			const FRoad* Got = ResolveRoad(Board.Rules, Board.Econ, Roads, C.X, C.Y, Local);
 			if (C.Road == nullptr) { CheckBool(What, Got == nullptr, true); return; }
 			++gChecks;
 			if (Got == nullptr) { Fail(What, "expected a road, got none"); return; }
@@ -608,12 +608,12 @@ int main()
 			CheckBool("roads found", Art != nullptr && Crs != nullptr, true);
 			if (Art != nullptr && Crs != nullptr)
 			{
-				const FLotRect R0 = LotRect(Board.Rules, *Art, LotFrom(T27_Lot0));
+				const FLotRect R0 = LotRect(Board.Rules, Board.Econ, *Art, LotFrom(T27_Lot0));
 				CheckNear("R0 xmin", R0.XMin, T27_Rect0.XMin, Tol);
 				CheckNear("R0 xmax", R0.XMax, T27_Rect0.XMax, Tol);
 				CheckNear("R0 ymin", R0.YMin, T27_Rect0.YMin, Tol);
 				CheckNear("R0 ymax", R0.YMax, T27_Rect0.YMax, Tol);
-				const FLotRect R1 = LotRect(Board.Rules, *Crs, LotFrom(T27_Lot1));
+				const FLotRect R1 = LotRect(Board.Rules, Board.Econ, *Crs, LotFrom(T27_Lot1));
 				CheckNear("R1 xmin", R1.XMin, T27_Rect1.XMin, Tol);
 				CheckNear("R1 xmax", R1.XMax, T27_Rect1.XMax, Tol);
 				CheckNear("R1 ymin", R1.YMin, T27_Rect1.YMin, Tol);
@@ -818,7 +818,10 @@ int main()
 	{
 		using namespace StacktownRoadsOracle;
 		const FPlacementBoard Board = OracleBoard();
-		auto RoadSeed = [&R]() { return SeedState(R); };
+		// GeometryMoney: roads cost money since road types, and a case about
+		// geometry must not refuse for want of a balance. The oracle funded its
+		// own states with the same number; the PRICE is checked on its own.
+		auto RoadSeed = [&R]() { FCityState S = SeedState(R); S.Money = GeometryMoney; return S; };
 
 		auto LotFrom2 = [](const FLotDef2& D) {
 			FLotPlacement L;
@@ -850,12 +853,12 @@ int main()
 			CheckBool("built-ins present", Art != nullptr && Crs != nullptr, true);
 			if (Art != nullptr && Crs != nullptr)
 			{
-				const FLotRect A = LotRect(Board.Rules, *Art, LotFrom2(T28_Lot0));
+				const FLotRect A = LotRect(Board.Rules, Board.Econ, *Art, LotFrom2(T28_Lot0));
 				CheckNear("A xmin", A.XMin, T28_Rect0.XMin, Tol);
 				CheckNear("A xmax", A.XMax, T28_Rect0.XMax, Tol);
 				CheckNear("A ymin", A.YMin, T28_Rect0.YMin, Tol);
 				CheckNear("A ymax", A.YMax, T28_Rect0.YMax, Tol);
-				const FLotRect B = LotRect(Board.Rules, *Crs, LotFrom2(T28_Lot1));
+				const FLotRect B = LotRect(Board.Rules, Board.Econ, *Crs, LotFrom2(T28_Lot1));
 				CheckNear("B xmin", B.XMin, T28_Rect1.XMin, Tol);
 				CheckNear("B xmax", B.XMax, T28_Rect1.XMax, Tol);
 				CheckNear("B ymin", B.YMin, T28_Rect1.YMin, Tol);
@@ -966,11 +969,278 @@ int main()
 			CheckBool("drawn road is a candidate", R1 != nullptr, true);
 			if (R1 != nullptr)
 			{
-				const FLotRect Rect = LotRect(Board.Rules, *R1, Lot);
+				const FLotRect Rect = LotRect(Board.Rules, Board.Econ, *R1, Lot);
 				CheckNear("rect xmin", Rect.XMin, T39_Rect.XMin, Tol);
 				CheckNear("rect xmax", Rect.XMax, T39_Rect.XMax, Tol);
 				CheckNear("rect ymin", Rect.YMin, T39_Rect.YMin, Tol);
 				CheckNear("rect ymax", Rect.YMax, T39_Rect.YMax, Tol);
+			}
+		}
+	}
+
+
+	// =====================================================================
+	// ROAD TYPES AS MECHANICS (queue item 10, MONDAY_DECISIONS section 2).
+	// placement.py self-tests 40-48. The type is the width class the segment
+	// already carried; every number is econrules.json's, so the owner retunes
+	// the table without a recompile.
+	// =====================================================================
+	{
+		using namespace StacktownRoadsOracle;
+		const FPlacementBoard Board = OracleBoard();
+		auto RoadSeed = [&R]() { FCityState S = SeedState(R); S.Money = GeometryMoney; return S; };
+		auto SegOf = [](const FSegDef& D) {
+			FRoadSegment S;
+			S.StartX = D.StartX; S.StartY = D.StartY; S.EndX = D.EndX; S.EndY = D.EndY;
+			if (D.WidthClass != nullptr) { S.WidthClass = FString(D.WidthClass); }
+			return S;
+		};
+
+		CASE("Roads.TypeRulesMatchOracle");
+		{
+			// THE COMPILED DEFAULT, checked against the owner's file. FEconRules
+			// ships the table it parses so a board built without a ruleset still
+			// measures the city; this is what stops that default going stale.
+			const TMap<FString, FRoadTypeRules> Shipped = DefaultRoadTypes();
+			const TArray<FString>& Names = RoadTypeNames();
+			CheckInt("four types", Names.Num(), OracleTypeNamesNum);
+			CheckStr("default type", FString(DefaultRoadType()), FString(OracleDefaultType));
+			for (int32 i = 0; i < OracleTypeNamesNum; ++i)
+			{
+				CheckStr("type name in order", Names[i], FString(OracleTypeNames[i]));
+			}
+			for (int32 i = 0; i < T40_TypesNum; ++i)
+			{
+				const FTypeRow& Row = T40_Types[i];
+				const FRoadTypeRules* T = Shipped.Find(FString(Row.Type));
+				CheckBool("shipped table has the type", T != nullptr, true);
+				if (T == nullptr) { continue; }
+				CheckNear("cost per 100uu", T->CostPer100uu, Row.CostPer100uu, Tol);
+				CheckNear("rent mult", T->RentMult, Row.RentMult, Tol);
+				CheckNear("carriageway", T->Width, Row.Width, Tol);
+				CheckBool("frontage", T->bFrontage, Row.bFrontage);
+			}
+		}
+
+		CASE("Roads.TypeGeometry");
+		{
+			// 40: the per-type corridor, and the reduction that makes this change
+			// safe - an avenue, and a road with NO type at all, are exactly the
+			// constants the board was authored against.
+			CheckNear("verge", Board.Rules.Verge, Verge, Tol);
+			for (int32 i = 0; i < T40_TypesNum; ++i)
+			{
+				const FTypeRow& Row = T40_Types[i];
+				FRoad Probe;
+				Probe.WidthClass = FString(Row.Type);
+				CheckStr("type of", RoadTypeOf(Probe), FString(Row.Type));
+				CheckNear("half", RoadHalf(Board.Rules, Board.Econ, Probe), Row.Half, Tol);
+				CheckNear("max reach", RoadMaxReach(Board.Rules, Board.Econ, Probe), Row.MaxReach, Tol);
+				CheckNear("corridor", RoadCorridor(Board.Rules, Board.Econ, Probe.WidthClass), 2.0 * Row.Half, Tol);
+				CheckBool("frontage", RoadHasFrontage(Board.Econ, Probe), Row.bFrontage);
+				CheckStr("material", RoadMaterialName(Probe.WidthClass), FString(Row.Material));
+			}
+			const FRoad* Arterial = FindRoad(Board.Roads, FString(TEXT("arterial")));
+			CheckBool("arterial found", Arterial != nullptr, true);
+			if (Arterial != nullptr)
+			{
+				CheckStr("no width class means avenue", RoadTypeOf(*Arterial), FString(OracleDefaultType));
+				CheckNear("untyped half is the constant", RoadHalf(Board.Rules, Board.Econ, *Arterial), T40_UntypedHalf, Tol);
+				CheckNear("untyped half IS RoadHalf", RoadHalf(Board.Rules, Board.Econ, *Arterial), Board.Rules.RoadHalf, Tol);
+				CheckNear("untyped reach is the constant", RoadMaxReach(Board.Rules, Board.Econ, *Arterial), T40_UntypedReach, Tol);
+				CheckNear("untyped reach IS RoadMaxReach", RoadMaxReach(Board.Rules, Board.Econ, *Arterial), Board.Rules.RoadMaxReach, Tol);
+			}
+		}
+
+		CASE("Roads.TypeCost");
+		{
+			// 41: price is derived from type and geometry, never stored.
+			for (int32 i = 0; i < T40_TypesNum; ++i)
+			{
+				const FTypeRow& Row = T40_Types[i];
+				FRoadSegment S;
+				S.EndX = 1400.0;
+				S.WidthClass = FString(Row.Type);
+				CheckNear("length", RoadLength(S), 1400.0, Tol);
+				double Cost = 0.0;
+				CheckBool("priced", RoadCost(Board.Econ, S, Cost), true);
+				CheckNear("cost of 1400 uu", Cost, Row.Cost1400, Tol);
+			}
+			// A vertical run prices identically to a horizontal one of the span.
+			double VCost = 0.0;
+			CheckNear("vertical length", RoadLength(SegOf(T41_VerticalSeg)), T41_VerticalLength, Tol);
+			CheckBool("vertical priced", RoadCost(Board.Econ, SegOf(T41_VerticalSeg), VCost), true);
+			CheckNear("vertical cost", VCost, T40_Types[1].Cost1400, Tol);
+			double SCost = 0.0;
+			CheckBool("short dirt priced", RoadCost(Board.Econ, SegOf(T41_ShortDirtSeg), SCost), true);
+			CheckNear("short dirt cost", SCost, T41_ShortDirtCost, Tol);
+		}
+
+		CASE("Roads.HighwayRefusesFrontage");
+		{
+			// 42: the SAME segment as a highway and as an avenue, and one click.
+			FCityState S = RoadSeed();
+			const FRoadDrawResult D = DrawRoad(Board, S, T42_Seg[0], T42_Seg[1], T42_Seg[2], T42_Seg[3],
+				FString(T42_HighwayStored.WidthClass), true);
+			CheckBool("highway drawn", D.bOk, true);
+			CheckStr("stored class", S.Roads[D.Id].WidthClass, FString(T42_HighwayStored.WidthClass));
+			CheckNear("money after", S.Money, T42_MoneyAfterHighway, Tol);
+
+			const FClickResult Beside = ResolveClick(Board, S, T42_BesideHighway.X, T42_BesideHighway.Y,
+				T42_BesideHighway.bPinsActive, Board.Rules.V0Width);
+			CheckBool("refused", Beside.bOk, T42_BesideHighway.bOk);
+			CheckStr("reason names the type", Beside.Reason, FString(T42_BesideHighway.Reason));
+
+			FCityState A = RoadSeed();
+			const FRoadDrawResult AD = DrawRoad(Board, A, T42_Seg[0], T42_Seg[1], T42_Seg[2], T42_Seg[3],
+				FString(TEXT("avenue")), true);
+			CheckBool("avenue drawn", AD.bOk, true);
+			const FClickResult OnAvenue = ResolveClick(Board, A, T42_BesideAvenue.X, T42_BesideAvenue.Y,
+				T42_BesideAvenue.bPinsActive, Board.Rules.V0Width);
+			CheckBool("the identical click places", OnAvenue.bOk, T42_BesideAvenue.bOk);
+			CheckNear("x0", OnAvenue.Lot.X0, T42_BesideAvenue.Lot.X0, Tol);
+			CheckNear("x1", OnAvenue.Lot.X1, T42_BesideAvenue.Lot.X1, Tol);
+			CheckStr("side", OnAvenue.Lot.Side, FString(T42_BesideAvenue.Lot.Side));
+			CheckStr("road", LotRoadId(OnAvenue.Lot), FString(T42_BesideAvenue.Lot.RoadId));
+
+			// 'no frontage' is bounded by the highway's OWN reach, not board-wide.
+			const FClickResult Far = ResolveClick(Board, S, T42_FarFromEverything.X, T42_FarFromEverything.Y,
+				T42_FarFromEverything.bPinsActive, Board.Rules.V0Width);
+			CheckBool("far refused", Far.bOk, T42_FarFromEverything.bOk);
+			CheckStr("far reason is off-board", Far.Reason, FString(T42_FarFromEverything.Reason));
+
+			// 43: and nothing may be laid ACROSS one.
+			const FClickResult Across = ResolveClick(Board, S, T43_WithHighway.X, T43_WithHighway.Y,
+				T43_WithHighway.bPinsActive, Board.Rules.V0Width);
+			CheckBool("across refused", Across.bOk, T43_WithHighway.bOk);
+			CheckStr("across reason", Across.Reason, FString(T43_WithHighway.Reason));
+			FCityState Bare = RoadSeed();
+			const FClickResult Control = ResolveClick(Board, Bare, T43_Without.X, T43_Without.Y,
+				T43_Without.bPinsActive, Board.Rules.V0Width);
+			CheckBool("the same click without a highway places", Control.bOk, T43_Without.bOk);
+			CheckStr("control road", LotRoadId(Control.Lot), FString(T43_Without.Lot.RoadId));
+		}
+
+		CASE("Roads.Afford");
+		{
+			// 44: on a state left at money_start deliberately.
+			FEconRules Rules = OracleRules();
+			FCityState S = SeedState(Rules);
+			CheckNear("money_start", S.Money, T44_MoneyStart, Tol);
+			const FRoadDrawResult Quote = ResolveRoadDraw(Board, S, T44_AvenueRefused.X0, T44_AvenueRefused.Y0,
+				T44_AvenueRefused.X1, T44_AvenueRefused.Y1, FString(T44_AvenueClass), T44_AvenueRefused.bPinsActive);
+			CheckBool("avenue refused", Quote.bOk, T44_AvenueRefused.bOk);
+			CheckStr("reason", Quote.Reason, FString(T44_AvenueRefused.Reason));
+			const FRoadDrawResult Tried = DrawRoad(Board, S, T44_AvenueRefused.X0, T44_AvenueRefused.Y0,
+				T44_AvenueRefused.X1, T44_AvenueRefused.Y1, FString(T44_AvenueClass), T44_AvenueRefused.bPinsActive);
+			CheckBool("draw refused too", Tried.bOk, false);
+			CheckNear("a refusal spends nothing", S.Money, T44_MoneyAfterRefusal, Tol);
+			CheckInt("and adds no road", S.Roads.Num(), 0);
+			const FRoadDrawResult Dirt = DrawRoad(Board, S, T44_AvenueRefused.X0, T44_AvenueRefused.Y0,
+				T44_AvenueRefused.X1, T44_AvenueRefused.Y1, FString(T44_DirtStored.WidthClass),
+				T44_AvenueRefused.bPinsActive);
+			CheckBool("the same road as dirt draws", Dirt.bOk, true);
+			CheckStr("dirt id", Dirt.Id, FString(T44_DirtStored.Id));
+			CheckStr("dirt stored class", S.Roads[Dirt.Id].WidthClass, FString(T44_DirtStored.WidthClass));
+			CheckNear("money after", S.Money, T44_MoneyAfter, Tol);
+		}
+
+		CASE("Roads.NarrowerFrontage");
+		{
+			// 45: a dirt road's own corridor and its own frontage line.
+			FCityState S = RoadSeed();
+			const FRoadDrawResult D = DrawRoad(Board, S, T44_AvenueRefused.X0, T44_AvenueRefused.Y0,
+				T44_AvenueRefused.X1, T44_AvenueRefused.Y1, FString(T44_DirtStored.WidthClass), true);
+			CheckBool("dirt drawn", D.bOk, true);
+			const FLotRect RoadR = RoadRect(Board.Rules, Board.Econ,
+				RoadDictFromSegment(D.Id, S.Roads[D.Id]));
+			CheckNear("road rect ymin", RoadR.YMin, T45_DirtRoadRect.YMin, Tol);
+			CheckNear("road rect ymax", RoadR.YMax, T45_DirtRoadRect.YMax, Tol);
+			const FPlaceResult P = Place(Board, S, T45_ClickX, T45_ClickY, true, Board.Rules.V0Width);
+			CheckBool("placed", P.bOk, true);
+			const FLotPlacement& Lot = S.Parcels[P.Pid].Placement.GetValue();
+			CheckStr("side", Lot.Side, FString(T45_Lot.Side));
+			CheckStr("road", LotRoadId(Lot), FString(T45_Lot.RoadId));
+			const TArray<FRoad> Roads = Board.AllRoads(S);
+			const FRoad* Own = FindRoad(Roads, LotRoadId(Lot));
+			CheckBool("own road found", Own != nullptr, true);
+			if (Own != nullptr)
+			{
+				const FLotRect Rect = LotRect(Board.Rules, Board.Econ, *Own, Lot);
+				CheckNear("lot rect ymin", Rect.YMin, T45_LotRect.YMin, Tol);
+				CheckNear("lot rect ymax", Rect.YMax, T45_LotRect.YMax, Tol);
+			}
+		}
+
+		CASE("Roads.RentMultiplier");
+		{
+			// 46: own type, then the highway's proximity bonus, which MULTIPLIES
+			// and is measured pavement to pad.
+			CheckNear("highway reach", Board.Econ.RoadHighwayReach, HighwayReach, Tol);
+			FLotPlacement Lot;
+			Lot.X0 = T46_Lot.X0; Lot.X1 = T46_Lot.X1;
+			Lot.Side = FString(T46_Lot.Side);
+			Lot.RoadId = FString(T46_Lot.RoadId);
+			for (int32 i = 0; i < T46_CasesNum; ++i)
+			{
+				const FRentCase& C = T46_Cases[i];
+				FCityState S;
+				FRoadSegment D;
+				D.StartX = 6200.0; D.StartY = 3000.0; D.EndX = 7600.0; D.EndY = 3000.0;
+				D.WidthClass = FString(C.Own);
+				S.Roads.Add(FString(TEXT("D")), D);
+				if (C.Highway != nullptr)
+				{
+					const FSegDef& H = FString(C.Highway) == FString(TEXT("near"))
+						? T46_NearHighway : T46_FarHighway;
+					S.Roads.Add(FString(TEXT("HW")), SegOf(H));
+				}
+				CheckNear("multiplier", RoadRentMultiplier(Board, S, Lot), C.Mult, Tol);
+			}
+			// The near miss the reach is bounded by: 2120 against a 2000 reach.
+			const FLotRect LotR = { T46_DirtLotRect.XMin, T46_DirtLotRect.XMax,
+				T46_DirtLotRect.YMin, T46_DirtLotRect.YMax };
+			CheckNear("far distance", RectDistance(LotR,
+				RoadRect(Board.Rules, Board.Econ, RoadDictFromSegment(FString(TEXT("HW")), SegOf(T46_FarHighway)))),
+				T46_FarDistance, Tol);
+		}
+
+		CASE("Roads.UnknownType");
+		{
+			// 47: refused at the boundary with a reason, nothing spent, no road.
+			FCityState S = RoadSeed();
+			const double Before = S.Money;
+			const FRoadDrawResult D = DrawRoad(Board, S, T47_Unknown.X0, T47_Unknown.Y0,
+				T47_Unknown.X1, T47_Unknown.Y1, FString(T47_Class), T47_Unknown.bPinsActive);
+			CheckBool("refused", D.bOk, T47_Unknown.bOk);
+			CheckStr("reason", D.Reason, FString(T47_Unknown.Reason));
+			CheckNear("nothing spent", S.Money, Before, Tol);
+			CheckInt("no road added", S.Roads.Num(), 0);
+		}
+
+		CASE("Roads.CrossingUsesOwnHalf");
+		{
+			// 48: a point 1300 uu from a centreline is ON a highway (half 1430)
+			// and NOT on an avenue (half 1130) - so whether it is shared pavement
+			// depends on the type. Direct, on a hand-built road list: no state
+			// reachable through DrawRoad can have two corridors sharing ground.
+			const FRoad* Arterial = FindRoad(Board.Roads, FString(TEXT("arterial")));
+			const FRoad* Cross = FindRoad(Board.Roads, FString(TEXT("cross")));
+			CheckBool("built-ins found", Arterial != nullptr && Cross != nullptr, true);
+			if (Arterial == nullptr || Cross == nullptr) { }
+			else
+			{
+				const FRoad Hw = RoadDictFromSegment(FString(TEXT("HW")), SegOf(T48_Segment));
+				FRoadSegment AvSeg = SegOf(T48_Segment);
+				AvSeg.WidthClass = FString(TEXT("avenue"));
+				const FRoad Av = RoadDictFromSegment(FString(TEXT("HW")), AvSeg);
+				TArray<FRoad> WithHw; WithHw.Add(*Arterial); WithHw.Add(Hw);
+				TArray<FRoad> WithAv; WithAv.Add(*Arterial); WithAv.Add(Av);
+				CheckBool("on a highway's pavement", InCrossing(Board.Rules, Board.Econ, WithHw, T48_X, T48_Y), T48_Highway);
+				CheckBool("not on an avenue's", InCrossing(Board.Rules, Board.Econ, WithAv, T48_X, T48_Y), T48_Avenue);
+				TArray<FRoad> BuiltIns; BuiltIns.Add(*Arterial); BuiltIns.Add(*Cross);
+				CheckBool("the built-in crossing is still a crossing",
+					InCrossing(Board.Rules, Board.Econ, BuiltIns, 0.0, 0.0), T48_BuiltinsAtOrigin);
 			}
 		}
 	}

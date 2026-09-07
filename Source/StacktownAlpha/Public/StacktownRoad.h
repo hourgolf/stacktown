@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "StacktownEconomyRules.h"
+#include "StacktownRoadTransform.h"
 #include "StacktownRoad.generated.h"
 
 class UStaticMeshComponent;
@@ -31,7 +32,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stacktown|Road")
 	void SetGhost(bool bGhost, bool bAccept);
 
-	void ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment);
+	/** `CorridorWidth` is the road's own across-scale - Stacktown::RoadCorridor
+	 *  for its type, so a highway reads as a highway. Defaulted to the avenue's
+	 *  for a caller with no ruleset to hand. */
+	void ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment,
+		double CorridorWidth = Stacktown::RoadFrame::Corridor);
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Stacktown|Road")

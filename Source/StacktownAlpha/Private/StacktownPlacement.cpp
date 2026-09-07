@@ -18,6 +18,8 @@ FPlacementBoard FPlacementBoard::Default()
 	Board.Rules.RoadHalf        = BoardData::RoadHalf;
 	Board.Rules.BlockDepth      = BoardData::BlockDepth;
 	Board.Rules.RoadMaxReach    = BoardData::RoadMaxReach;
+	Board.Rules.Verge           = BoardData::Verge;
+	Board.Rules.ReachSlack      = BoardData::ReachSlack;
 
 	// MEASURED off the board's own ground mesh, never derived - citylayout's
 	// procedural union was tried as the authority and the owner's live clicks
@@ -134,6 +136,10 @@ FRoad RoadDictFromSegment(const FString& Id, const FRoadSegment& Seg)
 	Road.StartY = Seg.StartY;
 	Road.EndX = Seg.EndX;
 	Road.EndY = Seg.EndY;
+	// The TYPE travels with the geometry. Orientation is read off start/end
+	// rather than stored; the width class is the one thing a segment genuinely
+	// carries that its shape cannot say.
+	Road.WidthClass = Seg.WidthClass;
 	if (Seg.StartY == Seg.EndY)
 	{
 		// Horizontal: the arterial's own convention.
@@ -167,19 +173,109 @@ TArray<FRoad> FPlacementBoard::AllRoads(const FCityState& State) const
 	return Out;
 }
 
-FLotRect RoadRect(const FPlacementRules& R, const FRoad& Road)
+// ---- ROAD TYPES AS MECHANICS ---------------------------------------------
+
+FString RoadTypeOf(const FRoad& Road)
 {
+	return Road.WidthClass.IsEmpty() ? FString(DefaultRoadType()) : Road.WidthClass;
+}
+
+FString RoadTypeOf(const FRoadSegment& Seg)
+{
+	return Seg.WidthClass.IsEmpty() ? FString(DefaultRoadType()) : Seg.WidthClass;
+}
+
+const FRoadTypeRules* RoadRulesFor(const FEconRules& E, const FRoad& Road)
+{
+	return E.FindRoadType(RoadTypeOf(Road));
+}
+
+double RoadHalfForType(const FPlacementRules& R, const FEconRules& E, const FString& WidthClass)
+{
+	const FRoadTypeRules* T = E.FindRoadType(
+		WidthClass.IsEmpty() ? FString(DefaultRoadType()) : WidthClass);
+	if (T == nullptr)
+	{
+		// A MEASUREMENT CANNOT REFUSE. Returning the authored half is the only
+		// answer that keeps the board measurable at all; every path that can
+		// refuse an unknown type does so before a road with one exists.
+		return R.RoadHalf;
+	}
+	return T->Width / 2.0 + R.Verge;
+}
+
+double RoadHalf(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
+{
+	return RoadHalfForType(R, E, Road.WidthClass);
+}
+
+double RoadCorridor(const FPlacementRules& R, const FEconRules& E, const FString& WidthClass)
+{
+	return 2.0 * RoadHalfForType(R, E, WidthClass);
+}
+
+double RoadMaxReach(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
+{
+	return RoadHalf(R, E, Road) + R.BlockDepth + R.ReachSlack;
+}
+
+bool RoadHasFrontage(const FEconRules& E, const FRoad& Road)
+{
+	const FRoadTypeRules* T = RoadRulesFor(E, Road);
+	// An unknown type keeps its frontage rather than losing it: this question
+	// must never quietly remove a road from the board. The draw path refuses an
+	// unknown type outright, so one cannot reach state to be asked about.
+	return T == nullptr ? true : T->bFrontage;
+}
+
+double RoadLength(const FRoadSegment& Seg)
+{
+	const double Dx = Seg.EndX - Seg.StartX;
+	const double Dy = Seg.EndY - Seg.StartY;
+	return FMath::Sqrt(Dx * Dx + Dy * Dy);
+}
+
+bool RoadCost(const FEconRules& E, const FRoadSegment& Seg, double& OutCost)
+{
+	const FRoadTypeRules* T = E.FindRoadType(RoadTypeOf(Seg));
+	if (T == nullptr)
+	{
+		return false;
+	}
+	OutCost = T->CostPer100uu * RoadLength(Seg) / 100.0;
+	return true;
+}
+
+FString RoadMaterialName(const FString& WidthClass)
+{
+	const FString Type = WidthClass.IsEmpty() ? FString(DefaultRoadType()) : WidthClass.ToLower();
+	return FString::Printf(TEXT("MI_road_%s"), *Type);
+}
+
+double RectDistance(const FLotRect& A, const FLotRect& B)
+{
+	// Gap on each axis, negative where the spans already intersect, clamped to
+	// zero; then the hypotenuse, so a diagonal neighbour is measured corner to
+	// corner rather than along whichever axis happens to be larger.
+	const double Dx = FMath::Max(0.0, FMath::Max(A.XMin - B.XMax, B.XMin - A.XMax));
+	const double Dy = FMath::Max(0.0, FMath::Max(A.YMin - B.YMax, B.YMin - A.YMax));
+	return FMath::Sqrt(Dx * Dx + Dy * Dy);
+}
+
+FLotRect RoadRect(const FPlacementRules& R, const FEconRules& E, const FRoad& Road)
+{
+	const double Half = RoadHalf(R, E, Road);
 	FLotRect Rect;
 	if (Road.StartY == Road.EndY)
 	{
 		Rect.XMin = FMath::Min(Road.StartX, Road.EndX);
 		Rect.XMax = FMath::Max(Road.StartX, Road.EndX);
-		Rect.YMin = Road.StartY - R.RoadHalf;
-		Rect.YMax = Road.StartY + R.RoadHalf;
+		Rect.YMin = Road.StartY - Half;
+		Rect.YMax = Road.StartY + Half;
 		return Rect;
 	}
-	Rect.XMin = Road.StartX - R.RoadHalf;
-	Rect.XMax = Road.StartX + R.RoadHalf;
+	Rect.XMin = Road.StartX - Half;
+	Rect.XMax = Road.StartX + Half;
 	Rect.YMin = FMath::Min(Road.StartY, Road.EndY);
 	Rect.YMax = FMath::Max(Road.StartY, Road.EndY);
 	return Rect;
@@ -222,13 +318,16 @@ FRoadProjection ProjectToRoad(const FRoad& Road, double X, double Y)
 	return P;
 }
 
-bool InCrossing(const FPlacementRules& R, const TArray<FRoad>& Roads, double X, double Y)
+bool InCrossing(const FPlacementRules& R, const FEconRules& E,
+	const TArray<FRoad>& Roads, double X, double Y)
 {
 	int32 Count = 0;
 	for (const FRoad& Road : Roads)
 	{
 		const FRoadProjection P = ProjectToRoad(Road, X, Y);
-		if (P.Along >= 0.0 && P.Along <= P.Length && FMath::Abs(P.Across) < R.RoadHalf)
+		// The ROAD'S OWN corridor, not the one avenue constant: a highway is
+		// 2000 wide and its pavement has to be 2000 wide here too.
+		if (P.Along >= 0.0 && P.Along <= P.Length && FMath::Abs(P.Across) < RoadHalf(R, E, Road))
 		{
 			++Count;
 		}
@@ -243,10 +342,57 @@ FString LotRoadId(const FLotPlacement& Lot)
 	return Lot.RoadId.IsSet() ? Lot.RoadId.GetValue() : FString(TEXT("arterial"));
 }
 
-const FRoad* ResolveRoad(const FPlacementRules& R, const TArray<FRoad>& Roads,
+/** Point-to-SEGMENT distance, with the projection that produced it. Past an
+ *  end, measured to the end itself: an infinite-line distance would read 0 for
+ *  a click far past the arterial's east end but sitting on y=0, and accept.
+ *  Factored out so the frontage search and the no-frontage explanation measure
+ *  with one function rather than each carrying its own copy of the clamp. */
+static double RoadDistance(const FRoad& Road, double X, double Y, FRoadProjection& OutProj)
+{
+	OutProj = ProjectToRoad(Road, X, Y);
+	if (OutProj.Along >= 0.0 && OutProj.Along <= OutProj.Length)
+	{
+		return FMath::Abs(OutProj.Across);
+	}
+	const double Clamped = FMath::Max(0.0, FMath::Min(OutProj.Length, OutProj.Along));
+	const double D = OutProj.Along - Clamped;
+	return FMath::Sqrt(D * D + OutProj.Across * OutProj.Across);
+}
+
+/** The nearest road that REFUSES frontage and whose reach the point is inside,
+ *  or nullptr. Exists so a click beside a highway can be told WHY it is
+ *  refused - the generic answer is "not within reach of any road", which is
+ *  true and useless standing on a highway's verge with the highway in sight. */
+static const FRoad* NearestNoFrontage(const FPlacementRules& R, const FEconRules& E,
+	const TArray<FRoad>& Roads, double X, double Y)
+{
+	const FRoad* Best = nullptr;
+	double BestDist = 0.0;
+	for (const FRoad& Road : Roads)
+	{
+		if (RoadHasFrontage(E, Road))
+		{
+			continue;
+		}
+		FRoadProjection P;
+		const double Dist = RoadDistance(Road, X, Y, P);
+		if (Dist > RoadMaxReach(R, E, Road))
+		{
+			continue;
+		}
+		if (Best == nullptr || Dist < BestDist)
+		{
+			Best = &Road;
+			BestDist = Dist;
+		}
+	}
+	return Best;
+}
+
+const FRoad* ResolveRoad(const FPlacementRules& R, const FEconRules& E, const TArray<FRoad>& Roads,
 	double X, double Y, FRoadLocal& OutLocal)
 {
-	if (InCrossing(R, Roads, X, Y))
+	if (InCrossing(R, E, Roads, X, Y))
 	{
 		return nullptr;
 	}
@@ -257,20 +403,23 @@ const FRoad* ResolveRoad(const FPlacementRules& R, const TArray<FRoad>& Roads,
 	double BestAcross = 0.0;
 	for (const FRoad& Road : Roads)
 	{
-		const FRoadProjection P = ProjectToRoad(Road, X, Y);
-		double Dist;
-		if (P.Along >= 0.0 && P.Along <= P.Length)
+		// A road that refuses frontage is not a candidate at all: the highway
+		// carries traffic past the city and a lot never faces one.
+		if (!RoadHasFrontage(E, Road))
 		{
-			Dist = FMath::Abs(P.Across);
+			continue;
 		}
-		else
+		FRoadProjection P;
+		const double Dist = RoadDistance(Road, X, Y, P);
+		// THE ROAD'S OWN reach, applied as a FILTER before nearest-road
+		// selection rather than as a test on the winner afterwards. With one
+		// reach for every road the two orders are identical (if the nearest is
+		// out of reach, all of them are); with per-type reaches a near, narrow
+		// road would otherwise win the comparison and then fail the bound,
+		// hiding a wider road that legally reaches the point.
+		if (Dist > RoadMaxReach(R, E, Road))
 		{
-			// Point-to-SEGMENT: past an end, measure to the end itself. An
-			// infinite-line distance would read 0 for a click far past the
-			// arterial's east end but sitting on y=0, and wrongly accept.
-			const double Clamped = FMath::Max(0.0, FMath::Min(P.Length, P.Along));
-			const double D = P.Along - Clamped;
-			Dist = FMath::Sqrt(D * D + P.Across * P.Across);
+			continue;
 		}
 		if (Best == nullptr || Dist < BestDist)
 		{
@@ -281,7 +430,7 @@ const FRoad* ResolveRoad(const FPlacementRules& R, const TArray<FRoad>& Roads,
 		}
 	}
 
-	if (Best == nullptr || BestDist > R.RoadMaxReach)
+	if (Best == nullptr)
 	{
 		return nullptr;
 	}
@@ -303,10 +452,14 @@ const FRoad* FindRoad(const TArray<FRoad>& Roads, const FString& Id)
 	return nullptr;
 }
 
-FLotRect LotRect(const FPlacementRules& R, const FRoad& Road, const FLotPlacement& Lot)
+FLotRect LotRect(const FPlacementRules& R, const FEconRules& E, const FRoad& Road,
+	const FLotPlacement& Lot)
 {
-	const double Near = R.RoadHalf;
-	const double Far  = R.RoadHalf + R.BlockDepth;
+	// PER-TYPE FRONTAGE LINE: a lot on a dirt track sits 880 uu off its
+	// centreline. BlockDepth is unchanged and deliberately so - the block
+	// behind a lot is the same block whatever road it faces.
+	const double Near = RoadHalf(R, E, Road);
+	const double Far  = Near + R.BlockDepth;
 	FLotRect Rect;
 	if (!Road.bAxisX)
 	{
@@ -358,16 +511,26 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	double X, double Y, bool bPinsActive, double Width)
 {
 	const FPlacementRules& R = Board.Rules;
+	const FEconRules& E = Board.Econ;
 	const TArray<FRoad> Roads = Board.AllRoads(State);
 
 	FRoadLocal Local;
-	const FRoad* Road = ResolveRoad(R, Roads, X, Y, Local);
+	const FRoad* Road = ResolveRoad(R, E, Roads, X, Y, Local);
 	if (Road == nullptr)
 	{
-		if (InCrossing(R, Roads, X, Y))
+		if (InCrossing(R, E, Roads, X, Y))
 		{
 			return Refuse(FString::Printf(
 				TEXT("in the crossing: (%.1f, %.1f) is pavement shared by more than one road"), X, Y));
+		}
+		// A refusal a player can act on, rather than the true-but-useless
+		// 'off-board' they would otherwise get standing on a highway's verge
+		// with the highway right in front of them.
+		if (const FRoad* Near = NearestNoFrontage(R, E, Roads, X, Y))
+		{
+			return Refuse(FString::Printf(
+				TEXT("no frontage: the %s is a %s and nothing may face it"),
+				*Near->Id, *RoadTypeOf(*Near)));
 		}
 		// There is no separate "too far from a road" refusal: any road
 		// ResolveRoad returns is already within RoadMaxReach by construction, so
@@ -378,11 +541,12 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	}
 
 	const FRoadProjection Proj = ProjectToRoad(*Road, X, Y);
-	if (Proj.Along >= 0.0 && Proj.Along <= Proj.Length && FMath::Abs(Local.Across) < R.RoadHalf)
+	const double Half = RoadHalf(R, E, *Road);
+	if (Proj.Along >= 0.0 && Proj.Along <= Proj.Length && FMath::Abs(Local.Across) < Half)
 	{
 		return Refuse(FString::Printf(
 			TEXT("in the road: |across|=%.0f is inside the %s corridor (half %.0f)"),
-			FMath::Abs(Local.Across), *Road->Id, R.RoadHalf));
+			FMath::Abs(Local.Across), *Road->Id, Half));
 	}
 
 	// WORLD SPACE FIRST, THEN SNAP. Neither plate minimum is a multiple of the
@@ -425,7 +589,33 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	Candidate.X1 = X1;
 	Candidate.Side = Local.Side;
 	Candidate.RoadId = Road->Id;
-	const FLotRect Mine = LotRect(R, *Road, Candidate);
+	const FLotRect Mine = LotRect(R, E, *Road, Candidate);
+
+	// NO-FRONTAGE CORRIDORS. Every other refusal here is reached THROUGH the
+	// road a lot faces, so a road nothing may face is unguarded by
+	// construction: a highway is not a candidate in ResolveRoad, is not a lot,
+	// and is not a pin, so without this a lot fronting some other road could be
+	// laid straight across two thousand uu of motorway.
+	//
+	// DELIBERATELY NOT ALL ROADS. A lot can also overlap a FRONTAGE road's
+	// corridor - the oracle's own test 39 places one in the 740 uu the arterial
+	// and a road drawn 3000 uu from it leave between their pavements, which is
+	// less than BlockDepth. That is a real, PRE-EXISTING gap; closing it moves
+	// where lots may go on boards that already exist, which is the owner's call
+	// and not part of road types. Raised on the board, not silently fixed here.
+	for (const FRoad& Other : Roads)
+	{
+		if (RoadHasFrontage(E, Other))
+		{
+			continue;
+		}
+		if (RectsOverlap(Mine, RoadRect(R, E, Other)))
+		{
+			return Refuse(FString::Printf(
+				TEXT("in the road: [%.1f, %.1f] would run across the %s, a %s"),
+				X0, X1, *Other.Id, *RoadTypeOf(Other)));
+		}
+	}
 
 	// Sorted, so a refusal names the same lot every run. The Python iterates a
 	// dict in insertion order; two lots can both overlap, and a message that
@@ -455,7 +645,7 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 		// WORLD footprints, not per-road spans: the corner is where a
 		// cross-street lot and an arterial lot share ground while their spans
 		// never compare, because they live on different axes.
-		if (RectsOverlap(Mine, LotRect(R, *OtherRoad, Other)))
+		if (RectsOverlap(Mine, LotRect(R, E, *OtherRoad, Other)))
 		{
 			return Refuse(FString::Printf(
 				TEXT("overlap: [%.1f, %.1f] on the %s crosses an existing lot at [%.1f, %.1f] on the %s"),
@@ -561,6 +751,22 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 	double X0, double Y0, double X1, double Y1, const FString& WidthClass, bool bPinsActive)
 {
 	const FPlacementRules& R = Board.Rules;
+	const FEconRules& E = Board.Econ;
+
+	// A BOUNDARY CHECK, not RoadTypeOf's problem: a bad string arriving from a
+	// UI deserves a reason, and nothing may reach state carrying a type the
+	// ruleset cannot price.
+	if (!WidthClass.IsEmpty() && E.FindRoadType(WidthClass) == nullptr)
+	{
+		FString Known;
+		for (const FString& T : RoadTypeNames())
+		{
+			Known += Known.IsEmpty() ? T : FString::Printf(TEXT(", %s"), *T);
+		}
+		return RefuseRoad(FString::Printf(
+			TEXT("unknown road type '%s': expected one of %s"), *WidthClass, *Known));
+	}
+
 	const double Dx = X1 - X0;
 	const double Dy = Y1 - Y0;
 
@@ -610,11 +816,11 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 	Result.Segment.WidthClass = WidthClass;
 
 	const TArray<FRoad> Roads = Board.AllRoads(State);
-	const FLotRect Mine = RoadRect(R, RoadDictFromSegment(Result.Id, Result.Segment));
+	const FLotRect Mine = RoadRect(R, E, RoadDictFromSegment(Result.Id, Result.Segment));
 
 	for (const FRoad& Road : Roads)
 	{
-		if (RectsOverlap(Mine, RoadRect(R, Road)))
+		if (RectsOverlap(Mine, RoadRect(R, E, Road)))
 		{
 			return RefuseRoad(FString::Printf(
 				TEXT("crosses: the drawn road would cross the %s road"), *Road.Id));
@@ -640,7 +846,7 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 			return RefuseRoad(FString::Printf(
 				TEXT("stale lot: '%s' names road '%s', which no longer exists"), *Pid, *LotRoad));
 		}
-		if (RectsOverlap(Mine, LotRect(R, *Road, Lot)))
+		if (RectsOverlap(Mine, LotRect(R, E, *Road, Lot)))
 		{
 			return RefuseRoad(FString::Printf(
 				TEXT("overlap: the drawn road would cross an existing lot at [%.1f, %.1f] on the %s"),
@@ -663,7 +869,7 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 				PinLot.X1 = Pin.X1;
 				PinLot.Side = Pin.Side;
 				PinLot.RoadId = Board.PinnedRoadId;
-				if (RectsOverlap(Mine, LotRect(R, *Arterial, PinLot)))
+				if (RectsOverlap(Mine, LotRect(R, E, *Arterial, PinLot)))
 				{
 					return RefuseRoad(FString::Printf(
 						TEXT("overlap: the drawn road would cross a pinned lot at [%.1f, %.1f]"),
@@ -673,8 +879,70 @@ FRoadDrawResult ResolveRoadDraw(const FPlacementBoard& Board, const FCityState& 
 		}
 	}
 
+	// COST LAST, after every geometric refusal: a road that crosses a building
+	// is illegal whatever the balance, and quoting the price of a road that
+	// could never have been drawn is noise.
+	double Cost = 0.0;
+	if (!RoadCost(E, Result.Segment, Cost))
+	{
+		// Unreachable through the guard at the top of this function; said out
+		// loud rather than defaulted, because a silently free road is worse
+		// than a refused one.
+		return RefuseRoad(FString::Printf(
+			TEXT("unknown road type '%s': the ruleset cannot price it"),
+			*RoadTypeOf(Result.Segment)));
+	}
+	if (State.Money < Cost)
+	{
+		return RefuseRoad(FString::Printf(
+			TEXT("can't afford: a %.0f uu %s costs %.2f, money is %.2f"),
+			Length, *RoadTypeOf(Result.Segment), Cost, State.Money));
+	}
+
 	Result.bOk = true;
 	return Result;
+}
+
+double RoadRentMultiplier(const FPlacementBoard& Board, const FCityState& State,
+	const FLotPlacement& Lot)
+{
+	const FPlacementRules& R = Board.Rules;
+	const FEconRules& E = Board.Econ;
+	const TArray<FRoad> Roads = Board.AllRoads(State);
+
+	const FRoad* Own = FindRoad(Roads, LotRoadId(Lot));
+	if (Own == nullptr)
+	{
+		// A lot naming a road that no longer exists. Neutral is the only honest
+		// answer here; the click path refuses such a lot with a reason, and a
+		// multiplier has no way to say anything.
+		return 1.0;
+	}
+	const FRoadTypeRules* OwnType = RoadRulesFor(E, *Own);
+	double Mult = OwnType == nullptr ? 1.0 : OwnType->RentMult;
+
+	// THE SECOND MECHANISM. A road that refuses frontage lifts every lot within
+	// RoadHighwayReach of its PAVEMENT - proximity, not frontage, because
+	// nothing ever fronts one and a frontage-only reading would leave
+	// road_rent_mult_highway dead in the rules file. THEY MULTIPLY: a dirt track
+	// beside a motorway is 0.75 x 1.1. Flagged for the owner, who may read the
+	// table's "rents at 1.1x" as an absolute instead.
+	const FLotRect Mine = LotRect(R, E, *Own, Lot);
+	for (const FRoad& Road : Roads)
+	{
+		if (RoadHasFrontage(E, Road))
+		{
+			continue;
+		}
+		if (RectDistance(Mine, RoadRect(R, E, Road)) <= E.RoadHighwayReach)
+		{
+			if (const FRoadTypeRules* T = RoadRulesFor(E, Road))
+			{
+				Mult *= T->RentMult;
+			}
+		}
+	}
+	return Mult;
 }
 
 FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityState& State,
@@ -684,6 +952,16 @@ FRoadDrawResult DrawRoad(const FPlacementBoard& Board, FCityState& State,
 	if (!Result.bOk)
 	{
 		return Result;
+	}
+	// THE MONEY MOVES HERE, and only here: ResolveRoadDraw decides whether the
+	// city can pay, so the ghost preview can say "can't afford" without
+	// spending anything, and this is what actually spends it. Charged from the
+	// SAME segment that was quoted, through the same RoadCost, so the amount
+	// charged cannot differ from the amount shown.
+	double Cost = 0.0;
+	if (RoadCost(Board.Econ, Result.Segment, Cost))
+	{
+		State.Money -= Cost;
 	}
 	// Inserted UNCHANGED, not re-derived.
 	State.Roads.Add(Result.Id, Result.Segment);

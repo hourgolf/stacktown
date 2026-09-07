@@ -219,3 +219,89 @@ lot-placement channel already uses, not a second mechanism.
   `ROADS_AS_MECHANIC.md` itself; nothing here closes any of them, only
   `width_class` existing as a field is new groundwork for the palette
   question specifically.
+
+  **The type palette closed on 2026-09-06** (section 7 below). The rest
+  of that list is still open; curves and arbitrary angles are the next
+  item.
+
+## 7. Road types as mechanics (2026-09-06)
+
+`MONDAY_DECISIONS.md` section 2 decided the four types on 2026-09-01 —
+dirt, paved avenue, tree-lined boulevard, highway, the highway
+**refusing frontage** — and left every number open. `NIGHT_PLAN.md`
+adopts that section's proposed table as working defaults. They live in
+`econrules.json` as seventeen `road_*` keys, so the owner retunes any
+cell without a code change or a rebuild.
+
+**`width_class` IS the type. No new field.** The queue item proposed a
+`type` beside `width_class`; the coordinator's 20:22 note settled it the
+other way, and it is the better answer: the field already existed on
+every segment, its one existing value (`'avenue'`) is already one of the
+four names, and a segment written before types existed means the avenue
+by that fallback alone. No saved city needs migrating and no two fields
+can disagree.
+
+What each type decides:
+
+| | dirt | avenue | boulevard | highway |
+|---|---|---|---|---|
+| carriageway | 900 | 1400 | 1400 | 2000 |
+| corridor half | 880 | **1130** | 1130 | 1430 |
+| cost / 100 uu | $5 | $10 | $20 | $30 |
+| rent | 0.75x | 1.0x | 1.25x | 1.1x, by proximity |
+| may be fronted | yes | yes | yes | **no** |
+
+The corridor half is `carriageway / 2 + VERGE`, and **VERGE = 430 is
+recovered, not chosen**: today's avenue is 1400 wide inside a corridor
+whose half is `citylayout.HALF` = 1130. So an avenue — and a road
+carrying no type at all, which is what both built-ins are — measures
+*exactly* the constant the board was authored against. That is what
+lets every test written before this one keep measuring the same board.
+It is a literal rather than `road_width_avenue / 2`, deliberately: it
+records how wide the road was when the board was authored and must not
+move when the owner retunes the avenue.
+
+Three refusals are new, and each names what a player can do about it:
+
+- **`no frontage`** — a click whose nearest reaching road refuses
+  frontage. Without it the answer is "not within reach of any road",
+  which is true and useless standing on a highway's verge. Bounded by
+  the highway's *own* reach: a click outside every road's reach still
+  gets `off-board`.
+- **`in the road: … would run across the R1, a highway`** — a lot
+  fronting some *other* road may not be laid across a highway's
+  corridor. Refusing frontage is not enough on its own: every other
+  refusal is reached *through* the road a lot faces, so a road nothing
+  faces is unguarded by construction.
+- **`can't afford`** — checked last, after every geometric refusal (a
+  road that crosses a building is illegal whatever the balance), and
+  checked in the resolver so the ghost preview can say it without
+  spending anything. `DrawRoad` is the only thing that spends, and it
+  charges the same segment that was quoted through the same function.
+
+**The rent multiplier is built, tested and NOT wired.** `Tick()` was the
+coordinator's on the night this landed. `RoadRentMultiplier(Board,
+State, Lot)` is the pure function rent is multiplied by; applying it is
+one line in the economy loop.
+
+Two open questions for the owner, both raised rather than assumed:
+
+1. **The boulevard's median.** The table says "1400 + median" and does
+   not say how wide the median is, so `road_width_boulevard` is 1400 —
+   the same corridor as an avenue. Its rent and cost already differ; its
+   *width* does not, and will not until the number exists.
+2. **How the highway's bonus combines.** "Every lot within 2,000 uu of
+   it rents at 1.1x" reads either as a multiplier or as an absolute.
+   Built as a multiplier (dirt beside a motorway is 0.75 × 1.1 = 0.825),
+   because that composes and keeps the type ordering intact; read as an
+   absolute, a dirt lot beside a highway would out-earn a boulevard lot
+   away from one. One word changes it.
+
+One **pre-existing gap**, found by widening the corridor check to every
+road and watching self-test 39 refuse: a lot can overlap a *frontage*
+road's corridor. Test 39's own lot does, sitting in the 740 uu the
+arterial and a road drawn 3,000 uu from it leave between their
+pavements, which is less than `BLOCK_DEPTH`. Closing it changes where
+lots may go on boards that already exist — the owner's call, not road
+types', so the check is scoped to frontage-refusing roads and the gap is
+named here.

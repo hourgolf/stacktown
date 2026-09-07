@@ -262,10 +262,10 @@ STACKTOWN_PLACE_TEST(FStacktownPlacePinnedSpans, "Stacktown.Placement.PinnedSpan
 namespace
 {
 	void CheckResolve(FAutomationTestBase& T, const TCHAR* What,
-		const TArray<FRoad>& Roads, const FPlacementRules& Rules, const FResolveCase& C)
+		const TArray<FRoad>& Roads, const FPlacementBoard& Board, const FResolveCase& C)
 	{
 		FRoadLocal Local;
-		const FRoad* Got = ResolveRoad(Rules, Roads, C.X, C.Y, Local);
+		const FRoad* Got = ResolveRoad(Board.Rules, Board.Econ, Roads, C.X, C.Y, Local);
 		if (C.Road == nullptr)
 		{
 			T.TestNull(FString::Printf(TEXT("%s (%.0f, %.0f): no road"), What, C.X, C.Y), Got);
@@ -296,14 +296,14 @@ STACKTOWN_PLACE_TEST(FStacktownResolveRoadAlone, "Stacktown.Placement.ResolveRoa
 
 	for (int32 i = 0; i < T13ArterialAloneNum; ++i)
 	{
-		CheckResolve(*this, TEXT("arterial alone"), Arterial, Board.Rules, T13ArterialAlone[i]);
+		CheckResolve(*this, TEXT("arterial alone"), Arterial, Board, T13ArterialAlone[i]);
 	}
 	// The cross street's own axis: across reduces to -x, and positive x is
 	// 'east' the same way positive y is 'north' for the arterial. Both
 	// conventions fall out of the projection; neither is asserted separately.
 	for (int32 i = 0; i < T14CrossAloneNum; ++i)
 	{
-		CheckResolve(*this, TEXT("cross alone"), Cross, Board.Rules, T14CrossAlone[i]);
+		CheckResolve(*this, TEXT("cross alone"), Cross, Board, T14CrossAlone[i]);
 	}
 	return true;
 }
@@ -316,15 +316,15 @@ STACKTOWN_PLACE_TEST(FStacktownResolveRoadSelection, "Stacktown.Placement.Resolv
 
 	// The same point test 13 resolves to the arterial ALONE goes to the cross
 	// street once both are offered - which is the whole force of "alone".
-	CheckResolve(*this, TEXT("nearest wins"), Both, Board.Rules, T15);
-	CheckResolve(*this, TEXT("past the crossing band"), Both, Board.Rules, T17);
+	CheckResolve(*this, TEXT("nearest wins"), Both, Board, T15);
+	CheckResolve(*this, TEXT("past the crossing band"), Both, Board, T17);
 	// Point-to-SEGMENT: far past the arterial's east end but exactly on its
 	// infinite centreline. An infinite-line distance would read 0 and accept.
 	CheckResolve(*this, TEXT("point to segment"),
-		OnlyRoad(Board, TEXT("arterial")), Board.Rules, T18);
+		OnlyRoad(Board, TEXT("arterial")), Board, T18);
 	for (int32 i = 0; i < T19TooFarNum; ++i)
 	{
-		CheckResolve(*this, TEXT("too far"), Both, Board.Rules, T19TooFar[i]);
+		CheckResolve(*this, TEXT("too far"), Both, Board, T19TooFar[i]);
 	}
 	return true;
 }
@@ -335,7 +335,7 @@ STACKTOWN_PLACE_TEST(FStacktownResolveRoadCrossing, "Stacktown.Placement.Resolve
 	const FPlacementBoard Board = OracleBoard();
 	for (int32 i = 0; i < T16CrossingNum; ++i)
 	{
-		CheckResolve(*this, TEXT("crossing"), Board.Roads, Board.Rules, T16Crossing[i]);
+		CheckResolve(*this, TEXT("crossing"), Board.Roads, Board, T16Crossing[i]);
 	}
 	return true;
 }
@@ -473,13 +473,13 @@ STACKTOWN_PLACE_TEST(FStacktownPlaceCorner, "Stacktown.Placement.Corner")
 	TestNotNull(TEXT("cross exists"), Cross);
 	if (Arterial != nullptr && Cross != nullptr)
 	{
-		const FLotRect R0 = LotRect(Board.Rules, *Arterial, LotFrom(T27_Lot0));
+		const FLotRect R0 = LotRect(Board.Rules, Board.Econ, *Arterial, LotFrom(T27_Lot0));
 		TestEqual(TEXT("arterial lot xmin"), R0.XMin, T27_Rect0.XMin, 1e-9);
 		TestEqual(TEXT("arterial lot xmax"), R0.XMax, T27_Rect0.XMax, 1e-9);
 		TestEqual(TEXT("arterial lot ymin"), R0.YMin, T27_Rect0.YMin, 1e-9);
 		TestEqual(TEXT("arterial lot ymax"), R0.YMax, T27_Rect0.YMax, 1e-9);
 
-		const FLotRect R1 = LotRect(Board.Rules, *Cross, LotFrom(T27_Lot1));
+		const FLotRect R1 = LotRect(Board.Rules, Board.Econ, *Cross, LotFrom(T27_Lot1));
 		TestEqual(TEXT("cross lot xmin"), R1.XMin, T27_Rect1.XMin, 1e-9);
 		TestEqual(TEXT("cross lot xmax"), R1.XMax, T27_Rect1.XMax, 1e-9);
 		TestEqual(TEXT("cross lot ymin"), R1.YMin, T27_Rect1.YMin, 1e-9);

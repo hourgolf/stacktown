@@ -15,5 +15,22 @@
   "demand_rate": 0.1,
   "demand_min": 0.5,
   "demand_max": 2.0,
-  "wear_ticks_per_tier": 150
+  "wear_ticks_per_tier": 150,
+  "road_cost_per_100uu_dirt": 5,
+  "road_cost_per_100uu_avenue": 10,
+  "road_cost_per_100uu_boulevard": 20,
+  "road_cost_per_100uu_highway": 30,
+  "road_rent_mult_dirt": 0.75,
+  "road_rent_mult_avenue": 1.0,
+  "road_rent_mult_boulevard": 1.25,
+  "road_rent_mult_highway": 1.1,
+  "road_width_dirt": 900,
+  "road_width_avenue": 1400,
+  "road_width_boulevard": 1400,
+  "road_width_highway": 2000,
+  "road_frontage_dirt": 1,
+  "road_frontage_avenue": 1,
+  "road_frontage_boulevard": 1,
+  "road_frontage_highway": 0,
+  "road_highway_reach": 2000
 }

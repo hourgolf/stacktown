@@ -371,6 +371,13 @@ FString AStacktownPlayerController::ClassifyPlaceRefusal(const FString& R)
 	if (R.Contains(TEXT("crosses a pinned lot"))) { return TEXT("That's part of the starter city"); }
 	if (R.Contains(TEXT("crosses an existing lot"))) { return TEXT("Already built there"); }
 	if (R.StartsWith(TEXT("pool exhausted"))) { return TEXT("No more lots available"); }
+	// ROAD TYPES (2026-09-06). Both rows are PLACEHOLDER WORDING - the design
+	// lane rules the words; these exist so the two new refusals do not fall
+	// through to "Can't build here", which says nothing a player can act on.
+	// Before the "in the road" row on purpose: the across-a-highway refusal
+	// starts with the same words and is a different thing to be told.
+	if (R.Contains(TEXT("would run across"))) { return TEXT("That would cross the highway"); }
+	if (R.StartsWith(TEXT("no frontage"))) { return TEXT("Nothing can face a highway"); }
 	if (R.StartsWith(TEXT("in the road"))) { return TEXT("That's the road - click the block beside it"); }
 	if (R.StartsWith(TEXT("too far from a road"))) { return TEXT("Too far from a road"); }
 	if (R.Contains(TEXT("crossing"))) { return TEXT("That's the crossing - pick one road's frontage"); }
@@ -395,7 +402,7 @@ void AStacktownPlayerController::HoverGhost(const FVector& BoardPoint, bool bOve
 	LastHoverPoint = BoardPoint;
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
-	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard();
+	const Stacktown::FPlacementBoard Board = Stacktown::TemporaryBoard(Econ->GetRules());
 	const Stacktown::FClickResult R = Stacktown::ResolveClick(Board, Econ->GetState(), BoardPoint.X, BoardPoint.Y, (!CityOwned() && PinsActive(GetGameInstance())), CurrentLotWidth());
 	if (!R.bOk)
 	{
@@ -405,7 +412,11 @@ void AStacktownPlayerController::HoverGhost(const FVector& BoardPoint, bool bOve
 	}
 	if (HudModel) { HudModel->PlaceRefusal.Reset(); }
 	Stacktown::LotFrame::FPose Pose;
-	if (!Stacktown::LotFrame::Pose(R.Lot, Board.AllRoads(Econ->GetState()), Pose)) { return; }
+	const TArray<Stacktown::FRoad> GhostRoads = Board.AllRoads(Econ->GetState());
+	const Stacktown::FRoad* GhostRoad = Stacktown::FindRoad(GhostRoads, Stacktown::LotRoadId(R.Lot));
+	const double GhostHalf = GhostRoad ? Stacktown::RoadHalf(Board.Rules, Board.Econ, *GhostRoad)
+	                                   : Stacktown::LotFrame::RoadHalf;
+	if (!Stacktown::LotFrame::Pose(R.Lot, GhostRoads, Pose, GhostHalf)) { return; }
 	if (!Ghost)
 	{
 		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -482,7 +493,7 @@ FString AStacktownPlayerController::CityPlaceAt(double X, double Y)
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	UStacktownCitySync* Sync = GetWorld() ? GetWorld()->GetSubsystem<UStacktownCitySync>() : nullptr;
 	if (!Econ || !Sync || !Sync->OwnsCity()) { return TEXT("the C++ port is not driving this city"); }
-	const Stacktown::FPlaceResult R = Stacktown::Place(Stacktown::TemporaryBoard(), Econ->GetMutableState(), X, Y, (!CityOwned() && PinsActive(GetGameInstance())), CurrentLotWidth());
+	const Stacktown::FPlaceResult R = Stacktown::Place(Stacktown::TemporaryBoard(Econ->GetRules()), Econ->GetMutableState(), X, Y, (!CityOwned() && PinsActive(GetGameInstance())), CurrentLotWidth());
 	if (!R.bOk)
 	{
 		if (HudModel) { HudModel->PlaceRefusal = ClassifyPlaceRefusal(R.Reason); }
@@ -548,6 +559,10 @@ FString AStacktownPlayerController::CityReset()
 FString AStacktownPlayerController::ClassifyRoadRefusal(const FString& R)
 {
 	// Docs/HUD_V1.md CONTENT 2, the draw rows plus the shared overlap rows
+	// PLACEHOLDER WORDING, design lane's to rule: roads cost money since road
+	// types, and a player who cannot pay must be told that and not "Can't build
+	// here". First, because it is the one refusal a player can fix by waiting.
+	if (R.StartsWith(TEXT("can't afford"))) { return TEXT("Not enough money"); }
 	if (R.Contains(TEXT("diagonal")) || R.Contains(TEXT("straight"))) { return TEXT("Roads run straight"); }
 	if (R.Contains(TEXT("short"))) { return TEXT("Too short for a road"); }
 	if (R.Contains(TEXT("cross"))) { return TEXT("Roads can't cross yet"); }
@@ -581,7 +596,7 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 	if (!bRoadStartSet) { HideRoadGhost(); return; }
 	UStacktownEconomy* Econ = GetGameInstance() ? GetGameInstance()->GetSubsystem<UStacktownEconomy>() : nullptr;
 	if (!Econ) { return; }
-	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
+	const Stacktown::FRoadDrawResult R = Stacktown::ResolveRoadDraw(Stacktown::TemporaryBoard(Econ->GetRules()), Econ->GetState(), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
 	if (!RoadGhostActor)
 	{
 		FActorSpawnParameters Params; Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -590,7 +605,8 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 	if (AStacktownRoad* G = Cast<AStacktownRoad>(RoadGhostActor))
 	{
 		// the chord as drawn when refused, the validated segment when accepted
-		if (R.bOk) { G->ShowSegment(TEXT("ghost"), R.Segment); }
+		if (R.bOk) { G->ShowSegment(TEXT("ghost"), R.Segment, Stacktown::RoadCorridor(
+			Stacktown::FPlacementBoard::Default().Rules, Econ->GetRules(), R.Segment.WidthClass)); }
 		else { G->Show(TEXT("ghost"), RoadStart.X, RoadStart.Y, BoardPoint.X, BoardPoint.Y); }
 		G->SetGhost(true, R.bOk);
 		G->SetActorHiddenInGame(false);
@@ -610,7 +626,7 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 		PlayCue(TEXT("S_Place"));
 		return FString::Printf(TEXT("road start (%.0f, %.0f)"), X, Y);
 	}
-	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
+	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(Econ->GetRules()), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, RoadClass, (!CityOwned() && PinsActive(GetGameInstance())));
 	bRoadStartSet = false;
 	HideRoadGhost();
 	if (!R.bOk)
@@ -797,7 +813,7 @@ FString AStacktownPlayerController::CityPreset()
 		return TEXT("preset refused: the board is not empty");
 	}
 	const Stacktown::FCityState Fresh = Econ->GetState();
-	Stacktown::FCityState Seeded = Stacktown::SeedPresetState(Econ->GetRules(), Stacktown::TemporaryBoard());
+	Stacktown::FCityState Seeded = Stacktown::SeedPresetState(Econ->GetRules(), Stacktown::TemporaryBoard(Econ->GetRules()));
 	Seeded.Money = Fresh.Money; Seeded.Demand = Fresh.Demand; Seeded.TradesProcessed = Fresh.TradesProcessed; Seeded.GoalsReached = Fresh.GoalsReached; Seeded.Roads = Fresh.Roads;
 	Econ->GetMutableState() = Seeded;
 	Econ->SaveState();

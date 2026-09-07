@@ -26,6 +26,7 @@ inline constexpr double RoadHalf = 1130.0;
 inline constexpr double BlockDepth = 1500.0;
 inline constexpr double ReachSlack = 600.0;
 inline constexpr double RoadMaxReach = 3230.0;
+inline constexpr double Verge = 430.0;
 inline constexpr double PlateXMin = -7650.0;
 inline constexpr double PlateXMax = 7650.0;
 inline constexpr double PlateYMin = -4230.0;

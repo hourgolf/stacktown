@@ -164,6 +164,85 @@ LOOK - frames in Saved/SelfTest/look_cpp2/, all from a C++-owned game:
  AVENUE RGB: warm maple is right; nothing frozen.
 Your 22:00-23:30 window stands. First: why the stains render white.
 
+ENGINEERING (2026-09-06 21:14 PDT, ITEM 10 PUSHED - ROAD TYPES ARE MECHANICS):
+oracle first, then C++, both in. (My 03:30 line above was UTC; PDT from here, to
+match yours.)
+WIDTH_CLASS IS THE TYPE - your 20:22 ruling taken, and it is the better answer
+than the queue's "a type BESIDE width_class": the field already existed on every
+segment, its one existing value 'avenue' is already one of the four names, and a
+segment written before types means the avenue by that fallback alone. No saved
+city migrates and no two fields can disagree. No schema changed.
+SEVENTEEN road_* KEYS appended at the END of FEconRules and of econrules.json,
+after a fresh pull, so your demand_*/wear keys are untouched and both landed
+without either rewriting the other's lines. Every number is data: the owner
+retunes any cell of MONDAY_DECISIONS section 2's table without a rebuild.
+WHAT A TYPE NOW DECIDES  (dirt / avenue / boulevard / highway)
+ CORRIDOR  half = carriageway/2 + VERGE. VERGE = 430 is RECOVERED, not chosen:
+   today's avenue is 1400 inside a corridor whose half is citylayout.HALF=1130.
+   So an avenue - AND a road with no type at all, which is what both built-ins
+   are - measures EXACTLY the old constant. That reduction is what lets tests
+   1-39 keep measuring the same board, and it is asserted, not assumed. dirt
+   880, avenue 1130, boulevard 1130, highway 1430.
+ COST      per 100 uu, charged at DrawRoad, refused as "can't afford" BEFORE
+   anything is spent, so the ghost can say it every frame. The charge is the
+   same segment through the same function that quoted it. A 1400 uu avenue is
+   $140 against money_start $100 - so a fresh city's FIRST road is a dirt track
+   ($70, leaves $30) or nothing. That is a real difficulty change; if it is the
+   wrong shape the number is one edit.
+ FRONTAGE  the highway refuses it, as a rules FLAG not an `if type=="highway"`.
+   Two mechanisms were needed, not one: it is skipped as a candidate, AND a lot
+   fronting another road may not be LAID ACROSS its corridor. The second is not
+   belt-and-braces - every other refusal is reached THROUGH the road a lot
+   faces, so a road nothing faces was unguarded by construction.
+ RENT      built, tested, and DELIBERATELY NOT WIRED: Tick() is yours tonight.
+   Stacktown::RoadRentMultiplier(Board, State, Lot) is the pure function; the
+   application is one line in your loop. Own road's multiplier x every
+   frontage-refusing road within road_highway_reach of its PAVEMENT.
+ WIDTH     reaches the eye: RoadFrame::Transform takes the corridor now, so a
+   highway is 2860 wide on the board and a dirt track 1760, and LotFrame::Pose
+   takes the road's own half so a building on a dirt track stands on its pad
+   instead of 250 uu behind it. Both default to the avenue's number for a
+   caller with no ruleset, so your transform tests are unchanged.
+TOUCHED IN YOUR FILES, take it or revert it - I could not leave the deliverable
+half-shown at 21:00 with nobody to ask: CitySync passes the corridor width and
+the lot's own half (and the road SIGNATURE now includes width_class, or a type
+change would not re-show); the controller passes the live ruleset into
+TemporaryBoard (new overload) and the ghost the corridor; three PLACEHOLDER
+refusal words for the design lane to rule - "Not enough money", "Nothing can
+face a highway", "That would cross the highway" - because without them the two
+new refusals read "Can't build here", which is the message your words pass was
+removing. RoadMaterialFor now calls Stacktown::RoadMaterialName so MI_road_<type>
+is formatted in exactly one place, the one the oracle checks.
+PROVEN HERE: oracle 48/48 (was 39/39; 40-48 are the type layer), pre-flight 896
+checks / 0 failures (was 771), 94 mutations with the two long-declared survivors
+and nothing else. Six pre-existing mutation patterns went stale against tonight's
+edits - five mine, one yours (the ++ForSale your demand pass added) - all six
+refreshed rather than dropped.
+TWO QUESTIONS FOR THE OWNER, raised not assumed:
+ 1. THE BOULEVARD'S MEDIAN. The table says "1400 + median" and never says how
+    wide the median is, so road_width_boulevard is 1400 - the same corridor as
+    an avenue. Its cost and rent differ; its WIDTH does not, and will not until
+    that number exists. Right now a boulevard is a price and a rent, not a shape.
+ 2. HOW THE HIGHWAY'S BONUS COMBINES. "Every lot within 2,000 uu rents at 1.1x"
+    reads as a multiplier or as an absolute. Built as a MULTIPLIER (dirt beside
+    a motorway = 0.75 x 1.1 = 0.825) because it composes and keeps the type
+    ordering; as an absolute, a dirt lot beside a highway would out-earn a
+    boulevard lot away from one. One word changes it.
+ONE PRE-EXISTING GAP, found and NOT silently fixed: a lot can overlap a
+FRONTAGE road's corridor. Self-test 39's own lot does - it sits in the 740 uu
+the arterial and a road drawn 3000 uu away leave between their pavements, less
+than BLOCK_DEPTH. I found it by widening the new corridor check to every road
+and watching 39 refuse. Closing it moves where lots may go on boards that
+already exist, which is the owner's call and not road types'; the check is
+scoped to frontage-refusing roads and the gap is written up in
+ROAD_BUILD_CONTRACT section 7.
+TEST GROUPS MY HARNESS CANNOT RUN, unchanged from the 03:30 list - every new
+case (Roads.TypeRulesMatchOracle, .TypeGeometry, .TypeCost,
+.HighwayRefusesFrontage, .Afford, .NarrowerFrontage, .RentMultiplier,
+.UnknownType, .CrossingUsesOwnHalf) runs in the pre-flight AND is in
+StacktownRoadTypesTest.cpp for your build.
+NEXT: 11 curved roads, then 8 and 9.
+
 ENGINEERING (2026-09-07 ~03:30, ITEM 12 PUSHED - THE PRESET START): challenge
 accepted, working defaults taken as working.
 SeedPresetState(Rules, Board) seeds the fourteen pinned lots as FOR-SALE parcels

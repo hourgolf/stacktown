@@ -40,6 +40,12 @@ struct STACKTOWNALPHA_API FRoad
 	FString SidePlus, SideMinus;
 	/** True for a horizontal road (the arterial's convention), false vertical. */
 	bool    bAxisX = true;
+
+	/** The segment's TYPE - dirt | avenue | boulevard | highway - carried
+	 *  through from FRoadSegment::WidthClass, and EMPTY for the two built-ins,
+	 *  which predate types entirely. RoadTypeOf() is the one place that empty
+	 *  becomes 'avenue'; nothing else may read this field raw. */
+	FString WidthClass;
 };
 
 /** One pinned lot's frontage span. Position was never citystate.json's to own -
@@ -90,14 +96,37 @@ struct STACKTOWNALPHA_API FPlacementRules
 	double  RoadHalf        = 1130.0;
 	double  BlockDepth      = 1500.0;
 	/** The outer claim distance: RoadHalf + BlockDepth + 600 forgiveness. The
-	 *  same number as the click reach on purpose, so the two cannot drift. */
+	 *  same number as the click reach on purpose, so the two cannot drift.
+	 *  THE AVENUE'S. RoadMaxReach() computes it per type; this stays as the
+	 *  number the board was authored against and the fixture checks against. */
 	double  RoadMaxReach    = 3230.0;
+	/** Verge either side of the carriageway: pavement, kerb, and the
+	 *  boulevard's trees. RECOVERED, not chosen - today's avenue is 1400 wide
+	 *  inside a corridor whose half is RoadHalf, so the verge is 1130 - 700.
+	 *  Generated from placement.VERGE rather than re-derived here, so the two
+	 *  cannot disagree, and a LITERAL rather than road_width_avenue / 2: it
+	 *  records how wide the road was when the board was authored, and must not
+	 *  move when the owner retunes the avenue. */
+	double  Verge           = 430.0;
+	/** Forgiveness behind the block, in RoadMaxReach(). */
+	double  ReachSlack      = 600.0;
 };
 
 /** Everything about the board this module does not compute for itself. */
 struct STACKTOWNALPHA_API FPlacementBoard
 {
 	FPlacementRules      Rules;
+
+	/** econrules.json, for the road-type table alone. placement.py imports
+	 *  econrules for exactly this reason and no other; carrying it on the board
+	 *  is how the same dependency crosses.
+	 *
+	 *  DEFAULTED, not required: FEconRules ships the same table it parses, so a
+	 *  board built without a ruleset measures the city correctly rather than
+	 *  measuring nothing. A caller holding the LIVE ruleset should still assign
+	 *  it - Stacktown.Roads.TypeRulesMatchOracle is what keeps the compiled
+	 *  default honest in the meantime. */
+	FEconRules           Econ;
 	/** The built-in roads: the arterial and the cross street. */
 	TArray<FRoad>        Roads;
 	TArray<FPinnedSpan>  PinnedSpans;
@@ -187,7 +216,8 @@ STACKTOWNALPHA_API FRoadProjection ProjectToRoad(const FRoad& Road, double X, do
  *  open - the narrower, unambiguous case. Factored out so ResolveRoad and
  *  ResolveClick (which wants its own distinctly-worded refusal) cannot disagree
  *  about the rule. */
-STACKTOWNALPHA_API bool InCrossing(const FPlacementRules& R, const TArray<FRoad>& Roads,
+STACKTOWNALPHA_API bool InCrossing(const FPlacementRules& R, const FEconRules& E,
+	const TArray<FRoad>& Roads,
 	double X, double Y);
 
 /** A placed lot's road, defaulting to "arterial" when the key is absent. */
@@ -199,7 +229,7 @@ STACKTOWNALPHA_API FString LotRoadId(const FLotPlacement& Lot);
  *  segment's end must not claim frontage on a road that does not reach that far.
  *  Refuses in the crossing before nearest-road selection runs, and refuses
  *  beyond RoadMaxReach. The returned pointer aliases into `Roads`. */
-STACKTOWNALPHA_API const FRoad* ResolveRoad(const FPlacementRules& R,
+STACKTOWNALPHA_API const FRoad* ResolveRoad(const FPlacementRules& R, const FEconRules& E,
 	const TArray<FRoad>& Roads, double X, double Y, FRoadLocal& OutLocal);
 
 /** The road named Id, or nullptr. The Python raises KeyError here; callers
@@ -212,7 +242,7 @@ STACKTOWNALPHA_API const FRoad* FindRoad(const TArray<FRoad>& Roads, const FStri
 /** World footprint of a lot's pad: its span along the road's axis, and facade
  *  line to block back edge across it, on the lot's side. Reduces exactly to the
  *  old hard-coded constants for both built-ins, whose centrelines are 0. */
-STACKTOWNALPHA_API FLotRect LotRect(const FPlacementRules& R, const FRoad& Road,
+STACKTOWNALPHA_API FLotRect LotRect(const FPlacementRules& R, const FEconRules& E, const FRoad& Road,
 	const FLotPlacement& Lot);
 
 STACKTOWNALPHA_API bool RectsOverlap(const FLotRect& A, const FLotRect& B);
@@ -259,6 +289,73 @@ STACKTOWNALPHA_API FPlaceResult Place(const FPlacementBoard& Board, FCityState& 
  *  before one ever reaches state. */
 STACKTOWNALPHA_API FRoad RoadDictFromSegment(const FString& Id, const FRoadSegment& Seg);
 
+// ---- ROAD TYPES AS MECHANICS (MONDAY_DECISIONS section 2) -----------------
+// The type is the width class the segment already carried; no schema changed.
+// Every number comes from FEconRules::RoadTypes, so the owner retunes the table
+// without a recompile.
+
+/** A road's type. An EMPTY width class means the avenue (the two built-ins, and
+ *  any segment written before types existed); an UNRECOGNISED one is returned
+ *  UNCHANGED so the caller can name it in a refusal rather than have it quietly
+ *  become something else. */
+STACKTOWNALPHA_API FString RoadTypeOf(const FRoad& Road);
+STACKTOWNALPHA_API FString RoadTypeOf(const FRoadSegment& Seg);
+
+/** This ruleset's row for a road, or nullptr when the ruleset has no such type.
+ *  Callers REFUSE on nullptr; none of them substitutes the avenue. */
+STACKTOWNALPHA_API const FRoadTypeRules* RoadRulesFor(const FEconRules& E, const FRoad& Road);
+
+/** Centreline to facade line for THIS road: its own carriageway plus the verge
+ *  either side. Reduces EXACTLY to Rules.RoadHalf for an avenue and for a road
+ *  carrying no type, which is what keeps the authored board measuring the same.
+ *  Falls back to Rules.RoadHalf when the ruleset has no row for the type - a
+ *  measurement cannot refuse, so the callers that CAN refuse do it first. */
+STACKTOWNALPHA_API double RoadHalf(const FPlacementRules& R, const FEconRules& E, const FRoad& Road);
+STACKTOWNALPHA_API double RoadHalfForType(const FPlacementRules& R, const FEconRules& E,
+	const FString& WidthClass);
+
+/** The full corridor a road occupies on the board - twice its half. What the
+ *  road MESH is scaled across, so a highway looks like a highway; RoadFrame's
+ *  own constant is this number for an avenue. */
+STACKTOWNALPHA_API double RoadCorridor(const FPlacementRules& R, const FEconRules& E,
+	const FString& WidthClass);
+
+/** RoadHalf + BlockDepth + ReachSlack, for THIS road. */
+STACKTOWNALPHA_API double RoadMaxReach(const FPlacementRules& R, const FEconRules& E, const FRoad& Road);
+
+/** False for a road no lot may face - the highway, and only the highway, today.
+ *  A road whose type the ruleset does not know is treated as frontage-bearing
+ *  so this question never silently deletes a road from the board; the draw path
+ *  refuses the unknown type outright before one can be created. */
+STACKTOWNALPHA_API bool RoadHasFrontage(const FEconRules& E, const FRoad& Road);
+
+/** Centreline length. Axis-aligned today, written as a true distance so it is
+ *  already right when segments stop being. */
+STACKTOWNALPHA_API double RoadLength(const FRoadSegment& Seg);
+
+/** What drawing this segment costs: its type's price per 100 uu times its own
+ *  length. DERIVED every time, never stored on the segment - a stored cost is
+ *  one more copy that can disagree with the geometry it prices. Returns false
+ *  when the ruleset has no row for the type. */
+STACKTOWNALPHA_API bool RoadCost(const FEconRules& E, const FRoadSegment& Seg, double& OutCost);
+
+/** MI_road_dirt / _avenue / _boulevard / _highway. Formatted HERE so the road
+ *  actor, the design lane and the oracle all read one string off one type. */
+STACKTOWNALPHA_API FString RoadMaterialName(const FString& WidthClass);
+
+/** Shortest distance between two rectangles, 0 when they touch or overlap. */
+STACKTOWNALPHA_API double RectDistance(const FLotRect& A, const FLotRect& B);
+
+/** What the roads around a lot do to its rent. Its OWN road's multiplier, times
+ *  the multiplier of every frontage-refusing road within RoadHighwayReach of
+ *  its pavement - two mechanisms, because MONDAY_DECISIONS section 2 describes
+ *  two, and the second HAS to be proximity: nothing ever fronts a highway.
+ *
+ *  NOT APPLIED BY Tick(). This is the pure function rent is multiplied by; the
+ *  one line that applies it is the economy loop's, deliberately left. */
+STACKTOWNALPHA_API double RoadRentMultiplier(const FPlacementBoard& Board,
+	const FCityState& State, const FLotPlacement& Lot);
+
 /** Drawn-road ids in creation order: R1, R2, ... R9, R10 - numerically, not
  *  lexicographically, which would put R10 before R2. The Python gets this free
  *  from dict insertion order; a C++ port that reloads from JSON cannot, and the
@@ -269,7 +366,7 @@ STACKTOWNALPHA_API void SortRoadIds(TArray<FString>& Ids);
  *  centreline, for its full length. Deliberately the same rectangle shape a lot
  *  gets, so one overlap test compares a candidate road against a road OR a lot
  *  with nothing road-specific in the comparison itself. */
-STACKTOWNALPHA_API FLotRect RoadRect(const FPlacementRules& R, const FRoad& Road);
+STACKTOWNALPHA_API FLotRect RoadRect(const FPlacementRules& R, const FEconRules& E, const FRoad& Road);
 
 /** R1, R2, ... - the first not taken. A namespace distinct by construction from
  *  the built-ins, from placed lots (P + digits) and from pins (letters). */

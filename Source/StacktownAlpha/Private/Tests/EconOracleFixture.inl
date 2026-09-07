@@ -28,6 +28,23 @@ inline constexpr double TradeCreditAmount = 20.0;
 inline constexpr double TradeBonusPerWin = 5.0;
 inline constexpr int32 TradeCreditsPerN = 10;
 
+// ROAD TYPES (MONDAY_DECISIONS section 2), read straight out of
+// econrules.json by the oracle. OracleRules() builds FEconRules::RoadTypes
+// from these, so a placement test measures the owner's table and not the
+// table the C++ happens to have compiled in - and
+// Stacktown.Roads.TypeRulesMatchOracle compares the two, which is what
+// keeps that compiled default from quietly drifting.
+struct FRoadTypeRow { const TCHAR* Type; double CostPer100uu; double RentMult;
+                      double Width; bool bFrontage; };
+inline const FRoadTypeRow RoadTypeRows[] = {
+	{ TEXT("dirt"), 5.0, 0.75, 900.0, true },
+	{ TEXT("avenue"), 10.0, 1.0, 1400.0, true },
+	{ TEXT("boulevard"), 20.0, 1.25, 1400.0, true },
+	{ TEXT("highway"), 30.0, 1.1, 2000.0, false },
+};
+inline constexpr int32 RoadTypeRowsNum = 4;
+inline constexpr double RoadHighwayReach = 2000.0;
+
 // --- the catalogue surface the economy asks about ------------------------
 inline constexpr int32 TierCount_office = 4;
 inline constexpr int32 TierCount_tower = 7;

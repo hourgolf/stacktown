@@ -54,9 +54,11 @@ MUTATIONS = [
     ('buy-does-not-transfer', 'a paid-for parcel is never marked owned',
      'P->bOwned = true;\n\tP->Accum = 0.0;', 'P->Accum = 0.0;', True, 'rules'),
 
+    # REFRESHED 2026-09-06: the coordinator's demand pass added a ++ForSale
+    # count before this continue, so the old pattern stopped matching.
     ('tick-pays-unowned-parcels', 'rent accrues on parcels nobody bought',
-     'if (!P.bOwned)\n\t\t{\n\t\t\tcontinue;\n\t\t}',
-     'if (false)\n\t\t{\n\t\t\tcontinue;\n\t\t}', True, 'rules'),
+     'if (!P.bOwned)\n\t\t{\n\t\t\t++ForSale;\n\t\t\tcontinue;\n\t\t}',
+     'if (false)\n\t\t{\n\t\t\t++ForSale;\n\t\t\tcontinue;\n\t\t}', True, 'rules'),
 
     ('growth-un-retires', 'a tick advances a tier again, the retired behaviour',
      'P.Accum += Earned;',
@@ -101,8 +103,10 @@ MUTATIONS = [
      'const double Nx = Uy;\n\tconst double Ny = -Ux;', True, 'placement'),
 
     ('point-to-infinite-line', 'a click far past a road end claims frontage on it',
-     'const double Clamped = FMath::Max(0.0, FMath::Min(P.Length, P.Along));\n\t\t\tconst double D = P.Along - Clamped;\n\t\t\tDist = FMath::Sqrt(D * D + P.Across * P.Across);',
-     'Dist = FMath::Abs(P.Across);', True, 'placement'),
+     # REFRESHED 2026-09-06: the clamp moved into RoadDistance when road types
+     # gave the no-frontage explanation a second caller for the same measurement.
+     'const double Clamped = FMath::Max(0.0, FMath::Min(OutProj.Length, OutProj.Along));\n\tconst double D = OutProj.Along - Clamped;\n\treturn FMath::Sqrt(D * D + OutProj.Across * OutProj.Across);',
+     'return FMath::Abs(OutProj.Across);', True, 'placement'),
 
     ('crossing-never-detected', 'a click on shared pavement resolves to one road anyway',
      'return Count > 1;', 'return Count > 2;', True, 'placement'),
@@ -137,8 +141,9 @@ MUTATIONS = [
      'return Lot.RoadId.IsSet() ? Lot.RoadId.GetValue() : FString(TEXT("cross"));', True, 'placement'),
 
     ('in-road-check-ignores-the-segment', 'a click past a road end refuses as in-the-road',
-     'if (Proj.Along >= 0.0 && Proj.Along <= Proj.Length && FMath::Abs(Local.Across) < R.RoadHalf)',
-     'if (FMath::Abs(Local.Across) < R.RoadHalf)', True, 'placement'),
+     # REFRESHED 2026-09-06: the corridor half became the road's own.
+     'if (Proj.Along >= 0.0 && Proj.Along <= Proj.Length && FMath::Abs(Local.Across) < Half)',
+     'if (FMath::Abs(Local.Across) < Half)', True, 'placement'),
 
     # CAUGHT, but only once Placement.Snap existed - and for a different reason
     # than placement.py gives. Its docstring justifies converting to world space
@@ -208,7 +213,7 @@ MUTATIONS = [
      'if (false && !(Board.PlateXMin <= SX0 && SX0 <= Board.PlateXMax &&', True, 'placement'),
 
     ('road-crossing-not-checked', 'a drawn road runs straight over another road',
-     'if (RectsOverlap(Mine, RoadRect(R, Road)))', 'if (false)', True, 'placement'),
+     'if (RectsOverlap(Mine, RoadRect(R, E, Road)))', 'if (false)', True, 'placement'),
 
     ('road-pin-scan-not-mode-gated', 'empty mode still refuses on a dormant pin',
      'if (bPinsActive)\n\t{\n\t\tconst FRoad* Arterial = FindRoad(Roads, Board.PinnedRoadId);',
@@ -216,11 +221,12 @@ MUTATIONS = [
      True, 'placement'),
 
     ('road-pin-scan-removed', 'a drawn road runs through a standing pinned building',
-     'if (RectsOverlap(Mine, LotRect(R, *Arterial, PinLot)))', 'if (false)', True, 'placement'),
+     'if (RectsOverlap(Mine, LotRect(R, E, *Arterial, PinLot)))', 'if (false)', True, 'placement'),
 
     ('road-corridor-full-width', 'a road corridor is measured at twice its half-width',
-     'Rect.YMin = Road.StartY - R.RoadHalf;\n\t\tRect.YMax = Road.StartY + R.RoadHalf;',
-     'Rect.YMin = Road.StartY - R.RoadHalf * 2.0;\n\t\tRect.YMax = Road.StartY + R.RoadHalf * 2.0;',
+     # REFRESHED 2026-09-06: the corridor half became the road's own (RoadHalf()).
+     'Rect.YMin = Road.StartY - Half;\n\t\tRect.YMax = Road.StartY + Half;',
+     'Rect.YMin = Road.StartY - Half * 2.0;\n\t\tRect.YMax = Road.StartY + Half * 2.0;',
      True, 'placement'),
 
     ('road-ids-start-at-zero', 'the first drawn road is R0, not R1',
@@ -323,6 +329,114 @@ MUTATIONS = [
     ('tick-iteration-order-unsorted', 'parcels summed in map order instead of sorted',
      'OutIds.Sort([](const FString& A, const FString& B) { return A < B; });', '',
      False, 'rules'),
+    # ---- road types as mechanics (queue item 10, self-tests 40-48) --------
+    ('road-half-verge-once', 'the verge counted once, not per side',
+     'return T->Width / 2.0 + R.Verge;',
+     'return (T->Width + R.Verge) / 2.0;', True, 'placement'),
+
+    ('road-half-ignores-type', 'every road measured as an avenue',
+     'return T->Width / 2.0 + R.Verge;',
+     'return R.RoadHalf;', True, 'placement'),
+
+    ('road-max-reach-constant-half', 'reach built on the avenue constant',
+     'return RoadHalf(R, E, Road) + R.BlockDepth + R.ReachSlack;',
+     'return R.RoadHalf + R.BlockDepth + R.ReachSlack;', True, 'placement'),
+
+    ('road-frontage-always-true', 'the highway stops refusing frontage',
+     'return T == nullptr ? true : T->bFrontage;',
+     'return true;', True, 'placement'),
+
+    ('resolve-road-offers-no-frontage-roads', 'a lot may front a highway',
+     '\t\tif (!RoadHasFrontage(E, Road))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tFRoadProjection P;\n\t\tconst double Dist = RoadDistance(Road, X, Y, P);',
+     '\t\tFRoadProjection P;\n\t\tconst double Dist = RoadDistance(Road, X, Y, P);', True, 'placement'),
+
+    ('resolve-road-reach-filter-dropped', 'the per-road reach bound stops applying',
+     '\t\tif (Dist > RoadMaxReach(R, E, Road))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (Best == nullptr || Dist < BestDist)\n\t\t{\n\t\t\tBest = &Road;\n\t\t\tBestDist = Dist;\n\t\t\tBestAlong = P.Along;',
+     '\t\tif (Best == nullptr || Dist < BestDist)\n\t\t{\n\t\t\tBest = &Road;\n\t\t\tBestDist = Dist;\n\t\t\tBestAlong = P.Along;', True, 'placement'),
+
+    ('nearest-no-frontage-reach-dropped', "'no frontage' handed out board-wide",
+     '\t\tconst double Dist = RoadDistance(Road, X, Y, P);\n\t\tif (Dist > RoadMaxReach(R, E, Road))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (Best == nullptr || Dist < BestDist)\n\t\t{\n\t\t\tBest = &Road;\n\t\t\tBestDist = Dist;\n\t\t}',
+     '\t\tconst double Dist = RoadDistance(Road, X, Y, P);\n\t\tif (Best == nullptr || Dist < BestDist)\n\t\t{\n\t\t\tBest = &Road;\n\t\t\tBestDist = Dist;\n\t\t}', True, 'placement'),
+
+    ('no-frontage-explanation-dropped', "the highway click falls back to 'off-board'",
+     'if (const FRoad* Near = NearestNoFrontage(R, E, Roads, X, Y))',
+     'if (const FRoad* Near = nullptr)', True, 'placement'),
+
+    ('lot-may-cross-a-highway', 'the no-frontage corridor scan stops running',
+     '\t\tif (RoadHasFrontage(E, Other))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectsOverlap(Mine, RoadRect(R, E, Other)))',
+     '\t\tif (true)\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectsOverlap(Mine, RoadRect(R, E, Other)))', True, 'placement'),
+
+    ('lot-rect-near-is-the-constant', 'the frontage line stops moving with the type',
+     'const double Near = RoadHalf(R, E, Road);',
+     'const double Near = R.RoadHalf;', True, 'placement'),
+
+    ('road-rect-half-is-the-constant', "a road's footprint stops moving with its type",
+     'const double Half = RoadHalf(R, E, Road);',
+     'const double Half = R.RoadHalf;', True, 'placement'),
+
+    ('in-crossing-half-is-the-constant', 'shared pavement measured as an avenue',
+     'FMath::Abs(P.Across) < RoadHalf(R, E, Road))',
+     'FMath::Abs(P.Across) < R.RoadHalf)', True, 'placement'),
+
+    ('in-road-half-is-the-constant', 'the in-the-road refusal measured as an avenue',
+     'const double Half = RoadHalf(R, E, *Road);',
+     'const double Half = R.RoadHalf;', True, 'placement'),
+
+    ('road-cost-per-10uu', 'roads priced ten times over',
+     'OutCost = T->CostPer100uu * RoadLength(Seg) / 100.0;',
+     'OutCost = T->CostPer100uu * RoadLength(Seg) / 10.0;', True, 'placement'),
+
+    ('road-length-manhattan', 'length measured along the axes, not the centreline',
+     'return FMath::Sqrt(Dx * Dx + Dy * Dy);\n}\n\nbool RoadCost',
+     'return FMath::Abs(Dx) + FMath::Abs(Dy) + 1.0;\n}\n\nbool RoadCost', True, 'placement'),
+
+    ('afford-check-dropped', 'a city may draw a road it cannot pay for',
+     'if (State.Money < Cost)',
+     'if (false)', True, 'placement'),
+
+    ('draw-road-does-not-charge', 'roads are quoted and then given away',
+     'State.Money -= Cost;',
+     'State.Money -= 0.0;', True, 'placement'),
+
+    ('unknown-type-guard-dropped', 'a typo reaches state as a road',
+     'if (!WidthClass.IsEmpty() && E.FindRoadType(WidthClass) == nullptr)',
+     'if (false)', True, 'placement'),
+
+    ('rent-mult-ignores-own-road', "a lot's own road stops mattering",
+     'double Mult = OwnType == nullptr ? 1.0 : OwnType->RentMult;',
+     'double Mult = 1.0;', True, 'placement'),
+
+    ('rent-mult-max-not-product', 'the highway replaces rather than multiplies',
+     'Mult *= T->RentMult;',
+     'Mult = FMath::Max(Mult, T->RentMult);', True, 'placement'),
+
+    ('rent-reach-widened', 'the highway bonus reaches ten percent further',
+     'if (RectDistance(Mine, RoadRect(R, E, Road)) <= E.RoadHighwayReach)',
+     'if (RectDistance(Mine, RoadRect(R, E, Road)) <= E.RoadHighwayReach * 1.1)', True, 'placement'),
+
+    ('rent-proximity-from-frontage-roads', 'every road lifts rent, not just the highway',
+     '\t\tif (RoadHasFrontage(E, Road))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectDistance(Mine, RoadRect(R, E, Road)) <= E.RoadHighwayReach)',
+     '\t\tif (false)\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (RectDistance(Mine, RoadRect(R, E, Road)) <= E.RoadHighwayReach)', True, 'placement'),
+
+    ('rect-distance-ignores-y', 'proximity measured on one axis only',
+     'return FMath::Sqrt(Dx * Dx + Dy * Dy);\n}\n\nFLotRect RoadRect',
+     'return Dx;\n}\n\nFLotRect RoadRect', True, 'placement'),
+
+    ('material-name-drops-the-type', 'every road wears the avenue stain',
+     'return FString::Printf(TEXT("MI_road_%s"), *Type);',
+     'return FString(TEXT("MI_road_avenue"));', True, 'placement'),
+
+    ('untyped-road-becomes-dirt', 'the built-ins stop being avenues',
+     'return Road.WidthClass.IsEmpty() ? FString(DefaultRoadType()) : Road.WidthClass;',
+     'return Road.WidthClass.IsEmpty() ? FString(TEXT("dirt")) : Road.WidthClass;', True, 'placement'),
+
+    ('shipped-table-drifts', 'the compiled default no longer matches econrules.json',
+     'M.Add(TEXT("dirt"),      FRoadTypeRules{  5.0, 0.75,  900.0, true  });',
+     'M.Add(TEXT("dirt"),      FRoadTypeRules{  5.0, 0.75, 1000.0, true  });', True, 'rules'),
+
+    ('type-order-scrambled', 'the T-key cycle stops matching the decided order',
+     'TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };',
+     'TEXT("avenue"), TEXT("dirt"), TEXT("boulevard"), TEXT("highway") };', True, 'rules'),
 ]
 
 

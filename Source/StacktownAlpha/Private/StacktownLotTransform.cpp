@@ -4,8 +4,11 @@ namespace Stacktown
 {
 namespace LotFrame
 {
-	bool Pose(const FLotPlacement& L, const TArray<FRoad>& Roads, FPose& Out)
+	bool Pose(const FLotPlacement& L, const TArray<FRoad>& Roads, FPose& Out, double InRoadHalf)
 	{
+		// The pad's centre line, off THIS road's frontage rather than the
+		// avenue's constant: PadCentreY is that same sum for an avenue.
+		const double PadCentre = InRoadHalf + BlockDepth * 0.5;
 		const FString WantId = LotRoadId(L);
 		const FRoad* Road = nullptr;
 		const FRoad* Arterial = nullptr;
@@ -19,13 +22,13 @@ namespace LotFrame
 		if (!Road->bAxisX)
 		{
 			const double Cx = Road->StartX;
-			if (L.Side == Road->SidePlus) { Out = { Cx - PadCentreY, L.X0, 90.0 }; }
-			else                          { Out = { Cx + PadCentreY, L.X1, -90.0 }; }
+			if (L.Side == Road->SidePlus) { Out = { Cx - PadCentre, L.X0, 90.0 }; }
+			else                          { Out = { Cx + PadCentre, L.X1, -90.0 }; }
 			return true;
 		}
 		const double Cy = Road->StartY;
-		if (L.Side == Road->SidePlus) { Out = { L.X0, Cy + PadCentreY, 0.0 }; }
-		else                          { Out = { L.X1, Cy - PadCentreY, 180.0 }; }
+		if (L.Side == Road->SidePlus) { Out = { L.X0, Cy + PadCentre, 0.0 }; }
+		else                          { Out = { L.X1, Cy - PadCentre, 180.0 }; }
 		return true;
 	}
 

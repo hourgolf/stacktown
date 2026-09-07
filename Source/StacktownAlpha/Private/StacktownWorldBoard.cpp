@@ -12,6 +12,13 @@ namespace Stacktown
 		// to delete once those call Default() directly.
 		return FPlacementBoard::Default();
 	}
+
+	FPlacementBoard TemporaryBoard(const FEconRules& Rules)
+	{
+		FPlacementBoard Board = FPlacementBoard::Default();
+		Board.Econ = Rules;
+		return Board;
+	}
 }
 
 namespace Stacktown

@@ -29,10 +29,20 @@ using namespace StacktownRoadsOracle;
 
 namespace
 {
+	/** A fresh city with the balance every GEOMETRY case here runs on.
+	 *
+	 *  Roads cost money since road types (2026-09-06), and a 1400 uu avenue is
+	 *  $140 against the $100 a fresh city starts with - so a case about geometry
+	 *  is given a balance that cannot be the reason it refuses. The number is the
+	 *  oracle's own (GeometryMoney), not a second copy chosen here, and its own
+	 *  states were funded identically. The PRICE is tested on a state left at
+	 *  money_start, in Stacktown.Roads.Afford. */
 	FCityState RoadSeed()
 	{
 		FEconRules R = OracleRules();
-		return SeedState(R);
+		FCityState S = SeedState(R);
+		S.Money = GeometryMoney;
+		return S;
 	}
 
 	FLotPlacement LotFrom2(const FLotDef2& D)
@@ -83,13 +93,13 @@ STACKTOWN_ROADS_TEST(FStacktownRoadsLotRectReduces, "Stacktown.Roads.LotRectRedu
 
 	// Both built-ins have centreline 0 in the relevant axis, so the generalized
 	// axis lookup must reproduce exactly what this used to hard-code.
-	const FLotRect R0 = LotRect(Board.Rules, *Arterial, LotFrom2(T28_Lot0));
+	const FLotRect R0 = LotRect(Board.Rules, Board.Econ, *Arterial, LotFrom2(T28_Lot0));
 	TestEqual(TEXT("arterial xmin"), R0.XMin, T28_Rect0.XMin, 1e-9);
 	TestEqual(TEXT("arterial xmax"), R0.XMax, T28_Rect0.XMax, 1e-9);
 	TestEqual(TEXT("arterial ymin"), R0.YMin, T28_Rect0.YMin, 1e-9);
 	TestEqual(TEXT("arterial ymax"), R0.YMax, T28_Rect0.YMax, 1e-9);
 
-	const FLotRect R1 = LotRect(Board.Rules, *Cross, LotFrom2(T28_Lot1));
+	const FLotRect R1 = LotRect(Board.Rules, Board.Econ, *Cross, LotFrom2(T28_Lot1));
 	TestEqual(TEXT("cross xmin"), R1.XMin, T28_Rect1.XMin, 1e-9);
 	TestEqual(TEXT("cross xmax"), R1.XMax, T28_Rect1.XMax, 1e-9);
 	TestEqual(TEXT("cross ymin"), R1.YMin, T28_Rect1.YMin, 1e-9);
@@ -251,7 +261,7 @@ STACKTOWN_ROADS_TEST(FStacktownRoadsPlaceAgainstDrawn, "Stacktown.Roads.PlaceAga
 	TestNotNull(TEXT("the drawn road is in the candidate list"), R1);
 	if (R1 != nullptr)
 	{
-		const FLotRect Rect = LotRect(Board.Rules, *R1, Lot);
+		const FLotRect Rect = LotRect(Board.Rules, Board.Econ, *R1, Lot);
 		TestEqual(TEXT("rect xmin"), Rect.XMin, T39_Rect.XMin, 1e-9);
 		TestEqual(TEXT("rect xmax"), Rect.XMax, T39_Rect.XMax, 1e-9);
 		TestEqual(TEXT("rect ymin"), Rect.YMin, T39_Rect.YMin, 1e-9);

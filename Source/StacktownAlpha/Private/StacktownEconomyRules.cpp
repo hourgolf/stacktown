@@ -10,6 +10,32 @@
 namespace Stacktown
 {
 
+const TArray<FString>& RoadTypeNames()
+{
+	// MONDAY_DECISIONS section 2's own order, which is also the T-key cycle in
+	// road mode - so it is a contract, not an incidental listing.
+	static const TArray<FString> Names = {
+		TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };
+	return Names;
+}
+
+const TCHAR* DefaultRoadType()
+{
+	return TEXT("avenue");
+}
+
+TMap<FString, FRoadTypeRules> DefaultRoadTypes()
+{
+	TMap<FString, FRoadTypeRules> M;
+	// { cost per 100 uu, rent multiplier, carriageway, may be fronted }
+	M.Add(TEXT("dirt"),      FRoadTypeRules{  5.0, 0.75,  900.0, true  });
+	M.Add(TEXT("avenue"),    FRoadTypeRules{ 10.0, 1.00, 1400.0, true  });
+	M.Add(TEXT("boulevard"), FRoadTypeRules{ 20.0, 1.25, 1400.0, true  });
+	// The one type that refuses frontage, and the reason the flag exists.
+	M.Add(TEXT("highway"),   FRoadTypeRules{ 30.0, 1.10, 2000.0, false });
+	return M;
+}
+
 FCityState SeedState(const FEconRules& R)
 {
 	FCityState S;

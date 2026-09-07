@@ -34,6 +34,22 @@ inline Stacktown::FEconRules OracleRules()
 	R.DemandMin         = StacktownOracle::DemandMin;
 	R.DemandMax         = StacktownOracle::DemandMax;
 	R.WearTicksPerTier  = StacktownOracle::WearTicksPerTier;
+	// ROAD TYPES: the owner's table, as the oracle read it out of
+	// econrules.json - not FEconRules' own compiled default, so a placement
+	// test measures the shipped ruleset. The two are compared directly by
+	// Stacktown.Roads.TypeRulesMatchOracle.
+	R.RoadTypes.Reset();
+	for (int32 i = 0; i < StacktownOracle::RoadTypeRowsNum; ++i)
+	{
+		const StacktownOracle::FRoadTypeRow& Row = StacktownOracle::RoadTypeRows[i];
+		Stacktown::FRoadTypeRules T;
+		T.CostPer100uu = Row.CostPer100uu;
+		T.RentMult     = Row.RentMult;
+		T.Width        = Row.Width;
+		T.bFrontage    = Row.bFrontage;
+		R.RoadTypes.Add(FString(Row.Type), T);
+	}
+	R.RoadHighwayReach = StacktownOracle::RoadHighwayReach;
 	return R;
 }
 

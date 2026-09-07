@@ -68,6 +68,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <initializer_list>
 
 typedef char     TCHAR;
 typedef int32_t  int32;
@@ -118,6 +119,14 @@ public:
 		return true;
 	}
 
+	FString ToLower() const
+	{
+		std::string Out = S;
+		for (char& C : Out) { C = static_cast<char>(std::tolower(static_cast<unsigned char>(C))); }
+		return FString(Out);
+	}
+	FString& operator+=(const FString& O) { S += O.S; return *this; }
+
 	FString Mid(int32 Start) const
 	{
 		return Start >= Len() ? FString() : FString(S.substr(static_cast<size_t>(Start)));
@@ -148,6 +157,11 @@ template <typename T>
 class TArray
 {
 public:
+	TArray() {}
+	/** Braced construction, the way UE's own TArray takes an initializer list -
+	 *  RoadTypeNames() declares the four types that way. */
+	TArray(std::initializer_list<T> L) : V_(L) {}
+
 	void Add(const T& V)          { V_.push_back(V); }
 	void Reset()                  { V_.clear(); }
 	void Reserve(int32 N)         { V_.reserve(static_cast<size_t>(N)); }
@@ -192,6 +206,8 @@ public:
 		for (const auto& P : Items) { if (P.first == Key) { return &P.second; } }
 		return nullptr;
 	}
+	void Reset() { Items.clear(); }
+
 	V& Add(const K& Key, const V& Value)
 	{
 		if (V* Existing = Find(Key)) { *Existing = Value; return *Existing; }

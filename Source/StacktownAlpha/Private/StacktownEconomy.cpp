@@ -80,10 +80,37 @@ bool FEconRules::FromJson(const FString& JsonText, FEconRules& Out, FString& Out
 		ReadNumber(Root, TEXT("demand_rate"),           R.DemandRate,        OutError) &&
 		ReadNumber(Root, TEXT("demand_min"),            R.DemandMin,         OutError) &&
 		ReadNumber(Root, TEXT("demand_max"),            R.DemandMax,         OutError) &&
-		ReadNumber(Root, TEXT("wear_ticks_per_tier"),   R.WearTicksPerTier,  OutError);
+		ReadNumber(Root, TEXT("wear_ticks_per_tier"),   R.WearTicksPerTier,  OutError) &&
+		ReadNumber(Root, TEXT("road_highway_reach"),    R.RoadHighwayReach,  OutError);
 	if (!bAll)
 	{
 		return false;
+	}
+
+	// ROAD TYPES. Four families x four types, read by building the key from the
+	// type name rather than listing sixteen literals - the names come from
+	// RoadTypeNames(), the single place the four are enumerated, so adding a
+	// fifth type is a rules-file edit plus one entry there, not sixteen.
+	// REQUIRED like every other key: a ruleset missing a type's cost is broken,
+	// and inheriting the compiled default would run a typo as if it were tuning.
+	R.RoadTypes.Reset();
+	for (const FString& Type : RoadTypeNames())
+	{
+		FRoadTypeRules T;
+		double Frontage = 0.0;
+		const bool bType =
+			ReadNumber(Root, *FString::Printf(TEXT("road_cost_per_100uu_%s"), *Type), T.CostPer100uu, OutError) &&
+			ReadNumber(Root, *FString::Printf(TEXT("road_rent_mult_%s"),      *Type), T.RentMult,     OutError) &&
+			ReadNumber(Root, *FString::Printf(TEXT("road_width_%s"),          *Type), T.Width,        OutError) &&
+			ReadNumber(Root, *FString::Printf(TEXT("road_frontage_%s"),       *Type), Frontage,       OutError);
+		if (!bType)
+		{
+			return false;
+		}
+		// The JSON carries 1/0 rather than true/false so the owner edits the
+		// same kind of number in every row of the table.
+		T.bFrontage = Frontage != 0.0;
+		R.RoadTypes.Add(Type, T);
 	}
 
 	if (CreditsPerN < 1.0)

@@ -1,5 +1,6 @@
 #include "StacktownRoad.h"
 #include "StacktownRoadTransform.h"
+#include "StacktownPlacement.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
@@ -25,18 +26,22 @@ static UMaterialInterface* RoadMaterialFor(const FString& WidthClass)
 {
 	// The design lane's four stains of one stock (2026-09-06 night): MI_road_<class>.
 	// An unknown or empty class wears the avenue; if even that is missing, the old inlay.
-	const FString Class = WidthClass.IsEmpty() ? TEXT("avenue") : WidthClass.ToLower();
-	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Stacktown/Materials/MI_road_%s.MI_road_%s"), *Class, *Class))) { return M; }
+	// Stacktown::RoadMaterialName is the ONE place MI_road_<type> is formatted -
+	// it is the string the oracle checks, so the actor reads it rather than
+	// building a second copy that could drift.
+	const FString Name = Stacktown::RoadMaterialName(WidthClass);
+	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("/Game/Stacktown/Materials/%s.%s"), *Name, *Name))) { return M; }
 	if (UMaterialInterface* M = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_road_avenue.MI_road_avenue"))) { return M; }
 	return LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Stacktown/Materials/MI_board_road.MI_board_road"));
 }
 
-void AStacktownRoad::ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment)
+void AStacktownRoad::ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment,
+	double CorridorWidth)
 {
 	RoadId = InRoadId;
 	WidthClass = Segment.WidthClass;
 	if (UMaterialInterface* M = RoadMaterialFor(WidthClass)) { Mesh->SetMaterial(0, M); }
-	const Stacktown::RoadFrame::FPose P = Stacktown::RoadFrame::Transform(Segment);
+	const Stacktown::RoadFrame::FPose P = Stacktown::RoadFrame::Transform(Segment, CorridorWidth);
 	SetActorLocationAndRotation(P.Location, P.Rotation);
 	SetActorScale3D(P.Scale);
 }

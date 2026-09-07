@@ -16,6 +16,8 @@
 #include "Components/SceneComponent.h"
 #include "StacktownRoad.h"
 #include "StacktownNight.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Widget.h"
@@ -482,11 +484,13 @@ FString AStacktownPlayerController::CityPlaceAt(double X, double Y)
 	if (!R.bOk)
 	{
 		if (HudModel) { HudModel->PlaceRefusal = ClassifyPlaceRefusal(R.Reason); }
+		PlayCue(TEXT("S_Refuse"));
 		return FString::Printf(TEXT("place refused: %s -> \"%s\""), *R.Reason, *ClassifyPlaceRefusal(R.Reason));
 	}
 	Econ->SaveState();
 	const FString Rep = Sync->Reconcile(false);
 	CitySelect(R.Pid);
+	PlayCue(TEXT("S_Place"));
 	return FString::Printf(TEXT("placed %s at (%.0f, %.0f) width %.0f; %s"), *R.Pid, X, Y, CurrentLotWidth(), *Rep);
 }
 
@@ -498,6 +502,7 @@ FString AStacktownPlayerController::CityVerb(const FString& Key)
 	if (SelectedPid.IsEmpty())
 	{
 		if (HudModel) { HudModel->ActionRefusal = TEXT("Select a lot first"); bRefusalShowing = true; }
+		PlayCue(TEXT("S_Refuse"));
 		return TEXT("no selection");
 	}
 	FString Reason; bool bOk = false; const TCHAR* Verb = TEXT("?");
@@ -508,12 +513,14 @@ FString AStacktownPlayerController::CityVerb(const FString& Key)
 	if (!bOk)
 	{
 		if (HudModel) { HudModel->ActionRefusal = ClassifyActionRefusal(Reason); bRefusalShowing = true; }
+		PlayCue(TEXT("S_Refuse"));
 		return FString::Printf(TEXT("%s %s refused: %s -> \"%s\""), Verb, *SelectedPid, *Reason, *ClassifyActionRefusal(Reason));
 	}
 	Econ->SaveState();
 	const FString Rep = Sync->Reconcile(false);
 	SetSelectionHighlight(SelectedPid, true);
 	RefreshSelection();
+	PlayCue(TEXT("S_Buy"));
 	return FString::Printf(TEXT("%s %s ok; money %.2f; %s"), Verb, *SelectedPid, Econ->GetState().Money, *Rep);
 }
 
@@ -598,6 +605,7 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 	{
 		bRoadStartSet = true; RoadStart = FVector2D(X, Y);
 		if (HudModel) { HudModel->BarMessage = TEXT("road start set \u00b7 click the end"); }
+		PlayCue(TEXT("S_Place"));
 		return FString::Printf(TEXT("road start (%.0f, %.0f)"), X, Y);
 	}
 	const Stacktown::FRoadDrawResult R = Stacktown::DrawRoad(Stacktown::TemporaryBoard(), Econ->GetMutableState(), RoadStart.X, RoadStart.Y, X, Y, TEXT("avenue"), PinsActive(GetGameInstance()));
@@ -606,11 +614,13 @@ FString AStacktownPlayerController::CityRoadClick(double X, double Y)
 	if (!R.bOk)
 	{
 		if (HudModel) { HudModel->PlaceRefusal = ClassifyRoadRefusal(R.Reason); HudModel->BarMessage = TEXT("click start, click end \u00b7 G to leave"); }
+		PlayCue(TEXT("S_Refuse"));
 		return FString::Printf(TEXT("road refused: %s -> \"%s\""), *R.Reason, *ClassifyRoadRefusal(R.Reason));
 	}
 	Econ->SaveState();
 	const FString Rep = Sync->Reconcile(false);
 	if (HudModel) { HudModel->PlaceRefusal.Reset(); HudModel->BarMessage = TEXT("click start, click end \u00b7 G to leave"); }
+	PlayCue(TEXT("S_Place"));
 	return FString::Printf(TEXT("road %s drawn (%.0f, %.0f) -> (%.0f, %.0f); %s"), *R.Id, R.Segment.StartX, R.Segment.StartY, R.Segment.EndX, R.Segment.EndY, *Rep);
 }
 
@@ -640,6 +650,7 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 		else if (Goals > GoalsAnnounced)
 		{
 			HudModel->BarMessage = FString::Printf(TEXT("GOAL %s REACHED"), *FText::AsNumber((int64)Stacktown::GoalLadder()[Goals - 1]).ToString());
+			PlayCue(TEXT("S_Goal"));
 			GoalsAnnounced = Goals;
 		}
 	}
@@ -702,4 +713,25 @@ void AStacktownPlayerController::DriveCity(float DeltaTime)
 	{
 		NHeld = 0.f; bNFired = false; HudModel->BarMessage.Reset();
 	}
+}
+
+void AStacktownPlayerController::PlayCue(const TCHAR* Name)
+{
+	const FString Key(Name);
+	if (CuesMissing.Contains(Key)) { return; }
+	TObjectPtr<USoundBase>* Found = Cues.Find(Key);
+	USoundBase* Cue = Found ? Found->Get() : nullptr;
+	if (!Cue)
+	{
+		Cue = LoadObject<USoundBase>(nullptr, *FString::Printf(TEXT("/Game/Stacktown/Audio/%s.%s"), Name, Name));
+		if (!Cue)
+		{
+			CuesMissing.Add(Key);
+			UE_LOG(LogStacktown, Log, TEXT("SOUND: no cue %s - silent"), Name);
+			return;
+		}
+		Cues.Add(Key, Cue);
+	}
+	UGameplayStatics::PlaySound2D(this, Cue);
+	UE_LOG(LogStacktown, Log, TEXT("SOUND: %s"), Name);
 }

@@ -106,6 +106,11 @@ private:
 	FString SelectedPid;
 	UPROPERTY() TObjectPtr<AActor> Ghost;
 	FVector LastHoverPoint = FVector(1e9, 1e9, 0.0);
+	/** Placeholder sound cues (MONDAY_DECISIONS section 5): wood taps in /Game/Stacktown/Audio,
+	 *  loaded by path once and cached; a missing asset plays nothing and logs once. */
+	void PlayCue(const TCHAR* Name);
+	TMap<FString, TObjectPtr<class USoundBase>> Cues;
+	TSet<FString> CuesMissing;
 	/** Goal ladder rungs announced this session; -1 until the first owning tick (a loaded city is not re-announced). */
 	int32 GoalsAnnounced = -1;
 	/** The fresh-city hint is on the bar (cleared when the first lot exists). */

@@ -1,0 +1,62 @@
+# The night plan - 17 to 50 by morning
+
+The owner, 2026-09-06 19:49 PDT: "we are barely a 17/100 if i'm being honest.. you
+literally have greenfield in front of you to build something amazing... i
+challenge you to get this above a 50/100 by the morning while staying
+within the visual language and vision scope of our platform... do you
+accept?" Accepted. This file is the plan, the assumptions, and the honest
+report at the end.
+
+## What 50 means (so the morning number is not a feeling)
+
+A stranger opens the packaged app and plays fifteen minutes without help:
+1. arrives on a wooden city that already exists (the 14-lot preset) or an
+   empty board, their choice at the first screen;
+2. chases a number: the score and the next goal are on the bar, a rung
+   announces itself, the board answers with sound;
+3. faces consequences: demand moves with what they own and leave empty,
+   neglected buildings wear out and char until repaired, roads cost money
+   and their TYPE decides rent and frontage;
+4. sees the wooden city at every stop: species, patina by age, windows at
+   night that differ mass to mass, roads cut from one stock;
+5. quits and comes back to the same city.
+Each line built and framed is roughly seven points on top of 17. All five
+is the fifty. Test counts count for nothing.
+
+## Assumptions, stated so they can be revoked
+
+- MONDAY_DECISIONS' proposed defaults become WORKING defaults tonight (the
+  rules file has said "SCAFFOLDING - every value is a placeholder" since
+  it was written; the owner's word changes any number in the morning).
+- The owner's rulings stand untouched: growth by purchase only (D20),
+  performance moves on player trades only, poor performance costs more and
+  never blocks, road types are mechanics, wedges are the look, both starts.
+- Commits: a standing word for tonight is REQUESTED - code, assets and
+  config committed on proof (clean build + suite + live pass). Without it,
+  work stalls while the owner sleeps and the seats cannot pull it.
+- The editor alternates: design windows for material work, coordinator
+  builds between them (a build needs the editor closed; PLAN section 3).
+
+## Who builds what
+
+COORDINATOR (Mac, engine): the ECONOMY LOOP v1 - Python oracle first, then
+C++: demand moves; wear and failure (a lot that has earned
+growth_threshold x (tier+1) since its last upgrade wears out, earns
+nothing, chars through the Failure channel until H repairs it); goals
+persisted (`goals_reached`); NEXT goal on the bar; failure written to the
+wood. Then the preset start and road types if the engineering seat is not
+deployed by 22:00. Repackage before morning. Honest number at the end.
+
+ENGINEERING (cloud, no engine): items 12 (preset start), 10 (road types
+with the section-2 table as rules defaults), 11 (curved roads), then 8
+and 9. Pull before touching the rules struct; append keys at its end.
+
+DESIGN (local, editor windows): the road fork and its four stains, the
+window pattern, the failure / charred read against the coordinator's
+frames, the words (hint, goal, road type names), the arrival frame, and a
+ruling on the sound register. Windows: 19:55-21:30, 22:00-23:30,
+00:00-01:30, then on request; builds in the gaps.
+
+## The morning report
+
+Filled in at the end of the night, not before.

@@ -112,6 +112,48 @@ build and the headless test run for after the release line. Your channel
 receipt is still expected under the ENGINEERING heading.
 
 ## ENGINEERING (status lines)
+COORDINATOR -> LOOK, ENGINEERING (2026-09-06 19:49 PDT) - THE NIGHT. The owner, verbatim:
+"we are barely a 17/100 if i'm being honest.. you literally have greenfield
+in front of you to build something amazing... i challenge you to get this
+above a 50/100 by the morning while staying within the visual language and
+vision scope of our platform." Accepted. Docs/NIGHT_PLAN.md is the plan and
+what 50 means; MONDAY_DECISIONS' proposed defaults are tonight's WORKING
+defaults (the owner changes any number in the morning). Every item below
+must be something a stranger notices, framed.
+
+LOOK - THE EDITOR IS YOURS NOW, exclusive, 19:55-21:30, then 22:00-23:30,
+then 00:00-01:30; I build in the gaps (write "LOOK: released <time>" at
+each end, measured grants as always; the marker before any PIE). In order:
+ 1. THE ROAD FORK: M_RoadInlay from M_WoodMaster with world-aligned UVs,
+    MI_board_road re-parented; then the FOUR STAINS of that one stock for
+    the four road types (dirt / avenue / boulevard / highway: instances
+    MI_road_dirt, MI_road_avenue, MI_road_boulevard, MI_road_highway - the
+    C++ will load exactly those names by path; avenue = today's
+    MI_board_road look). Frames at the far stop and the near stop.
+ 2. THE WINDOW PATTERN: ObjectPositionWS seed, a third dark, in M_WoodMaster.
+ 3. THE FAILED LOOK: I will write cpdmap channel 5 (Failure) = 0.8 on a
+    worn-out lot tonight; read the char against a frame I post and rule
+    the value (0.6->1 chars per cpdmap; is 0.8 the right "needs repair"?).
+ 4. WORDS, in HUD_V1's form: the fresh-city hint, "GOAL n REACHED", the
+    NEXT-goal label, the four road type names as the bar's mode word, the
+    failure state line. Placeholders are in the build; replace them.
+ 5. THE ARRIVAL: the first frame a stranger sees - camera pose at load
+    (the camera model's arrival numbers are yours to rule; I wire them).
+ 6. SOUND REGISTER: wood taps or not; one line.
+ Rule fast, in frames; the loop one-pager is replaced by rulings on the
+ working loop as it lands.
+
+ENGINEERING - tonight, in THIS order (value first): 12 the PRESET START,
+10 ROAD TYPES (rules defaults = MONDAY_DECISIONS §2's table; keys
+road_cost_per_100uu_<type>, road_rent_mult_<type>, road_width_<type>,
+road_frontage_<type>; materials by name MI_road_<type>), 11 CURVED ROADS,
+then 8 and 9. PULL BEFORE TOUCHING FEconRules / econrules.json and append
+your keys at the END of the struct: I am adding demand_gain, demand_loss,
+demand_min, demand_max, wear_ticks_per_tier and the `goals_reached` /
+`wear` state fields in the next hour (the economy loop is mine tonight -
+do not touch tick()/Tick()). Push each item with its board entry; I build
+every push in the next gap and post the pass line.
+
 COORDINATOR -> LOOK, ENGINEERING (2026-09-06 18:57 PDT): THE BOARD ANSWERS - placeholder SOUND
 is in the game (MONDAY_DECISIONS §5, proposed). Four wood taps generated
 in-repo (a noise transient into a fast-decaying sine, nothing sampled):

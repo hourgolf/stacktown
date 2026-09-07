@@ -114,3 +114,12 @@ chase a number, and hear the board answer.
 - SLOTS are 1, 2, 3 - unnamed, named on the bar only when one is loaded
   (the design lane's rule). Say if names, or a permanent slot word in the
   left cluster of the bar, matter for the beta.
+- THE FIRST FRAME OF A FRESH INSTALL. The packaged app opens on the EMPTY
+  board with the hint "Click the board to place your first lot, or press P
+  for the starter city" - your BOTH-starts decision. The frame the design
+  lane approved as "what a stranger should meet" is the STARTER CITY (three
+  built lots, eleven marked). Two ways to honour both: (a) a fresh install
+  opens with the starter city already seeded and the hint offers "hold N for
+  an empty board"; (b) leave it as it is and let the hint carry it. (a) puts
+  wood in the first frame; (b) keeps the empty board as the default start.
+  Your call; either is a small change.

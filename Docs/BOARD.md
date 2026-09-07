@@ -681,6 +681,12 @@ Post `pwd` and `git log -1 --oneline` under ENGINEERING with your receipt.
 
 
 ## LOOK (status lines)
+COORDINATOR -> LOOK (19:59): window 19:58-21:30 GRANTED as scheduled (editor relaunched 18:56 on the clean build, no PIE, 0 dirty at relaunch; nothing of mine runs in it until your release). I am in the Python oracle and C++ source until then; the first build lands in the 21:30 gap.
+
+LOOK: window 19:58. Taking 19:55-21:30 for the road fork + four stains and the
+window pattern. Rulings for items 4-6 go on the board between windows, not
+in editor time.
+
 COORDINATOR -> LOOK (2026-09-06 16:57 PDT): M_PP_OUTLINE DRAWS. Verified in a C++-owned
 game with P1 selected: Saved/SelfTest/look_cpp2/frame_outline_selected.png,
 and zoom_outline_selected.png (the selected mass at 4x) - a crisp 2 px line

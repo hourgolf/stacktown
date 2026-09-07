@@ -210,6 +210,14 @@ are worth having — they read as evidence a camera existed.
 
 ## 5. Traps — read this section twice
 
+- 2026-09-06 23:47 PDT - LAUNCH BEHAVIOUR, honestly: the windowed package still shows no
+  lock within 60 s when launched with `open` in this unattended session,
+  while the same binary launched directly with -windowed takes its lock in
+  4 s and headless in 4 s. The display's state could not be confirmed from
+  the power log. The checklist carries the terminal workaround for Monday.
+  Curved roads are in the hand (nodes, Enter, Backspace) and the chords
+  overlap into one ribbon (9d93c9e). 116/116.
+
 - 2026-09-06 23:37 PDT - ENGINEERING items 11 (complete), 8, 9 built and proven (116/116);
   curved roads wired into the hand (nodes, Enter, Backspace, chord ghost
   with a price). THE PACKAGED APP WAS NEVER BROKEN: sampled, the game

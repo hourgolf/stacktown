@@ -114,3 +114,18 @@ That is the pipeline a stranger's download will use.
 24. THE ARRIVAL: the first frame shows the whole board, three-quarter,
     roads diagonal, thick edge visible, nothing moving. Say if it reads as a
     model on a table.
+
+## If the packaged app opens to a blank window and sits there (read before Monday)
+
+Diagnosed 2026-09-06 23:47 PDT: the app itself is sound - headless it reaches the city in
+four seconds, and launched from a terminal with `-windowed` it reaches the
+city in four seconds. What stalled all evening was macOS's own fullscreen
+Space transition inside the engine's window creation, in a session whose
+display was unattended. The beta now defaults to a 1600x900 WINDOW. If a
+double-click still shows nothing after ten seconds on Monday, run this
+once from a terminal and it will open:
+
+    "Saved/Packaged/Mac/StacktownAlpha.app/Contents/MacOS/StacktownAlpha" -windowed -ResX=1600 -ResY=900
+
+and tell the coordinator; that would mean the windowed default is not
+being read in a cooked build and the app needs it forced in code.

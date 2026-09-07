@@ -291,7 +291,8 @@ FString UStacktownCitySync::Reconcile(bool bHideBlueprintLots)
 		if (RoadSignatures.FindRef(Id) != Sig)
 		{
 			Road->ShowSegment(Id, Seg,
-				Stacktown::RoadCarriageway(Board.Econ, Seg.WidthClass), Joint.TanStart, Joint.TanEnd);
+				Stacktown::RoadCarriageway(Board.Econ, Seg.WidthClass), Joint.TanStart, Joint.TanEnd,
+				Joint.S0, Joint.PathLength);
 			RoadSignatures.Add(Id, Sig);
 		}
 	}

@@ -54,6 +54,13 @@ namespace RoadFrame
 	{
 		TArray<FJoint> Out;
 		Out.SetNum(Chords.Num());
+		double S = 0.0;
+		for (int32 i = 0; i < Chords.Num(); ++i)
+		{
+			Out[i].S0 = S;
+			S += FVector2D(Chords[i].EndX - Chords[i].StartX, Chords[i].EndY - Chords[i].StartY).Size();
+		}
+		for (FJoint& J : Out) { J.PathLength = S; }
 		for (int32 i = 0; i + 1 < Chords.Num(); ++i)
 		{
 			const FRoadSegment& A = Chords[i];

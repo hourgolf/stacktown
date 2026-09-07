@@ -55,6 +55,9 @@ bool FStacktownRoadMitreTest::RunTest(const FString& Parameters)
 	const TArray<RoadFrame::FJoint> J = RoadFrame::ChainJoints(Chain);
 	TestEqual(TEXT("chain: A.TanEnd"), J[0].TanEnd, T, 1e-12); TestEqual(TEXT("chain: B.TanStart"), J[1].TanStart, T, 1e-12);
 	TestEqual(TEXT("chain: A.TanStart free"), J[0].TanStart, 0.0, 1e-12); TestEqual(TEXT("chain: B.TanEnd free"), J[1].TanEnd, 0.0, 1e-12);
+	// the stain's arc length: A starts the path, B starts 100 along, the path is 200
+	TestEqual(TEXT("chain: A.S0"), J[0].S0, 0.0, 1e-9); TestEqual(TEXT("chain: B.S0"), J[1].S0, 100.0, 1e-9);
+	TestEqual(TEXT("chain: path length"), J[1].PathLength, 200.0, 1e-9); TestEqual(TEXT("chain: the same on A"), J[0].PathLength, 200.0, 1e-9);
 	FRoadSegment B2 = B; B2.StartX = 130.0;
 	TArray<FRoadSegment> Broken; Broken.Add(A); Broken.Add(B2);
 	const TArray<RoadFrame::FJoint> JB = RoadFrame::ChainJoints(Broken);
@@ -74,6 +77,8 @@ bool FStacktownRoadMitreTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("path: middle chord end (another turn toward +y)"), PJ[TEXT("R8")].TanEnd, 1.0, 1e-9);
 	TestEqual(TEXT("path: last chord end free"), PJ[TEXT("R9")].TanEnd, 0.0, 1e-12);
 	TestEqual(TEXT("lone road: square"), PJ[TEXT("R3")].TanStart, 0.0, 1e-12); TestEqual(TEXT("lone road: square end"), PJ[TEXT("R3")].TanEnd, 0.0, 1e-12);
+	TestEqual(TEXT("lone road: its own path length"), PJ[TEXT("R3")].PathLength, 1000.0, 1e-9);
+	TestEqual(TEXT("path: the last chord starts 200 along"), PJ[TEXT("R9")].S0, 200.0, 1e-9); TestEqual(TEXT("path: 300 long"), PJ[TEXT("R9")].PathLength, 300.0, 1e-9);
 	return true;
 }
 

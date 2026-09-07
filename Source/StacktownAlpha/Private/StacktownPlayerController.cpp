@@ -642,7 +642,7 @@ void AStacktownPlayerController::RoadGhost(const FVector& BoardPoint)
 		if (!G) { continue; }
 		if (k < Chords.Num())
 		{
-			G->ShowSegment(TEXT("ghost"), Chords[k], Width, Joints[k].TanStart, Joints[k].TanEnd);
+			G->ShowSegment(TEXT("ghost"), Chords[k], Width, Joints[k].TanStart, Joints[k].TanEnd, Joints[k].S0, Joints[k].PathLength);
 			G->SetGhost(true, R.bOk);
 			G->SetActorHiddenInGame(false);
 			double C = 0.0; Length += Stacktown::RoadLength(Chords[k]); if (Stacktown::RoadCost(Econ->GetRules(), Chords[k], C)) { Cost += C; }

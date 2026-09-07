@@ -29,7 +29,7 @@ static UMaterialInterface* RoadMaterialFor(const FString& WidthClass)
 }
 
 void AStacktownRoad::ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment,
-	double Width, double TanStart, double TanEnd)
+	double Width, double TanStart, double TanEnd, double S0, double PathLength)
 {
 	RoadId = InRoadId;
 	WidthClass = Segment.WidthClass;
@@ -54,12 +54,21 @@ void AStacktownRoad::ShowSegment(const FString& InRoadId, const Stacktown::FRoad
 	// the chord by H * tan(turn / 2): the +y corner one way, the -y corner the
 	// other, which is the bisector cut. A free end (tan 0) stays square.
 	UKismetProceduralMeshLibrary::GenerateBoxMesh(FVector(L * 0.5, H, T), Vertices, Triangles, Normals, UVs, Tangents);
-	for (FVector& V : Vertices)
+	// The stain's UV: U 0..1 over the whole PATH (the stock cube gave a straight
+	// road 0..1 over its length, so this is the same stretch, now continuous
+	// across a curve's joints), V 0..1 across the carriageway.
+	const double Along = FMath::Max(PathLength, L);
+	for (int32 i = 0; i < Vertices.Num(); ++i)
 	{
+		FVector& V = Vertices[i];
 		const bool bStart = V.X < 0.0;
 		const bool bPlus  = V.Y > 0.0;
 		const double Slide = (bStart ? H * TanStart : -H * TanEnd) * (bPlus ? 1.0 : -1.0);
 		V.X += Slide;
+		if (UVs.IsValidIndex(i))
+		{
+			UVs[i] = FVector2D((S0 + V.X + L * 0.5) / Along, (V.Y + H) / (2.0 * H));
+		}
 	}
 	const TArray<FLinearColor> NoColors;
 	Mesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, NoColors, Tangents, /*bCreateCollision*/ true);

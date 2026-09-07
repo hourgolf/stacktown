@@ -44,7 +44,8 @@ public:
 	 *  same number the neighbouring chord was given for that joint - and 0 for
 	 *  a free end, which is cut square. */
 	void ShowSegment(const FString& InRoadId, const Stacktown::FRoadSegment& Segment,
-		double Width = Stacktown::RoadFrame::Carriageway, double TanStart = 0.0, double TanEnd = 0.0);
+		double Width = Stacktown::RoadFrame::Carriageway, double TanStart = 0.0, double TanEnd = 0.0,
+		double S0 = 0.0, double PathLength = 0.0);
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Stacktown|Road")

@@ -68,6 +68,12 @@ namespace RoadFrame
 	{
 		double TanStart = 0.0;
 		double TanEnd   = 0.0;
+		/** Arc length from the path's start to this chord's start, and the whole
+		 *  path's length: the stain's U runs 0..1 over the PATH, as it ran over
+		 *  the stock cube of a straight road, so a curve's grain is continuous
+		 *  across its joints instead of restarting on every chord (frame 06:20). */
+		double S0         = 0.0;
+		double PathLength = 0.0;
 	};
 
 	/** Joints for chords in drawing order (a resolved path, a ghost chain). A

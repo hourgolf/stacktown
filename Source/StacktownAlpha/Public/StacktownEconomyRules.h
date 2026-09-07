@@ -297,6 +297,14 @@ STACKTOWNALPHA_API FVerbResult TierUpAllowed(const ICatalogue& Catalogue,
  *  comparison runs on a big save. */
 STACKTOWNALPHA_API void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents);
 
+/** ONE CITY TICK as the game performs it: the economy's Tick, then AdvanceAge on
+ *  every parcel by key. Age stays outside Tick (the economy oracles assert exact
+ *  equality and age sits outside them), but the subsystem and any test that
+ *  predicts what the subsystem persists must call the SAME composite - the engine
+ *  suite found the two CityState round-trip tests predicting with Tick alone
+ *  (2026-09-06: "reloaded matches the rules (parcel 'P1': age differs)"). */
+STACKTOWNALPHA_API void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents);
+
 STACKTOWNALPHA_API FVerbResult Buy(const FEconRules& R, FCityState& State, const FString& Pid);
 
 /** Player-initiated and priced - since the retirement, the ONLY way a tier

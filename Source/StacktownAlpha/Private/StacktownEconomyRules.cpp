@@ -136,6 +136,17 @@ void Tick(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
 	}
 }
 
+void TickCity(const FEconRules& R, FCityState& State, TArray<FEconEvent>& OutEvents)
+{
+	Tick(R, State, OutEvents);
+	TArray<FString> Ids;
+	State.Parcels.GetKeys(Ids);
+	for (const FString& Id : Ids)
+	{
+		AdvanceAge(State.Parcels[Id]);
+	}
+}
+
 FVerbResult Buy(const FEconRules& R, FCityState& State, const FString& Pid)
 {
 	FParcelState* P = State.Parcels.Find(Pid);

@@ -105,7 +105,7 @@ STACKTOWN_CITY_TEST(FStacktownCityTick, "Stacktown.CityState.Tick")
 	TArray<FEconEvent> DirectEvents;
 	for (int32 i = 0; i < 10; ++i)
 	{
-		Tick(E->GetRules(), Expected, DirectEvents);
+		TickCity(E->GetRules(), Expected, DirectEvents);   // what CityTick persists: tick AND age
 	}
 	for (int32 i = 0; i < 10; ++i)
 	{
@@ -133,7 +133,7 @@ STACKTOWN_CITY_TEST(FStacktownCityGrowthRetired, "Stacktown.CityState.GrowthReti
 
 	FCityState Expected = E->GetState();
 	TArray<FEconEvent> DirectEvents;
-	Tick(E->GetRules(), Expected, DirectEvents);
+	TickCity(E->GetRules(), Expected, DirectEvents);   // what CityTick persists: tick AND age
 	E->CityTick();
 
 	FCityState Reloaded;

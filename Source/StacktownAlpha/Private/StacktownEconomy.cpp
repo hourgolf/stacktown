@@ -488,19 +488,10 @@ FString UStacktownEconomy::StatePathForSession(Stacktown::EStateSource& OutSourc
 void UStacktownEconomy::CityTick()
 {
 	TArray<Stacktown::FEconEvent> Events;
-	Stacktown::Tick(Rules, State, Events);
-	// AGE ADVANCES HERE, not inside Tick (queue item 7). The economy oracles
-	// assert exact state equality against hand-computed answers and age sits
-	// outside them; folding it into Tick would make every one of those known
-	// answers wrong for a reason unrelated to what they test.
-	// By key, like every other parcel walk here: unambiguous about mutating the
-	// stored value rather than a copy, and deterministic besides.
-	TArray<FString> AgeIds;
-	State.Parcels.GetKeys(AgeIds);
-	for (const FString& Id : AgeIds)
-	{
-		Stacktown::AdvanceAge(State.Parcels[Id]);
-	}
+	// Tick, then age (queue item 7) - ONE composite, Stacktown::TickCity, shared
+	// with the tests that predict what this call persists. Age stays outside
+	// Tick itself so the economy oracles' exact known answers hold.
+	Stacktown::TickCity(Rules, State, Events);
 	SaveState();
 }
 

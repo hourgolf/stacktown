@@ -371,10 +371,11 @@ MUTATIONS = [
      'if (const FRoad* Near = NearestNoFrontage(R, E, Roads, X, Y))',
      'if (const FRoad* Near = nullptr)', True, 'placement'),
 
-    ('lot-may-cross-a-highway', 'the no-frontage corridor scan stops running',
-     # REFRESHED 2026-09-06: item 11 moved the geometry into quads.
-     '\t\tif (RoadHasFrontage(E, Other))\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (QuadsOverlap(Mine, RoadQuad(R, E, Other)))',
-     '\t\tif (true)\n\t\t{\n\t\t\tcontinue;\n\t\t}\n\t\tif (QuadsOverlap(Mine, RoadQuad(R, E, Other)))', True, 'placement'),
+    # RETIRED 2026-09-07: the scan it targeted was scoped to frontage-refusing
+    # roads, and the rule is now every road with the lot's own PATH exempt.
+    # corridor-scan-frontage-only-again and corridor-scan-own-path-not-exempt
+    # below are its successors; the highway case is one instance of what they
+    # cover, so this is retired rather than refreshed into a duplicate.
 
     ('lot-rect-near-is-the-constant', 'the frontage line stops moving with the type',
      'const double Near = RoadHalf(R, E, Road);',
@@ -613,6 +614,22 @@ MUTATIONS = [
     ('path-span-takes-every-chord', 'a span runs round the bend past its own pad',
      '\t\tconst bool bJoined =\n\t\t\t(Other.EndX   == Road.StartX && Other.EndY   == Road.StartY) ||\n\t\t\t(Other.StartX == Road.EndX   && Other.StartY == Road.EndY)   ||\n\t\t\t(Other.StartX == Road.StartX && Other.StartY == Road.StartY) ||\n\t\t\t(Other.EndX   == Road.EndX   && Other.EndY   == Road.EndY);',
      '\t\tconst bool bJoined = true;', True, 'placement'),
+
+    # ---- the frontage-corridor gap closed (self-test 61, 2026-09-07) ------
+    ('corridor-scan-frontage-only-again', 'a lot may stand in the arterial again',
+     '\t\tif (RoadPathId(Other) == OwnPath)\n\t\t{\n\t\t\tcontinue;\n\t\t}',
+     '\t\tif (RoadHasFrontage(E, Other))\n\t\t{\n\t\t\tcontinue;\n\t\t}', True, 'placement'),
+
+    ('corridor-scan-own-path-not-exempt', 'no lot can front a curve',
+     '\t\tif (RoadPathId(Other) == OwnPath)\n\t\t{\n\t\t\tcontinue;\n\t\t}',
+     '\t\tif (false)\n\t\t{\n\t\t\tcontinue;\n\t\t}', True, 'placement'),
+
+    ('corridor-scan-exempts-by-chord', 'a lot may stand across the chord next to its own',
+     'if (RoadPathId(Other) == OwnPath)', 'if (Other.Id == Road->Id)', True, 'placement'),
+
+    ('article-always-a', 'the refusal reads "a avenue"',
+     'return (L == TEXT("a") || L == TEXT("e") || L == TEXT("i")\n\t\t|| L == TEXT("o") || L == TEXT("u")) ? TEXT("an") : TEXT("a");',
+     'return TEXT("a");', True, 'placement'),
 
     ('type-order-scrambled', 'the T-key cycle stops matching the decided order',
      'TEXT("dirt"), TEXT("avenue"), TEXT("boulevard"), TEXT("highway") };',

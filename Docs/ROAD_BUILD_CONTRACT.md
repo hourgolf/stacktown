@@ -449,11 +449,38 @@ Two open questions for the owner, both raised rather than assumed:
    absolute, a dirt lot beside a highway would out-earn a boulevard lot
    away from one. One word changes it.
 
-One **pre-existing gap**, found by widening the corridor check to every
-road and watching self-test 39 refuse: a lot can overlap a *frontage*
-road's corridor. Test 39's own lot does, sitting in the 740 uu the
-arterial and a road drawn 3,000 uu from it leave between their
-pavements, which is less than `BLOCK_DEPTH`. Closing it changes where
-lots may go on boards that already exist — the owner's call, not road
-types', so the check is scoped to frontage-refusing roads and the gap is
-named here.
+**That gap is closed as of 2026-09-07** (§7a below); until then the check
+was scoped to frontage-refusing roads and the gap was named here.
+
+## 7a. A lot may not overlap any road's corridor (2026-09-07)
+
+Decided as a working default by the coordinator's 23:37 note; the owner
+reverts it with a word.
+
+The case is the one self-test 39 **used to be**: a road drawn 3,000 uu
+from the arterial leaves 740 uu between their pavements, which is less
+than `BLOCK_DEPTH` — so its south frontage band ran 760 uu into the
+arterial's own road surface. A lot stood in the road and nothing was
+looking, because every other refusal in `resolve_click` is reached
+*through* the road a lot faces.
+
+**Its own road is not a crossing, and for a curve that is not free
+arithmetic.** On a straight road the pad's near edge *is* `road_half` and
+`quads_overlap` is strict, so a lot touches its own corridor without
+overlapping it. On a curve it does not: a lot fronting one chord
+necessarily overlaps the corridors of the chords either side, because
+they are 410 uu apart and 2260 uu wide and the pad starts at the frontage
+line of the one it faces. Comparing by **path** rather than by chord is
+what keeps curves buildable — the first run of this check refused a lot
+on all twelve chords of a curve, every one of them against the curve
+itself.
+
+**What it costs, measured rather than guessed:** on a three-node curve
+probed at both sides of every chord, 4 clicks placed before and 2 after.
+The two it refuses were being laid across the arterial's and the cross
+street's pavement — the loss is the bug, not collateral.
+
+Two self-tests moved to make room, and the reason is worth recording:
+test 39 and test 45 both drew a road at y=3000 and placed a lot on its
+south side. Both were placing lots *in the arterial*. They now draw at
+y=3800, which leaves 1170..2670 and clears the arterial's 1130 by 40 uu.

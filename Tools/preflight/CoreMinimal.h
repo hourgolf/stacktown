@@ -131,6 +131,11 @@ public:
 	}
 	FString& operator+=(const FString& O) { S += O.S; return *this; }
 
+	FString Left(int32 Count) const
+	{
+		return FString(S.substr(0, static_cast<size_t>(Count < 0 ? 0 : Count)));
+	}
+
 	FString Mid(int32 Start) const
 	{
 		return Start >= Len() ? FString() : FString(S.substr(static_cast<size_t>(Start)));

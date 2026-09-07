@@ -277,6 +277,16 @@ bool RoadCost(const FEconRules& E, const FRoadSegment& Seg, double& OutCost)
 	return true;
 }
 
+/** "a" or "an". Small, but these strings are read by a person: "a avenue" is
+ *  the kind of seam that makes a message look machine-made. */
+static const TCHAR* Article(const FString& Word)
+{
+	if (Word.IsEmpty()) { return TEXT("a"); }
+	const FString L = Word.Left(1).ToLower();
+	return (L == TEXT("a") || L == TEXT("e") || L == TEXT("i")
+		|| L == TEXT("o") || L == TEXT("u")) ? TEXT("an") : TEXT("a");
+}
+
 FString RoadMaterialName(const FString& WidthClass)
 {
 	const FString Type = WidthClass.IsEmpty() ? FString(DefaultRoadType()) : WidthClass.ToLower();
@@ -853,29 +863,40 @@ FClickResult ResolveClick(const FPlacementBoard& Board, const FCityState& State,
 	// to RectsOverlap while everything is axis-aligned.
 	const FQuad Mine = LotQuad(R, E, *Road, Candidate);
 
-	// NO-FRONTAGE CORRIDORS. Every other refusal here is reached THROUGH the
-	// road a lot faces, so a road nothing may face is unguarded by
-	// construction: a highway is not a candidate in ResolveRoad, is not a lot,
-	// and is not a pin, so without this a lot fronting some other road could be
-	// laid straight across two thousand uu of motorway.
+	// NO LOT MAY OVERLAP ANY ROAD'S CORRIDOR. Every other refusal here is
+	// reached THROUGH the road a lot faces, so any other road is unguarded by
+	// construction: it is not a candidate in ResolveRoad, is not a lot, and is
+	// not a pin.
 	//
-	// DELIBERATELY NOT ALL ROADS. A lot can also overlap a FRONTAGE road's
-	// corridor - the oracle's own test 39 places one in the 740 uu the arterial
-	// and a road drawn 3000 uu from it leave between their pavements, which is
-	// less than BlockDepth. That is a real, PRE-EXISTING gap; closing it moves
-	// where lots may go on boards that already exist, which is the owner's call
-	// and not part of road types. Raised on the board, not silently fixed here.
+	// SCOPED TO FRONTAGE-REFUSING ROADS until 2026-09-07, because closing it
+	// fully moves where lots may go on boards that already exist - the owner's
+	// call, and now made. The case is the one the oracle's test 39 used to be:
+	// a road drawn 3000 uu from the arterial leaves 740 uu between their
+	// pavements, less than BlockDepth, so its south frontage band ran 760 uu
+	// into the arterial's own road surface. A lot stood in the road and
+	// nothing was looking.
+	//
+	// ITS OWN ROAD IS NOT A CROSSING, and for a CURVE that is not free
+	// arithmetic. On a straight road the pad's near edge IS RoadHalf and
+	// QuadsOverlap is strict, so a lot touches its own corridor without
+	// overlapping it. On a curve a lot fronting one chord necessarily overlaps
+	// the corridors of the chords either side: they are 410 uu apart and 2260
+	// uu wide, and the pad starts at the frontage line of the one it faces.
+	// Comparing by PATH is what keeps curves buildable - the first run of this
+	// check refused a lot on all twelve chords of a curve, every one of them
+	// against the curve itself.
+	const FString OwnPath = RoadPathId(*Road);
 	for (const FRoad& Other : Roads)
 	{
-		if (RoadHasFrontage(E, Other))
+		if (RoadPathId(Other) == OwnPath)
 		{
 			continue;
 		}
 		if (QuadsOverlap(Mine, RoadQuad(R, E, Other)))
 		{
 			return Refuse(FString::Printf(
-				TEXT("in the road: [%.1f, %.1f] would run across the %s, a %s"),
-				X0, X1, *Other.Id, *RoadTypeOf(Other)));
+				TEXT("in the road: [%.1f, %.1f] would run across the %s, %s %s"),
+				X0, X1, *Other.Id, Article(RoadTypeOf(Other)), *RoadTypeOf(Other)));
 		}
 	}
 

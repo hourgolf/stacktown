@@ -470,9 +470,17 @@ if __name__ == '__main__':
     #     and the road are built by the placement spec itself, not by hand.
     import placement as _pl
     st6 = {'money': 5000.0, 'demand': 1.0, 'parcels': {}, 'roads': {}}
-    st6, _road6, ok6, why6 = _pl.draw_road(st6, -6500.0, -3000.0, -5100.0, -3000.0, 'dirt', False)
+    #     RELOCATED 2026-09-07 (engineering seat) when a lot stopped being
+    #     allowed to overlap ANY road's corridor: at y=-3000 a dirt road's north
+    #     frontage band is -2120..-620, which runs 510 uu into the ARTERIAL's own
+    #     pavement - this test was placing its lot in the road, like the seat's
+    #     own tests 39 and 45. y=-3800 leaves -2920..-1420, clear by 290 uu, and
+    #     the click moves out with it so this road is still the nearest one.
+    #     Nothing about what the test MEASURES changes: it is the same dirt road,
+    #     the same lot width, and the same 0.75x.
+    st6, _road6, ok6, why6 = _pl.draw_road(st6, -6500.0, -3800.0, -5100.0, -3800.0, 'dirt', False)
     assert ok6, why6
-    st6, _pid6, ok6, why6 = _pl.place(st6, -5800.0, -1900.0, False)
+    st6, _pid6, ok6, why6 = _pl.place(st6, -5800.0, -2500.0, False)
     assert ok6, why6
     pid6 = [k for k, v in st6['parcels'].items() if v.get('placement')][0]
     st6, ok6, why6 = buy(st6, pid6)

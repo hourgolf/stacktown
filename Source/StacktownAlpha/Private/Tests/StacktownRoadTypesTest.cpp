@@ -253,8 +253,11 @@ STACKTOWN_TYPES_TEST(FStacktownRoadNarrowerFrontage, "Stacktown.Roads.NarrowerFr
 {
 	const FPlacementBoard Board = OracleBoard();
 	FCityState S = TypeSeed();
-	const FRoadDrawResult D = DrawRoad(Board, S, T44_AvenueRefused.X0, T44_AvenueRefused.Y0,
-		T44_AvenueRefused.X1, T44_AvenueRefused.Y1, FString(T44_DirtStored.WidthClass), true);
+	// ITS OWN ROAD (T45_Road), not 44's: 45 places a lot and so moved north
+	// when a lot stopped being allowed to overlap the arterial's corridor,
+	// while 44 is about the price and stayed put.
+	const FRoadDrawResult D = DrawRoad(Board, S, T45_Road[0], T45_Road[1],
+		T45_Road[2], T45_Road[3], FString(T44_DirtStored.WidthClass), true);
 	TestTrue(TEXT("dirt drawn"), D.bOk);
 
 	// Its footprint is y 2120..3880, not the avenue's 1870..4130.

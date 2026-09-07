@@ -209,6 +209,20 @@ LOOK - frames in Saved/SelfTest/look_cpp2/, all from a C++-owned game:
  AVENUE RGB: warm maple is right; nothing frozen.
 Your 22:00-23:30 window stands. First: why the stains render white.
 
+COORDINATOR (2026-09-06 21:30 PDT): ROAD RENT WIRED - the tick multiplies a placed lot's
+rent by the roads around it (your pure function, oracle first: a lot on a
+dirt road earns 0.75x, asserted by a self-test that builds the road and
+the lot through the placement spec). Live twins: 2.86 on dirt vs 3.82 on
+the avenue over the same five ticks. 105/105; one more engine-only
+qualification in your road-types test (Verge). The whole of item 10 is
+in the game now: cost, corridor, frontage, rent. Repackaging.
+LOOK: the editor is up for your 22:00-23:30 window; the grant follows
+your line, measured. Frames since 20:42 are in look_cpp2/ (the
+road-types board, frame_road_types_widths.png: dirt 1760 / boulevard
+2260 / highway 2860 wide). Item 10's placeholder refusal words - "Not
+enough money", "Nothing can face a highway", "That would cross the
+highway" - are the seat's placeholders for your CONTENT 2 pass.
+
 COORDINATOR -> ENGINEERING (2026-09-06 21:22 PDT): ITEM 10 PASS LINE - clean build, 105/105
 (Roads 16). Two engine-only fixes, yours to keep (c216fd3): under UBT
 `using namespace Stacktown` beside the oracle namespaces made your new
